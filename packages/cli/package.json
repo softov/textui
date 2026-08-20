@@ -1,0 +1,23 @@
+{
+  "name": "@textui/cli",
+  "version": "0.1.0",
+  "description": "TextUI developer CLI - init, add, create, doctor - and primitives for building your own",
+  "type": "module",
+  "license": "MIT",
+  "files": ["dist", "README.md"],
+  "bin": { "textui": "./dist/bin.js" },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./app": { "types": "./dist/app.d.ts", "import": "./dist/app.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/terminal": "workspace:*"
+  },
+  "publishConfig": { "access": "public" }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@textui/terminal",
+  "version": "0.1.0",
+  "description": "Terminal adapters, capability detection, ANSI writing and input decoding for TextUI",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./node": { "types": "./dist/node.d.ts", "import": "./dist/node.js" },
+    "./virtual": { "types": "./dist/virtual.d.ts", "import": "./dist/virtual.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*"
+  },
+  "publishConfig": { "access": "public" }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "textui-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Workspace root for TextUI - a graph-mounted terminal UI runtime",
+  "scripts": {
+    "dev": "pnpm --filter @textui/playground dev",
+    "build": "tsc -b packages/core packages/terminal packages/testing packages/cli",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo playground/.dev"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.19.0",
+    "vitest": "^3.0.0",
+    "@eslint/js": "^9.17.0",
+    "globals": "^15.14.0"
+  }
+}

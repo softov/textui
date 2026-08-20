@@ -1,0 +1,22 @@
+{
+  "name": "@textui/testing",
+  "version": "0.1.0",
+  "description": "Headless testing harness for TextUI - semantic queries, input, resizing, time",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/terminal": "workspace:*"
+  },
+  "publishConfig": { "access": "public" }
+}

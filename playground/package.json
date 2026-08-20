@@ -1,0 +1,20 @@
+{
+  "name": "@textui/playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The TextUI showcase and focused playgrounds. Never published.",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/terminal": "workspace:*"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*",
+    "esbuild": "^0.25.0"
+  }
+}

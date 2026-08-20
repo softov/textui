@@ -1,0 +1,13 @@
+{
+  "name": "@textui/registry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The TextUI component registry: source copied into your project, not imported from it",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*"
+  }
+}

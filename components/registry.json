@@ -1,0 +1,109 @@
+{
+  "name": "textui",
+  "version": "0.1.0",
+  "description": "The TextUI component registry. Components are copied into your project so you own them.",
+  "homepage": "https://github.com/softov/textui",
+  "components": [
+    {
+      "name": "status-dot",
+      "description": "The shared status vocabulary: a glyph and a colour, never colour alone.",
+      "category": "display",
+      "version": "0.1.0",
+      "files": [{ "path": "ui/status-dot.tsx", "type": "component" }],
+      "variants": ["up", "degraded", "down", "pending", "unknown"],
+      "related": ["service-table"]
+    },
+    {
+      "name": "metric-card",
+      "description": "One number, its unit, its trend and a sparkline.",
+      "category": "display",
+      "version": "0.1.0",
+      "files": [{ "path": "ui/metric-card.tsx", "type": "component" }],
+      "optionalCapabilities": ["unicode"],
+      "related": ["service-table"]
+    },
+    {
+      "name": "service-table",
+      "description": "Service rows with column priorities that survive a narrow terminal.",
+      "category": "data",
+      "version": "0.1.0",
+      "files": [{ "path": "ui/service-table.tsx", "type": "component" }],
+      "dependencies": ["status-dot"],
+      "storeBindings": ["$/services/list"],
+      "related": ["status-dot", "metric-card"],
+      "templates": ["dashboard", "monitoring"]
+    },
+    {
+      "name": "log-panel",
+      "description": "A log tail bound to any stream source.",
+      "category": "data",
+      "version": "0.1.0",
+      "files": [{ "path": "ui/log-panel.tsx", "type": "component" }],
+      "storeBindings": ["$/logs/lines"],
+      "templates": ["logs", "monitoring"]
+    },
+    {
+      "name": "key-hints-bar",
+      "description": "The footer line, built from the command registry rather than a hand-kept list.",
+      "category": "chrome",
+      "version": "0.1.0",
+      "files": [{ "path": "ui/key-hints-bar.tsx", "type": "component" }],
+      "templates": ["dashboard", "logs", "command-center"]
+    }
+  ],
+  "themes": [
+    { "name": "console", "file": "themes/console.ts", "appearance": "dark" },
+    { "name": "paper", "file": "themes/paper.ts", "appearance": "light" },
+    { "name": "workbench", "file": "themes/workbench.ts", "appearance": "dark" }
+  ],
+  "templates": [
+    {
+      "name": "dashboard",
+      "description": "Service dashboard: metrics, a service table and a log panel.",
+      "files": ["templates/dashboard.tsx"],
+      "components": ["service-table", "metric-card", "log-panel", "key-hints-bar"]
+    },
+    {
+      "name": "monitoring",
+      "description": "Monitoring console with charts and alerts.",
+      "files": ["templates/monitoring.tsx"],
+      "components": ["service-table", "metric-card"]
+    },
+    {
+      "name": "logs",
+      "description": "Full-screen log viewer with filtering.",
+      "files": ["templates/logs.tsx"],
+      "components": ["log-panel", "key-hints-bar"]
+    },
+    {
+      "name": "explorer",
+      "description": "Resource explorer with registered viewers.",
+      "files": ["templates/explorer.tsx"],
+      "components": []
+    },
+    {
+      "name": "login",
+      "description": "A sign-in form with validation.",
+      "files": ["templates/login.tsx"],
+      "components": []
+    },
+    {
+      "name": "wizard",
+      "description": "A multi-step setup flow.",
+      "files": ["templates/wizard.tsx"],
+      "components": []
+    },
+    {
+      "name": "settings",
+      "description": "Settings screen with sections and a danger zone.",
+      "files": ["templates/settings.tsx"],
+      "components": []
+    },
+    {
+      "name": "command-center",
+      "description": "Workbench shell with a palette, rail and panel.",
+      "files": ["templates/command-center.tsx"],
+      "components": ["service-table", "key-hints-bar"]
+    }
+  ]
+}

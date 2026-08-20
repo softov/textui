@@ -1,0 +1,98 @@
+# Extension points
+
+Separate typed registries rather than one generic plugin bag: every category has its own contract, so a bad contribution fails where it is written instead of at some later lookup.
+
+## The registries
+
+```ts
+app.components.register({ component, renderer, category, role, opens });
+app.commands.register({ id, title, when, args, slots, run });
+app.keybindings.register({ keys, commandId, when, scopeId });
+app.themes.register({ id, name, appearance, extends, colors, glyphs });
+app.layouts.register({ name, component, surfaces });
+app.shells.register({ id, title, component, surfaces, theme, minSize });
+app.screens.register({ id, component, keepAlive });
+app.resources.registerKind / registerProvider / registerViewer / registerEditor / registerAction;
+app.store.registerDataProvider / registerSchema / registerPersistence;
+app.services.provide(key, value);
+```
+
+Every one returns a `Disposable`. Registration is reversible, which is what makes a manifest unloadable.
+
+## Manifests
+
+One source contributing to several registries at once, unwound by a single disposable:
+
+```ts
+await app.manifest.load({
+  source: { id: 'acme.services', version: '1.2.0', displayName: 'Services' },
+  requires: ['acme.core'],
+  requiresCapabilities: ['mouse'],
+  contributes: {
+    components: [ServiceTableDefinition],
+    commands: [restartCommand, scaleCommand],
+    keybindings: [{ keys: 'r', commandId: 'service.restart' }],
+    themes: [midnight],
+    resourceKinds: [serviceKind],
+    resourceViewers: [serviceViewer],
+    dataProviders: [servicesProvider],
+    computed: [{ path: '$/summary/services/down', def: { from: ['$/services/list'], select: 'count' } }],
+    views: [{ surface: 'sidebar', key: 'services', target: { component: 'ServiceList' } }],
+  },
+});
+
+app.manifest.unload('acme.services');   // everything above, undone
+```
+
+Views mount last, because they may name a component the same manifest just added.
+
+## Services
+
+A typed lookup table, not a dependency-injection container. No lifecycles, no scoping rules, no auto-wiring - a child falls back to its parent and that is all.
+
+```ts
+import { serviceKey } from '@textui/core';
+
+const ApiKey = serviceKey<ApiClient>('acme.api');
+
+app.services.provide(ApiKey, new ApiClient(url));
+// in a component
+const api = useRequiredService(ApiKey);   // throws with the key id when missing
+```
+
+## Registries for the CLI
+
+An organisation can publish its own component registry - a directory with a `registry.json` and the source files it names - and point projects at it:
+
+```bash
+textui registry add internal ../design-system/registry
+textui add --registry internal ops-header
+```
+
+A registry manifest carries what the CLI needs to be useful later: version, files, dependencies, required and optional capabilities, variants, store bindings, related components and template membership.
+
+## Custom host primitives
+
+`canvas` is the escape hatch, and it is enough for most things that do not fit the box model:
+
+```tsx
+<canvas
+  intrinsic={{ height: 6 }}
+  draw={(surface, ctx) => {
+    for (let x = 0; x < surface.rect.width; x++) {
+      surface.put(x, 0, ctx.glyph('bulletFilled'), { fg: ctx.color('accent') });
+    }
+  }}
+/>
+```
+
+The surface is clipped to the node's content box and drawn in its own coordinate space, so a chart never needs to know where on screen it landed.
+
+## The inspector
+
+```ts
+app.inspect();   // the component tree: rects, props, roles, bindings, render reasons
+app.stats();     // renders, runs in the last frame, mounted instances
+```
+
+`inspect()` is what the test harness queries and what a development inspector would render. With `diagnostics: true` each instance also carries *why* it last rendered - `mount`, `props`, `store $/path` - which is usually the fastest way to find a component re-rendering for no reason.

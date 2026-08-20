@@ -1,0 +1,25 @@
+{
+  "name": "@textui/core",
+  "version": "0.1.0",
+  "description": "Graph-mounted terminal UI runtime - store, registries, renderer, components",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./types": { "types": "./dist/types/index.d.ts", "import": "./dist/types/index.js" },
+    "./jsx-runtime": { "types": "./dist/jsx/jsx-runtime.d.ts", "import": "./dist/jsx/jsx-runtime.js" },
+    "./jsx-dev-runtime": { "types": "./dist/jsx/jsx-dev-runtime.d.ts", "import": "./dist/jsx/jsx-dev-runtime.js" },
+    "./ui": { "types": "./dist/ui/index.d.ts", "import": "./dist/ui/index.js" },
+    "./themes": { "types": "./dist/themes/index.d.ts", "import": "./dist/themes/index.js" },
+    "./hooks": { "types": "./dist/hooks/index.d.ts", "import": "./dist/hooks/index.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "publishConfig": { "access": "public" }
+}

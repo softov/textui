@@ -1,0 +1,236 @@
+import type {
+  Resource, ResourceActionDefinition, ResourceEditorDefinition, ResourceKind,
+  ResourceMetadata, ResourceProvider, ResourceRegistry, ResourceURI,
+  ResourceViewerDefinition,
+} from '../types/resource.js';
+import type { ComponentNode } from '../types/graph.js';
+import type { ComponentRegistry } from '../types/component-registry.js';
+import type { WhenEngine } from '../types/when.js';
+import type { Disposable } from '../types/disposable.js';
+import { toDisposable } from '../util/disposable.js';
+
+function schemeOf(uri: ResourceURI): string {
+  const i = uri.indexOf(':');
+  return i === -1 ? 'file' : uri.slice(0, i);
+}
+
+function matchesGlob(name: string, pattern: string): boolean {
+  if (pattern.startsWith('*.')) return name.toLowerCase().endsWith(pattern.slice(1).toLowerCase());
+  return name.toLowerCase() === pattern.toLowerCase();
+}
+
+/**
+ * The resource model.
+ *
+ * A resource is anything addressable that something can be registered to
+ * display, edit or act on - a file, a record, a log stream, a service. The
+ * filesystem is one provider among several rather than the model itself, which
+ * is what lets an explorer browse services and files with the same component.
+ *
+ * Kinds form a hierarchy by dotted name: `file.markdown` specialises
+ * `file.text`, so a viewer registered for `file.text` still opens a markdown
+ * file when no more specific one exists.
+ */
+export class Resources implements ResourceRegistry {
+  private kindDefs = new Map<string, ResourceKind>();
+  private providers = new Map<string, ResourceProvider>();
+  private viewers: ResourceViewerDefinition[] = [];
+  private editors: ResourceEditorDefinition[] = [];
+  private actions: ResourceActionDefinition[] = [];
+
+  constructor(
+    private deps: {
+      components: ComponentRegistry;
+      when: WhenEngine;
+    },
+  ) {}
+
+  registerKind(kind: ResourceKind): Disposable {
+    this.kindDefs.set(kind.id, kind);
+    return toDisposable(() => this.kindDefs.delete(kind.id));
+  }
+
+  registerProvider(provider: ResourceProvider): Disposable {
+    this.providers.set(provider.scheme, provider);
+    return toDisposable(() => this.providers.delete(provider.scheme));
+  }
+
+  registerViewer(def: ResourceViewerDefinition): Disposable {
+    this.viewers.push(def);
+    return toDisposable(() => {
+      const i = this.viewers.indexOf(def);
+      if (i >= 0) this.viewers.splice(i, 1);
+    });
+  }
+
+  registerEditor(def: ResourceEditorDefinition): Disposable {
+    this.editors.push(def);
+    return toDisposable(() => {
+      const i = this.editors.indexOf(def);
+      if (i >= 0) this.editors.splice(i, 1);
+    });
+  }
+
+  registerAction(def: ResourceActionDefinition): Disposable {
+    this.actions.push(def);
+    return toDisposable(() => {
+      const i = this.actions.indexOf(def);
+      if (i >= 0) this.actions.splice(i, 1);
+    });
+  }
+
+  kinds(): ResourceKind[] {
+    return [...this.kindDefs.values()];
+  }
+
+  /** Extension, then mime type, then an explicit `detect`. Best match wins. */
+  detectKind(uri: ResourceURI, meta: ResourceMetadata = { name: uri }): string {
+    const name = meta.name || uri.split('/').pop() || uri;
+    const candidates: { id: string; score: number }[] = [];
+
+    for (const kind of this.kindDefs.values()) {
+      let score = kind.priority ?? 0;
+      let matched = false;
+
+      if (kind.extensions?.some((p) => matchesGlob(name, p))) {
+        score += 100;
+        matched = true;
+      }
+      if (meta.mimeType && kind.mimeTypes?.includes(meta.mimeType)) {
+        score += 80;
+        matched = true;
+      }
+      if (kind.detect?.(uri, meta)) {
+        score += 200;
+        matched = true;
+      }
+      // A more specific kind beats its parent on equal evidence.
+      if (matched) {
+        score += kind.id.split('.').length;
+        candidates.push({ id: kind.id, score });
+      }
+    }
+
+    if (candidates.length === 0) return meta.mimeType ? 'file' : 'unknown';
+    candidates.sort((a, b) => b.score - a.score);
+    return (candidates[0] as { id: string }).id;
+  }
+
+  kindMatches(kind: string, ancestor: string): boolean {
+    if (kind === ancestor) return true;
+    if (kind.startsWith(ancestor + '.')) return true;
+
+    let cursor = this.kindDefs.get(kind);
+    const seen = new Set<string>();
+    while (cursor?.extends && !seen.has(cursor.id)) {
+      seen.add(cursor.id);
+      if (cursor.extends === ancestor) return true;
+      cursor = this.kindDefs.get(cursor.extends);
+    }
+    return false;
+  }
+
+  private provider(uri: ResourceURI): ResourceProvider {
+    const scheme = schemeOf(uri);
+    const provider = this.providers.get(scheme);
+    if (!provider) {
+      throw new Error(`[textui] no resource provider registered for "${scheme}:"`);
+    }
+    return provider;
+  }
+
+  async stat(uri: ResourceURI): Promise<Resource | null> {
+    const resource = await this.provider(uri).stat(uri);
+    if (!resource) return null;
+    // A provider may leave classification to the registry.
+    if (!resource.kind || resource.kind === 'unknown') {
+      return { ...resource, kind: this.detectKind(uri, resource.metadata) };
+    }
+    return resource;
+  }
+
+  async list(uri: ResourceURI): Promise<Resource[]> {
+    const provider = this.provider(uri);
+    if (!provider.list) return [];
+    const items = await provider.list(uri);
+    return items.map((r) =>
+      r.kind && r.kind !== 'unknown' ? r : { ...r, kind: this.detectKind(r.uri, r.metadata) },
+    );
+  }
+
+  async read(uri: ResourceURI): Promise<string | Uint8Array> {
+    const provider = this.provider(uri);
+    if (!provider.read) throw new Error(`[textui] "${schemeOf(uri)}:" cannot be read`);
+    return provider.read(uri);
+  }
+
+  async write(uri: ResourceURI, content: string | Uint8Array): Promise<void> {
+    const provider = this.provider(uri);
+    if (!provider.write) throw new Error(`[textui] "${schemeOf(uri)}:" is read-only`);
+    return provider.write(uri, content);
+  }
+
+  viewersFor(kind: string): ResourceViewerDefinition[] {
+    const specific = this.viewers
+      .filter((v) => !v.fallback && v.kinds.some((k) => this.kindMatches(kind, k)))
+      .filter((v) => this.deps.when.evaluate(v.when))
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+
+    const fallbacks = this.viewers
+      .filter((v) => v.fallback)
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+
+    return [...specific, ...fallbacks];
+  }
+
+  editorsFor(kind: string): ResourceEditorDefinition[] {
+    return this.editors
+      .filter((e) => e.kinds.some((k) => this.kindMatches(kind, k)))
+      .filter((e) => this.deps.when.evaluate(e.when))
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  }
+
+  actionsFor(kind: string, slot?: string): ResourceActionDefinition[] {
+    return this.actions
+      .filter((a) => a.kinds.some((k) => this.kindMatches(kind, k) || k === '*'))
+      .filter((a) => !slot || (a.slots ?? ['context']).includes(slot))
+      .filter((a) => this.deps.when.evaluate(a.when))
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  }
+
+  /**
+   * The node that displays this resource. An explicit `viewerId` wins; then a
+   * registered editor when edit was asked for; then the best viewer; then a
+   * component that declared `opens` for this kind; then nothing.
+   */
+  nodeFor(
+    resource: Resource,
+    options: { viewerId?: string; mode?: 'view' | 'edit' } = {},
+  ): ComponentNode | null {
+    const props = { resource, uri: resource.uri };
+
+    if (options.viewerId) {
+      const chosen =
+        this.viewers.find((v) => v.id === options.viewerId) ??
+        this.editors.find((e) => e.id === options.viewerId);
+      return chosen ? { component: chosen.component, ...props } : null;
+    }
+
+    if (options.mode === 'edit') {
+      const editor = this.editorsFor(resource.kind)[0];
+      if (editor) return { component: editor.component, ...props };
+    }
+
+    const viewer = this.viewersFor(resource.kind)[0];
+    if (viewer) return { component: viewer.component, ...props };
+
+    const opener = this.deps.components.findOpeners(resource.kind)[0];
+    if (opener) return { component: opener.component, ...props };
+
+    return null;
+  }
+}
+
+export function createResources(deps: ConstructorParameters<typeof Resources>[0]): Resources {
+  return new Resources(deps);
+}

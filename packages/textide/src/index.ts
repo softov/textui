@@ -18,8 +18,11 @@ export type { Workspace, WorkspaceConfig } from './workspace.js';
 export { TitleBar } from './chrome/titlebar.js';
 export { StatusLine } from './chrome/statusbar.js';
 export { MenuBar, MENUS } from './chrome/menubar.js';
-export { textideCommands, paletteOrder, EDITOR_URI, CATEGORIES } from './commands.js';
+export { textideCommands, paletteOrder, layoutCommands, EDITOR_URI, CATEGORIES, TOGGLE_COMMAND } from './commands.js';
 export { attachLog, fileSink, unixSink } from './log.js';
 export type { LogSink, LogOptions } from './log.js';
-export { Icon, mono, ICON_WIDTH_SAFE } from './icons.js';
-export type { IconName } from './icons.js';
+export {
+  Icon, mono, iconsFor, ICON_SETS, ICON_WIDTH_SAFE,
+  FULL_ICONS, BMP_ICONS, ASCII_ICONS,
+} from './icons.js';
+export type { IconName, IconSet } from './icons.js';

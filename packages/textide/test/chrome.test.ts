@@ -75,11 +75,11 @@ describe.each(SIZES.map((s) => [`${s.width}x${s.height}`, s] as const))('the chr
     const t = await open(size);
     expect(t.hasText('? for keys')).toBe(true);
 
-    await t.app.execute('view.toggleStatusBar');
+    await t.app.execute('view.toggle', { surface: 'status' });
     await t.settle();
     expect(t.hasText('? for keys')).toBe(false);
 
-    await t.app.execute('view.toggleStatusBar');
+    await t.app.execute('view.toggle', { surface: 'status' });
     await t.settle();
     expect(t.hasText('? for keys')).toBe(true);
     await t.unmount();
@@ -92,11 +92,11 @@ describe.each(SIZES.map((s) => [`${s.width}x${s.height}`, s] as const))('the chr
     // is the kind of thing one fixed test size never shows you.
     expect(t.hasText('Help')).toBe(true);
 
-    await t.app.execute('view.toggleTitleBar');
+    await t.app.execute('view.toggle', { surface: 'header' });
     await t.settle();
     expect(t.hasText('Help')).toBe(false);
 
-    await t.app.execute('view.toggleTitleBar');
+    await t.app.execute('view.toggle', { surface: 'header' });
     await t.settle();
     expect(t.hasText('Help')).toBe(true);
     await t.unmount();
@@ -154,7 +154,7 @@ describe('the command palette', () => {
     for (const id of [
       'fs.newFile', 'fs.newFolder', 'fs.rename', 'fs.delete',
       'file.save', 'file.revert', 'file.close',
-      'view.theme', 'view.toggleSidebar', 'view.toggleStatusBar', 'view.toggleTitleBar',
+      'view.theme', 'view.toggle',
       'help.keys', 'help.about', 'app.palette',
     ]) {
       expect(ids, `missing ${id}`).toContain(id);
@@ -545,7 +545,7 @@ describe('the command palette', () => {
 
     expect(glyph('Title Bar')).toBe(g.regionTop);
     expect(line('Title Bar')).toContain('Visible');
-    // The row stands for `view.toggleSidebar`, so it shows that key.
+    // The row is the sidebar switch, and ctrl+b is bound to that surface.
     expect(line('Sidebar')).toContain('ctrl+b');
 
     t.press('enter');

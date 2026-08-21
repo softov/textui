@@ -4,7 +4,7 @@ import type {
 import { notify } from '@textui/core';
 import { getDocument, isDocumentDirty, revertDocument, saveDocument } from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
-import { Icon } from './icons.js';
+import { iconsFor } from './icons.js';
 
 /**
  * textide's own commands.
@@ -61,12 +61,20 @@ const SURFACE_TITLES: Record<string, string> = {
   status: 'Status Bar',
 };
 
-/** The registered command a surface's switch stands for, where there is one. */
-const TOGGLE_COMMANDS: Record<string, string> = {
-  sidebar: 'view.toggleSidebar',
-  status: 'view.toggleStatusBar',
-  header: 'view.toggleTitleBar',
-};
+/**
+ * The key bound to flipping this surface, if one is.
+ *
+ * `forCommand` cannot answer it: every switch is the same command, and what
+ * separates them is the argument the binding carries.
+ */
+function shortcutFor(app: TextUIApp, surface: SurfaceName): string | undefined {
+  return app.keybindings.list()
+    .find((b) => b.commandId === TOGGLE_COMMAND && b.args?.surface === surface)
+    ?.keys;
+}
+
+/** The one command every surface switch runs. */
+export const TOGGLE_COMMAND = 'view.toggle';
 
 /** Which edge of the frame a surface lives on, as a theme glyph role. */
 const SURFACE_EDGE: Record<string, keyof ThemeGlyphs> = {
@@ -112,7 +120,7 @@ export function layoutCommands(app: TextUIApp): CommandDefinition[] {
     // toggle makes the row you just acted on look like a different row. The
     // state goes in the word beside it.
     const edge = SURFACE_EDGE[surface] ?? 'regionCentre';
-    const bound = TOGGLE_COMMANDS[surface];
+    const bound = shortcutFor(app, surface);
     return {
       id: `view.toggle:${surface}`,
       title: titleFor(surface),
@@ -120,8 +128,9 @@ export function layoutCommands(app: TextUIApp): CommandDefinition[] {
       icon: String(app.theme.glyphs[edge]),
       badge: shown ? 'Visible' : 'Hidden',
       description: `${shown ? 'Hide' : 'Show'} the ${titleFor(surface).toLowerCase()}`,
-      // The row stands for a registered command, so it shows that one's key.
-      ...(bound ? { shortcut: app.keybindings.forCommand(bound)[0] } : {}),
+      // The row is a switch, and the key bound to that switch is the key
+      // bound to this surface - not to a command named after it.
+      ...(bound ? { shortcut: bound } : {}),
       // Flipping one switch should not put the list away.
       keepOpen: true,
       slots: [],
@@ -140,6 +149,10 @@ let previousTheme: string | null = null;
 
 export function textideCommands(app: TextUIApp): CommandDefinition[] {
   const themes = app.themes.list().map((t) => t.id);
+  // Asked once, here, rather than at each icon: which marks this terminal can
+  // draw is a property of the terminal, and a command list is built after it
+  // is known.
+  const Icon = iconsFor(app.capabilities.unicode);
 
   return [
     // --- File: about the thing in front of you -----------------------------
@@ -278,7 +291,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
           node: {
             component: 'CommandPalette',
             width: 62,
-            placeholder: 'Show, hide, arrange…',
+            placeholder: `Show, hide, arrange${app.theme.glyphs.ellipsis}`,
             // A function, not a snapshot: flipping a switch leaves the list
             // open, so every row has to redraw with what is now true.
             commands: () => layoutCommands(ctx.app),
@@ -288,28 +301,27 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       },
     },
     {
-      id: 'view.toggleSidebar',
+      // One switch, told which surface to flip, rather than one command per
+      // surface.
+      //
+      // Three near-identical commands were three rows that had to be kept out
+      // of every list by hand, because the Layout palette already offers the
+      // same switches - and they only covered the three surfaces this file
+      // happened to know about, which is the opposite of letting a shell name
+      // its own. A keybinding carries the surface as an argument, so binding a
+      // key to `lateral1` needs nothing registered here.
+      id: TOGGLE_COMMAND,
       icon: Icon.sidebar,
-      title: 'Toggle Sidebar',
+      title: 'Toggle Surface',
       category: 'View',
-      slots: ['palette'],
-      run: (_args: Record<string, unknown>, ctx: CommandContext) => { toggleSurface(ctx.app, 'sidebar'); },
-    },
-    {
-      id: 'view.toggleStatusBar',
-      icon: Icon.statusBar,
-      title: 'Toggle Status Bar',
-      category: 'View',
-      slots: ['palette'],
-      run: (_args: Record<string, unknown>, ctx: CommandContext) => { toggleSurface(ctx.app, 'status'); },
-    },
-    {
-      id: 'view.toggleTitleBar',
-      icon: Icon.titleBar,
-      title: 'Toggle Title Bar',
-      category: 'View',
-      slots: ['palette'],
-      run: (_args: Record<string, unknown>, ctx: CommandContext) => { toggleSurface(ctx.app, 'header'); },
+      // Never in a list. The Layout palette builds a row per surface from the
+      // running shell, and this is what those rows and the keys both call.
+      slots: [],
+      args: [{ name: 'surface', type: 'string' }],
+      run: (args: Record<string, unknown>, ctx: CommandContext) => {
+        const surface = typeof args.surface === 'string' ? args.surface : null;
+        if (surface) toggleSurface(ctx.app, surface as SurfaceName);
+      },
     },
 
     // --- Help --------------------------------------------------------------

@@ -1,5 +1,7 @@
 export * as ansi from './ansi.js';
 export { Writer, createWriter } from './writer.js';
+export { captureBuffer } from './capture.js';
+export type { CaptureOptions } from './capture.js';
 export {
   detectCapabilities, detectColorDepth, detectUnicode,
   applyOverrides, describeEnvironment,

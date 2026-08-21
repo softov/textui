@@ -1,3 +1,4 @@
+import type { CapabilityOverrides, ColorDepth, UnicodeLevel } from '@textui/core';
 import { createApp, WRITER_KEY, renderToString } from '@textui/core';
 import { createNodeTerminal, createWriter } from '@textui/terminal';
 import { loadWorkspace } from './workspace.js';
@@ -12,7 +13,9 @@ import { StatusLine } from './chrome/statusbar.js';
  *
  * `textide [dir]` opens a workspace. `--static` renders one frame to stdout,
  * which is what makes it usable in a pipe and checkable in CI, and the reason
- * a screenshot of it can be taken without a terminal.
+ * a screenshot of it can be taken without a terminal. Once it is running, f12
+ * writes the frame that is actually on screen - state, scroll position and
+ * all - which is the one `--static` cannot give you.
  */
 
 interface Options {
@@ -26,7 +29,13 @@ interface Options {
   logFile?: string;
   logUnix?: string;
   verbose: boolean;
+  unicode?: UnicodeLevel;
+  colors?: ColorDepth;
+  shots?: string;
 }
+
+const UNICODE_LEVELS: UnicodeLevel[] = ['ascii', 'bmp', 'full'];
+const COLOR_DEPTHS: ColorDepth[] = [0, 4, 8, 24];
 
 function parse(argv: string[]): Options {
   const options: Options = {
@@ -48,6 +57,19 @@ function parse(argv: string[]): Options {
       case '--width': case '-w': options.width = Number(argv[++i]); break;
       case '--height': options.height = Number(argv[++i]); break;
       case '--theme': options.theme = argv[++i]; break;
+      case '--unicode': {
+        const level = argv[++i] as UnicodeLevel;
+        if (!UNICODE_LEVELS.includes(level)) fail(`--unicode must be one of ${UNICODE_LEVELS.join(', ')}`);
+        options.unicode = level;
+        break;
+      }
+      case '--colors': case '--colours': {
+        const depth = Number(argv[++i]) as ColorDepth;
+        if (!COLOR_DEPTHS.includes(depth)) fail(`--colors must be one of ${COLOR_DEPTHS.join(', ')}`);
+        options.colors = depth;
+        break;
+      }
+      case '--shots': options.shots = argv[++i]; break;
       case '--log-file': options.logFile = argv[++i]; break;
       case '--log-unix': options.logUnix = argv[++i]; break;
       case '--verbose': options.verbose = true; break;
@@ -62,6 +84,31 @@ function parse(argv: string[]): Options {
   return options;
 }
 
+function fail(message: string): never {
+  process.stderr.write(`textide: ${message}\n`);
+  process.exit(2);
+}
+
+/**
+ * What to tell the runtime about the terminal, when the answer is not the
+ * truth.
+ *
+ * Detection is right almost always, and the times it is not are exactly the
+ * times you need to see the other answer: what this looks like on a console
+ * that has no dingbats, or with sixteen colours, without owning one.
+ */
+function overrides(options: Options): CapabilityOverrides | undefined {
+  const out: CapabilityOverrides = {};
+  if (options.unicode !== undefined) {
+    out.unicode = options.unicode;
+    // A terminal that cannot draw a dingbat cannot draw a double-width one
+    // either, and the layout depends on that being true.
+    out.wideChars = options.unicode !== 'ascii';
+  }
+  if (options.colors !== undefined) out.colorDepth = options.colors;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 const HELP = `textide - an IDE in a terminal
 
   textide [dir]           open a workspace (default: the current directory)
@@ -71,6 +118,10 @@ const HELP = `textide - an IDE in a terminal
   --theme <id>            override the workspace theme
   --static, -s            render one frame to stdout and exit
   --width N --height N    size for --static
+
+  --unicode <level>       draw as ascii, bmp or full, whatever the terminal is
+  --colors <0|4|8|24>     draw at this colour depth
+  --shots <dir>           where f12 writes a screenshot (default: here)
 
   --log-file <path>       append a JSONL log of what the runtime does
   --log-unix <path>       send that log to whatever is listening on a socket
@@ -86,6 +137,7 @@ async function main(): Promise<void> {
   if (options.readonly) workspace.readonly = true;
   if (options.hidden) workspace.hidden = true;
   const theme = options.theme ?? workspace.theme ?? 'paper-dark';
+  const capabilities = overrides(options);
 
   // Static mode has no application, so the parts of the screen that ask the
   // registry what opens a file render empty. The chrome is what it is for:
@@ -107,6 +159,7 @@ async function main(): Promise<void> {
       width: options.width,
       height: options.height,
       theme,
+      ...(capabilities ? { capabilities } : {}),
       components: [
         { component: 'TitleBar', category: 'chrome', renderer: { kind: 'function', render: TitleBar } },
         { component: 'StatusLine', category: 'chrome', renderer: { kind: 'function', render: StatusLine } },
@@ -121,7 +174,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const terminal = createNodeTerminal();
+  const terminal = createNodeTerminal(capabilities ? { capabilities } : {});
   const app = createApp({
     terminal,
     // No `root`: everything textide shows is a surface mount. Passing one puts
@@ -131,7 +184,7 @@ async function main(): Promise<void> {
     shell: 'workbench',
     session: { managed: true, altScreen: true, mouse: true, title: `textide - ${workspace.name}` },
     onBoot: (booted) => {
-      registerTextide(booted, { workspace });
+      registerTextide(booted, { workspace, ...(options.shots ? { shots: options.shots } : {}) });
 
       booted.commands.register({
         id: 'app.quit',

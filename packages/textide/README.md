@@ -11,6 +11,25 @@ pnpm textide --static     # one frame to stdout, for a pipe or a screenshot
 
 `--help` lists the rest.
 
+## Seeing what it drew
+
+A terminal application has nowhere to print a diagnostic: the screen is the output, and the next redraw erases whatever was wrong. So there are three ways to get the evidence out of the process.
+
+**f12 writes the frame that is on screen.** Not the one `--static` renders - the real one, with the file you have open, where you scrolled to and what has focus. Two files: `textide-001.ans` keeps the colour and replays with `cat`, and `textide-001.txt` beside it is the same frame in plain text, which is the one a diff can read and an issue can carry. `--shots <dir>` says where they go.
+
+**`--unicode` and `--colors` show you a terminal you are not sitting at.** Detection is right almost always, and the times it is not are the times nobody is watching.
+
+```bash
+pnpm textide --unicode ascii    # a console with no dingbats
+pnpm textide --unicode bmp      # blocks and box drawing, nothing exotic
+pnpm textide --colors 4         # sixteen colours
+pnpm textide --colors 0         # none
+```
+
+Every glyph has three tiers - the theme's in [`glyphs.ts`](../core/src/themes/glyphs.ts), textide's own in [`icons.ts`](src/icons.ts) - and a test asserts the ASCII tier is actually ASCII, because a fallback holding one stray `⌸` fails on exactly the terminal it exists for.
+
+**`--log-file` and `--log-unix` send a running commentary somewhere else.** What has focus, what the chrome did, every command that ran. `examples/logtail.mjs` listens on a socket.
+
 ## The workspace
 
 A directory is a workspace. `.textide.json` in its root configures it, and a
@@ -41,9 +60,14 @@ directory until it is configured is an editor nobody opens.
 
 ## What is not, yet
 
-- **The editor.** `CodeViewer` is read-only; a real `CodeEditor` - cursor,
-  selection, undo - does not exist yet. Nothing here can change a file's
-  contents.
+- **Undo.** `CodeEditor` has a cursor and edits and saves; it has no history,
+  no selection and no clipboard. Editing without undo is the thing that
+  actually loses work, so it is next.
+- **Hot reload.** `pnpm dev` bundles from the workspace sources, so a change to
+  the runtime is live on the next run with no build in between - but a running
+  editor does not pick it up. The shape it would take is written down in
+  [decisions](../../docs/decisions.md): a full remount that keeps the store,
+  not a clever partial one.
 - **Tabs and splits.** One explorer, one view. [`app.tsx`](src/app.tsx) is the
   only place that knows that, which is the point of keeping the tree and the
   viewer as separate components.

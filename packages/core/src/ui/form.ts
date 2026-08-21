@@ -231,6 +231,7 @@ export interface FormActionsProps extends BoxProps {
 }
 
 export const FormActions = defineComponent<FormActionsProps>('FormActions', (props) => {
+  const theme = useTheme();
   const form = useFormContext();
   const {
     submitLabel = 'Submit', cancelLabel = 'Cancel', onCancel,
@@ -242,7 +243,7 @@ export const FormActions = defineComponent<FormActionsProps>('FormActions', (pro
   return h('box', { direction: 'row', gap: 1, justify: 'end', ...rest },
     onCancel ? h(Button, { label: cancelLabel, onPress: onCancel }) : null,
     h(Button, {
-      label: form.submitting ? `${submitLabel}…` : submitLabel,
+      label: form.submitting ? `${submitLabel}${theme.glyphs.ellipsis}` : submitLabel,
       tone,
       variant: 'solid',
       disabled: blocked,

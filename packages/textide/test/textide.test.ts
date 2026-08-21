@@ -140,13 +140,13 @@ describe.each(SIZES.map((s) => [label(s), s] as const))('the screen at %s', (_na
     for (let i = 0; i < 8; i++) await t.settle();
     expect(t.hasText('README.md')).toBe(true);
 
-    await t.app.execute('view.toggleSidebar');
+    await t.app.execute('view.toggle', { surface: 'sidebar' });
     await t.settle();
     expect(t.hasText('README.md')).toBe(false);
 
     // Restoring remounts the explorer, which lists again: the tree is async,
     // so one frame is not enough to see it come back.
-    await t.app.execute('view.toggleSidebar');
+    await t.app.execute('view.toggle', { surface: 'sidebar' });
     for (let i = 0; i < 8; i++) await t.settle();
     expect(t.hasText('README.md')).toBe(true);
     await t.unmount();

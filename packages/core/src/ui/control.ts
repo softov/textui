@@ -483,11 +483,12 @@ export interface SelectProps extends BoxProps {
 export const Select = defineComponent<SelectProps>('Select', (props) => {
   const theme = useTheme();
   const {
-    options, value, onChange, label, placeholder = 'Select…',
+    options, value, onChange, label, placeholder,
     open: openProp, visibleRows = 6, disabled, ...rest
   } = props;
 
   const focus = useFocus({ disabled });
+  const empty = placeholder ?? `Select${theme.glyphs.ellipsis}`;
   const [open, setOpen] = useState(openProp ?? false);
   const index = Math.max(0, options.findIndex((o) => o.value === value));
   const [highlight, setHighlight] = useState(index);
@@ -532,7 +533,7 @@ export const Select = defineComponent<SelectProps>('Select', (props) => {
     },
       label ? h('text', { content: label, fg: 'muted' }) : null,
       h('text', {
-        content: selected?.label ?? placeholder,
+        content: selected?.label ?? empty,
         fg: selected ? undefined : 'subtle',
         flex: 1,
         truncate: 'end',

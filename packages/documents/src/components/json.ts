@@ -24,12 +24,13 @@ export interface JsonViewerProps extends BoxProps {
 
 /** JSON source, coloured by the registered highlighter. */
 export const JsonViewer = defineComponent<JsonViewerProps>('JsonViewer', (props) => {
+  const theme = useTheme();
   const { resource, uri, content, lineNumbers = true, ...rest } = props;
   const target = content === undefined ? (uri ?? resource?.uri ?? null) : null;
   const doc = useDocument(target);
 
   if (content === undefined && doc.status === 'running') {
-    return h(Spinner, { label: 'Loading…', ...rest });
+    return h(Spinner, { label: `Loading${theme.glyphs.ellipsis}`, ...rest });
   }
   if (content === undefined && doc.status === 'error') {
     return h(ErrorState, { error: doc.error, ...rest });
@@ -72,7 +73,7 @@ export const JsonTreeViewer = defineComponent<JsonTreeViewerProps>('JsonTreeView
   }, [text]);
 
   if (content === undefined && doc.status === 'running') {
-    return h(Spinner, { label: 'Loading…', ...rest });
+    return h(Spinner, { label: `Loading${theme.glyphs.ellipsis}`, ...rest });
   }
   if (content === undefined && doc.status === 'error') {
     return h(ErrorState, { error: doc.error, ...rest });

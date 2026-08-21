@@ -1,5 +1,5 @@
-import type { Disposable, TextUIApp } from '@textui/core';
-import { createBag, registerBuiltins } from '@textui/core';
+import type { Disposable, EventPath, TextUIApp } from '@textui/core';
+import { createBag, notify, registerBuiltins } from '@textui/core';
 import { jsonAdapter, registerDocuments } from '@textui/documents';
 import { filesystemAdapter } from './filesystem.js';
 import { seedWorkspace, type Workspace } from './workspace.js';
@@ -7,13 +7,16 @@ import { Editor, Explorer } from './app.js';
 import { TitleBar } from './chrome/titlebar.js';
 import { StatusLine } from './chrome/statusbar.js';
 import { MenuBar } from './chrome/menubar.js';
-import { textideCommands, paletteOrder } from './commands.js';
-import { Icon } from './icons.js';
+import { textideCommands, paletteOrder, TOGGLE_COMMAND } from './commands.js';
+import { iconsFor } from './icons.js';
+import { takeScreenshot } from './screenshot.js';
 
 export interface RegisterOptions {
   workspace: Workspace;
   /** Also register the shipped catalog. On unless the host already did it. */
   builtins?: boolean;
+  /** Where `view.screenshot` writes. Defaults to the working directory. */
+  shots?: string;
 }
 
 /**
@@ -39,7 +42,34 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
 
   seedWorkspace(app, workspace);
 
+  const Icon = iconsFor(app.capabilities.unicode);
+
   for (const command of textideCommands(app)) bag.add(app.commands.register(command));
+
+  // A terminal application cannot show you what it looked like when it went
+  // wrong, so this is how it tells you: the frame that is on screen, written
+  // out with its colours. `notify` after, never before - a toast in the
+  // picture is a picture of the toast.
+  bag.add(app.commands.register({
+    id: 'view.screenshot',
+    title: 'Screenshot',
+    category: 'View',
+    icon: Icon.camera,
+    description: 'Write the current frame to a file',
+    slots: ['palette'],
+    run: async () => {
+      try {
+        const shot = await takeScreenshot(app, options.shots ? { dir: options.shots } : {});
+        app.events.emit('@/app/screenshot' as EventPath, {
+          ansi: shot.ansi, text: shot.text, width: shot.width, height: shot.height,
+        });
+        notify(app, { tone: 'success', message: `Saved ${shot.ansi}` });
+      } catch (error) {
+        notify(app, { tone: 'danger', message: `Screenshot failed: ${String(error)}` });
+      }
+    },
+  }));
+  bag.add(app.keybindings.register({ keys: 'f12', commandId: 'view.screenshot' }));
 
   // The palette is a command like everything else, so the menu and a
   // keybinding reach the same one.
@@ -79,6 +109,13 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     },
   }));
 
+  // A key bound to a surface carries which surface, because there is one
+  // switch and not one per surface. The Layout palette reads the argument back
+  // to show the key beside the row.
+  bag.add(app.keybindings.register({
+    keys: 'ctrl+b', commandId: TOGGLE_COMMAND, args: { surface: 'sidebar' },
+  }));
+
   // Keybindings are registered here, not in `main`, because a host that
   // embeds textide gets the editor and its keys or neither - an entry point
   // that keeps them to itself hands over a screen nobody can drive.
@@ -87,7 +124,6 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+k', 'app.palette'],
     ['ctrl+s', 'file.save'],
     ['ctrl+w', 'file.close'],
-    ['ctrl+b', 'view.toggleSidebar'],
     ['ctrl+n', 'fs.newFile'],
     ['ctrl+e', 'file.edit'],
     // F10 enters the bar; alt+letter opens one menu outright. Both exist

@@ -29,6 +29,7 @@ export interface TextViewerProps extends BoxProps {
 }
 
 export const TextViewer = defineComponent<TextViewerProps>('TextViewer', (props) => {
+  const theme = useTheme();
   const { resource, uri, content, ...rest } = props;
   const target = content === undefined ? (uri ?? resource?.uri ?? null) : null;
   // A buffer rather than a read, so an action that rewrites the text shows its
@@ -36,7 +37,7 @@ export const TextViewer = defineComponent<TextViewerProps>('TextViewer', (props)
   const doc = useDocument(target);
 
   if (content === undefined && doc.status === 'running') {
-    return h(Spinner, { label: 'Loading…', ...rest });
+    return h(Spinner, { label: `Loading${theme.glyphs.ellipsis}`, ...rest });
   }
   if (content === undefined && doc.status === 'error') {
     return h(ErrorState, { error: doc.error, ...rest });
@@ -87,7 +88,7 @@ export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownView
   );
 
   if (content === undefined && doc.status === 'running') {
-    return h(Spinner, { label: 'Loading…', ...rest });
+    return h(Spinner, { label: `Loading${theme.glyphs.ellipsis}`, ...rest });
   }
   if (content === undefined && doc.status === 'error') {
     return h(ErrorState, { error: doc.error, ...rest });
@@ -401,6 +402,7 @@ export interface ResourceViewProps extends BoxProps {
  * of file types.
  */
 export const ResourceView = defineComponent<ResourceViewProps>('ResourceView', (props) => {
+  const theme = useTheme();
   const runtime = useRuntime();
   const { uri, viewerId, mode, viewerProps, ...rest } = props;
   const app = runtime.app();
@@ -415,7 +417,7 @@ export const ResourceView = defineComponent<ResourceViewProps>('ResourceView', (
   }, [uri]);
 
   if (!uri) return h(EmptyState, { title: 'Nothing selected', ...rest });
-  if (task.status === 'running') return h(Spinner, { label: 'Loading…', ...rest });
+  if (task.status === 'running') return h(Spinner, { label: `Loading${theme.glyphs.ellipsis}`, ...rest });
   if (task.status === 'error') return h(ErrorState, { error: task.error, ...rest });
 
   const resource = task.data;

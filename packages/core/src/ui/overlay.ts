@@ -7,6 +7,7 @@ import type { RenderOutput } from '../types/render.js';
 import type { ArgSpec, CommandDefinition } from '../types/command.js';
 import type { TextUIApp } from '../types/app.js';
 import type { Disposable } from '../types/disposable.js';
+import type { ResolvedTheme } from '../types/theme.js';
 import { h, defineComponent } from '../jsx/factory.js';
 import {
   useEffect, useFocusScope, useInput, useRuntime, useState, useTheme,
@@ -174,7 +175,7 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const theme = useTheme();
   const runtime = useRuntime();
   const {
-    commands, placeholder = 'Type a command…', onRun, onClose, execute = true,
+    commands, placeholder, onRun, onClose, execute = true,
     grouped = true, visibleRows = 8, width = 60, openAt, ...rest
   } = props;
 
@@ -337,6 +338,7 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   );
 
   const highlighted = pending ? undefined : matches[index];
+  const move = `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown} move`;
   const detail = pending
     ? pending.arg.description ?? `${pending.command.title} needs a ${pending.arg.name}`
     : highlighted?.description ?? highlighted?.id ?? '';
@@ -368,8 +370,8 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       },
       onSubmit: choose,
       placeholder: pending
-        ? (pending.arg.description ?? `Choose ${pending.command.title.toLowerCase()}…`)
-        : placeholder,
+        ? (pending.arg.description ?? `Choose ${pending.command.title.toLowerCase()}${theme.glyphs.ellipsis}`)
+        : (placeholder ?? `Type a command${theme.glyphs.ellipsis}`),
       search: true,
       autoFocus: true,
       border: 'none',
@@ -395,8 +397,8 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     h('box', { direction: 'row', gap: 1 },
       h('text', {
         content: pending
-          ? `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown} move · enter choose · esc back`
-          : `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown} move · enter run · ${theme.glyphs.chevronRight} sub-items · esc close`,
+          ? hint(theme, [move, 'enter choose', 'esc back'])
+          : hint(theme, [move, 'enter run', `${theme.glyphs.chevronRight} sub-items`, 'esc close']),
         fg: 'subtle',
         truncate: 'end',
       })),
@@ -637,6 +639,17 @@ let notifyCounter = 0;
  * how two of them end up with different timeouts and one of them forgets the
  * `notification` layer and lands under the dialog it is reporting on.
  */
+/**
+ * The footer of an overlay: what the keys do.
+ *
+ * Joined with the theme's separator rather than a `·` written here, because a
+ * terminal that cannot draw a middle dot draws a `?` instead - and the row it
+ * ruins is the one telling you how to get out.
+ */
+function hint(theme: ResolvedTheme, parts: string[]): string {
+  return parts.join(` ${theme.glyphs.separator} `);
+}
+
 export function notify(app: TextUIApp, options: NotifyOptions): Disposable {
   const { message, tone = 'info', title, icon, timeoutMs = 2500, id } = options;
   return app.layers.open({

@@ -1,10 +1,12 @@
 import {
-  Column, KeyHints, Row, defineComponent, useFocusScope, useRuntime, useStoreValue,
+  Column, KeyHints, Row, defineComponent, useCapabilities, useFocusScope, useRuntime,
+  useStoreValue,
 } from '@textui/core';
 import type { RenderOutput, Resource } from '@textui/core';
 import { ResourceExplorer, ResourceView } from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
 import { WORKSPACE_PATH, type Workspace } from './workspace.js';
+import { iconsFor } from './icons.js';
 
 /**
  * The screen, as surfaces.
@@ -70,6 +72,7 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
      * it, and "am I in here" is a question about the published focus rather
      * than about this component holding focus itself.
      */
+    const Icon = iconsFor(useCapabilities().unicode);
     const scope = useFocusScope({ id: 'pane.main' });
     const focusedScope = useStoreValue<string | null>('$/focus/scope', null);
     const active = focusedScope === scope;
@@ -78,7 +81,7 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
       <Row flex={1} align="stretch" id="pane.main">
         <box
           width={1}
-          fill={'\u258e'}
+          fill={Icon.activeRule}
           fg={active ? 'focus' : 'borderSubtle'}
         />
         <Column flex={1}>

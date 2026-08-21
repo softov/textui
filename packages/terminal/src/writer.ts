@@ -29,7 +29,7 @@ function freshState(): WriterState {
   return { fg: COLOR_DEFAULT, bg: COLOR_DEFAULT, attrs: 0, link: undefined, x: -1, y: -1, valid: false };
 }
 
-function fgSequence(color: number, depth: TerminalCapabilities['colorDepth']): string {
+export function fgSequence(color: number, depth: TerminalCapabilities['colorDepth']): string {
   const c = downsample(color, depth);
   if (c === COLOR_DEFAULT) return `${ansi.SGR.fgDefault}`;
   if (isRgb(c)) {
@@ -41,7 +41,7 @@ function fgSequence(color: number, depth: TerminalCapabilities['colorDepth']): s
   return `38;5;${c}`;
 }
 
-function bgSequence(color: number, depth: TerminalCapabilities['colorDepth']): string {
+export function bgSequence(color: number, depth: TerminalCapabilities['colorDepth']): string {
   const c = downsample(color, depth);
   if (c === COLOR_DEFAULT) return `${ansi.SGR.bgDefault}`;
   if (isRgb(c)) {
@@ -53,7 +53,7 @@ function bgSequence(color: number, depth: TerminalCapabilities['colorDepth']): s
   return `48;5;${c}`;
 }
 
-const ATTR_ON: [number, number][] = [
+export const ATTR_ON: [number, number][] = [
   [ATTR_BOLD, SGRon(ansi.SGR.bold)],
   [ATTR_DIM, SGRon(ansi.SGR.dim)],
   [ATTR_ITALIC, SGRon(ansi.SGR.italic)],

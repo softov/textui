@@ -6,7 +6,7 @@ import type { TextUIApp, Resource, ResourceProvider } from '@textui/core';
 import { render, renderApp } from '@textui/testing';
 import {
   jsonAdapter, openDocument, getDocument, isDocumentDirty, saveDocument,
-  setDocumentContent,
+  setDocumentContent, MarkdownViewer,
 } from '../src/index.js';
 
 /**
@@ -541,6 +541,106 @@ describe('a text field with a label', () => {
     expect(cursor).toBeGreaterThanOrEqual(0);
     expect(cursor).toBeLessThanOrEqual(20);
     expect(t.hasText('ghij')).toBe(true);
+    await t.unmount();
+  });
+});
+
+/**
+ * The rendered Markdown view scrolls in the rows it draws.
+ *
+ * The distinction matters because nothing in a rendered document is one row
+ * per source line: a paragraph wraps, a fence marker draws nothing, and a
+ * fence draws its lines plus two rules. Counting the wrong unit is invisible
+ * on a file of short lines and cuts the tail off every other one.
+ */
+describe('MarkdownViewer', () => {
+  const PARA = 'A paragraph long enough that it certainly wraps onto three separate rows inside a pane this narrow.';
+  const WRAPPED = [
+    '# Title',
+    '',
+    ...Array.from({ length: 12 }, (_, i) => [`${i} ${PARA}`, '']).flat(),
+    'THE-END',
+  ].join('\n');
+
+  const FENCED = [
+    'before',
+    '',
+    '```ts',
+    ...Array.from({ length: 8 }, (_, i) => `const line${i} = ${i};`),
+    '```',
+    '',
+    'after',
+  ].join('\n');
+
+  const open = async (content: string, height = 12) => {
+    const t = await render(
+      h('box', { direction: 'column', width: 40, height },
+        h(MarkdownViewer, { content, flex: 1, autoFocus: true }),
+        h('text', { content: 'STATUS' })),
+      { width: 40, height },
+    );
+    await t.settle();
+    // A fence renders a CodeViewer, which is a document too. The outermost is
+    // the one that scrolls.
+    t.focus((t.getAllByRole('document')[0] as { id: string }).id);
+    return t;
+  };
+
+  it('reaches the last row of a document whose lines wrap', async () => {
+    const t = await open(WRAPPED);
+    expect(t.hasText('THE-END')).toBe(false);
+
+    t.press('end');
+    await t.settle();
+
+    // Counted in source lines this stops three paragraphs short, because each
+    // one of them spends four rows to say one line.
+    expect(t.hasText('THE-END')).toBe(true);
+    // And the pane still ends where the pane ended.
+    expect(t.hasText('STATUS')).toBe(true);
+    await t.unmount();
+  });
+
+  it('never draws more rows than its pane, at any scroll position', async () => {
+    const t = await open(WRAPPED);
+    const status = () => t.lines().findIndex((line) => line.includes('STATUS'));
+    const home = status();
+
+    for (let i = 0; i < 30; i++) {
+      t.press('down');
+      await t.settle();
+      expect(status()).toBe(home);
+    }
+    await t.unmount();
+  });
+
+  it('scrolls one drawn row per key, not one source line', async () => {
+    const t = await open(WRAPPED);
+    const second = t.line(1);
+
+    t.press('down');
+    await t.settle();
+
+    expect(t.line(0)).toBe(second);
+    await t.unmount();
+  });
+
+  it('keeps a fence in one box when the window cuts through it', async () => {
+    const t = await open(FENCED, 8);
+    const box = () => t.lines().filter((line) => line.includes('const line'));
+
+    // Scrolled to where the fence has been entered but not left, the code is
+    // still ruled on both sides - the box is clipped, not abandoned.
+    t.press('down');
+    t.press('down');
+    t.press('down');
+    t.press('down');
+    await t.settle();
+
+    const inside = box();
+    expect(inside.length).toBeGreaterThan(0);
+    expect(inside.every((line) => line.trimStart().startsWith('│'))).toBe(true);
+    expect(t.hasText('STATUS')).toBe(true);
     await t.unmount();
   });
 });

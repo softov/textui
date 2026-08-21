@@ -1,11 +1,13 @@
 import type { ComponentDefinition } from '@textui/core';
 import type { BoxProps } from '@textui/core';
 import type { Resource, ResourceViewerDefinition } from '@textui/core';
+import type { ResolvedTheme, StyleColor } from '@textui/core';
 import { h, defineComponent } from '@textui/core';
 import {
-  useFocus, useInput, useMeasure, useRuntime, useState, useTheme,
+  useFocus, useInput, useMeasure, useMemo, useRuntime, useState, useTheme,
   useTask, useEffect,
 } from '@textui/core';
+import { repeatToWidth, stringWidth, wrapText } from '@textui/core';
 import { useDocument } from '../use-document.js';
 import { Tree, CodeViewer, type TreeNode } from '@textui/core';
 import { EmptyState, ErrorState, KeyValue, Spinner } from '@textui/core';
@@ -55,9 +57,10 @@ export const TextViewer = defineComponent<TextViewerProps>('TextViewer', (props)
 export type MarkdownViewerProps = TextViewerProps;
 
 /**
- * A deliberately small Markdown renderer: headings, emphasis, lists, rules,
- * code fences, block quotes. Not a parser - a formatter for the subset that
- * appears in READMEs and notes, which is what a terminal viewer is for.
+ * A rendered Markdown document, scrolled by the rows it draws.
+ *
+ * The formatting is deliberately small - see `layoutMarkdown` below, which is
+ * where the document becomes a flat list of rows this only has to window.
  */
 export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownViewer', (props) => {
   const theme = useTheme();
@@ -67,6 +70,22 @@ export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownView
   const focus = useFocus({});
   const [top, setTop] = useState(0);
 
+  const text = content ?? doc.content;
+
+  // Lay the whole document out before deciding what is on screen.
+  //
+  // The window has to be measured in the rows the pane will *draw*, not in the
+  // lines the file happens to contain: one source line becomes three rows when
+  // it wraps, none when it is a fence marker, and a fence becomes its lines
+  // plus two rules. Slicing the source and hoping is what silently cut the
+  // last few rows off every screen and made the tail of a long file
+  // unreachable - `end` would stop three paragraphs early, because the scroll
+  // limit was counted in the wrong unit.
+  const rowsOfDoc = useMemo(
+    () => layoutMarkdown(text.split('\n'), measured.width, theme),
+    [text, measured.width, theme],
+  );
+
   if (content === undefined && doc.status === 'running') {
     return h(Spinner, { label: 'Loading…', ...rest });
   }
@@ -74,16 +93,13 @@ export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownView
     return h(ErrorState, { error: doc.error, ...rest });
   }
 
-  const text = content ?? doc.content;
-  const lines = text.split('\n');
-
   // Render a window, not the file. A README is short; a changelog is not, and
   // one instance per line is the difference between a pane that opens and one
   // that stalls the frame.
-  const rows = viewportRows({ flex: 1 }, measured, lines.length);
-  const maxTop = Math.max(0, lines.length - rows);
+  const rows = viewportRows({ flex: 1 }, measured, rowsOfDoc.length);
+  const maxTop = Math.max(0, rowsOfDoc.length - rows);
   const first = Math.min(top, maxTop);
-  const window = lines.slice(first, first + rows);
+  const window = rowsOfDoc.slice(first, first + rows);
 
   useInput(
     (event) => {
@@ -101,106 +117,231 @@ export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownView
   );
 
   const out: unknown[] = [];
-  // A fence that opened above the window is still open inside it. Counting is
-  // cheap; getting it wrong turns a code block into prose.
-  let inFence = countFences(lines, first) % 2 === 1;
-  let fence: string[] = [];
+  for (let i = 0; i < window.length;) {
+    const row = window[i] as MarkdownRow;
+    const key = first + i;
 
-  const flushFence = (key: number): void => {
-    out.push(h('box', {
-      key: `fence-${key}`,
-      border: { style: theme.border, color: 'borderSubtle' },
-      padding: [0, 1],
-    }, h(CodeViewer, {
-      content: fence.join('\n'),
-      lineNumbers: false,
-      scrollbar: false,
-      showCaret: false,
-      // A fence inside a rendered document is typography, not a control. Left
-      // focusable, every code block in a README becomes a tab stop - so a file
-      // with two of them puts two things between the document and the menu bar
-      // that nobody can do anything with.
-      disabled: true,
-    })));
-    fence = [];
-  };
+    if (row.kind === 'fence') {
+      // A fence that the window cuts through is still one box, with only the
+      // rules that are actually on screen.
+      let end = i;
+      while (end < window.length) {
+        const next = window[end] as MarkdownRow;
+        if (next.kind !== 'fence' || next.fence !== row.fence) break;
+        end++;
+      }
+      const group = window.slice(i, end) as Extract<MarkdownRow, { kind: 'fence' }>[];
+      const code = group.filter((r) => r.part === 'code').map((r) => r.text ?? '');
 
-  window.forEach((line, offset) => {
-    const i = first + offset;
-    if (line.trimStart().startsWith('```')) {
-      if (inFence) flushFence(i);
-      inFence = !inFence;
-      return;
+      if (code.length === 0) {
+        // Only one edge of the box is on screen, and a box one row tall cannot
+        // say which. Drawn directly, so the seam between this row and the rest
+        // of the fence is invisible as it scrolls past.
+        out.push(h('text', {
+          key,
+          content: fenceEdge(theme, measured.width, group.some((r) => r.part === 'open')),
+          fg: 'borderSubtle',
+          wrap: 'none',
+        }));
+      } else {
+        out.push(h('box', {
+          key,
+          border: {
+            style: theme.border,
+            color: 'borderSubtle',
+            sides: {
+              top: group.some((r) => r.part === 'open'),
+              bottom: group.some((r) => r.part === 'close'),
+              left: true,
+              right: true,
+            },
+          },
+          padding: [0, 1],
+        }, h(CodeViewer, {
+          content: code.join('\n'),
+          lineNumbers: false,
+          scrollbar: false,
+          showCaret: false,
+          // A fence inside a rendered document is typography, not a control.
+          // Left focusable, every code block in a README becomes a tab stop -
+          // so a file with two of them puts two things between the document
+          // and the menu bar that nobody can do anything with.
+          disabled: true,
+        })));
+      }
+      i = end;
+      continue;
     }
-    if (inFence) {
-      fence.push(line);
-      return;
+
+    if (row.kind === 'rule') {
+      out.push(h('box', { key, height: 1, fill: theme.borderChars().top, fg: 'borderSubtle' }));
+      i++;
+      continue;
     }
 
-    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (heading) {
-      const level = (heading[1] as string).length;
+    if (row.kind === 'heading') {
       out.push(h('text', {
-        key: i,
-        content: heading[2] as string,
-        bold: level <= 2,
-        underline: level === 1,
-        fg: level <= 2 ? 'text' : 'muted',
+        key,
+        content: row.text,
+        wrap: 'none',
+        bold: row.level <= 2,
+        underline: row.level === 1,
+        fg: row.level <= 2 ? 'text' : 'muted',
       }));
-      return;
+      i++;
+      continue;
     }
 
-    if (/^\s*([-*_])\1{2,}\s*$/.test(line)) {
-      out.push(h('box', { key: i, height: 1, fill: theme.borderChars().top, fg: 'borderSubtle' }));
-      return;
+    if (row.prefix !== undefined) {
+      out.push(h('box', { key, direction: 'row', gap: 1 },
+        h('text', { content: row.prefix, fg: row.prefixFg ?? 'accent' }),
+        h('text', { content: row.text, wrap: 'none', flex: 1, ...(row.fg ? { fg: row.fg } : {}) })));
+      i++;
+      continue;
     }
 
-    const bullet = /^(\s*)[-*+]\s+(.*)$/.exec(line);
-    if (bullet) {
-      out.push(h('box', { key: i, direction: 'row', gap: 1 },
-        h('text', { content: `${bullet[1]}${theme.glyphs.bulletFilled}`, fg: 'accent' }),
-        h('text', { content: stripInline(bullet[2] as string), wrap: 'word', flex: 1 })));
-      return;
-    }
-
-    const ordered = /^(\s*)(\d+)\.\s+(.*)$/.exec(line);
-    if (ordered) {
-      out.push(h('box', { key: i, direction: 'row', gap: 1 },
-        h('text', { content: `${ordered[1]}${ordered[2]}.`, fg: 'accent' }),
-        h('text', { content: stripInline(ordered[3] as string), wrap: 'word', flex: 1 })));
-      return;
-    }
-
-    const quote = /^>\s?(.*)$/.exec(line);
-    if (quote) {
-      out.push(h('box', { key: i, direction: 'row', gap: 1 },
-        h('text', { content: theme.borderChars().left, fg: 'borderSubtle' }),
-        h('text', { content: stripInline(quote[1] as string), fg: 'muted', wrap: 'word', flex: 1 })));
-      return;
-    }
-
-    out.push(h('text', { key: i, content: stripInline(line), wrap: 'word' }));
-  });
-
-  if (inFence && fence.length > 0) flushFence(lines.length);
+    out.push(h('text', { key, content: row.text, wrap: 'none', ...(row.fg ? { fg: row.fg } : {}) }));
+    i++;
+  }
 
   return h('box', {
     id: focus.id,
     role: 'document',
     direction: 'column',
     flex: 1,
-    overflow: 'scroll',
+    overflow: 'hidden',
     ...rest,
   }, ...out);
 });
 
-/** How many fence markers appear before `limit`. Odd means one is open. */
-function countFences(lines: string[], limit: number): number {
-  let count = 0;
-  for (let i = 0; i < limit && i < lines.length; i++) {
-    if ((lines[i] as string).trimStart().startsWith('```')) count++;
+/**
+ * One drawn row of a rendered document.
+ *
+ * Every variant is exactly one row tall, which is the whole point: it makes
+ * "how far can this scroll" a length rather than an estimate. A fence is the
+ * exception that proves it - it is several rows, so it becomes several rows
+ * here, tagged with which fence they belong to so the renderer can put the
+ * visible ones back into one box.
+ */
+type MarkdownRow =
+  | { kind: 'rule' }
+  | { kind: 'heading'; text: string; level: number }
+  | { kind: 'text'; text: string; prefix?: string; prefixFg?: StyleColor; fg?: StyleColor }
+  | { kind: 'fence'; fence: number; part: 'open' | 'code' | 'close'; text?: string };
+
+/** The top or bottom edge of a fence, for when the window shows only that row. */
+function fenceEdge(theme: ResolvedTheme, width: number, top: boolean): string {
+  const chars = theme.borderChars();
+  const [left, mid, right] = top
+    ? [chars.topLeft, chars.top, chars.topRight]
+    : [chars.bottomLeft, chars.bottom, chars.bottomRight];
+  return `${left}${repeatToWidth(mid, Math.max(0, width - 2))}${right}`;
+}
+
+/** Wrap, unless nothing has been measured yet and there is no width to wrap to. */
+function wrapAt(text: string, width: number): string[] {
+  if (width <= 0) return [text];
+  const wrapped = wrapText(text, width);
+  return wrapped.length > 0 ? wrapped : [''];
+}
+
+/** Wrapped rows behind a gutter: the marker on the first, its width on the rest. */
+function withPrefix(
+  text: string,
+  width: number,
+  prefix: string,
+  options: { continued?: string; prefixFg?: StyleColor; fg?: StyleColor } = {},
+): MarkdownRow[] {
+  const gutter = stringWidth(prefix);
+  const rest = options.continued ?? ' '.repeat(gutter);
+  return wrapAt(text, width <= 0 ? 0 : Math.max(1, width - gutter - 1)).map((line, index) => ({
+    kind: 'text' as const,
+    text: line,
+    prefix: index === 0 ? prefix : rest,
+    ...(options.prefixFg ? { prefixFg: options.prefixFg } : {}),
+    ...(options.fg ? { fg: options.fg } : {}),
+  }));
+}
+
+/**
+ * A deliberately small Markdown layout: headings, emphasis, lists, rules, code
+ * fences, block quotes. Not a parser - a formatter for the subset that appears
+ * in READMEs and notes, which is what a terminal viewer is for.
+ */
+function layoutMarkdown(lines: string[], width: number, theme: ResolvedTheme): MarkdownRow[] {
+  const rows: MarkdownRow[] = [];
+  let fence = 0;
+  let inFence = false;
+
+  for (const line of lines) {
+    if (line.trimStart().startsWith('```')) {
+      rows.push({ kind: 'fence', fence, part: inFence ? 'close' : 'open' });
+      if (inFence) fence++;
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) {
+      rows.push({ kind: 'fence', fence, part: 'code', text: line });
+      continue;
+    }
+
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
+      const level = (heading[1] as string).length;
+      for (const text of wrapAt(stripInline(heading[2] as string), width)) {
+        rows.push({ kind: 'heading', text, level });
+      }
+      continue;
+    }
+
+    if (/^\s*([-*_])\1{2,}\s*$/.test(line)) {
+      rows.push({ kind: 'rule' });
+      continue;
+    }
+
+    const bullet = /^(\s*)[-*+]\s+(.*)$/.exec(line);
+    if (bullet) {
+      rows.push(...withPrefix(
+        stripInline(bullet[2] as string),
+        width,
+        `${bullet[1]}${theme.glyphs.bulletFilled}`,
+      ));
+      continue;
+    }
+
+    const ordered = /^(\s*)(\d+)\.\s+(.*)$/.exec(line);
+    if (ordered) {
+      rows.push(...withPrefix(
+        stripInline(ordered[3] as string),
+        width,
+        `${ordered[1]}${ordered[2]}.`,
+      ));
+      continue;
+    }
+
+    const quote = /^>\s?(.*)$/.exec(line);
+    if (quote) {
+      const bar = theme.borderChars().left;
+      // The bar repeats down every row of the quote: a rule that stopped after
+      // the first wrapped row would read as one quoted line and some prose.
+      rows.push(...withPrefix(stripInline(quote[1] as string), width, bar, {
+        continued: bar,
+        prefixFg: 'borderSubtle',
+        fg: 'muted',
+      }));
+      continue;
+    }
+
+    for (const text of wrapAt(stripInline(line), width)) {
+      rows.push({ kind: 'text', text });
+    }
   }
-  return count;
+
+  // An unterminated fence still gets its closing rule, so the box reads as a
+  // box rather than as something the renderer forgot to finish.
+  if (inFence) rows.push({ kind: 'fence', fence, part: 'close' });
+
+  return rows;
 }
 
 /** Emphasis markers are noise once nothing can render them. */

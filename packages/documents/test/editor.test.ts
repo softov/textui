@@ -132,3 +132,40 @@ describe('the caret has a column', () => {
     await t.unmount();
   });
 });
+
+describe('the viewport', () => {
+  it('draws a scrollbar only when there is more than fits', async () => {
+    const short = await renderApp({
+      width: 30, height: 8,
+      onBoot: (app) => { registerBuiltins(app); registerDocuments(app); },
+      root: { component: 'box', direction: 'column', flex: 1,
+        children: { component: 'CodeEditor', flex: 1, value: 'a\nb\nc\n' } },
+    });
+    await settle(short);
+    expect(short.text()).not.toContain(short.app.theme.glyphs.progressEmpty);
+    await short.unmount();
+
+    const long = await renderApp({
+      width: 30, height: 8,
+      onBoot: (app) => { registerBuiltins(app); registerDocuments(app); },
+      root: { component: 'box', direction: 'column', flex: 1,
+        children: { component: 'CodeEditor', flex: 1,
+          value: Array.from({ length: 60 }, (_, i) => `line ${i}`).join('\n') } },
+    });
+    await settle(long);
+    const track = long.text();
+    expect(track).toContain(long.app.theme.glyphs.progressFull);
+    expect(track).toContain(long.app.theme.glyphs.progressEmpty);
+    await long.unmount();
+  });
+
+  it('follows the caret rather than resizing the pane', async () => {
+    const { t } = await editing(Array.from({ length: 60 }, (_, i) => `line ${i}`).join('\n'));
+    expect(t.hasText('line 0')).toBe(true);
+    for (let i = 0; i < 30; i++) t.press('down');
+    await settle(t);
+    expect(t.hasText('line 30'), 'the viewport followed').toBe(true);
+    expect(t.hasText('line 0'), 'and left the top behind').toBe(false);
+    await t.unmount();
+  });
+});

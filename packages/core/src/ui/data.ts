@@ -838,7 +838,14 @@ function spansFor(
   return out;
 }
 
-const ScrollThumb = defineComponent<{
+/**
+ * A one-cell scrollbar.
+ *
+ * Exported because anything with a viewport wants the same one: two components
+ * drawing their own would drift, and the thumb is the only thing on screen
+ * that says how much of a file you are looking at.
+ */
+export const ScrollThumb = defineComponent<{
   total: number;
   rows: number;
   offset: number;

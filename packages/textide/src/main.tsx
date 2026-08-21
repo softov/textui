@@ -2,6 +2,7 @@ import { createApp, WRITER_KEY, renderToString } from '@textui/core';
 import { createNodeTerminal, createWriter } from '@textui/terminal';
 import { loadWorkspace } from './workspace.js';
 import { registerTextide } from './register.js';
+import { attachLog, fileSink, unixSink } from './log.js';
 import { Editor, Explorer } from './app.js';
 import { TitleBar } from './chrome/titlebar.js';
 import { StatusLine } from './chrome/statusbar.js';
@@ -22,6 +23,9 @@ interface Options {
   theme?: string;
   readonly: boolean;
   hidden: boolean;
+  logFile?: string;
+  logUnix?: string;
+  verbose: boolean;
 }
 
 function parse(argv: string[]): Options {
@@ -32,6 +36,7 @@ function parse(argv: string[]): Options {
     height: process.stdout.rows ?? 30,
     readonly: false,
     hidden: false,
+    verbose: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -43,6 +48,9 @@ function parse(argv: string[]): Options {
       case '--width': case '-w': options.width = Number(argv[++i]); break;
       case '--height': options.height = Number(argv[++i]); break;
       case '--theme': options.theme = argv[++i]; break;
+      case '--log-file': options.logFile = argv[++i]; break;
+      case '--log-unix': options.logUnix = argv[++i]; break;
+      case '--verbose': options.verbose = true; break;
       case '--help': case '-h':
         process.stdout.write(HELP);
         process.exit(0);
@@ -63,6 +71,13 @@ const HELP = `textide - an IDE in a terminal
   --theme <id>            override the workspace theme
   --static, -s            render one frame to stdout and exit
   --width N --height N    size for --static
+
+  --log-file <path>       append a JSONL log of what the runtime does
+  --log-unix <path>       send that log to whatever is listening on a socket
+  --verbose               log every store write, not only focus and chrome
+
+A terminal application cannot print its own diagnostics - the screen is the
+output - so the log leaves the process. examples/logtail.mjs listens.
 `;
 
 async function main(): Promise<void> {
@@ -132,6 +147,11 @@ async function main(): Promise<void> {
       booted.keybindings.register({ keys: 'ctrl+c', commandId: 'app.quit' });
     },
   });
+
+  const sink = options.logUnix
+    ? unixSink(options.logUnix)
+    : options.logFile ? fileSink(options.logFile) : null;
+  if (sink) attachLog(app, sink, { verbose: options.verbose });
 
   app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
   await app.start();

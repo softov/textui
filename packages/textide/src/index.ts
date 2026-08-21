@@ -19,3 +19,5 @@ export { TitleBar } from './chrome/titlebar.js';
 export { StatusLine } from './chrome/statusbar.js';
 export { MenuBar, MENUS } from './chrome/menubar.js';
 export { textideCommands, paletteOrder, EDITOR_URI, CATEGORIES } from './commands.js';
+export { attachLog, fileSink, unixSink } from './log.js';
+export type { LogSink, LogOptions } from './log.js';

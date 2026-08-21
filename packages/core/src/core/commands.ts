@@ -133,9 +133,17 @@ export class Commands implements CommandRegistry {
       source,
     };
 
+    // Announced, not just run. Which command fired and what asked for it is
+    // the first question anyone debugging a keybinding, a menu or a palette
+    // has, and reconstructing it from its effects is guesswork.
+    app?.events.emit('@/command/run', { id, source, args: filled });
+
     try {
-      return await def.run(filled, ctx);
+      const result = await def.run(filled, ctx);
+      app?.events.emit('@/command/done', { id, source });
+      return result;
     } catch (err) {
+      app?.events.emit('@/command/error', { id, source, message: String(err) });
       this.deps.onError(err, `command "${id}"`);
       throw err;
     }

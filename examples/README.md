@@ -49,3 +49,36 @@ The runner bundles from the workspace sources, so a change to the runtime shows
 up on the next run with no build in between. A consumer outside this repo would
 build with `tsc` and run the output instead - the example's own `build` script
 does exactly that, and is there to prove the published packages are enough.
+
+## logtail.mjs
+
+Watch what a textui application is doing, from outside it.
+
+A terminal application cannot print its own diagnostics, because the screen is
+the output. So it sends them somewhere else instead - a file, or a unix socket
+with this listening on the other end.
+
+```bash
+node examples/logtail.mjs /tmp/textide.sock
+node packages/textide/dist/main.js ~/scratch --log-unix /tmp/textide.sock
+```
+
+```text
+    141ms event   @/command/run   {"id":"file.edit","source":"api","args":{}}
+    199ms store   $/focus/id      n124:focus
+    199ms store   $/focus/scope   pane.main
+```
+
+Add `--verbose` to the application for every store write rather than only
+focus, chrome and commands, and pass substrings to filter:
+
+```bash
+node examples/logtail.mjs /tmp/textide.sock focus
+```
+
+`--log-file <path>` writes the same JSONL to a file, for a run you want to read
+afterwards rather than watch.
+
+What is recorded is the runtime's own vocabulary - `$/focus/id` moved, a
+command ran, a surface changed - rather than narration written at each call
+site, so the log cannot drift from what actually happened.

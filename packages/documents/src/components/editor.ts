@@ -1,8 +1,8 @@
 import type { BoxProps } from '@textui/core';
 import type { ComponentDefinition, SyntaxToken } from '@textui/core';
 import {
-  h, defineComponent, useFocus, useHighlight, useInput, useMeasure, useState, useTheme,
-  viewportRows,
+  h, defineComponent, ScrollThumb, useFocus, useHighlight, useInput, useMeasure,
+  useState, useTheme, viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
 
@@ -39,6 +39,8 @@ export interface CodeEditorProps extends BoxProps {
   language?: string;
   kind?: string;
   onCursor?(cursor: { line: number; column: number }): void;
+  /** Draw a scrollbar when the file is taller than the view. On by default. */
+  scrollbar?: boolean;
 }
 
 interface Cursor { line: number; column: number }
@@ -60,7 +62,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   const theme = useTheme();
   const {
     uri = null, value, onChange, lineNumbers = true, tabWidth: _tabWidth = 2,
-    readonly: readonlyProp, language, kind, onCursor, ...rest
+    readonly: readonlyProp, language, kind, onCursor, scrollbar = true, ...rest
   } = props;
 
   const doc = useDocument(uri);
@@ -244,13 +246,24 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
       h('spacer', { flex: 1 }));
   });
 
+  // The bar goes beside the rows, not inside them, so it spans the viewport
+  // rather than the longest line - and only when there is something off screen
+  // to point at.
+  const bars = scrollbar && lines.length > rows;
+
   return h('box', {
     id: focus.id,
     role: 'textbox',
-    direction: 'column',
+    direction: 'row',
     flex: 1,
     ...rest,
-  }, ...rowNodes);
+  },
+    h('box', { direction: 'column', flex: 1 }, ...rowNodes),
+    bars
+      ? h(ScrollThumb, {
+          total: lines.length, rows, offset: visibleTop, focused: focus.focused,
+        })
+      : null);
 });
 
 export const EDITOR_COMPONENTS: ComponentDefinition[] = [

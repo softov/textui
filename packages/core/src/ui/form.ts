@@ -191,7 +191,19 @@ export const Field = defineComponent<FieldProps>('Field', (props) => {
     : null;
 
   return h('box', { direction: 'column', ...rest },
-    h('box', { direction: stacked ? 'column' : 'row', gap: stacked ? 0 : 1 },
+    // Centred, so the label sits on the control's line of text rather than on
+    // the top edge of its frame.
+    //
+    // A row stretches its children, so a one-row label beside a three-row
+    // bordered input was drawn at the top of three rows - level with the
+    // border, one above the text it names. Borderless controls are one row
+    // and were fine, which is why a form mixing the two had half its labels
+    // aligned and half of them a row high.
+    h('box', {
+      direction: stacked ? 'column' : 'row',
+      gap: stacked ? 0 : 1,
+      ...(stacked ? {} : { align: 'center' as const }),
+    },
       labelNode,
       h('box', { flex: 1 }, children)),
     error

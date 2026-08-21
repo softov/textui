@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, renderApp } from '../src/index.js';
-import { h, Column, ScrollView, Select, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
+import { h, Column, Field, Form, Progress, ScrollView, Select, TextInput, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
 
 const ROWS = [
   { id: 'api', name: 'api-gateway', status: 'up', cpu: '12.4', mem: '310' },
@@ -641,6 +641,91 @@ describe('ScrollView', () => {
     await t.settle();
     expect(t.lines()[0]).toContain('line 5');
     expect(t.lines()[15]).toContain('line 20');
+    await t.unmount();
+  });
+});
+
+/**
+ * Labels, on the line of the thing they name.
+ *
+ * A row stretches its children, so a one-row label beside a three-row bordered
+ * input was drawn level with the border - one row above the text it labels.
+ * Borderless controls are one row and looked right, so a form mixing the two
+ * had half its labels aligned and half of them a row high.
+ */
+describe('Field alignment', () => {
+  const Subject = defineComponent<Record<string, never>>('Subject', () => {
+    const [value, setValue] = useState('typed');
+    const form = useForm({ initialValues: { name: '' }, onSubmit: () => {} });
+    return h(Form, { form },
+      h(Field, { name: 'name', label: 'Name', labelWidth: 12 },
+        h(TextInput, { value, onChange: setValue })));
+  });
+
+  it('puts the label on the input\'s line of text', async () => {
+    const t = await render(h(Subject, {}), { width: 46, height: 6 });
+    await t.settle();
+
+    const labelRow = t.lines().findIndex((l) => l.includes('Name'));
+    const textRow = t.lines().findIndex((l) => l.includes('typed'));
+    expect(labelRow).toBe(textRow);
+    await t.unmount();
+  });
+
+  it('leaves a borderless control where it already was', async () => {
+    const Flat = defineComponent<Record<string, never>>('Flat', () => {
+      const form = useForm({ initialValues: { n: '' }, onSubmit: () => {} });
+      return h(Form, { form },
+        h(Field, { name: 'n', label: 'Notify', labelWidth: 12 },
+          h('text', { content: '[on]' })));
+    });
+    const t = await render(h(Flat, {}), { width: 40, height: 4 });
+    await t.settle();
+
+    const labelRow = t.lines().findIndex((l) => l.includes('Notify'));
+    expect(t.lines()[labelRow]).toContain('[on]');
+    await t.unmount();
+  });
+});
+
+/**
+ * A stack of bars starts at one column.
+ *
+ * Labels are their own width otherwise, which is right for one bar and wrong
+ * for three - each pushes its track somewhere different and the group reads as
+ * three unrelated widgets.
+ */
+describe('Progress labelWidth', () => {
+  it('starts every track at the same column', async () => {
+    const t = await render(
+      h(Column, {},
+        h(Progress, { label: 'download', value: 0.35, labelWidth: 9 }),
+        h(Progress, { label: 'index', value: 0.82, labelWidth: 9 })),
+      { width: 44, height: 4 },
+    );
+    await t.settle();
+
+    const bars = t.lines()
+      .filter((l) => l.trim() !== '')
+      .map((l) => l.search(/[█░]/));
+    expect(bars.length).toBe(2);
+    expect(bars[0]).toBe(bars[1]);
+    await t.unmount();
+  });
+
+  it('lets each label be its own width when nothing says otherwise', async () => {
+    const t = await render(
+      h(Column, {},
+        h(Progress, { label: 'download', value: 0.35 }),
+        h(Progress, { label: 'index', value: 0.82 })),
+      { width: 44, height: 4 },
+    );
+    await t.settle();
+
+    const bars = t.lines()
+      .filter((l) => l.trim() !== '')
+      .map((l) => l.search(/[█░]/));
+    expect(bars[0]).not.toBe(bars[1]);
     await t.unmount();
   });
 });

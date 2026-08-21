@@ -1,5 +1,5 @@
 import {
-  Column, Field, Form, FormActions, FormSection, KeyValue, Panel,
+  Column, Field, Form, FormActions, FormSection, KeyValue, Panel, Row,
   RadioGroup, Slider, Switch, TextInput,
   fieldValidators, useForm, validators,
 } from '@textui/core';
@@ -7,9 +7,19 @@ import {
 /**
  * Forms.
  *
- * The cross-field rule is the point: "confirm must match password" cannot be
- * written as a per-field validator, so validation runs over the whole values
- * object and fields subscribe to the errors that name them.
+ * Two things to look at.
+ *
+ * The cross-field rule: "confirm must match password" cannot be written as a
+ * per-field validator, so validation runs over the whole values object and
+ * fields subscribe to the errors that name them.
+ *
+ * And the two ways to put a label on a control, which are both here because
+ * having both and showing one is how you end up thinking a control cannot
+ * label itself. A control's own `label` draws it inside the frame; `Field`
+ * draws it in a gutter to the left and adds the error and hint lines under
+ * it. They are for different jobs and they do not stack - a `Field` around a
+ * control that labels itself says the same word twice, which is what
+ * `hideLabel` is for.
  */
 export function FormsPlayground() {
   const form = useForm({
@@ -21,6 +31,8 @@ export function FormsPlayground() {
       role: 'viewer',
       replicas: 3,
       notify: true,
+      host: '',
+      port: '8443',
     },
     validate: (values) => {
       const errors = fieldValidators<typeof values>({
@@ -96,6 +108,41 @@ export function FormsPlayground() {
 
           <FormActions submitLabel="Create account" onCancel={() => form.reset()} requireDirty />
         </Form>
+      </Panel>
+
+      {/*
+        * The same fields, labelled the other way.
+        *
+        * No gutter and no error line: the label lives inside the frame, so
+        * the control is one row taller than its text and nothing has to agree
+        * on a `labelWidth`. That is the right shape for a toolbar, a filter
+        * bar or a dialog with three inputs - and the wrong one for the form
+        * above, where a column of labels has to line up and every field needs
+        * somewhere to put "That is not an email".
+        */}
+      <Panel title="The same controls, labelling themselves">
+        <Column gap={0}>
+          <text
+            content="A control's own label sits inside its frame. Field puts it in a gutter and adds the error line - which is why the form above uses one and this does not."
+            fg="muted"
+            wrap="word"
+          />
+          <Row gap={1}>
+            <TextInput
+              label="Host"
+              value={String(form.values.host)}
+              onChange={(v: string) => form.setValue('host', v)}
+              placeholder="api.example.com"
+              flex={1}
+            />
+            <TextInput
+              label="Port"
+              value={String(form.values.port)}
+              onChange={(v: string) => form.setValue('port', v)}
+              width={16}
+            />
+          </Row>
+        </Column>
       </Panel>
 
       <Panel title="Form state">

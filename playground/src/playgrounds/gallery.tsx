@@ -148,6 +148,9 @@ const FACTS = [
   { label: 'channel', value: 'stable', tone: 'success' as const },
 ];
 
+/** A border and its padding: where a bordered control's label starts. */
+const BORDERED_INSET = 2;
+
 function ControlsSection() {
   const [text, setText] = useState('');
   const [checked, setChecked] = useState(true);
@@ -168,24 +171,36 @@ function ControlsSection() {
 
       <TextInput value={text} onChange={setText} label="Name" placeholder="Type here" />
 
-      <Row gap={3}>
-        <Checkbox label="Follow tail" checked={checked} onChange={setChecked} />
-        <Switch label="Animations" value={on} onChange={setOn} />
-      </Row>
+      {/*
+        * Indented to the same column the bordered controls put their labels
+        * in.
+        *
+        * A field with a border sets its label one cell inside the frame and
+        * one more inside the padding, so "Name" and "Region" start two cells
+        * further right than a checkbox does. Read down the column and nothing
+        * lines up - the labels of one kind of control sit in a different place
+        * from the labels of the other, for no reason a reader can see.
+        */}
+      <Column gap={1} padding={{ left: BORDERED_INSET }}>
+        <Row gap={3}>
+          <Checkbox label="Follow tail" checked={checked} onChange={setChecked} />
+          <Switch label="Animations" value={on} onChange={setOn} />
+        </Row>
 
-      <RadioGroup
-        label="Protocol"
-        inline
-        options={[
-          { value: 'https', label: 'https' },
-          { value: 'http', label: 'http' },
-          { value: 'grpc', label: 'grpc' },
-        ]}
-        value={choice}
-        onChange={setChoice}
-      />
+        <RadioGroup
+          label="Protocol"
+          inline
+          options={[
+            { value: 'https', label: 'https' },
+            { value: 'http', label: 'http' },
+            { value: 'grpc', label: 'grpc' },
+          ]}
+          value={choice}
+          onChange={setChoice}
+        />
 
-      <Slider label="Threshold" value={level} onChange={setLevel} format={(v) => `${v}%`} />
+        <Slider label="Threshold" value={level} onChange={setLevel} format={(v) => `${v}%`} />
+      </Column>
 
       <Select
         label="Region"
@@ -235,9 +250,11 @@ function FeedbackSection() {
 
       <Panel title="Progress">
         <Column gap={0}>
-          <Progress label="download" value={0.35} />
-          <Progress label="index" value={0.82} tone="success" />
-          <Progress label="working" />
+          {/* One gutter for the three, so the tracks start at one column
+            * rather than wherever each label happens to end. */}
+          <Progress label="download" value={0.35} labelWidth={9} />
+          <Progress label="index" value={0.82} tone="success" labelWidth={9} />
+          <Progress label="working" labelWidth={9} />
         </Column>
       </Panel>
 

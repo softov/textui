@@ -181,6 +181,15 @@ export interface ProgressProps extends BoxProps {
   showValue?: boolean;
   tone?: SemanticVariant;
   barWidth?: number;
+  /**
+   * A fixed gutter for the label, so a stack of bars starts at one column.
+   *
+   * Labels are their own width otherwise, which is right for one bar and
+   * wrong for three: "download", "index" and "working" each push their track
+   * to a different place and the group reads as three unrelated widgets.
+   * Nothing here can measure its siblings, so whoever stacks them says.
+   */
+  labelWidth?: number;
 }
 
 /**
@@ -189,7 +198,9 @@ export interface ProgressProps extends BoxProps {
  */
 export const Progress = defineComponent<ProgressProps>('Progress', (props) => {
   const theme = useTheme();
-  const { value, total = 1, label, showValue = true, tone = 'primary', barWidth, ...rest } = props;
+  const {
+    value, total = 1, label, showValue = true, tone = 'primary', barWidth, labelWidth, ...rest
+  } = props;
   const frame = useFrame(8);
 
   const width = barWidth ?? 20;
@@ -216,7 +227,13 @@ export const Progress = defineComponent<ProgressProps>('Progress', (props) => {
   }
 
   return h('box', { role: 'progressbar', label, direction: 'row', gap: 1, ...rest },
-    label ? h('text', { content: label, fg: 'muted' }) : null,
+    label
+      ? h('text', {
+          content: label,
+          fg: 'muted',
+          ...(labelWidth === undefined ? {} : { width: labelWidth, truncate: 'end' as const }),
+        })
+      : null,
     h('text', { content: bar, fg: TONE_COLOR[tone] }),
     showValue && value !== undefined
       ? h('text', { content: `${Math.round(ratio * 100)}%`, fg: 'muted' })

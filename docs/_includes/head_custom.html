@@ -1,0 +1,50 @@
+{%- comment -%}
+  Follow the reader's browser, and remember it when they disagree.
+
+  just-the-docs compiles one stylesheet per colour scheme and switches by
+  swapping the href, so choosing a scheme is choosing a file. This runs in
+  <head>, after that link and before first paint, which is what stops the page
+  flashing light before turning dark.
+{%- endcomment -%}
+<script>
+  (function () {
+    var base = '{{ "/assets/css/just-the-docs-" | relative_url }}';
+    var sheet = document.querySelector('link[rel="stylesheet"]');
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function chosen() {
+      try { return localStorage.getItem('textui-theme'); } catch (e) { return null; }
+    }
+
+    function resolve(choice) {
+      if (choice === 'light' || choice === 'dark') return choice;
+      return prefersDark.matches ? 'dark' : 'light';
+    }
+
+    function apply(choice) {
+      var scheme = resolve(choice);
+      if (sheet) sheet.setAttribute('href', base + scheme + '.css');
+      var root = document.documentElement;
+      root.setAttribute('data-theme', scheme);
+      root.setAttribute('data-theme-choice', choice || 'auto');
+    }
+
+    window.textuiTheme = {
+      get: function () { return chosen() || 'auto'; },
+      set: function (choice) {
+        try {
+          if (choice === 'auto') localStorage.removeItem('textui-theme');
+          else localStorage.setItem('textui-theme', choice);
+        } catch (e) { /* private windows still get a working page */ }
+        apply(choice === 'auto' ? null : choice);
+      }
+    };
+
+    apply(chosen());
+
+    // Keep following the system, but only while the reader has not overridden it.
+    var follow = function () { if (!chosen()) apply(null); };
+    if (prefersDark.addEventListener) prefersDark.addEventListener('change', follow);
+    else if (prefersDark.addListener) prefersDark.addListener(follow);
+  })();
+</script>

@@ -1,0 +1,28 @@
+<button type="button" class="theme-toggle" id="theme-toggle" aria-live="polite">
+  <span class="theme-toggle-dot" aria-hidden="true"></span>
+  <span class="theme-toggle-label">Theme</span>
+</button>
+<script>
+  (function () {
+    var button = document.getElementById('theme-toggle');
+    if (!button || !window.textuiTheme) return;
+
+    var order = ['auto', 'light', 'dark'];
+    var labels = { auto: 'Auto', light: 'Light', dark: 'Dark' };
+    var text = button.querySelector('.theme-toggle-label');
+
+    function paint() {
+      var choice = window.textuiTheme.get();
+      text.textContent = labels[choice];
+      button.setAttribute('title', 'Colour scheme: ' + labels[choice].toLowerCase());
+    }
+
+    button.addEventListener('click', function () {
+      var next = order[(order.indexOf(window.textuiTheme.get()) + 1) % order.length];
+      window.textuiTheme.set(next);
+      paint();
+    });
+
+    paint();
+  })();
+</script>

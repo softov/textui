@@ -1,0 +1,102 @@
+// Imported last, so this is where rules go rather than variables.
+
+
+// A rule under the masthead rather than a hard edge against the sidebar.
+.site-header,
+.site-nav,
+.side-bar {
+  border-color: $border-color;
+}
+
+// The current page gets a bar in the accent, not just a bolder weight. A
+// terminal library's docs can afford to say where you are.
+.site-nav .nav-list .nav-list-item .nav-list-link.active {
+  box-shadow: inset 2px 0 0 0 $link-color;
+  background-color: $feedback-color;
+}
+
+// Code is the point of this site, so it gets a real container: the surface
+// tone behind it, one rule around it, and no rounded corners fighting the
+// box-drawing characters inside.
+div.highlighter-rouge,
+figure.highlight,
+pre.highlight {
+  border-radius: $border-radius;
+}
+div.highlighter-rouge div.highlight {
+  border: 1px solid rgba($border-color, 0.4);
+  background-color: rgba($code-background-color, 0.1);
+}
+
+code.language-plaintext.highlighter-rouge {
+  border: 1px solid $border-color;
+  padding: 0.12em 0.32em;
+}
+
+// Tables carry a lot of this documentation - the token lists, the scope
+// tables, the capability matrix - so the header needs to separate.
+.main-content table thead th {
+  background-color: $feedback-color;
+  border-bottom: 1px solid $border-color;
+}
+
+.main-content table td,
+.main-content table th {
+  border-color: $border-color;
+}
+
+// Headings a little tighter than the default, which is set for prose that is
+// mostly paragraphs rather than mostly reference.
+.main-content h1,
+.main-content h2,
+.main-content h3 {
+  letter-spacing: -0.01em;
+}
+
+// Blockquotes read as asides here (the "not a terminal adapter" notes), so
+// they get the accent rather than a grey bar.
+.main-content blockquote {
+  border-left-width: 1px;
+}
+
+p.warning, blockquote.warning {
+  border-left: 1px solid $yellow-000;
+  border-color: rgba($yellow-000, 0.3);
+  background-color: rgba($yellow-000, 0.1);
+}
+// The scheme toggle, at the foot of the sidebar.
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  background-color: transparent;
+  color: $search-result-preview-color;
+  font-size: 0.72rem;
+  font-family: $mono-font-family;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background-color: $feedback-color;
+  color: $body-heading-color;
+}
+
+.theme-toggle-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  border: 1px solid $link-color;
+  background-color: transparent;
+}
+
+// Filled when the reader has chosen; hollow while it follows the browser -
+// the same rest/selected distinction the component catalog uses.
+:root[data-theme-choice="light"] .theme-toggle-dot,
+:root[data-theme-choice="dark"] .theme-toggle-dot {
+  background-color: $link-color;
+}

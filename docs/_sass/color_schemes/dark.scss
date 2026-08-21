@@ -1,0 +1,20 @@
+// Plumbing only - see _sass/custom/setup.scss. Imported after light.scss, so
+// every value light sets must be restated here.
+$color-scheme: dark;
+
+$body-background-color:       $dark-canvas;
+$body-heading-color:          $dark-ink;
+$body-text-color:             $dark-ink-body;
+$link-color:                  $dark-accent;
+$nav-child-link-color:        $dark-ink-body;
+$sidebar-color:               $dark-surface;
+$base-button-color:           $dark-surface-alt;
+$btn-primary-color:           $dark-accent;
+$code-background-color:       $dark-surface;
+$feedback-color:              $dark-surface-alt;
+$table-background-color:      $dark-surface;
+$search-background-color:     $dark-surface;
+$search-result-preview-color: $dark-ink-muted;
+$border-color:                $dark-rule;
+
+@import "./vendor/accessible-pygments/github-dark";

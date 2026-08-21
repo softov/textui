@@ -1,0 +1,37 @@
+// Imported before the colour schemes, so this is the one file that can move
+// anything. Both schemes read their palette from here and define nothing of
+// their own - to recolour the site, edit below and nothing else.
+
+// ── Type and metrics ────────────────────────────────────────────────────────
+//
+// A terminal UI library should not set its own documentation in a font that
+// cannot draw a box. The mono stack leads with the faces that ship with the
+// systems people read this on.
+$mono-font-family: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono",
+  menlo, consolas, "Liberation Mono", monospace;
+
+$body-font-family: system-ui, -apple-system, "Segoe UI", roboto,
+  "Helvetica Neue", arial, sans-serif;
+
+$border-radius: 6px;
+$content-width: 50rem;
+
+// ── Light ───────────────────────────────────────────────────────────────────
+$light-canvas:      #ffffff;   // the page
+$light-surface:     #f6f8fa;   // sidebar, code blocks, table headers
+$light-surface-alt: #eaeef2;   // buttons, hover
+$light-rule:        #d0d7de;   // every border
+$light-ink:         #1f2328;   // headings
+$light-ink-body:    #414850;   // paragraphs
+$light-ink-muted:   #656d76;   // captions, search previews
+$light-accent:      #15803d;   // links, active nav, blockquote rule, buttons
+
+// ── Dark ────────────────────────────────────────────────────────────────────
+$dark-canvas:       #0d1117;
+$dark-surface:      #161b22;
+$dark-surface-alt:  #1c2128;
+$dark-rule:         #30363d;
+$dark-ink:          #e6edf3;
+$dark-ink-body:     #c3ccd6;
+$dark-ink-muted:    #8b949e;
+$dark-accent:       #22c55e;

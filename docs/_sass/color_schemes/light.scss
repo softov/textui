@@ -1,0 +1,20 @@
+// Plumbing only. The colours live in _sass/custom/setup.scss, which is
+// imported before this file - assigning anything here would silently beat it.
+$color-scheme: light;
+
+$body-background-color:       $light-canvas;
+$body-heading-color:          $light-ink;
+$body-text-color:             $light-ink-body;
+$link-color:                  $light-accent;
+$nav-child-link-color:        $light-ink-body;
+$sidebar-color:               $light-surface;
+$base-button-color:           $light-surface-alt;
+$btn-primary-color:           $light-accent;
+$code-background-color:       $light-surface;
+$feedback-color:              $light-surface-alt;
+$table-background-color:      $light-canvas;
+$search-background-color:     $light-canvas;
+$search-result-preview-color: $light-ink-muted;
+$border-color:                $light-rule;
+
+@import "./vendor/accessible-pygments/github-light";

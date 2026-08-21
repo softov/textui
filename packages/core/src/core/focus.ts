@@ -67,7 +67,17 @@ export class Focus implements FocusManager {
     const scope = this.scopes.get(id);
     this.stack.splice(index, 1);
 
-    if (scope?.restore) {
+    // A scope closing may only move focus it was holding. Blurring regardless
+    // took focus off whatever was driving the change - a sidebar that swaps
+    // the screen beside it lost focus on every arrow press, and the incoming
+    // screen then claimed it, so the sidebar could be moved exactly once.
+    // "Nothing holds focus" counts as held: a scope closing takes its own
+    // contents with it, so by the time this runs the thing it had focused has
+    // usually already unmounted. What must not count is focus sitting on
+    // something *outside* - that belongs to whoever put it there.
+    const held = this.current === null || this.scopeOf(this.current) === id;
+
+    if (scope?.restore && held) {
       const target = scope.restoreTo;
       scope.restoreTo = null;
       if (target && this.nodes.has(target)) {
@@ -75,7 +85,9 @@ export class Focus implements FocusManager {
         return;
       }
       this.blur();
-    } else if (this.current && this.scopeOf(this.current) === id) {
+    } else if (scope?.restore) {
+      scope.restoreTo = null;
+    } else if (held) {
       this.blur();
     }
     this.onChange();

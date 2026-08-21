@@ -1,11 +1,12 @@
 import {
   Badge, Column, EmptyState, KeyValue, List, Panel, Row, ScrollView, Timeline,
-  defineComponent, useApp, useEffect, useScreen, useStoreSubtree, useTheme,
+  defineComponent, useApp, useEffect, useStoreSubtree, useStoreValue, useTheme,
 } from '@textui/core';
 import type { BoxProps, ListItem, RenderOutput } from '@textui/core';
 import {
-  PROJECTS, TASKS, getProject, getTask, projects, tags, tasksIn, toggleTask,
-  type Filter, type Task,
+  DEFAULT_VIEW, PROJECTS, TASKS, VIEW, getProject, getTask, projects, setView,
+  tags, tasksIn, toggleTask,
+  type Status, type Task, type View,
 } from './data.js';
 
 /**
@@ -32,7 +33,10 @@ function rowFor(store: ReturnType<typeof useApp>['store'], task: Task): ListItem
 }
 
 export interface TaskListProps extends BoxProps {
-  filter: Filter;
+  /** Which tasks. Omit to use the view the sidebar is driving. */
+  view?: Partial<View>;
+  /** An explicit list, for search - which asks its own question. */
+  tasks?: Task[];
   selectedId?: string | null;
   onSelect?(id: string): void;
   onOpen?(id: string): void;
@@ -42,19 +46,24 @@ export interface TaskListProps extends BoxProps {
 
 export const TaskList: (props: TaskListProps) => RenderOutput = defineComponent<TaskListProps>('TaskList', (props) => {
   const app = useApp();
-  const { filter, selectedId, onSelect, onOpen, title, autoFocus: _autoFocus, ...rest } = props;
+  const { view, tasks, selectedId, onSelect, onOpen, title, autoFocus: _autoFocus, ...rest } = props;
   // Subscribing to the subtree is what makes this a live list: any write under
   // `$/todo/tasks` redraws it, and every mutation is a whole-task write.
   useStoreSubtree(TASKS);
 
-  const items = tasksIn(app.store, filter).map((task) => rowFor(app.store, task));
+  const items = (tasks ?? tasksIn(app.store, view ?? {})).map((task) => rowFor(app.store, task));
 
   // A list with a highlight on it and nothing selected is a list whose detail
   // panel is empty until you press a key. Changing the filter has the same
   // problem the other way: the selection is a task this view does not show.
   const ids = items.map((item) => item.id).join(',');
   useEffect(() => {
-    if (items.length === 0) return;
+    // An empty list has nothing selected. Leaving the last selection would
+    // leave the detail panel describing a task this view does not show.
+    if (items.length === 0) {
+      if (selectedId) onSelect?.('');
+      return;
+    }
     if (selectedId && items.some((item) => item.id === selectedId)) return;
     onSelect?.(items[0]?.id as string);
   }, [ids]);
@@ -154,115 +163,115 @@ export const TaskDetail: (props: TaskDetailProps) => RenderOutput = defineCompon
  */
 export const Nav: (props: Record<string, never>) => RenderOutput = defineComponent<Record<string, never>>('Nav', () => {
   const app = useApp();
+  const theme = useTheme();
   useStoreSubtree(TASKS);
   useStoreSubtree(PROJECTS);
-  // The published entry, not `screens.current()`. The method is a read and
-  // this has to be a *subscription*: without it the highlight stays on
-  // whatever row it started on, so the second arrow press moves from the same
-  // place as the first and the sidebar goes one row and stops.
-  const current = useScreen();
-
-  const count = (filter: Filter): string => String(tasksIn(app.store, filter).length);
+  const view = useStoreValue<View>(VIEW, DEFAULT_VIEW) ?? DEFAULT_VIEW;
 
   /**
-   * Groups with titles, not a tree.
+   * Four blocks, and a row in each says which one that axis is on.
    *
-   * A heading is a row nobody can select - `disabled` - so the same list draws
-   * the blocks and the keyboard steps over them. Indenting children under a
-   * selectable parent would make "Projects" both a title and somewhere to go,
-   * and it is only ever a title.
+   * Not a tree. A heading is a row nobody can select - `disabled` - so the
+   * keyboard steps over it and the same flat list draws blocks with titles.
+   * Nothing nests under anything: `PROJECTS` is a title, never somewhere to
+   * go, and it has no children in the sense a tree means.
+   *
+   * Three axes, three markers. The list has one cursor, so which project is
+   * *chosen* cannot be the cursor - it is a dot beside the row, and there is
+   * one lit in each block at all times.
    */
+  const mark = (on: boolean): string => (on ? theme.glyphs.bulletFilled : ' ');
+
+  /** How many the list would hold if this row were chosen, everything else as it is. */
+  const count = (patch: Partial<View>): string => String(tasksIn(app.store, patch).length);
+
+  const statuses: [Status, string][] = [
+    ['all', 'All'],
+    ['today', 'Today'],
+    ['upcoming', 'Upcoming'],
+    ['completed', 'Completed'],
+    ['archived', 'Archived'],
+  ];
+
   const items: ListItem[] = [
     { id: 'h:inbox', label: 'INBOX', disabled: true },
-    { id: 'view:all', label: '  All', meta: count({ kind: 'all' }) },
-    { id: 'view:today', label: '  Today', meta: count({ kind: 'due', due: 'today' }) },
-    { id: 'view:upcoming', label: '  Upcoming', meta: count({ kind: 'due', due: 'upcoming' }) },
-    { id: 'view:completed', label: '  Completed', meta: count({ kind: 'state', state: 'completed' }) },
-    { id: 'view:archived', label: '  Archived', meta: count({ kind: 'state', state: 'archived' }) },
+    ...statuses.map(([status, label]) => ({
+      id: `status:${status}`,
+      label,
+      icon: mark(view.status === status),
+      meta: count({ status }),
+    })),
 
     { id: 'h:projects', label: 'PROJECTS', disabled: true },
+    {
+      id: 'project:',
+      label: 'Any project',
+      icon: mark(view.project === null),
+      meta: count({ project: null }),
+    },
     ...projects(app.store).map((project) => ({
       id: `project:${project.id}`,
-      label: `  ${project.name}`,
-      meta: count({ kind: 'project', projectId: project.id }),
+      label: project.name,
+      icon: mark(view.project === project.id),
+      meta: count({ project: project.id }),
     })),
-    { id: 'nav:projects', label: '  All projects' },
 
     { id: 'h:tags', label: 'TAGS', disabled: true },
-    ...tags(app.store).map(({ tag, count: n }) => ({
+    {
+      id: 'tag:',
+      label: 'Any tag',
+      icon: mark(view.tag === null),
+      meta: count({ tag: null }),
+    },
+    ...tags(app.store).map((tag) => ({
       id: `tag:${tag}`,
-      label: `  #${tag}`,
-      meta: String(n),
+      label: `#${tag}`,
+      icon: mark(view.tag === tag),
+      meta: count({ tag }),
     })),
-    { id: 'nav:tags', label: '  All tags' },
 
     { id: 'h:more', label: 'MORE', disabled: true },
-    { id: 'nav:search', label: '  Search' },
-    { id: 'nav:settings', label: '  Settings' },
+    { id: 'go:projects', label: 'Projects' },
+    { id: 'go:search', label: 'Search' },
+    { id: 'go:settings', label: 'Settings' },
   ];
 
   return (
     <List
       items={items}
       flex={1}
-      selectedId={selectionFor(current.id, current.params)}
-      // Moving *is* choosing. A sidebar you have to press enter in is a
-      // sidebar that filters nothing until you commit to it, and the list
-      // beside it is the preview.
-      onSelect={(id: string) => go(app, id)}
-      onActivate={(id: string) => open(app, id)}
+      marker={false}
+      // Enter chooses; moving does not. With one axis, moving could choose -
+      // there was nothing to pass over. With three, walking from INBOX down to
+      // a project sets every status on the way and arrives with the list
+      // already wrong, which is the whole complaint. The dots say what is
+      // chosen, so the cursor is free to be somewhere else.
+      onActivate={(id: string) => choose(app, id)}
     />
   );
 });
 
 /**
- * Which nav row stands for what is on screen.
+ * One row, one axis.
  *
- * The list's view is one string - `today`, `project:advisor`, `tag:bug` - so
- * the row for a project and the row for `Today` are the same kind of thing,
- * which is what makes selecting either of them filter rather than navigate.
+ * Choosing a project narrows what is already on screen rather than replacing
+ * it: "Today, in Advisor" is a view somebody wants and there is no reason
+ * picking the second should throw away the first. Only the last block
+ * navigates, and those are pages rather than filters.
  */
-function selectionFor(screen: string | null, params: Record<string, unknown>): string {
-  if (screen === 'tasks') {
-    const view = String(params.view ?? 'all');
-    return view.includes(':') ? view : `view:${view}`;
+function choose(app: ReturnType<typeof useApp>, id: string): void {
+  const [kind, rest] = splitOnce(id, ':');
+  if (kind === 'status') setView(app.store, { status: rest as Status });
+  else if (kind === 'project') setView(app.store, { project: rest === '' ? null : rest });
+  else if (kind === 'tag') setView(app.store, { tag: rest === '' ? null : rest });
+  else if (kind === 'go') {
+    if (rest === 'projects') app.screens.replace('projects');
+    else if (rest === 'search') app.screens.replace('search');
+    else if (rest === 'settings') app.screens.replace('settings');
+    return;
   }
-  if (screen === 'project') return `project:${String(params.projectId ?? '')}`;
-  return `nav:${screen ?? ''}`;
-}
-
-/**
- * One place that turns a nav row into a screen.
- *
- * `replace` and not `push`: choosing a view in the sidebar is not a step you
- * should have to press escape out of. Opening a task is, and that one pushes.
- */
-function go(app: ReturnType<typeof useApp>, id: string): void {
-  const [kind, rest] = splitOnce(id, ':');
-  // A project and a tag are views of the list, not places of their own.
-  // Moving onto one filters what is in front of you, the way `Today` does -
-  // being sent somewhere with a different shape is how you lose what you were
-  // looking at.
-  if (kind === 'view') app.screens.replace('tasks', { view: rest });
-  else if (kind === 'project' || kind === 'tag') app.screens.replace('tasks', { view: id });
-  else if (rest === 'projects') app.screens.replace('projects');
-  else if (rest === 'tags') app.screens.replace('tags');
-  else if (rest === 'search') app.screens.replace('search');
-  else if (rest === 'settings') app.screens.replace('settings');
-}
-
-/**
- * Enter, which is the other half of it.
- *
- * A project has notes and an activity log, so there is somewhere to go that is
- * more than a filter; a tag is its tasks and nothing else, so opening one is
- * the same as selecting it. Inventing a tag page to make the two symmetrical
- * would be a page with nothing on it that the list does not already show.
- */
-function open(app: ReturnType<typeof useApp>, id: string): void {
-  const [kind, rest] = splitOnce(id, ':');
-  if (kind === 'project') app.screens.push('project', { projectId: rest });
-  else go(app, id);
+  // Any filter change is about the list, so it belongs on the list screen.
+  if (app.screens.current()?.id !== 'tasks') app.screens.replace('tasks');
 }
 
 function splitOnce(text: string, separator: string): [string, string] {

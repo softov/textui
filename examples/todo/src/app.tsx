@@ -5,12 +5,12 @@ import {
 import type { BoxProps, CommandDefinition, Disposable, TextUIApp } from '@textui/core';
 import { Nav, TaskDetail, TaskList } from './components.js';
 import {
-  ProjectListPage, ProjectPage, SearchPage, SettingsPage, TagListPage,
-  TaskListPage, TaskPage,
+  EditTaskPage, ProjectListPage, ProjectPage, SearchPage, SettingsPage,
+  TagListPage, TaskListPage, TaskPage,
 } from './screens.js';
 import {
-  QUERY, TASKS, addTask, archiveTask, deleteTask, getTask, seed, settings,
-  toggleTask,
+  DEFAULT_VIEW, QUERY, TASKS, addTask, archiveTask, deleteTask, getTask, seed,
+  setView, settings, tasksIn, toggleTask,
 } from './data.js';
 
 /**
@@ -47,12 +47,30 @@ const Hints = defineComponent<BoxProps>('TodoHints', (props) => {
         { keys: 'enter', label: 'open' },
         { keys: 'space', label: 'done' },
         { keys: 'n', label: 'new' },
-        { keys: 'd', label: 'delete' },
+        { keys: 'e', label: 'edit' },
+        { keys: 'del', label: 'delete' },
         { keys: '/', label: 'search' },
         { keys: 'ctrl+p', label: 'commands' },
         { keys: 'q', label: 'quit' },
       ]}
     />
+  );
+});
+
+const Header = defineComponent<Record<string, never>>('TodoHeader', () => {
+  const app = useApp();
+  const theme = useTheme();
+  useStoreSubtree(TASKS);
+  const open = tasksIn(app.store, { status: 'all', project: null, tag: null })
+    .filter((task) => task.state === 'active').length;
+
+  return (
+    <Row gap={1} padding={[0, 1]}>
+      <text content="Todo" bold fg="accent" />
+      <text content={theme.glyphs.separator} fg="subtle" />
+      <text content={`${open} open`} fg="muted" flex={1} />
+      <text content="? help   ctrl+p commands" fg="subtle" />
+    </Row>
   );
 });
 
@@ -99,11 +117,13 @@ export function registerTodo(app: TextUIApp, options: TodoOptions = {}): Disposa
     { component: 'TaskDetail', render: TaskDetail },
     { component: 'TaskListPage', render: TaskListPage },
     { component: 'TaskPage', render: TaskPage },
+    { component: 'EditTaskPage', render: EditTaskPage },
     { component: 'ProjectListPage', render: ProjectListPage },
     { component: 'ProjectPage', render: ProjectPage },
     { component: 'TagListPage', render: TagListPage },
     { component: 'SearchPage', render: SearchPage },
     { component: 'SettingsPage', render: SettingsPage },
+    { component: 'TodoHeader', render: Header },
     { component: 'TodoStatus', render: Status },
     { component: 'TodoHints', render: Hints },
   ]) {
@@ -117,12 +137,17 @@ export function registerTodo(app: TextUIApp, options: TodoOptions = {}): Disposa
   seed(app.store);
 
   // The frame. Only `main` changes as you navigate.
-  bag.add(app.surfaces.open({ surface: 'sidebar', key: 'nav', target: { component: 'Nav' }, display: { title: 'Todo' } }));
+  // The name goes in the title bar. It was the sidebar's heading, which made
+  // the sidebar look like one tree called "Todo" with everything under it -
+  // and "Todo" is the application, not a place in it.
+  bag.add(app.surfaces.open({ surface: 'header', key: 'title', target: { component: 'TodoHeader' } }));
+  bag.add(app.surfaces.open({ surface: 'sidebar', key: 'nav', target: { component: 'Nav' } }));
   bag.add(app.surfaces.open({ surface: 'status', key: 'status', target: { component: 'TodoStatus' } }));
 
   for (const screen of [
     { id: 'tasks', component: 'TaskListPage' },
     { id: 'task', component: 'TaskPage' },
+    { id: 'task.edit', component: 'EditTaskPage' },
     { id: 'projects', component: 'ProjectListPage' },
     // The project page keeps which tab you were on while it is open and
     // forgets it when it is popped, which is what a screen scope is for.
@@ -148,16 +173,19 @@ export function registerTodo(app: TextUIApp, options: TodoOptions = {}): Disposa
     ['escape', 'go.back'],
 
     ['space', 'task.toggle'],
-    ['e', 'task.open'],
+    // Not `enter`: the list opens what it activates, and a global enter would
+    // fire wherever a control did not consume it - in a form, on a scrolling
+    // panel - which is somewhere nobody pressed it.
+    ['e', 'task.edit'],
     ['x', 'task.archive'],
-    ['d', 'task.delete'],
+    ['delete', 'task.delete'],
     ['/', 'go.search'],
     ['g', 'go.tasks'],
   ] as const) {
     bag.add(app.keybindings.register({ keys, commandId }));
   }
 
-  app.screens.reset('tasks', { view: 'all' });
+  app.screens.reset('tasks');
   return bag;
 }
 
@@ -206,8 +234,20 @@ function commands(app: TextUIApp): CommandDefinition[] {
         app.screens.pop();
       },
     },
-    { id: 'go.tasks', title: 'Go to Inbox', category: 'Go', slots: ['palette'], run: () => app.screens.replace('tasks', { view: 'all' }) },
-    { id: 'go.today', title: 'Go to Today', category: 'Go', slots: ['palette'], run: () => app.screens.replace('tasks', { view: 'today' }) },
+    {
+      id: 'go.tasks',
+      title: 'Go to Inbox',
+      category: 'Go',
+      slots: ['palette'],
+      run: () => { setView(app.store, DEFAULT_VIEW); app.screens.replace('tasks'); },
+    },
+    {
+      id: 'go.today',
+      title: 'Go to Today',
+      category: 'Go',
+      slots: ['palette'],
+      run: () => { setView(app.store, { status: 'today' }); app.screens.replace('tasks'); },
+    },
     { id: 'go.projects', title: 'Go to Projects', category: 'Go', slots: ['palette'], run: () => app.screens.replace('projects') },
     { id: 'go.tags', title: 'Go to Tags', category: 'Go', slots: ['palette'], run: () => app.screens.replace('tags') },
     { id: 'go.search', title: 'Search', category: 'Go', slots: ['palette'], run: () => app.screens.replace('search') },
@@ -246,6 +286,16 @@ function commands(app: TextUIApp): CommandDefinition[] {
         if (app.store.get<string>('$/todo/ui/selected') === id) {
           app.store.set('$/todo/ui/selected', null);
         }
+      },
+    },
+    {
+      id: 'task.edit',
+      title: 'Edit',
+      category: 'Task',
+      slots: ['palette'],
+      run: () => {
+        const id = currentTask(app);
+        if (id) app.screens.push('task.edit', { taskId: id });
       },
     },
     {

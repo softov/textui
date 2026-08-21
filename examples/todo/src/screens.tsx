@@ -1,12 +1,14 @@
 import {
-  Badge, Column, EmptyState, KeyValue, List, Panel, Row, SearchBox, Switch,
-  defineComponent, useApp, useScreen, useStoreSubtree, useStoreValue,
+  Badge, Column, EmptyState, Field, Form, FormActions, KeyValue, List, Panel,
+  Row, SearchBox, Select, Switch, TextInput,
+  defineComponent, useApp, useForm, useScreen, useStoreSubtree, useStoreValue,
 } from '@textui/core';
-import type { ListItem, ReactiveStore, RenderOutput } from '@textui/core';
+import type { ListItem, RenderOutput } from '@textui/core';
 import { TaskDetail, TaskList } from './components.js';
 import {
-  PROJECTS, QUERY, SETTINGS, TASKS, getProject, projects, settings, tags, tasksIn,
-  type Due, type Filter, type TaskState,
+  DEFAULT_VIEW, PROJECTS, QUERY, SETTINGS, TASKS, VIEW, getProject, getTask, now,
+  projects, searchTasks, setView, settings, tags, tasksIn, viewTitle, writeTask,
+  type Due, type Task, type View,
 } from './data.js';
 
 /**
@@ -19,57 +21,27 @@ import {
  */
 
 /**
- * The sidebar's view names, mapped onto what the list actually filters by.
- *
- * A project and a tag are views of the same list, not places of their own -
- * which is the point. Selecting `Advisor` in the sidebar should filter the
- * tasks in front of you, the way `Today` does; being sent somewhere with a
- * different shape instead is how you lose the thing you were looking at.
- *
- * One string, because the view is a screen *parameter*: it has to survive
- * being written into `$/layout/screen/params` and read back, and a name does
- * that where a predicate does not.
- */
-function filterFor(store: ReactiveStore, view: string): { filter: Filter; title: string } {
-  if (view.startsWith('project:')) {
-    const projectId = view.slice('project:'.length);
-    return {
-      filter: { kind: 'project', projectId },
-      title: getProject(store, projectId)?.name ?? projectId,
-    };
-  }
-  if (view.startsWith('tag:')) {
-    const tag = view.slice('tag:'.length);
-    return { filter: { kind: 'tag', tag }, title: `#${tag}` };
-  }
-  if (view === 'today') return { filter: { kind: 'due', due: 'today' as Due }, title: 'Today' };
-  if (view === 'upcoming') return { filter: { kind: 'due', due: 'upcoming' as Due }, title: 'Upcoming' };
-  if (view === 'completed') return { filter: { kind: 'state', state: 'completed' as TaskState }, title: 'Completed' };
-  if (view === 'archived') return { filter: { kind: 'state', state: 'archived' as TaskState }, title: 'Archived' };
-  return { filter: { kind: 'all' }, title: 'Inbox' };
-}
-
-/**
  * List, with the detail beside it.
  *
  * Master and detail in one screen because they move together: the detail is
  * about the selected row, and a selection that survived navigating away would
  * be a selection pointing at a list nobody can see.
  */
-export const TaskListPage: (props: { view?: string }) => RenderOutput = defineComponent<{ view?: string }>('TaskListPage', (props) => {
+export const TaskListPage: (props: Record<string, never>) => RenderOutput = defineComponent<Record<string, never>>('TaskListPage', () => {
   const app = useApp();
-  const screen = useScreen<{ view?: string }>();
   useStoreSubtree(PROJECTS);
-  const { filter, title } = filterFor(app.store, props.view ?? screen.params.view ?? 'all');
+  useStoreSubtree(TASKS);
+  // The sidebar writes the view and this reads it. No parameter, because the
+  // filter is not a place you navigated to - it is the state of one screen.
+  const view = useStoreValue<View>(VIEW, DEFAULT_VIEW) ?? DEFAULT_VIEW;
   const selected = useStoreValue<string | null>('$/todo/ui/selected', null);
 
   return (
     <Row flex={1} gap={1}>
       <TaskList
-        filter={filter}
-        title={title}
+        title={viewTitle(app.store, view)}
         selectedId={selected ?? null}
-        onSelect={(id: string) => app.store.set('$/todo/ui/selected', id)}
+        onSelect={(id: string) => app.store.set('$/todo/ui/selected', id === '' ? null : id)}
         onOpen={(id: string) => app.screens.push('task', { taskId: id })}
         flex={1}
       />
@@ -107,7 +79,7 @@ export const ProjectListPage: (props: Record<string, never>) => RenderOutput = d
   const items: ListItem[] = projects(app.store).map((project) => ({
     id: project.id,
     label: project.name,
-    meta: `${tasksIn(app.store, { kind: 'project', projectId: project.id }).length} open`,
+    meta: `${tasksIn(app.store, { status: 'all', project: project.id, tag: null }).length} open`,
     ...(project.notes ? { description: project.notes } : {}),
   }));
 
@@ -150,7 +122,7 @@ export const ProjectPage: (props: { projectId?: string }) => RenderOutput = defi
     <Column flex={1} gap={1}>
       <Row gap={1}>
         <text content={project.name} bold />
-        <Badge label={`${tasksIn(app.store, { kind: 'project', projectId }).length} open`} tone="muted" />
+        <Badge label={`${tasksIn(app.store, { status: 'all', project: projectId, tag: null }).length} open`} tone="muted" />
       </Row>
       <Row flex={1} gap={1}>
         <List
@@ -163,7 +135,7 @@ export const ProjectPage: (props: { projectId?: string }) => RenderOutput = defi
         />
         {tab === 'tasks' ? (
           <TaskList
-            filter={{ kind: 'project', projectId }}
+            view={{ status: 'all', project: projectId, tag: null }}
             title="Tasks"
             onOpen={(id: string) => app.screens.push('task', { taskId: id })}
             flex={1}
@@ -175,7 +147,7 @@ export const ProjectPage: (props: { projectId?: string }) => RenderOutput = defi
         ) : (
           <Panel title="Activity" flex={1}>
             <KeyValue
-              items={tasksIn(app.store, { kind: 'project', projectId })
+              items={tasksIn(app.store, { status: 'all', project: projectId, tag: null })
                 .flatMap((task) => task.activity.map((entry) => ({
                   label: entry.at,
                   value: `${entry.what} - ${task.title}`,
@@ -196,13 +168,17 @@ export const TagListPage: (props: Record<string, never>) => RenderOutput = defin
   return (
     <Panel title="Tags" flex={1}>
       <List
-        items={tags(app.store).map(({ tag, count }) => ({ id: tag, label: `#${tag}`, meta: String(count) }))}
+        items={tags(app.store).map((tag) => ({
+          id: tag,
+          label: `#${tag}`,
+          meta: String(tasksIn(app.store, { status: 'all', tag, project: null }).length),
+        }))}
         flex={1}
         emptyMessage="No tags"
-        // A tag has nothing behind it but its tasks, so opening one is the
-        // same as filtering by it. A "tag page" would be this list with a
-        // heading.
-        onActivate={(tag: string) => app.screens.replace('tasks', { view: `tag:${tag}` })}
+        onActivate={(tag: string) => {
+          setView(app.store, { tag });
+          app.screens.replace('tasks');
+        }}
       />
     </Panel>
   );
@@ -228,7 +204,7 @@ export const SearchPage: (props: Record<string, never>) => RenderOutput = define
         onChange={(next: string) => app.store.set(QUERY, next)}
       />
       <TaskList
-        filter={{ kind: 'search', query }}
+        tasks={searchTasks(app.store, query)}
         title={query === '' ? 'Type to search' : `${query}`}
         onOpen={(id: string) => app.screens.push('task', { taskId: id })}
         flex={1}
@@ -236,6 +212,120 @@ export const SearchPage: (props: Record<string, never>) => RenderOutput = define
     </Column>
   );
 });
+
+/**
+ * Editing a task.
+ *
+ * A screen rather than a dialog, because there are six things to change and a
+ * dialog that tall is a screen with a border. It takes the task's id the same
+ * way the detail page does, and it writes on submit rather than as you type:
+ * a form is the one place where "not yet" is a real state, and cancelling has
+ * to mean the task is as it was.
+ */
+export const EditTaskPage: (props: { taskId?: string }) => RenderOutput = defineComponent<{ taskId?: string }>('EditTaskPage', (props) => {
+  const app = useApp();
+  const screen = useScreen<{ taskId?: string }>();
+  const taskId = props.taskId ?? screen.params.taskId ?? '';
+  useStoreSubtree(PROJECTS);
+
+  const task = getTask(app.store, taskId);
+  if (!task) return <EmptyState title="No such task" flex={1} />;
+
+  const names = projects(app.store);
+  const form = useForm({
+    initialValues: {
+      title: task.title,
+      description: task.description,
+      project: task.projectId ?? '',
+      priority: task.priority as string,
+      due: task.due as string,
+      tags: task.tags.join(' '),
+    },
+    validate: (values) => (String(values.title).trim() === ''
+      ? { title: 'A task needs a title' }
+      : {}),
+    onSubmit: (values) => {
+      writeTask(app.store, {
+        ...task,
+        title: String(values.title).trim(),
+        description: String(values.description),
+        projectId: values.project === '' ? null : String(values.project),
+        priority: values.priority as Task['priority'],
+        due: values.due as Due,
+        // Typed with or without the hash, because both are what people type.
+        tags: String(values.tags)
+          .split(/[\s,]+/)
+          .map((tag) => tag.replace(/^#/, '').trim())
+          .filter((tag) => tag !== ''),
+        activity: [...task.activity, { at: now(app.store), what: 'Edited' }],
+      });
+      app.screens.pop();
+    },
+  });
+
+  return (
+    <Panel title={`Edit ${task.title}`} flex={1}>
+      {/*
+        * Borderless controls, because six bordered ones are eighteen rows and
+        * the buttons end up below the fold - a form whose Save you cannot see
+        * is a form nobody completes.
+        */}
+      <Form form={form} gap={0}>
+        <Field name="title" label="Title" labelWidth={12} required>
+          <TextInput
+            value={String(form.values.title)}
+            onChange={(v: string) => form.setValue('title', v)}
+            border="none"
+            autoFocus
+          />
+        </Field>
+        <Field name="description" label="Description" labelWidth={12}>
+          <TextInput
+            value={String(form.values.description)}
+            onChange={(v: string) => form.setValue('description', v)}
+            border="none"
+          />
+        </Field>
+        <Field name="project" label="Project" labelWidth={12}>
+          <Select
+            value={String(form.values.project)}
+            options={[{ value: '', label: 'None' },
+              ...names.map((p) => ({ value: p.id, label: p.name }))]}
+            onChange={(v: string) => form.setValue('project', v)}
+            border="none"
+          />
+        </Field>
+        <Field name="priority" label="Priority" labelWidth={12}>
+          <Select
+            value={String(form.values.priority)}
+            options={PRIORITIES.map((v) => ({ value: v, label: v }))}
+            onChange={(v: string) => form.setValue('priority', v)}
+            border="none"
+          />
+        </Field>
+        <Field name="due" label="Due" labelWidth={12}>
+          <Select
+            value={String(form.values.due)}
+            options={DUES.map((v) => ({ value: v, label: v }))}
+            onChange={(v: string) => form.setValue('due', v)}
+            border="none"
+          />
+        </Field>
+        <Field name="tags" label="Tags" labelWidth={12} hint="Separated by spaces">
+          <TextInput
+            value={String(form.values.tags)}
+            onChange={(v: string) => form.setValue('tags', v)}
+            border="none"
+          />
+        </Field>
+        <FormActions submitLabel="Save" cancelLabel="Cancel" onCancel={() => app.screens.pop()} />
+      </Form>
+    </Panel>
+  );
+});
+
+const PRIORITIES = ['high', 'normal', 'low'];
+const DUES = ['none', 'today', 'upcoming'];
 
 export const SettingsPage: (props: Record<string, never>) => RenderOutput = defineComponent<Record<string, never>>('SettingsPage', () => {
   const app = useApp();

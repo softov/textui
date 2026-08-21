@@ -52,13 +52,27 @@ A [persistence adapter](src/storage.ts), not saving. Nothing in this application
 
 What is about *this run* is not in it. The selection and the search box would restore a highlight pointing at a task that has since gone. Seeding happens at boot and hydration after it, so the fixture data is a default and the file is the answer; a missing file is a first run, not an error. The write goes to a temporary file and renames over the target, so a process killed halfway leaves the previous file rather than half of a new one.
 
-## The sidebar is groups, not a tree
+## The filter is three axes, not one menu
 
-`INBOX`, `PROJECTS`, `TAGS` are headings - rows nobody can select, which is what `disabled` means to a `List`. The keyboard steps over them, so the same flat list draws blocks with titles without anything having to know what a group is. Indenting children under a selectable parent would make "Projects" both a title and somewhere to go, and it is only ever a title.
+Status, project and tag are asked at the same time and they **combine**. "Today, in Scena, tagged design" is one view.
 
-Moving the selection **is** choosing: arrowing down the sidebar filters the list beside it. A sidebar you have to press enter in filters nothing until you commit to it.
+```text
+╭ Today · Scena · #design ────────────╮
+```
 
-A project and a tag are *views of the same list*, not places of their own - `Advisor` filters the tasks in front of you the way `Today` does. Enter on a project opens the project page, which has notes and activity and is therefore genuinely more than a filter; enter on a tag does the same as selecting it, because a tag is its tasks and nothing else.
+Making them one exclusive choice is what turns a filter into a menu: picking a project throws away the status, and nothing on screen says it did. Each axis has an "Any" row that clears that axis and leaves the other two alone, so there is nothing to reset.
+
+The number beside each row is what the list would hold if you chose it, **with the other two axes as they are** - which is why `Advisor 0` while `Scena 2` under `Today · #design`. A total per project would be a number about the data rather than about what you are looking at.
+
+## The sidebar is four blocks, not a tree
+
+`INBOX`, `PROJECTS`, `TAGS`, `MORE`. A heading is a row nobody can select - `disabled` - so the keyboard steps over it and one flat list draws blocks with titles. Nothing nests: `PROJECTS` is a title, never somewhere to go.
+
+**Enter chooses; moving does not.** With one axis, moving could choose - there was nothing to pass over. With three, walking from `INBOX` down to a project would set every status on the way and arrive with the list already wrong. A dot marks the chosen row in each block, so the cursor is free to be somewhere else.
+
+The first three blocks filter. The fourth navigates - those are pages, not filters.
+
+The application's name is in the title bar. It was the sidebar's heading, which made the sidebar look like one tree called "Todo" with everything underneath it.
 
 ## Nothing here writes a dialog
 
@@ -72,8 +86,9 @@ app.keybindings.register({ keys: 'n', commandId: 'app.palette', args: { at: 'tas
 ## Keys
 
 ```text
-↑↓ move    enter open    space done    n new    d delete    x archive
-/ search   tab pane      esc back      ctrl+p commands      q quit
+↑↓ move    enter choose/open    space done    n new    e edit
+del delete    x archive    / search    tab pane    esc back
+ctrl+p commands    q quit
 ```
 
 Three panes, and tab reaches all three. The detail panel is a stop because it scrolls, and something that scrolls but cannot be focused only scrolls with a mouse.

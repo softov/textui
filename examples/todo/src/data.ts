@@ -54,34 +54,89 @@ export interface Settings {
  * what a screen takes as a parameter, what the sidebar highlights, and what
  * ends up in the palette. A function could not be any of those.
  */
-export type Filter =
-  | { kind: 'all' }
-  | { kind: 'due'; due: Due }
-  | { kind: 'state'; state: TaskState }
-  | { kind: 'project'; projectId: string }
-  | { kind: 'tag'; tag: string }
-  | { kind: 'search'; query: string };
 
-export function tasksIn(store: ReactiveStore, filter: Filter): Task[] {
-  const all = Object.values(store.get<Record<string, Task>>(TASKS) ?? {});
-  const live = (t: Task): boolean => t.state !== 'archived';
+/**
+ * The view: three questions, asked at the same time.
+ *
+ * Status, project and tag are separate axes and they *combine* - "Today, in
+ * Advisor, tagged bug" is one view, not three you have to choose between.
+ * Making them one exclusive choice is what turns a filter into a menu: picking
+ * a project throws away the status, and nothing on screen says it did.
+ *
+ * `null` on an axis means "any", which is what the "All" row in each block
+ * sets. Every axis is independent, so there is nothing to reset.
+ */
+export type Status = 'all' | 'today' | 'upcoming' | 'completed' | 'archived';
 
-  switch (filter.kind) {
-    case 'all': return all.filter(live);
-    case 'due': return all.filter((t) => live(t) && t.due === filter.due);
-    case 'state': return all.filter((t) => t.state === filter.state);
-    case 'project': return all.filter((t) => live(t) && t.projectId === filter.projectId);
-    case 'tag': return all.filter((t) => live(t) && t.tags.includes(filter.tag));
-    case 'search': {
-      const needle = filter.query.trim().toLowerCase();
-      if (needle === '') return [];
-      return all.filter((t) =>
-        t.title.toLowerCase().includes(needle) ||
-        t.description.toLowerCase().includes(needle) ||
-        t.tags.some((tag) => tag.toLowerCase().includes(needle)));
-    }
-    default: return all;
+export interface View {
+  status: Status;
+  project: string | null;
+  tag: string | null;
+}
+
+export const VIEW = '$/todo/ui/view' as BindingPath;
+export const DEFAULT_VIEW: View = { status: 'all', project: null, tag: null };
+
+export function currentView(store: ReactiveStore): View {
+  return store.get<View>(VIEW) ?? DEFAULT_VIEW;
+}
+
+export function setView(store: ReactiveStore, patch: Partial<View>): void {
+  store.set(VIEW, { ...currentView(store), ...patch });
+}
+
+/** Does this task pass one axis? */
+function matchesStatus(task: Task, status: Status): boolean {
+  switch (status) {
+    // "All" means what is live. Archived is somewhere you go on purpose.
+    case 'all': return task.state !== 'archived';
+    case 'today': return task.state !== 'archived' && task.due === 'today';
+    case 'upcoming': return task.state !== 'archived' && task.due === 'upcoming';
+    case 'completed': return task.state === 'completed';
+    case 'archived': return task.state === 'archived';
+    default: return true;
   }
+}
+
+export function allTasks(store: ReactiveStore): Task[] {
+  return Object.values(store.get<Record<string, Task>>(TASKS) ?? {});
+}
+
+/**
+ * The tasks a view shows.
+ *
+ * Takes a partial view so a count can ask "how many with *this* project,
+ * everything else as it is" - which is what makes the number beside a sidebar
+ * row mean something rather than being the project's total.
+ */
+export function tasksIn(store: ReactiveStore, view: Partial<View> = {}): Task[] {
+  const full: View = { ...currentView(store), ...view };
+  return allTasks(store).filter((task) =>
+    matchesStatus(task, full.status) &&
+    (full.project === null || task.projectId === full.project) &&
+    (full.tag === null || task.tags.includes(full.tag)));
+}
+
+/** Search is its own screen, and its own question. */
+export function searchTasks(store: ReactiveStore, query: string): Task[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === '') return [];
+  return allTasks(store).filter((task) =>
+    task.title.toLowerCase().includes(needle) ||
+    task.description.toLowerCase().includes(needle) ||
+    task.tags.some((tag) => tag.toLowerCase().includes(needle)));
+}
+
+/** What the list is showing, in words. */
+export function viewTitle(store: ReactiveStore, view: View): string {
+  const status: Record<Status, string> = {
+    all: 'Inbox', today: 'Today', upcoming: 'Upcoming',
+    completed: 'Completed', archived: 'Archived',
+  };
+  const parts = [status[view.status]];
+  if (view.project) parts.push(getProject(store, view.project)?.name ?? view.project);
+  if (view.tag) parts.push(`#${view.tag}`);
+  return parts.join(' · ');
 }
 
 export function taskPath(id: string): BindingPath {
@@ -100,13 +155,13 @@ export function getProject(store: ReactiveStore, id: string): Project | undefine
   return store.get<Project>(`${PROJECTS}/${id}` as BindingPath);
 }
 
-/** Every tag in use, with how many tasks use it. */
-export function tags(store: ReactiveStore): { tag: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const task of tasksIn(store, { kind: 'all' })) {
-    for (const tag of task.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+/** Every tag any task carries, in order. */
+export function tags(store: ReactiveStore): string[] {
+  const seen = new Set<string>();
+  for (const task of allTasks(store)) {
+    for (const tag of task.tags) seen.add(tag);
   }
-  return [...counts].map(([tag, count]) => ({ tag, count })).sort((a, b) => a.tag.localeCompare(b.tag));
+  return [...seen].sort((a, b) => a.localeCompare(b));
 }
 
 export function settings(store: ReactiveStore): Settings {
@@ -125,7 +180,7 @@ export function toggleTask(store: ReactiveStore, id: string): void {
   writeTask(store, {
     ...task,
     state,
-    activity: [...task.activity, { at: stamp(store), what: state === 'completed' ? 'Completed' : 'Reopened' }],
+    activity: [...task.activity, { at: now(store), what: state === 'completed' ? 'Completed' : 'Reopened' }],
   });
 }
 
@@ -135,7 +190,7 @@ export function archiveTask(store: ReactiveStore, id: string): void {
   writeTask(store, {
     ...task,
     state: 'archived',
-    activity: [...task.activity, { at: stamp(store), what: 'Archived' }],
+    activity: [...task.activity, { at: now(store), what: 'Archived' }],
   });
 }
 
@@ -154,7 +209,7 @@ export function addTask(store: ReactiveStore, partial: Partial<Task> & { title: 
     priority: 'normal',
     description: '',
     subtasks: [],
-    activity: [{ at: stamp(store), what: 'Created' }],
+    activity: [{ at: now(store), what: 'Created' }],
     ...partial,
   };
   writeTask(store, task);
@@ -184,7 +239,7 @@ function nextId(store: ReactiveStore): number {
  * application is the same screenshot tomorrow. An application with a real
  * clock reads one here instead.
  */
-function stamp(store: ReactiveStore): string {
+export function now(store: ReactiveStore): string {
   return store.get<string>('$/todo/now' as BindingPath) ?? '00:00';
 }
 

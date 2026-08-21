@@ -451,3 +451,4 @@ describe('a button and the palette are the same act', () => {
     await t.unmount();
   });
 });
+

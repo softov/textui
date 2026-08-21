@@ -139,12 +139,12 @@ describe('one task, however many places show it', () => {
 
   it('adds a task through the command that asks for its title', async () => {
     const t = await open();
-    const before = tasksIn(t.app.store, { kind: 'all' }).length;
+    const before = tasksIn(t.app.store, { status: 'all', project: null, tag: null }).length;
 
     await t.app.execute('task.new', { title: 'Something new' });
     for (let i = 0; i < 4; i++) await t.settle();
 
-    expect(tasksIn(t.app.store, { kind: 'all' })).toHaveLength(before + 1);
+    expect(tasksIn(t.app.store, { status: 'all', project: null, tag: null })).toHaveLength(before + 1);
     expect(t.hasText('Something new')).toBe(true);
     await t.unmount();
   });
@@ -158,7 +158,7 @@ describe('one task, however many places show it', () => {
     for (let i = 0; i < 4; i++) await t.settle();
 
     expect(t.hasText('Fix authenticati')).toBe(false);
-    expect(tasksIn(t.app.store, { kind: 'state', state: 'archived' })).toHaveLength(2);
+    expect(tasksIn(t.app.store, { status: 'archived', project: null, tag: null })).toHaveLength(2);
     await t.unmount();
   });
 });
@@ -199,50 +199,57 @@ describe('driving it', () => {
     await t.unmount();
   });
 
-  it('filters the list as the sidebar selection moves', async () => {
+  it('narrows on enter, one axis at a time, and combines them', async () => {
     const t = await open();
-    // The navigation is not in a screen - it is mounted on the sidebar - so
-    // it is the global scope's focusable, and this says which one it is
-    // rather than counting tabs to it.
-    t.focus(t.app.focus.order('__global__')[0] as string);
+    const nav = t.app.focus.order('__global__')[0] as string;
+    t.focus(nav);
     await t.settle();
+    const view = () => t.app.store.get<{ status: string; project: string | null; tag: string | null }>('$/todo/ui/view');
 
     t.press('down');
-    for (let i = 0; i < 4; i++) await t.settle();
-    expect(t.app.screens.current()?.params?.view).toBe('today');
-
-    // Four more rows, over a heading. A sidebar that stopped at "PROJECTS"
-    // would be a sidebar whose bottom half no keyboard can reach.
-    t.press('down');
-    t.press('down');
-    t.press('down');
-    t.press('down');
-    for (let i = 0; i < 4; i++) await t.settle();
-
-    // Still the list, filtered - not a different page. A project is a view of
-    // the tasks, the way `Today` is.
-    expect(t.app.screens.current()?.id).toBe('tasks');
-    expect(t.app.screens.current()?.params?.view).toBe('project:advisor');
-    expect(t.hasText('Advisor')).toBe(true);
-    await t.unmount();
-  });
-
-  it('opens the project page on enter, where there is more than a filter', async () => {
-    const t = await open();
-    t.focus(t.app.focus.order('__global__')[0] as string);
-    await t.settle();
-    for (let i = 0; i < 5; i++) { t.press('down'); await t.settle(); }
-    expect(t.app.screens.current()?.params?.view).toBe('project:advisor');
-
     t.press('enter');
-    for (let i = 0; i < 4; i++) await t.settle();
+    for (let i = 0; i < 3; i++) await t.settle();
+    expect(view()?.status).toBe('today');
 
-    // Notes and activity are things a filter cannot show, which is the whole
-    // reason enter goes somewhere at all.
-    expect(t.app.screens.current()?.id).toBe('project');
-    expect(t.hasText('Notes')).toBe(true);
+    // Six more rows - over the PROJECTS heading and past "Any project" - to a
+    // project. Passing Upcoming and Completed on the way must not have changed
+    // the status: choosing every row you walk over is what made arriving at a
+    // project arrive with the list already wrong.
+    for (let i = 0; i < 6; i++) { t.press('down'); await t.settle(); }
+    expect(view()?.status).toBe('today');
+    t.press('enter');
+    for (let i = 0; i < 3; i++) await t.settle();
+
+    // Two axes at once, which is the whole point of them being axes.
+    expect(view()).toMatchObject({ status: 'today', project: 'scena' });
+    expect(t.hasText('Today · Scena')).toBe(true);
+
+    for (let i = 0; i < 5; i++) { t.press('down'); await t.settle(); }
+    t.press('enter');
+    for (let i = 0; i < 3; i++) await t.settle();
+    expect(view()).toMatchObject({ status: 'today', project: 'scena', tag: 'design' });
+    expect(t.hasText('Today · Scena · #design')).toBe(true);
     await t.unmount();
   });
+
+  it('clears one axis without touching the others', async () => {
+    const t = await open();
+    t.app.store.set('$/todo/ui/view', { status: 'today', project: 'scena', tag: 'design' });
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    t.focus(t.app.focus.order('__global__')[0] as string);
+    await t.settle();
+    // "Any project": four more statuses, then the heading is stepped over.
+    for (let i = 0; i < 5; i++) { t.press('down'); await t.settle(); }
+    t.press('enter');
+    for (let i = 0; i < 3; i++) await t.settle();
+
+    expect(t.app.store.get('$/todo/ui/view')).toMatchObject({
+      status: 'today', project: null, tag: 'design',
+    });
+    await t.unmount();
+  });
+
 
   it('completes with the space bar', async () => {
     const t = await open();
@@ -432,5 +439,107 @@ describe('the file it keeps', () => {
     expect(t.hasText('Release package')).toBe(true);
     await t.unmount();
     await rm(dir, { recursive: true, force: true });
+  });
+});
+
+/**
+ * Editing.
+ *
+ * The form writes on submit rather than as you type, because a form is the one
+ * place where "not yet" is a real state - so cancelling has to leave the task
+ * exactly as it was.
+ */
+describe('editing a task', () => {
+  const editing = async () => {
+    const t = await open();
+    t.app.store.set('$/todo/ui/selected', 't1');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    t.feed('e');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.app.screens.current()?.id).toBe('task.edit');
+    return t;
+  };
+
+  it('opens on the title, with the task in it', async () => {
+    const t = await editing();
+
+    expect(t.hasText('Fix authentication bug')).toBe(true);
+    expect(t.hasText('Priority')).toBe(true);
+    // Straight into the field: a form that opens with focus nowhere is a form
+    // you have to tab into before you can type.
+    expect(t.app.focus.focused()).not.toBeNull();
+    await t.unmount();
+  });
+
+  it('saves the title and comes back to the list', async () => {
+    const t = await editing();
+    t.type(' EDITED');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    // Cancel then Save: the tab order puts the safe one first.
+    for (let i = 0; i < 7; i++) { t.press('tab'); await t.settle(); }
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    expect(getTask(t.app.store, 't1')?.title).toBe('Fix authentication bug EDITED');
+    expect(t.app.screens.current()?.id).toBe('tasks');
+    await t.unmount();
+  });
+
+  it('changes nothing when it is cancelled', async () => {
+    const t = await editing();
+    t.type(' EDITED');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    for (let i = 0; i < 6; i++) { t.press('tab'); await t.settle(); }
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    expect(getTask(t.app.store, 't1')?.title).toBe('Fix authentication bug');
+    expect(t.app.screens.current()?.id).toBe('tasks');
+    await t.unmount();
+  });
+});
+
+/**
+ * The sidebar keeps the keyboard while it changes what is beside it.
+ *
+ * Replacing a screen deactivates its focus scope, and a scope closing used to
+ * blur whatever held focus - including something outside it. So the sidebar
+ * lost focus on the first arrow press and the incoming screen took it: you
+ * could move the selection exactly once.
+ */
+describe('the sidebar keeps the keyboard', () => {
+  it('walks the whole list without losing it', async () => {
+    const t = await open();
+    const nav = t.app.focus.order('__global__')[0] as string;
+    t.focus(nav);
+    await t.settle();
+
+    // A scope closing used to blur whatever held focus, including something
+    // outside it - so the sidebar lost the keyboard on the first press and
+    // could be moved exactly once.
+    for (let i = 0; i < 14; i++) {
+      t.press('down');
+      for (let j = 0; j < 2; j++) await t.settle();
+      expect(t.app.focus.focused()).toBe(nav);
+    }
+    await t.unmount();
+  });
+
+  it('goes to the pages in the last block', async () => {
+    const t = await open();
+    t.focus(t.app.focus.order('__global__')[0] as string);
+    await t.settle();
+
+    t.press('end');
+    for (let i = 0; i < 3; i++) await t.settle();
+    t.press('enter');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    // Three blocks filter; the fourth navigates.
+    expect(t.app.screens.current()?.id).toBe('settings');
+    await t.unmount();
   });
 });

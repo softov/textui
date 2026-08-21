@@ -726,6 +726,7 @@ export class App implements TextUIApp {
         id,
         disabled: instance.props.disabled === true,
         skipTab: instance.props.skipTab === true,
+        global: instance.props.global === true,
         order: typeof instance.props.order === 'number' ? instance.props.order : undefined,
         scopeId: typeof instance.props.focusScope === 'string'
           ? instance.props.focusScope

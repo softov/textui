@@ -600,6 +600,7 @@ export function useInput(
       const registration = runtime.focus.register({
         id: `${instance.id}:global`,
         skipTab: true,
+        global: true,
         scopeId: focusScopeOf(instance) ?? '__global__',
         onKey,
       });

@@ -239,8 +239,11 @@ describe('editing a file', () => {
     expect(t.app.store.get('$/ui/editor/mode')).toBe('edit');
     expect(t.hasText('alpha')).toBe(true);
 
-    t.focus('pane.main'); t.flush();
-    t.tab(); t.flush();
+    // No tab. `file.edit` focuses the editor, so typing goes into it - and
+    // tabbing from there left the pane for the menu bar, where the keystrokes
+    // only reached the editor because an unfocused focusable used to be
+    // offered every key anyway.
+    expect(t.app.focus.focused()).toBe(t.app.focus.order('pane.main')[0]);
     t.press('end');
     t.type('!');
     await quiet();

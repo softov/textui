@@ -29,11 +29,13 @@ export interface TabsProps extends BoxProps {
   /** Underline the active tab instead of inverting it. */
   variant?: 'underline' | 'solid' | 'plain';
   separator?: string;
+  /** Take focus on mount, so the keyboard has somewhere to be. */
+  autoFocus?: boolean;
 }
 
 export const Tabs = defineComponent<TabsProps>('Tabs', (props) => {
-  const { items, activeId, onChange, variant = 'underline', separator, ...rest } = props;
-  const focus = useFocus({});
+  const { items, activeId, onChange, variant = 'underline', separator, autoFocus, ...rest } = props;
+  const focus = useFocus({ autoFocus });
   const index = Math.max(0, items.findIndex((t) => t.id === activeId));
 
   useInput(

@@ -583,3 +583,38 @@ describe('the registry itself', () => {
     }
   });
 });
+
+/**
+ * The gallery, driven the way somebody drives it.
+ *
+ * Left and right walk the tab strip; down belongs to whatever is focused. A
+ * list under an unfocused tab strip that moved on every arrow was the symptom
+ * of dispatch offering keys to focusables that had none.
+ */
+describe('the gallery', () => {
+  it('starts with the tab strip focused, so the keyboard has somewhere to be', async () => {
+    const t = await mount('gallery');
+    await t.settle();
+    expect(t.app.focus.focused()).not.toBeNull();
+    await t.unmount();
+  });
+
+  it('leaves the Data list alone until it is focused', async () => {
+    const t = await mount('gallery');
+    await t.settle();
+    t.press('right'); await t.settle();
+    t.press('right'); await t.settle();
+    expect(t.hasText('billing-worker')).toBe(true);
+
+    const before = t.lines().find((l) => l.includes('mailer'));
+    t.press('down'); await t.settle();
+    t.press('down'); await t.settle();
+    expect(t.lines().find((l) => l.includes('mailer'))).toBe(before);
+
+    // Tab reaches it, and then the arrows are its own.
+    t.press('tab'); await t.settle();
+    t.press('down'); await t.settle();
+    expect(t.lines().find((l) => l.includes('mailer'))).not.toBe(before);
+    await t.unmount();
+  });
+});

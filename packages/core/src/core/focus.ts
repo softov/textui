@@ -313,11 +313,21 @@ export class Focus implements FocusManager {
       if (node && inTrap(node) && (node.onKey?.(event) === true || event.handled)) return true;
     }
 
+    // Then the handlers that are not about one control.
+    //
+    // Only those. This loop used to offer the event to every registered
+    // handler, focused or not, which quietly undid the line above it: a list
+    // moved on an arrow it never received, because the arrow reached it here.
+    // With nothing focused it went to whichever focusable registered first -
+    // so a page with two lists moved the earlier one, and a tab strip and a
+    // list beneath it split the arrow keys between them by accident. That
+    // reads as working until the second list exists.
     for (let i = this.stack.length - 1; i >= 0; i--) {
       const scopeId = this.stack[i] as string;
       if (trap !== null && scopeId !== trap) continue;
       for (const node of this.nodes.values()) {
         if (node.id === this.current) continue;
+        if (node.global !== true) continue;
         if ((node.scopeId ?? GLOBAL_SCOPE) !== scopeId) continue;
         if (!node.onKey) continue;
         if (node.onKey(event) === true || event.handled) return true;

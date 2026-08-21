@@ -32,7 +32,11 @@ export function Gallery() {
         <Label content="component gallery" />
       </Row>
 
-      <Tabs items={SECTIONS} activeId={section} onChange={setSection} />
+      {/*
+        * Something has to hold focus, or the keyboard has nowhere to be and
+        * the page is dead until you press tab and guess.
+        */}
+      <Tabs items={SECTIONS} activeId={section} onChange={setSection} autoFocus />
       <Divider />
 
       {section === 'display' ? <DisplaySection /> : null}

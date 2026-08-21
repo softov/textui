@@ -193,9 +193,13 @@ export const MenuBar: (props: Record<string, never>) => RenderOutput =
           ...(app.theme.border === 'none' ? { padding: { left: 1, right: 1 } } : {}),
           // The panel itself takes a key only after the menu inside has
           // declined it, which is how left and right walk the bar while a
-          // dropdown is open without the menu losing its own arrows.
+          // dropdown is open without the menu losing its own arrows. `global`
+          // is what says so: the panel is never the focused node - the menu
+          // inside it is - and a focusable that is not focused reads no keys
+          // unless it asks to.
           focusable: true,
           skipTab: true,
+          global: true,
           onKey: { handler: (event: KeyEvent) => {
             if (event.name === 'left') { walkOpen(spec.id, -1); return true; }
             if (event.name === 'right') { walkOpen(spec.id, 1); return true; }

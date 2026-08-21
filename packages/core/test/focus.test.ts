@@ -90,3 +90,80 @@ describe('closing a scope', () => {
     expect(GLOBAL_SCOPE).toBe(focus.scopeOf('opener'));
   });
 });
+
+/**
+ * Who a key is for.
+ *
+ * The rule is the whole meaning of focus: a focusable reads keys while it is
+ * focused, and not otherwise. Dispatch used to offer the event to every
+ * registered handler after the focused one declined, which quietly repealed
+ * that - and it looked like it worked, because with one list on screen the
+ * arrow reached the only thing that wanted it.
+ */
+describe('dispatch and focus', () => {
+  const arrow = { type: 'key', name: 'down' } as never;
+
+  it('does not deliver to a focusable that is not focused', () => {
+    const focus = createFocus();
+    const seen: string[] = [];
+    focus.register({ id: 'a', onKey: () => { seen.push('a'); return true; } });
+    focus.register({ id: 'b', onKey: () => { seen.push('b'); return true; } });
+
+    focus.dispatch(arrow);
+    expect(seen).toEqual([]);
+
+    focus.focus('b');
+    focus.dispatch(arrow);
+    expect(seen).toEqual(['b']);
+  });
+
+  it('does not hand the key to whichever registered first', () => {
+    // Two lists on one page. With nothing focused this used to move the one
+    // that mounted earliest, which is not a rule anybody could have predicted
+    // from looking at the screen.
+    const focus = createFocus();
+    const moved: string[] = [];
+    focus.register({ id: 'list.a', onKey: () => { moved.push('a'); return true; } });
+    focus.register({ id: 'list.b', onKey: () => { moved.push('b'); return true; } });
+
+    focus.dispatch(arrow);
+    expect(moved).toEqual([]);
+
+    focus.focus('list.b');
+    focus.dispatch(arrow);
+    expect(moved).toEqual(['b']);
+  });
+
+  it('still delivers to a handler that asked to be global', () => {
+    const focus = createFocus();
+    const seen: string[] = [];
+    focus.register({ id: 'shortcuts', global: true, onKey: () => { seen.push('global'); return true; } });
+
+    focus.dispatch(arrow);
+    expect(seen).toEqual(['global']);
+  });
+
+  it('offers the focused node the key before any global handler', () => {
+    const focus = createFocus();
+    const seen: string[] = [];
+    focus.register({ id: 'panel', global: true, onKey: () => { seen.push('panel'); return true; } });
+    focus.register({ id: 'menu', onKey: () => { seen.push('menu'); return true; } });
+    focus.focus('menu');
+
+    // The dropdown panel takes left and right only because the menu inside it
+    // declines them - which is the arrangement `global` exists to express.
+    focus.dispatch(arrow);
+    expect(seen).toEqual(['menu']);
+  });
+
+  it('falls through to the global handler when the focused node declines', () => {
+    const focus = createFocus();
+    const seen: string[] = [];
+    focus.register({ id: 'panel', global: true, onKey: () => { seen.push('panel'); return true; } });
+    focus.register({ id: 'menu', onKey: () => { seen.push('menu'); return false; } });
+    focus.focus('menu');
+
+    focus.dispatch(arrow);
+    expect(seen).toEqual(['menu', 'panel']);
+  });
+});

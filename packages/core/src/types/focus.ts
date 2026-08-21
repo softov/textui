@@ -28,6 +28,14 @@ export interface FocusableOptions {
   disabled?: boolean;
   /** Skipped by tab, still reachable by directional navigation and click. */
   skipTab?: boolean;
+  /**
+   * Reads keys whether or not it is focused.
+   *
+   * For handlers that are not about one control - a screen's shortcuts, a
+   * layer that must see escape. A focusable without this only reads keys while
+   * it holds focus, which is what focus means.
+   */
+  global?: boolean;
   /** Current bounds, for directional navigation and mouse hit-testing. */
   rect?: Rect;
   scopeId?: string;

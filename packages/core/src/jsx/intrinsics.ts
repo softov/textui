@@ -29,6 +29,15 @@ export interface BaseProps extends Style {
   /** The focus scope this node belongs to. */
   focusScope?: string;
   autoFocus?: boolean;
+  /**
+   * `onKey` runs whether or not this node is focused.
+   *
+   * For a node that wraps something else and wants the keys that thing
+   * declines - a dropdown panel taking left and right while the menu inside it
+   * keeps up and down. Without this a handler only runs while focused, which
+   * is what focus means.
+   */
+  global?: boolean;
 
   onKey?(event: KeyEvent): boolean | void;
   onFocus?(): void;

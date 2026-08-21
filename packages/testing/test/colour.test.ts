@@ -391,3 +391,52 @@ describe('an overlay covers what is behind it', () => {
     await t.unmount();
   });
 });
+
+/**
+ * One theme, one accent.
+ *
+ * A theme's accent is its identity, and a handful of tokens are nothing but
+ * that accent drawn somewhere: the focus ring, the caret. They are separate
+ * tokens so a theme *can* part them, but nobody ever means to - and a plain
+ * merge along `extends` parts them silently. `console` set a teal accent over
+ * `dark` and kept dark's blue focus ring; `paper` went warm all over and kept
+ * a blue caret. Green in one place and blue in another, in one theme.
+ */
+describe('the accent family', () => {
+  /** Rough hue in degrees, or null for a grey. */
+  function hue(color: string): number | null {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color);
+    if (!m) return null;
+    const [r, g, b] = [1, 2, 3].map((i) => parseInt(m[i] as string, 16) / 255) as [number, number, number];
+    const max = Math.max(r, g, b);
+    const delta = max - Math.min(r, g, b);
+    if (delta < 0.04) return null;
+    const raw = max === r ? ((g - b) / delta) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+    return (raw * 60 + 360) % 360;
+  }
+
+  /** Shortest way round the wheel, so 350 and 10 are twenty apart. */
+  function apart(a: number, b: number): number {
+    const d = Math.abs(a - b) % 360;
+    return d > 180 ? 360 - d : d;
+  }
+
+  for (const theme of ['dark', 'light', 'console', 'paper', 'paper-dark', 'workbench']) {
+    it(`draws ${theme}'s focus ring and caret in its own accent`, async () => {
+      const t = await renderApp({ width: 20, height: 3, theme, onBoot: () => {} });
+      const colors = t.app.theme.colors;
+      const accent = hue(String(colors.accent));
+      expect(accent, `${theme} has no accent hue to compare against`).not.toBeNull();
+
+      for (const token of ['focus', 'cursor', 'primary', 'selected', 'active'] as const) {
+        const found = hue(String(colors[token]));
+        if (found === null) continue;
+        expect(
+          apart(accent as number, found),
+          `${theme}: ${token} is ${String(colors[token])}, a different colour from accent ${String(colors.accent)}`,
+        ).toBeLessThan(40);
+      }
+      await t.unmount();
+    });
+  }
+});

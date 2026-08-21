@@ -523,12 +523,26 @@ export const Select = defineComponent<SelectProps>('Select', (props) => {
   const start = Math.max(0, Math.min(highlight - Math.floor(visibleRows / 2), options.length - visibleRows));
   const window = options.slice(start, start + visibleRows);
 
-  return h('box', { id: focus.id, role: 'combobox', label, direction: 'column', ...rest },
+  /**
+   * One box, open or shut.
+   *
+   * The list used to be a second bordered box under the first, so opening the
+   * control drew two rules back to back and the options read as a separate
+   * thing that happened to be nearby. They are the control - the same border
+   * holds both, with a rule between them where the two borders used to be.
+   */
+  return h('box', {
+    id: focus.id,
+    role: 'combobox',
+    label,
+    direction: 'column',
+    border: { style: theme.border, color: focus.focused ? 'focus' : 'border' },
+    padding: [0, 1],
+    ...rest,
+  },
     h('box', {
       direction: 'row',
       gap: 1,
-      border: { style: theme.border, color: focus.focused ? 'focus' : 'border' },
-      padding: [0, 1],
       onClick: () => { if (!disabled) setOpen(!open); },
     },
       label ? h('text', { content: label, fg: 'muted' }) : null,
@@ -540,16 +554,27 @@ export const Select = defineComponent<SelectProps>('Select', (props) => {
       }),
       h('text', { content: open ? theme.glyphs.chevronUp : theme.glyphs.chevronDown, fg: 'muted' })),
 
+    // A borderless theme has no rule to draw, and a blank row there would be
+    // the gap this was meant to close.
+    open && theme.border !== 'none'
+      ? h('box', { height: 1, fill: theme.borderChars().top, fg: 'borderSubtle' })
+      : null,
+
     open
-      ? h('box', { direction: 'column', border: theme.border, padding: [0, 1] },
+      ? h('box', { direction: 'column' },
           ...window.map((option, i) => {
             const active = start + i === highlight;
             return h('box', {
               key: option.value,
               direction: 'row',
               gap: 1,
-              bg: active ? 'selected' : undefined,
-              fg: option.disabled ? 'disabled' : active ? 'inverted' : undefined,
+              // Ink, not a filled row.
+              //
+              // A background swatch is the heaviest mark available and it has
+              // to invert the text to stay readable, so the highlighted option
+              // is the one option whose colour tells you nothing about itself.
+              // Accent and an underline say "here" without repainting the row.
+              fg: option.disabled ? 'disabled' : active ? 'accent' : undefined,
               onClick: () => {
                 if (option.disabled) return;
                 onChange?.(option.value);
@@ -558,7 +583,8 @@ export const Select = defineComponent<SelectProps>('Select', (props) => {
             },
               h('text', { content: active ? theme.glyphs.chevronRight : ' ' }),
               option.icon ? h('text', { content: option.icon }) : null,
-              h('text', { content: option.label, flex: 1, truncate: 'end' }),
+              h('text', { content: option.label, underline: active, bold: active }),
+              h('box', { flex: 1 }),
               option.value === value ? h('text', { content: theme.glyphs.check }) : null,
             );
           }))

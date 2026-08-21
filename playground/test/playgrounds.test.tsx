@@ -618,3 +618,60 @@ describe('the gallery', () => {
     await t.unmount();
   });
 });
+
+/**
+ * The card and the fact list hold more than they show.
+ *
+ * That is the point of them: a paragraph that fits proves nothing about the
+ * wrapper, and a list that fits proves nothing about the viewport. Both are
+ * filled past the fold so that resizing this page is a test of rewrapping and
+ * tabbing into it is a test of scrolling.
+ */
+describe('the gallery display section', () => {
+  it('wraps the card body and keeps the last paragraph below the fold', async () => {
+    const t = await mount('gallery', { width: 92, height: 30 });
+    await t.settle();
+
+    expect(t.hasText('A card is a titled box')).toBe(true);
+    // The closing paragraph is out of view until something scrolls.
+    expect(t.hasText('below the fold')).toBe(false);
+    await t.unmount();
+  });
+
+  it('rewraps when the width changes', async () => {
+    const t = await mount('gallery', { width: 92, height: 30 });
+    await t.settle();
+    const wide = t.lines().find((l) => l.includes('A card is a titled box'));
+
+    await t.resize(70, 30);
+    await t.settle();
+    const narrow = t.lines().find((l) => l.includes('A card is a titled box'));
+
+    expect(narrow).not.toBe(wide);
+    await t.unmount();
+  });
+
+  it('lets the keyboard reach what did not fit', async () => {
+    const t = await mount('gallery', { width: 92, height: 30 });
+    await t.settle();
+    expect(t.hasText('below the fold')).toBe(false);
+
+    // Tab leaves the strip for the card's viewport, and then down is its own.
+    t.press('tab');
+    await t.settle();
+    for (let i = 0; i < 8; i++) { t.press('down'); await t.settle(); }
+
+    expect(t.hasText('below the fold')).toBe(true);
+    await t.unmount();
+  });
+
+  it('cuts the fact list off rather than growing past the frame', async () => {
+    const t = await mount('gallery', { width: 92, height: 30 });
+    await t.settle();
+
+    expect(t.hasText('billing:2.14.0')).toBe(true);
+    // Fourteen facts do not fit in the rows this pane was given.
+    expect(t.hasText('stable')).toBe(false);
+    await t.unmount();
+  });
+});

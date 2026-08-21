@@ -1,7 +1,7 @@
 import {
   Alert, Badge, Breadcrumb, Button, Card, Checkbox, Column, Divider, Grid,
   Heading, KeyValue, Label, List, Menu, Panel, Progress, RadioGroup, Row,
-  Select, Slider, Spinner, StatusDot, Switch, Tabs, TextInput, Timeline,
+  ScrollView, Select, Slider, Spinner, StatusDot, Switch, Tabs, TextInput, Timeline,
   Wizard, useState,
 } from '@textui/core';
 import { EVENTS } from '../data.js';
@@ -78,24 +78,71 @@ function DisplaySection() {
         </Column>
       </Panel>
 
-      <Row gap={1}>
+      {/*
+        * Both of these hold more than they can show, on purpose.
+        *
+        * A card with one line in it proves a border draws. It says nothing
+        * about what this library actually has to get right - wrapping at the
+        * width it was given, rewrapping when that width changes, and letting
+        * the keyboard reach the part that did not fit. Fill them, give them
+        * the rest of the column, and let them scroll: now resizing the
+        * terminal is a test, and tab is a test.
+        */}
+      {/* `stretch`, because a row centres its children by default - and a pane
+        * that is only as tall as its content is a pane that never scrolls. */}
+      <Row gap={1} flex={1} vAlign="stretch">
         <Card title="Card" subtitle="with a subtitle" flex={1}>
-          <text content="Body text sits inside." wrap="word" />
+          <ScrollView flex={1}>
+            <Column gap={1}>
+              {CARD_TEXT.map((paragraph, i) => (
+                <text key={i} content={paragraph} wrap="word" />
+              ))}
+            </Column>
+          </ScrollView>
         </Card>
 
         <Panel title="Key / value" flex={1}>
-          <KeyValue
-            items={[
-              { label: 'image', value: 'billing:2.14.0' },
-              { label: 'node', value: 'ip-10-0-2-19' },
-              { label: 'status', value: 'degraded', tone: 'warning' },
-            ]}
-          />
+          <ScrollView flex={1}>
+            <KeyValue items={FACTS} />
+          </ScrollView>
         </Panel>
       </Row>
     </Column>
   );
 }
+
+/**
+ * Enough prose to wrap, and enough of it to overflow.
+ *
+ * Text that fits is text the wrapper never has to think about. These are long
+ * enough that the last paragraph is below the fold at any ordinary height, so
+ * a viewport that miscounts its rows shows it - which is the bug this page
+ * exists to catch.
+ */
+const CARD_TEXT = [
+  'A card is a titled box with something inside it. The something here is a paragraph long enough to wrap, because a component that only ever holds one short line has not been tested at all - it has been looked at.',
+  'Wrapping happens at the width the card was given, and that width changes when the terminal does. Resize this window and the text reflows; the row count changes with it, which is what the viewport underneath has to keep up with.',
+  'Scrolling is the other half. A panel with more in it than fits has a hidden bottom, and hiding it silently is worse than not having it - so this one takes focus, and tab reaches it.',
+  'The last paragraph is here to be below the fold. If you can read it without scrolling, the terminal is taller than the layout expected; if you cannot reach it by scrolling, something is counting rows wrong.',
+];
+
+/** Long enough to overflow, and mixed enough to show the tones. */
+const FACTS = [
+  { label: 'image', value: 'billing:2.14.0' },
+  { label: 'digest', value: 'sha256:9f2c1a7e4b' },
+  { label: 'node', value: 'ip-10-0-2-19' },
+  { label: 'zone', value: 'eu-west-1c' },
+  { label: 'status', value: 'degraded', tone: 'warning' as const },
+  { label: 'replicas', value: '2 of 3' },
+  { label: 'restarts', value: '14', tone: 'danger' as const },
+  { label: 'uptime', value: '3d 4h 12m' },
+  { label: 'cpu', value: '820m / 1000m' },
+  { label: 'memory', value: '1.4 GiB / 2 GiB' },
+  { label: 'probe', value: 'failing', tone: 'danger' as const },
+  { label: 'last deploy', value: '14:02 by fernando' },
+  { label: 'commit', value: 'b6f4b62' },
+  { label: 'channel', value: 'stable', tone: 'success' as const },
+];
 
 function ControlsSection() {
   const [text, setText] = useState('');

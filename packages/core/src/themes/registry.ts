@@ -54,6 +54,9 @@ const SYNTAX_DEFAULTS: Record<SyntaxScope, ColorToken> = {
   invalid: 'danger',
 };
 
+/** Tokens that are the accent rather than merely near it. */
+const FOLLOWS_ACCENT = ['focus', 'cursor'] as const;
+
 export class Themes implements ThemeRegistry {
   private defs = new Map<string, ThemeDefinition>();
   private cache = new Map<string, ResolvedTheme>();
@@ -117,6 +120,23 @@ export class Themes implements ThemeRegistry {
 
     for (const def of chain) {
       Object.assign(colors, def.colors);
+      // A theme that restates the accent restates what the accent is *for*.
+      //
+      // `focus` and `cursor` have no identity of their own - a focus ring and
+      // a caret are the accent, drawn somewhere. Left to a plain merge they
+      // keep whatever the extended theme set, so `console` overrode accent to
+      // teal and kept a blue focus ring, and `paper` went warm all over with a
+      // blue caret still in it. Accent teal here and blue there, in one theme.
+      //
+      // Only these two. `selected` and `active` are backgrounds that have to
+      // be dim or bright enough for the text on them, which is a decision
+      // about contrast rather than hue - a theme picks those itself.
+      const stated = def.colors ?? {};
+      if (stated.accent !== undefined) {
+        for (const token of FOLLOWS_ACCENT) {
+          if (stated[token] === undefined) colors[token] = stated.accent;
+        }
+      }
       if (def.syntax) syntaxOverrides = { ...syntaxOverrides, ...def.syntax };
       if (def.spacing) spacing = { ...spacing, ...def.spacing };
       if (def.glyphs) glyphOverrides = { ...glyphOverrides, ...def.glyphs };

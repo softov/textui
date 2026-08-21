@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, renderApp } from '../src/index.js';
-import { h, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
+import { h, Select, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
 
 const ROWS = [
   { id: 'api', name: 'api-gateway', status: 'up', cpu: '12.4', mem: '310' },
@@ -519,6 +519,63 @@ describe('a list with unselectable rows', () => {
     await t.settle();
 
     expect(chosen).toEqual(['advisor', 'today', 'all']);
+    await t.unmount();
+  });
+});
+
+/**
+ * The select, open.
+ *
+ * Two things were wrong and both were about weight: the list was a second
+ * bordered box below the first, so opening it drew two rules back to back and
+ * the options read as a separate thing sitting nearby; and the highlighted
+ * option was a filled row, which is the heaviest mark a list can make and the
+ * only one that forces the text to invert to survive it.
+ */
+describe('Select', () => {
+  const OPTIONS = [
+    { value: 'eu-west-1', label: 'eu-west-1' },
+    { value: 'us-east-1', label: 'us-east-1' },
+    { value: 'sa-east-1', label: 'sa-east-1' },
+  ];
+
+  async function open() {
+    return render(
+      h(Select, { label: 'Region', value: 'us-east-1', open: true, options: OPTIONS }),
+      { width: 40, height: 14 },
+    );
+  }
+
+  it('holds the options inside its own border, with no second one', async () => {
+    const t = await open();
+    await t.settle();
+    const drawn = t.lines().filter((l) => l.trim() !== '');
+
+    // One top edge and one bottom edge for the whole control.
+    expect(drawn.filter((l) => l.startsWith('┌')).length).toBe(1);
+    expect(drawn.filter((l) => l.startsWith('└')).length).toBe(1);
+    // And nothing blank between the value and the first option.
+    const value = drawn.findIndex((l) => l.includes('us-east-1'));
+    const first = drawn.findIndex((l) => l.includes('eu-west-1'));
+    expect(first - value).toBe(2);
+    await t.unmount();
+  });
+
+  it('marks the highlighted option with ink rather than a filled row', async () => {
+    const t = await open();
+    await t.settle();
+
+    const lines = t.lines();
+    const y = lines.findIndex((l) => l.includes('▸ us-east-1'));
+    const plainY = lines.findIndex((l) => l.includes('  eu-west-1'));
+    const active = t.app.buffer().get((lines[y] as string).indexOf('us-east-1'), y);
+    const plain = t.app.buffer().get((lines[plainY] as string).indexOf('eu-west-1'), plainY);
+
+    // Same background as the row above it: nothing was painted behind it.
+    expect(active?.bg).toEqual(plain?.bg);
+    // Accent, and underlined.
+    expect(active?.fg).not.toEqual(plain?.fg);
+    expect((active?.attrs ?? 0) & 8).toBe(8);
     await t.unmount();
   });
 });

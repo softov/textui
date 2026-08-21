@@ -112,6 +112,21 @@ export const CONSOLE: ThemeDefinition = {
     accent: '#88c0d0',
     text: '#d8dee9',
     muted: '#616e88',
+    // The accent is teal, so the things made of it are too. Inheriting these
+    // from `dark` is what left a teal underline over a blue focus ring and a
+    // blue selected row - one theme wearing two accents.
+    //
+    // The two selection backgrounds are picked rather than derived: `selected`
+    // carries `inverted` text so it has to be light, and `active` carries
+    // `text` so it has to be dark. Same hue, opposite ends.
+    primary: '#88c0d0',
+    info: '#88c0d0',
+    selected: '#6ba3b2',
+    active: '#1e3d47',
+    onAccent: '#0a0e14',
+    onPrimary: '#0a0e14',
+    onInfo: '#0a0e14',
+    hover: '#141a21',
   },
   spacing: { none: 0, xs: 0, sm: 0, md: 1, lg: 1, xl: 2 },
   components: {

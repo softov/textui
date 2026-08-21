@@ -196,6 +196,19 @@ export function filesystemAdapter(options: FilesystemOptions = {}): ResourceAdap
       { id: 'file.data', title: 'Data', extends: 'file', extensions: ['*.yaml', '*.yml', '*.toml', '*.ini'] },
     ],
 
+    // The editor is a resource editor like any other: the registry decides
+    // that a text file opens in it, and `mode: 'edit'` is what asks for one.
+    editors: writable
+      ? [{
+          id: 'textide.edit',
+          title: 'Editor',
+          kinds: ['file.text', 'file.code', 'file.markdown', 'file.data'],
+          component: 'CodeEditor',
+          saves: true as const,
+          priority: 100,
+        }]
+      : [],
+
     commands: writable
       ? [
           {

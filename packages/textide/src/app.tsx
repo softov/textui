@@ -55,6 +55,7 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
 export const Editor: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('Editor', () => {
     const uri = useStoreValue<string | null>('$/ui/editor/uri', null);
+    const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
 
     /**
      * The main pane is a tab stop, and says so.
@@ -74,7 +75,7 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
           fg={focus.focused ? 'focus' : 'borderSubtle'}
         />
         <Column flex={1}>
-        <ResourceView uri={uri ?? null} flex={1} />
+        <ResourceView uri={uri ?? null} mode={mode} flex={1} />
         <KeyHints
           hints={[
             { keys: 'up/down', label: 'move' },
@@ -82,6 +83,7 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
             { keys: 'enter', label: 'open' },
             { keys: 'ctrl+b', label: 'sidebar' },
             { keys: 'ctrl+p', label: 'commands' },
+            { keys: 'ctrl+e', label: mode === 'edit' ? 'view' : 'edit' },
             { keys: 'q', label: 'quit' },
           ]}
         />

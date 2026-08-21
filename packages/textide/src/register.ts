@@ -88,6 +88,7 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+w', 'file.close'],
     ['ctrl+b', 'view.toggleSidebar'],
     ['ctrl+n', 'fs.newFile'],
+    ['ctrl+e', 'file.edit'],
     // F10 enters the bar; alt+letter opens one menu outright. Both exist
     // because the first is discoverable and the second is fast.
     ['f10', 'menu.focus'],

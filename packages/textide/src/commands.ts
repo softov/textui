@@ -242,6 +242,19 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       },
     },
     {
+      id: 'file.edit',
+      icon: '✎',
+      title: 'Toggle Edit Mode',
+      category: 'File',
+      slots: ['palette'],
+      // View and edit are the same resource through two registrations, so this
+      // asks the registry for the other one rather than swapping a component.
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const mode = ctx.store.get<string>('$/ui/editor/mode' as BindingPath) ?? 'view';
+        ctx.store.set('$/ui/editor/mode' as BindingPath, mode === 'edit' ? 'view' : 'edit');
+      },
+    },
+    {
       id: 'view.layout',
       icon: '▤',
       title: 'Layout',

@@ -1,6 +1,7 @@
 import type { Disposable, TextUIApp } from '@textui/core';
 import { createBag } from '@textui/core';
 import { RESOURCE_COMPONENTS } from './components/resource.js';
+import { EDITOR_COMPONENTS } from './components/editor.js';
 
 /**
  * Documents.
@@ -27,6 +28,7 @@ export type { DocumentHandle } from './use-document.js';
 
 export * from './components/resource.js';
 export * from './components/json.js';
+export * from './components/editor.js';
 
 export {
   jsonAdapter, jsonHighlighter, scanJson, formatJson, minifyJson, sortJsonKeys,
@@ -43,5 +45,6 @@ export type { JsonAdapterOptions, JsonFormatOptions, JsonProblem } from './adapt
 export function registerDocuments(app: TextUIApp): Disposable {
   const bag = createBag();
   bag.add(app.components.registerMany(RESOURCE_COMPONENTS));
+  bag.add(app.components.registerMany(EDITOR_COMPONENTS));
   return bag;
 }

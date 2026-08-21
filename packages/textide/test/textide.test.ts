@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
@@ -208,5 +208,48 @@ describe('the filesystem adapter', () => {
     expect(t.app.commands.list().map((c) => c.id)).not.toContain('fs.delete');
     expect(t.app.resources.actionsFor('directory')).toHaveLength(0);
     await t.unmount();
+  });
+});
+
+describe('editing a file', () => {
+  /**
+   * View and edit are the same resource through two registrations, so this
+   * asserts the whole path: the registry picks the editor, keys reach the
+   * buffer, and `save` writes what the buffer holds back through the provider.
+   */
+  it('opens in the editor, types, and saves to disk', async () => {
+    const scratch = await mkdtemp(join(tmpdir(), 'textide-edit-'));
+    await writeFile(join(scratch, 'a.txt'), 'alpha\nbeta\n');
+    const workspace = await loadWorkspace(scratch);
+    const t = await renderApp({
+      width: 90, height: 16, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    const quiet = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) { await t.settle(); t.advance(50); t.flush(); }
+    };
+    await quiet();
+
+    t.app.store.set('$/ui/editor/uri', `file://${join(scratch, 'a.txt')}`);
+    await quiet();
+
+    t.app.execute('file.edit');
+    await quiet();
+    expect(t.app.store.get('$/ui/editor/mode')).toBe('edit');
+    expect(t.hasText('alpha')).toBe(true);
+
+    t.focus('pane.main'); t.flush();
+    t.tab(); t.flush();
+    t.press('end');
+    t.type('!');
+    await quiet();
+    expect(t.hasText('alpha!')).toBe(true);
+
+    t.app.execute('file.save');
+    await quiet();
+    expect(await readFile(join(scratch, 'a.txt'), 'utf8')).toBe('alpha!\nbeta\n');
+
+    await t.unmount();
+    await rm(scratch, { recursive: true, force: true });
   });
 });

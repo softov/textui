@@ -126,7 +126,7 @@ console.log(renderToString(<Services />, {
 
 ## Where to go next
 
-- [`store.md`](store.md) - paths, scopes, providers
-- [`components.md`](components.md) - the catalog
-- [`theming.md`](theming.md) - tokens and capability downgrade
-- [`testing.md`](testing.md) - the harness
+- [Store](store/index.md) - paths, scopes, providers
+- [Components](components/index.md) - the catalog
+- [Themes](themes/index.md) - tokens and capability downgrade
+- [Testing](testing/index.md) - the harness

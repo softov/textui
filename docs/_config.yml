@@ -83,6 +83,18 @@ defaults:
       path: ""
     values:
       layout: default
+      # Jekyll runs Liquid over the page body before markdown, so a JSX prop
+      # like `border={{ style: 'single' }}` or the store's `$/rows/{{ $/id }}`
+      # is read as an unterminated Liquid variable and fails the build. No page
+      # here uses Liquid in its body; the layouts and includes still do.
+      render_with_liquid: false
+
+  # The theme's stylesheets are *built* from Liquid (`{% include ... %}`), so
+  # the rule above must not reach them. A more specific scope wins.
+  - scope:
+      path: "assets"
+    values:
+      render_with_liquid: true
 
 exclude:
   - Gemfile

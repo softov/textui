@@ -29,6 +29,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Cheap, and it catches the one failure Jekyll reports as success: a
+      # `parent:` that matches no title, which drops the page from the sidebar.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the docs tree
+        run: node scripts/check-docs.mjs
+
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'

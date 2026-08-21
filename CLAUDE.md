@@ -2,7 +2,18 @@
 
 TextUI is a terminal UI runtime. A screen is data - a graph of component nodes resolved through late-binding registries - and JSX is a way of writing that data, not a different thing from it.
 
-Read [`README.md`](README.md), then [`docs/`](docs/README.md): the architecture, the vocabulary, and the rules a consumer has to follow.
+Read [`README.md`](README.md), then [`docs/`](docs/index.md): the architecture, the vocabulary, and the rules a consumer has to follow.
+
+The docs are a Jekyll site published to GitHub Pages. There is no Ruby on this
+machine and there is not going to be - `scripts/docs-serve.sh` runs it in a
+container, `scripts/docs-preview.py` serves an already-built `_site` with no
+container at all, and `node scripts/check-docs.mjs` checks the nav tree without
+either. A plain `python -m http.server` over `docs/_site` will 404 on every
+file, because the site is built with `baseurl: /textui` and nothing is mounted
+there.
+Two rules the build enforces: a page's `parent:` must match another page's
+`title:` exactly, and `render_with_liquid: false` is what stops Jekyll reading
+`{{` in a JSX prop as a Liquid variable.
 
 ## Commands
 

@@ -36,23 +36,30 @@ Everything else follows from that: one reactive store addressed by paths, typed 
 
 ## Documentation
 
+Published at **<https://softov.github.io/textui/>**, and readable in
+[`docs/`](docs/index.md) as plain markdown.
+
+Start here:
+
 | Document | What it answers |
 | --- | --- |
-| [`docs/README.md`](docs/README.md) | The vocabulary everything else assumes |
-| [`docs/architecture.md`](docs/architecture.md) | The model: store, graph, registries, surfaces, shells |
-| [`docs/getting-started.md`](docs/getting-started.md) | From nothing to a running application |
-| [`docs/components.md`](docs/components.md) | The catalog, and how to write one |
-| [`docs/theming.md`](docs/theming.md) | Tokens, glyphs, borders, density, capability downgrade |
-| [`docs/store.md`](docs/store.md) | Paths, scopes, computed, collections, providers, events |
-| [`docs/commands-focus.md`](docs/commands-focus.md) | Commands, keybindings, focus scopes, layers |
-| [`docs/resources.md`](docs/resources.md) | Kinds, providers, viewers, editors, actions, adapters, documents |
-| [`docs/syntax.md`](docs/syntax.md) | Highlighters, scopes, and how a theme colours them |
-| [`docs/adapters.md`](docs/adapters.md) | Terminals, capabilities, managed and embedded sessions |
-| [`docs/testing.md`](docs/testing.md) | The harness, and what to assert |
-| [`docs/cli.md`](docs/cli.md) | The developer CLI and the registry model |
-| [`docs/templates.md`](docs/templates.md) | The shipped templates |
-| [`docs/extending.md`](docs/extending.md) | Registries, manifests, extension points |
-| [`docs/decisions.md`](docs/decisions.md) | What was chosen, and what it cost |
+| [Getting started](docs/getting-started.md) | From nothing to a running application |
+| [The vocabulary](docs/vocabulary.md) | The words everything else assumes |
+| [Architecture](docs/architecture.md) | The model: store, graph, registries, surfaces, shells |
+| [Decisions and tradeoffs](docs/decisions.md) | What was chosen, and what it cost |
+
+Then by subsystem:
+
+| Section | What it covers |
+| --- | --- |
+| [Store](docs/store/index.md) | Paths, scopes, computed, collections, providers, events |
+| [Components](docs/components/index.md) | The catalog, how to write one, and the templates |
+| [Themes](docs/themes/index.md) | Tokens, glyphs, borders, capability downgrade, syntax |
+| [Platform](docs/platform/index.md) | Commands, keybindings, focus, layers, screens, extension points |
+| [Terminal](docs/terminal/index.md) | Adapters, capabilities, managed and embedded sessions |
+| [Documents](docs/documents/index.md) | Resource kinds, providers, viewers, editors, buffers |
+| [CLI](docs/cli/index.md) | The developer CLI and the registry model |
+| [Testing](docs/testing/index.md) | The harness, and what to assert |
 
 ## Development
 
@@ -64,6 +71,22 @@ pnpm test           # every suite
 pnpm dev --list     # the playgrounds
 pnpm dev gallery    # open one
 ```
+
+The docs site is Jekyll, and needs no Ruby on your machine - it builds in a
+container:
+
+```bash
+scripts/docs-serve.sh           # live, with reload, at localhost:4000/textui/
+scripts/docs-serve.sh --build   # build once, into docs/_site
+scripts/docs-preview.py         # serve what was built, at localhost:8000/textui/
+scripts/docs-preview.py --host 0.0.0.0   # ...and reachable from the network
+node scripts/check-docs.mjs     # the nav tree, links and titles
+```
+
+`docs-preview.py` exists because the site is built with `baseurl: /textui`, so
+every link in it is absolute at `/textui/...`. A plain `python -m http.server`
+over `docs/_site` 404s on all of it; this one mounts the site under the prefix
+the pages actually ask for.
 
 Node ≥ 22, pnpm 10.
 

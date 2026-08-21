@@ -1,3 +1,9 @@
+---
+title: Syntax highlighting
+parent: Themes
+nav_order: 5
+---
+
 # Syntax highlighting
 
 A highlighter names **scopes**, never colours. The theme owns the palette, so one JSON highlighter looks right on a dark console, a paper report and a sixteen-colour terminal without knowing that any of them exist - and a colourless terminal resolves every scope to the default foreground.

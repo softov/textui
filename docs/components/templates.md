@@ -1,3 +1,9 @@
+---
+title: Templates
+parent: Components
+nav_order: 8
+---
+
 # Templates
 
 Full screens composed from public components. Copy one and edit it - that is what they are for.

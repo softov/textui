@@ -1,3 +1,9 @@
+---
+title: Extension points
+parent: Platform
+nav_order: 6
+---
+
 # Extension points
 
 Separate typed registries rather than one generic plugin bag: every category has its own contract, so a bad contribution fails where it is written instead of at some later lookup.

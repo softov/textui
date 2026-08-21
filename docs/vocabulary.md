@@ -35,7 +35,7 @@ Everything else assumes these words. They are worth five minutes.
 
 **Resource.** Anything addressable that a viewer, editor or action can be registered for. Kinds form a hierarchy by dotted name, so `file.markdown` specialises `file.text`.
 
-**Adapter.** Everything one resource type needs, as one value: kinds, a provider, viewers, a highlighter, actions, commands. Registering returns a disposable that removes exactly what it added. (The other kind of adapter is a *terminal* adapter, in `docs/adapters.md`; the two never meet.)
+**Adapter.** Everything one resource type needs, as one value: kinds, a provider, viewers, a highlighter, actions, commands. Registering returns a disposable that removes exactly what it added. (The other kind of adapter is a *terminal* adapter, in [Terminal](terminal/adapters.md); the two never meet.)
 
 **Document.** An open buffer for a resource, at `$/session/documents/<uri>`. What a viewer shows and what an action transforms - so formatting a file from a read-only provider does something visible without writing anything.
 

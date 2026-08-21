@@ -1,3 +1,8 @@
+---
+title: Decisions and tradeoffs
+nav_order: 13
+---
+
 # Decisions and tradeoffs
 
 What was chosen, and what it cost.

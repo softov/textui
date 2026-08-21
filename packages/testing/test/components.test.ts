@@ -458,3 +458,67 @@ describe('layers', () => {
     await t.unmount();
   });
 });
+
+/**
+ * A list with headings in it.
+ *
+ * A grouped list is a list whose group titles are rows nobody can select.
+ * Stopping at one instead of stepping over it turns the heading into a wall,
+ * and the list below it into somewhere the keyboard cannot reach.
+ */
+describe('a list with unselectable rows', () => {
+  const ITEMS = [
+    { id: 'h1', label: 'Inbox', disabled: true },
+    { id: 'all', label: 'All' },
+    { id: 'today', label: 'Today' },
+    { id: 'h2', label: 'Projects', disabled: true },
+    { id: 'advisor', label: 'Advisor' },
+  ];
+
+  const list = async () => {
+    const chosen: string[] = [];
+    const t = await render(
+      h('List', {
+        items: ITEMS,
+        autoFocus: true,
+        onSelect: { handler: (id: string) => chosen.push(id) },
+      }),
+      { width: 30, height: 8 },
+    );
+    await t.settle();
+    t.focus(t.getByRole('list').id);
+    return { t, chosen };
+  };
+
+  it('starts on the first row somebody can choose', async () => {
+    const { t } = await list();
+    // Not the heading above it.
+    expect(t.getByRole('listitem', { name: 'All' }).props.selected).toBe(true);
+    await t.unmount();
+  });
+
+  it('steps over a heading rather than stopping at it', async () => {
+    const { t, chosen } = await list();
+    t.press('down');
+    await t.settle();
+    t.press('down');
+    await t.settle();
+
+    // All -> Today -> (Projects is a heading) -> Advisor
+    expect(chosen).toEqual(['today', 'advisor']);
+    await t.unmount();
+  });
+
+  it('goes back past one too, and lands on something real at each end', async () => {
+    const { t, chosen } = await list();
+    t.press('end');
+    await t.settle();
+    t.press('up');
+    await t.settle();
+    t.press('home');
+    await t.settle();
+
+    expect(chosen).toEqual(['advisor', 'today', 'all']);
+    await t.unmount();
+  });
+});

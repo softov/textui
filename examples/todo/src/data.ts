@@ -139,6 +139,10 @@ export function archiveTask(store: ReactiveStore, id: string): void {
   });
 }
 
+export function deleteTask(store: ReactiveStore, id: string): void {
+  store.delete(taskPath(id));
+}
+
 export function addTask(store: ReactiveStore, partial: Partial<Task> & { title: string }): Task {
   const id = `t${nextId(store)}`;
   const task: Task = {

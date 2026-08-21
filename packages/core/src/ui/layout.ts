@@ -2,7 +2,7 @@ import type { ComponentDefinition } from '../types/component-registry.js';
 import type { BoxProps } from '../jsx/intrinsics.js';
 import type { BorderSpec, Dimension, StyleColor } from '../types/style.js';
 import { h, defineComponent } from '../jsx/factory.js';
-import { useState, useTheme } from '../runtime/hooks.js';
+import { useFocus, useInput, useState, useTheme } from '../runtime/hooks.js';
 
 /**
  * Layout and containers.
@@ -181,6 +181,16 @@ export interface ScrollViewProps extends BoxProps {
   onScroll?(offset: number): void;
   /** Draw a scrollbar track on the right when the content overflows. */
   scrollbar?: boolean;
+  /**
+   * A tab stop, so the keys that scroll it can reach it.
+   *
+   * On by default: a viewport had the arrow handlers all along and registered
+   * nothing, so unless the caller happened to make it focusable itself the
+   * only way to scroll was the wheel - which is to say, on a keyboard, not at
+   * all. Turn it off for a view that scrolls inside something already focused.
+   */
+  focusable?: boolean;
+  autoFocus?: boolean;
 }
 
 /**
@@ -191,7 +201,11 @@ export interface ScrollViewProps extends BoxProps {
  * rounds.
  */
 export const ScrollView = defineComponent<ScrollViewProps>('ScrollView', (props) => {
-  const { offset, onScroll, scrollbar = true, children, ...rest } = props;
+  const {
+    offset, onScroll, scrollbar = true, focusable = true, autoFocus, id,
+    children, ...rest
+  } = props;
+  const focus = useFocus({ disabled: !focusable, autoFocus });
   const [internal, setInternal] = useState(0);
   const top = offset ?? internal;
 
@@ -201,12 +215,8 @@ export const ScrollView = defineComponent<ScrollViewProps>('ScrollView', (props)
     onScroll?.(clamped);
   };
 
-  return h('box', {
-    ...rest,
-    overflow: 'scroll',
-    scrollTop: top,
-    direction: 'row',
-    onKey: (event: { name: string }) => {
+  useInput(
+    (event) => {
       if (event.name === 'up') { scrollTo(top - 1); return true; }
       if (event.name === 'down') { scrollTo(top + 1); return true; }
       if (event.name === 'pageup') { scrollTo(top - 10); return true; }
@@ -214,6 +224,16 @@ export const ScrollView = defineComponent<ScrollViewProps>('ScrollView', (props)
       if (event.name === 'home') { scrollTo(0); return true; }
       return false;
     },
+    { focusId: focus.id, enabled: focusable },
+  );
+
+  return h('box', {
+    id: id ?? focus.id,
+    role: 'region',
+    ...rest,
+    overflow: 'scroll',
+    scrollTop: top,
+    direction: 'row',
     onMouse: (event: { action: string; wheel?: number }) => {
       if (event.action !== 'wheel') return false;
       scrollTo(top + (event.wheel ?? 0) * 3);

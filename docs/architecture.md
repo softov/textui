@@ -1,3 +1,8 @@
+---
+title: Architecture
+nav_order: 4
+---
+
 # Architecture
 
 The whole runtime is one idea taken seriously: **UI is data, and the data lives in one store.** Everything below follows from that, including the parts that look like ceremony.

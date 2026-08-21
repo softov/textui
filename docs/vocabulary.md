@@ -1,3 +1,8 @@
+---
+title: The vocabulary
+nav_order: 3
+---
+
 # The vocabulary
 
 Everything else assumes these words. They are worth five minutes.

@@ -176,3 +176,124 @@ describe('on a terminal that can only do ASCII', () => {
     await t.unmount();
   });
 });
+
+/**
+ * The keyboard, driven as bytes.
+ *
+ * `press` synthesises an event and a terminal sends bytes; where those two
+ * disagree a key works in a test and never in the product. Everything a person
+ * would actually press goes in as bytes.
+ */
+describe('driving it', () => {
+  it('filters the list as the sidebar selection moves', async () => {
+    const t = await open();
+    t.tab();
+    await t.settle();
+
+    t.press('down');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.app.screens.current()?.params?.view).toBe('today');
+
+    // Four more rows, over a heading. A sidebar that stopped at "PROJECTS"
+    // would be a sidebar whose bottom half no keyboard can reach.
+    t.press('down');
+    t.press('down');
+    t.press('down');
+    t.press('down');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.app.screens.current()?.id).toBe('project');
+    await t.unmount();
+  });
+
+  it('completes with the space bar', async () => {
+    const t = await open();
+    t.tab();
+    t.tab();
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    const first = t.app.store.get<string>('$/todo/ui/selected') as string;
+    expect(getTask(t.app.store, first)?.state).toBe('active');
+
+    // 0x20, not a synthesised `{ name: 'space' }`.
+    t.feed(' ');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(getTask(t.app.store, first)?.state).toBe('completed');
+    await t.unmount();
+  });
+
+  it('has three panes, and reaches all of them', async () => {
+    const t = await open();
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    // Navigation, list, detail. The detail is a stop because it scrolls, and
+    // something that scrolls and cannot be focused only scrolls with a mouse.
+    expect(t.app.focus.order()).toHaveLength(3);
+    await t.unmount();
+  });
+
+  it('asks for a title rather than making an untitled task', async () => {
+    const t = await open();
+    t.tab();
+    t.tab();
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    t.feed('n');
+    for (let i = 0; i < 6; i++) await t.settle();
+    // The command declares "I need a title" and the palette collects it. No
+    // dialog is written anywhere in this example.
+    expect(t.hasText('What needs doing')).toBe(true);
+
+    t.type('Buy milk');
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    expect(t.app.layers.entries()).toHaveLength(0);
+    expect(t.hasText('Buy milk')).toBe(true);
+    await t.unmount();
+  });
+
+  it('asks before deleting, and does nothing when the answer is no', async () => {
+    const t = await open();
+    t.app.store.set('$/todo/ui/selected', 't1');
+    await t.settle();
+
+    void t.app.execute('task.delete');
+    for (let i = 0; i < 6; i++) await t.settle();
+    // The title, not the message: a long task name wraps the message and the
+    // test would be asserting on where the line broke.
+    expect(t.hasText('Delete task')).toBe(true);
+
+    t.press('escape');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(getTask(t.app.store, 't1')).toBeDefined();
+
+    void t.app.execute('task.delete');
+    for (let i = 0; i < 6; i++) await t.settle();
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(getTask(t.app.store, 't1')).toBeUndefined();
+    await t.unmount();
+  });
+
+  it('scrolls the detail panel', async () => {
+    const t = await open();
+    t.app.store.set('$/todo/ui/selected', 't1');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    t.tab();
+    t.tab();
+    t.tab();
+    for (let i = 0; i < 4; i++) await t.settle();
+    const before = t.lines().join('\n');
+
+    t.press('down');
+    t.press('down');
+    t.press('down');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    // A panel with more in it than fits and no way to scroll is a panel with a
+    // hidden bottom half.
+    expect(t.lines().join('\n')).not.toBe(before);
+    await t.unmount();
+  });
+});

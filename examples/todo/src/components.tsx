@@ -1,6 +1,6 @@
 import {
-  Badge, Column, EmptyState, KeyValue, List, Panel, Row, Timeline,
-  defineComponent, useApp, useStoreSubtree, useTheme,
+  Badge, Column, EmptyState, KeyValue, List, Panel, Row, ScrollView, Timeline,
+  defineComponent, useApp, useEffect, useScreen, useStoreSubtree, useTheme,
 } from '@textui/core';
 import type { BoxProps, ListItem, RenderOutput } from '@textui/core';
 import {
@@ -49,6 +49,16 @@ export const TaskList: (props: TaskListProps) => RenderOutput = defineComponent<
 
   const items = tasksIn(app.store, filter).map((task) => rowFor(app.store, task));
 
+  // A list with a highlight on it and nothing selected is a list whose detail
+  // panel is empty until you press a key. Changing the filter has the same
+  // problem the other way: the selection is a task this view does not show.
+  const ids = items.map((item) => item.id).join(',');
+  useEffect(() => {
+    if (items.length === 0) return;
+    if (selectedId && items.some((item) => item.id === selectedId)) return;
+    onSelect?.(items[0]?.id as string);
+  }, [ids]);
+
   return (
     <Panel title={title ?? 'Tasks'} flex={1} {...rest}>
       <List
@@ -89,8 +99,12 @@ export const TaskDetail: (props: TaskDetailProps) => RenderOutput = defineCompon
     { label: 'State', value: task.state },
   ];
 
+  // A panel with more in it than fits is a panel with a hidden bottom half, so
+  // it scrolls - and to scroll it has to be somewhere the keyboard can go,
+  // which is what makes it the third stop rather than decoration beside two.
   return (
-    <Column flex={1} gap={1} {...rest}>
+    <ScrollView flex={1} {...rest}>
+    <Column gap={1}>
       <Row gap={1}>
         <text content={task.title} bold flex={1} wrap="word" />
         <Badge label={task.state === 'completed' ? 'done' : task.state} tone={task.state === 'completed' ? 'success' : 'muted'} />
@@ -127,6 +141,7 @@ export const TaskDetail: (props: TaskDetailProps) => RenderOutput = defineCompon
         </Column>
       ) : null}
     </Column>
+    </ScrollView>
   ) as RenderOutput;
 });
 
@@ -141,37 +156,60 @@ export const Nav: (props: Record<string, never>) => RenderOutput = defineCompone
   const app = useApp();
   useStoreSubtree(TASKS);
   useStoreSubtree(PROJECTS);
-  const current = app.screens.current();
+  // The published entry, not `screens.current()`. The method is a read and
+  // this has to be a *subscription*: without it the highlight stays on
+  // whatever row it started on, so the second arrow press moves from the same
+  // place as the first and the sidebar goes one row and stops.
+  const current = useScreen();
 
   const count = (filter: Filter): string => String(tasksIn(app.store, filter).length);
 
+  /**
+   * Groups with titles, not a tree.
+   *
+   * A heading is a row nobody can select - `disabled` - so the same list draws
+   * the blocks and the keyboard steps over them. Indenting children under a
+   * selectable parent would make "Projects" both a title and somewhere to go,
+   * and it is only ever a title.
+   */
   const items: ListItem[] = [
-    { id: 'view:all', label: 'Inbox', meta: count({ kind: 'all' }) },
+    { id: 'h:inbox', label: 'INBOX', disabled: true },
+    { id: 'view:all', label: '  All', meta: count({ kind: 'all' }) },
     { id: 'view:today', label: '  Today', meta: count({ kind: 'due', due: 'today' }) },
     { id: 'view:upcoming', label: '  Upcoming', meta: count({ kind: 'due', due: 'upcoming' }) },
     { id: 'view:completed', label: '  Completed', meta: count({ kind: 'state', state: 'completed' }) },
     { id: 'view:archived', label: '  Archived', meta: count({ kind: 'state', state: 'archived' }) },
-    { id: 'nav:projects', label: 'Projects', meta: String(projects(app.store).length) },
+
+    { id: 'h:projects', label: 'PROJECTS', disabled: true },
     ...projects(app.store).map((project) => ({
       id: `project:${project.id}`,
       label: `  ${project.name}`,
       meta: count({ kind: 'project', projectId: project.id }),
     })),
-    { id: 'nav:tags', label: 'Tags', meta: String(tags(app.store).length) },
+    { id: 'nav:projects', label: '  All projects' },
+
+    { id: 'h:tags', label: 'TAGS', disabled: true },
     ...tags(app.store).map(({ tag, count: n }) => ({
       id: `tag:${tag}`,
       label: `  #${tag}`,
       meta: String(n),
     })),
-    { id: 'nav:search', label: 'Search' },
-    { id: 'nav:settings', label: 'Settings' },
+    { id: 'nav:tags', label: '  All tags' },
+
+    { id: 'h:more', label: 'MORE', disabled: true },
+    { id: 'nav:search', label: '  Search' },
+    { id: 'nav:settings', label: '  Settings' },
   ];
 
   return (
     <List
       items={items}
       flex={1}
-      selectedId={selectionFor(current?.id ?? null, current?.params ?? {})}
+      selectedId={selectionFor(current.id, current.params)}
+      // Moving *is* choosing. A sidebar you have to press enter in is a
+      // sidebar that filters nothing until you commit to it, and the list
+      // beside it is the preview.
+      onSelect={(id: string) => go(app, id)}
       onActivate={(id: string) => go(app, id)}
     />
   );

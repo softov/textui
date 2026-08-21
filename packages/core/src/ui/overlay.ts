@@ -277,6 +277,16 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
 
   const choose = (): void => {
     if (pending) {
+      // An argument with choices is answered by picking one; an argument
+      // without any is answered by typing it. The palette already has a field
+      // and a list, so it is the same overlay either way - and without this a
+      // command that asks for a name could be *opened* and never *answered*.
+      if (pending.arg.choices === undefined) {
+        const typed = query.trim();
+        if (typed === '') return;
+        finish(pending.command.id, { [pending.arg.name]: typed });
+        return;
+      }
       const value = rows[index];
       if (value === undefined) return;
       finish(pending.command.id, { [pending.arg.name]: value });
@@ -370,7 +380,9 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       },
       onSubmit: choose,
       placeholder: pending
-        ? (pending.arg.description ?? `Choose ${pending.command.title.toLowerCase()}${theme.glyphs.ellipsis}`)
+        ? (pending.arg.description ?? (pending.arg.choices === undefined
+          ? `${pending.command.title}${theme.glyphs.ellipsis}`
+          : `Choose ${pending.command.title.toLowerCase()}${theme.glyphs.ellipsis}`))
         : (placeholder ?? `Type a command${theme.glyphs.ellipsis}`),
       search: true,
       autoFocus: true,
@@ -397,7 +409,9 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     h('box', { direction: 'row', gap: 1 },
       h('text', {
         content: pending
-          ? hint(theme, [move, 'enter choose', 'esc back'])
+          ? (pending.arg.choices === undefined
+            ? hint(theme, ['type it', 'enter confirm', 'esc back'])
+            : hint(theme, [move, 'enter choose', 'esc back']))
           : hint(theme, [move, 'enter run', `${theme.glyphs.chevronRight} sub-items`, 'esc close']),
         fg: 'subtle',
         truncate: 'end',
@@ -406,8 +420,18 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
 });
 
 /** The first argument a command declares choices for, if any. */
+/**
+ * The argument the palette should ask about, if there is one.
+ *
+ * A fixed set of choices, or something required that nothing has supplied.
+ * Only the first kind used to count, which meant a command declaring "I need a
+ * title" ran with no title and did nothing - the one failure mode that looks
+ * exactly like a broken key.
+ */
 function argumentOf(command: CommandDefinition): ArgSpec | undefined {
-  return (command.args ?? []).find((arg) => arg.choices !== undefined);
+  return (command.args ?? []).find(
+    (arg) => arg.choices !== undefined || (arg.required === true && arg.default === undefined),
+  );
 }
 
 function filterStrings(values: string[], query: string): string[] {

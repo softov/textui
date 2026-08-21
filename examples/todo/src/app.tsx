@@ -1,5 +1,5 @@
 import {
-  KeyHints, Row, createBag, defineComponent, registerBuiltins, useApp,
+  KeyHints, Row, confirm, createBag, defineComponent, registerBuiltins, useApp,
   useStoreSubtree, useTheme,
 } from '@textui/core';
 import type { BoxProps, CommandDefinition, Disposable, TextUIApp } from '@textui/core';
@@ -9,7 +9,8 @@ import {
   TaskListPage, TaskPage,
 } from './screens.js';
 import {
-  QUERY, TASKS, addTask, archiveTask, getTask, seed, toggleTask,
+  QUERY, TASKS, addTask, archiveTask, deleteTask, getTask, seed, settings,
+  toggleTask,
 } from './data.js';
 
 /**
@@ -46,6 +47,7 @@ const Hints = defineComponent<BoxProps>('TodoHints', (props) => {
         { keys: 'enter', label: 'open' },
         { keys: 'space', label: 'done' },
         { keys: 'n', label: 'new' },
+        { keys: 'd', label: 'delete' },
         { keys: '/', label: 'search' },
         { keys: 'ctrl+p', label: 'commands' },
         { keys: 'q', label: 'quit' },
@@ -136,13 +138,21 @@ export function registerTodo(app: TextUIApp, options: TodoOptions = {}): Disposa
 
   for (const command of commands(app)) bag.add(app.commands.register(command));
 
+  // `n` asks for the title before it makes anything, and the asking is the
+  // palette's job: the command declares an argument and the palette collects
+  // it, so there is no "new task" dialog written anywhere.
+  bag.add(app.keybindings.register({
+    keys: 'n', commandId: 'app.palette', args: { at: 'task.new' },
+  }));
+
   for (const [keys, commandId] of [
     ['ctrl+p', 'app.palette'],
     ['escape', 'go.back'],
-    ['n', 'task.new'],
+
     ['space', 'task.toggle'],
     ['e', 'task.open'],
     ['x', 'task.archive'],
+    ['d', 'task.delete'],
     ['/', 'go.search'],
     ['g', 'go.tasks'],
   ] as const) {
@@ -165,7 +175,8 @@ function commands(app: TextUIApp): CommandDefinition[] {
       // Not offered inside itself: an entry whose only effect is to redraw
       // what you are already looking at.
       slots: [],
-      run: () => {
+      args: [{ name: 'at', type: 'string' as const }],
+      run: (args: Record<string, unknown>) => {
         app.layers.open({
           id: 'palette',
           layer: 'modal',
@@ -176,6 +187,10 @@ function commands(app: TextUIApp): CommandDefinition[] {
             component: 'CommandPalette',
             width: 58,
             commands: app.commands.list({ slot: 'palette', enabledOnly: true }),
+            // A caller that already knows which question to ask - `n`, for a
+            // new task - opens the palette *at* that command rather than on
+            // the whole list with a word typed into the search box.
+            ...(typeof args.at === 'string' ? { openAt: args.at } : {}),
             onClose: { handler: () => app.layers.close('palette') },
           },
         });
@@ -233,6 +248,38 @@ function commands(app: TextUIApp): CommandDefinition[] {
         if (app.store.get<string>('$/todo/ui/selected') === id) {
           app.store.set('$/todo/ui/selected', null);
         }
+      },
+    },
+    {
+      id: 'task.delete',
+      title: 'Delete',
+      category: 'Task',
+      slots: ['palette'],
+      run: async () => {
+        const id = currentTask(app);
+        const task = id ? getTask(app.store, id) : undefined;
+        if (!id || !task) return;
+
+        // Ask, unless the settings say not to. The dialog is a layer, so it is
+        // over the screen rather than in it, and `confirm` resolves false when
+        // it is dismissed - there is no third answer to handle.
+        if (settings(app.store).confirmDelete) {
+          const yes = await confirm(app.layers, {
+            title: 'Delete task',
+            message: `Delete "${task.title}"? This cannot be undone.`,
+            confirmLabel: 'Delete',
+            cancelLabel: 'Keep',
+            tone: 'danger',
+          });
+          if (!yes) return;
+        }
+
+        deleteTask(app.store, id);
+        if (app.store.get<string>('$/todo/ui/selected') === id) {
+          app.store.set('$/todo/ui/selected', null);
+        }
+        // Deleting what a page is showing leaves the page showing nothing.
+        if (app.screens.current()?.id === 'task') app.screens.pop();
       },
     },
     {

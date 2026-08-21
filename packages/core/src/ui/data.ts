@@ -55,14 +55,26 @@ export const List = defineComponent<ListProps>('List', (props) => {
 
   const focus = useFocus({ disabled: !focusable });
   const measured = useMeasure();
-  const [internalId, setInternalId] = useState<string | null>(items[0]?.id ?? null);
+  const [internalId, setInternalId] = useState<string | null>(
+    items.find((i) => !i.disabled)?.id ?? null,
+  );
   const currentId = selectedId ?? internalId;
   const pageSize = viewportRows(props, measured, 10, { requested: visibleRows });
   const index = Math.max(0, items.findIndex((i) => i.id === currentId));
 
-  const select = (next: number): void => {
-    const item = items[Math.max(0, Math.min(items.length - 1, next))];
-    if (!item || item.disabled) return;
+  /**
+   * Move to `target`, skipping past anything unselectable on the way.
+   *
+   * The direction has to be given rather than inferred, because `home` and
+   * `end` land on an index without coming from one. Stopping at a disabled row
+   * instead of stepping over it makes a heading into a wall - which is what a
+   * grouped list is made of, so it could not be built at all.
+   */
+  const selectAt = (target: number, direction: 1 | -1): void => {
+    let i = Math.max(0, Math.min(items.length - 1, target));
+    while (i >= 0 && i < items.length && items[i]?.disabled === true) i += direction;
+    const item = items[i];
+    if (!item) return;
     if (selectedId === undefined) setInternalId(item.id);
     onSelect?.(item.id, item);
   };
@@ -71,15 +83,15 @@ export const List = defineComponent<ListProps>('List', (props) => {
     (event) => {
       if (items.length === 0) return false;
       switch (event.name) {
-        case 'up': select(index - 1); return true;
-        case 'down': select(index + 1); return true;
-        case 'home': select(0); return true;
-        case 'end': select(items.length - 1); return true;
-        case 'pageup': select(index - pageSize); return true;
-        case 'pagedown': select(index + pageSize); return true;
+        case 'up': selectAt(index - 1, -1); return true;
+        case 'down': selectAt(index + 1, 1); return true;
+        case 'home': selectAt(0, 1); return true;
+        case 'end': selectAt(items.length - 1, -1); return true;
+        case 'pageup': selectAt(index - pageSize, -1); return true;
+        case 'pagedown': selectAt(index + pageSize, 1); return true;
         case 'enter': {
           const item = items[index];
-          if (item) onActivate?.(item.id, item);
+          if (item && item.disabled !== true) onActivate?.(item.id, item);
           return true;
         }
         default: return false;

@@ -1,0 +1,19 @@
+source "https://rubygems.org"
+
+# Not the `github-pages` gem. That one pins Jekyll 3.10, jekyll-sass-converter
+# 1.5 and Rouge 3.30, which is where just-the-docs' SCSS load-path failures
+# come from. Building the site ourselves means Jekyll 4, Dart Sass and Rouge 5.
+gem "jekyll", "~> 4.4"
+gem "just-the-docs", "~> 0.12"
+
+# Rewrites `[x](theming.md)` to the built page's URL, so the prose stays
+# readable on github.com.
+gem "jekyll-relative-links", "~> 0.7"
+
+gem "jekyll-seo-tag", "~> 2.8"
+gem "jekyll-include-cache", "~> 0.2"
+
+# Jekyll 4 wants these declared on Ruby 3.4+.
+gem "csv"
+gem "base64"
+gem "bigdecimal"

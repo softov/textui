@@ -1,0 +1,90 @@
+title: TextUI
+description: A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is one way to write them.
+theme: just-the-docs
+
+# Where the site is served from.
+#
+# These two are the only settings that can break every asset and link at once,
+# and they break it silently - an unstyled page on the live site means the CSS
+# 404'd, which means these disagree with where Pages actually served it.
+#
+#   GitHub Pages default   url: https://softov.github.io   baseurl: /textui
+#   Custom domain          url: https://textui.softov.dev  baseurl: ""
+url: https://softov.github.io
+baseurl: /textui
+
+# Rouge, via Jekyll 4. `tsx` is a real lexer here; on the github-pages gem's
+# pinned Rouge 3.30 it would not be.
+markdown: kramdown
+kramdown:
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
+
+search_enabled: true
+search:
+  # h2 is where a topic starts in these docs, so it is what a result should
+  # land on. Indexing h3 as well buries the section under its own asides.
+  heading_level: 2
+  previews: 3
+  preview_words_before: 5
+  preview_words_after: 10
+  tokenizer_separator: /[\s\-/]+/
+  rel_url: true
+  button: false
+
+# Light by default, with the toggle in the footer. The docs are read in a
+# terminal-shaped context often enough that dark matters.
+color_scheme: light
+
+enable_copy_code_button: true
+heading_anchors: true
+back_to_top: true
+back_to_top_text: "Back to top"
+
+aux_links:
+  "GitHub":
+    - "https://github.com/softov/textui"
+aux_links_new_tab: true
+
+# Edit-on-GitHub, without `last_edit_timestamp` - that one needs the full git
+# history in CI, and a shallow clone makes it fail rather than degrade.
+gh_edit_link: true
+gh_edit_link_text: "Edit this page on GitHub"
+gh_edit_repository: "https://github.com/softov/textui"
+gh_edit_branch: "main"
+gh_edit_source: docs
+gh_edit_view_mode: "tree"
+
+callouts_level: quiet
+callouts:
+  note:
+    title: Note
+    color: blue
+  warning:
+    title: Warning
+    color: yellow
+
+footer_content: 'MIT licensed. Pre-1.0 - the surface is still moving.'
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-relative-links
+  - jekyll-include-cache
+
+# `.md` cross-links are rewritten at build time, so the same file reads
+# correctly both on github.com and here. Nothing in the prose is Liquid.
+relative_links:
+  enabled: true
+  collections: false
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor/

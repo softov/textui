@@ -427,12 +427,14 @@ export function chordToEvents(chord: string): KeyEvent[] {
       // works in a terminal fails in a test and nobody can tell which is right.
       const { mods: names, key } = splitStroke(stroke);
       const mods = new Set(names);
-      const printable = [...key].length === 1;
+      // `space` is named and printable at once - the decoder emits both, and a
+      // press that gave only the name could not be typed into a field.
+      const char = key === 'space' ? ' ' : ([...key].length === 1 ? key : undefined);
 
       return {
         type: 'key' as const,
         name: key,
-        char: printable ? key : undefined,
+        char,
         ctrl: mods.has('ctrl') || mods.has('control'),
         alt: mods.has('alt') || mods.has('option'),
         shift: mods.has('shift'),

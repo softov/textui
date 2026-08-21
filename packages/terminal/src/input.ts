@@ -162,7 +162,14 @@ export class InputDecoder {
     }
 
     this.carry = this.carry.slice(char.length);
-    this.emit(key(char, { char, raw: char, shift: char !== char.toLowerCase() && char.toLowerCase() !== char.toUpperCase() }));
+    // Space is the one printable with a name, because it is the one printable
+    // people bind to. `KeyName` has always listed it and `Button`, `Checkbox`,
+    // `Switch` and `Select` have always tested for it - and none of them ever
+    // saw it, because a terminal sends 0x20 and this named it `' '`. The
+    // harness synthesised `'space'`, so every one of those tests passed while
+    // nothing worked. `char` stays `' '`, so typing one still types one.
+    const name = cp === 0x20 ? 'space' : char;
+    this.emit(key(name, { char, raw: char, shift: char !== char.toLowerCase() && char.toLowerCase() !== char.toUpperCase() }));
     return char.length;
   }
 

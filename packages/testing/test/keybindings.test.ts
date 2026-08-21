@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { renderApp, chordToEvents } from '../src/index.js';
+import { h, defineComponent, useState } from '@textui/core';
+import { render, renderApp, chordToEvents } from '../src/index.js';
 import { splitStroke, strokeOf, normalizeStroke } from '@textui/core';
 
 /**
@@ -71,6 +72,49 @@ describe('+ from a real terminal', () => {
     t.feed('-');
     await t.settle();
     expect(fired).toEqual(['+', '-']);
+    await t.unmount();
+  });
+});
+
+/**
+ * The keys a person actually presses.
+ *
+ * `press` synthesises an event; a terminal sends bytes. Where the two disagree
+ * a binding works in a test and never in the product, which is the one failure
+ * a test harness must not have - so these go in as bytes.
+ */
+describe('a key pressed as bytes', () => {
+  it('reaches a binding registered as space', async () => {
+    let ran = 0;
+    const t = await renderApp({
+      onBoot: (app) => {
+        app.commands.register({ id: 'toggle', title: 'Toggle', run: () => { ran++; } });
+        app.keybindings.register({ keys: 'space', commandId: 'toggle' });
+      },
+    });
+
+    // 0x20, the byte a space bar sends. `KeyName` has listed `space` from the
+    // start and nothing ever received one.
+    t.feed(' ');
+    await t.settle();
+
+    expect(ran).toBe(1);
+    await t.unmount();
+  });
+
+  it('still types a space into a field', async () => {
+    const Field = defineComponent('Field', () => {
+      const [value, setValue] = useState('');
+      return h('TextInput', { value, onChange: setValue, label: 'name', autoFocus: true, width: 20 });
+    });
+    const t = await render(h(Field, {}), { width: 30, height: 3 });
+    await t.settle();
+    t.focus(t.getByRole('textbox').id);
+
+    t.feed('a b');
+    await t.settle();
+
+    expect(t.hasText('a b')).toBe(true);
     await t.unmount();
   });
 });

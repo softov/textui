@@ -15,6 +15,16 @@ function keys(events: InputEvent[]): KeyEvent[] {
 }
 
 describe('printable keys', () => {
+  it('names the space bar, and still calls it a character', () => {
+    const c = collect();
+    c.feed(' ');
+    // Both, and both matter. `KeyName` lists `space` and every control that
+    // toggles tests for it, so a terminal that sent `' '` meant none of them
+    // ever fired; and a field that inserts `event.char` still has to be able
+    // to insert a space.
+    expect(keys(c.events)[0]).toMatchObject({ name: 'space', char: ' ' });
+  });
+
   it('decodes a plain character', () => {
     const c = collect();
     c.feed('a');

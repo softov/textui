@@ -32,6 +32,7 @@ if (existsSync(socketPath)) unlinkSync(socketPath);
 const DIM = '\x1b[2m';
 const OFF = '\x1b[0m';
 const COLOUR = {
+  stops: '\x1b[33m',
   store: '\x1b[36m',
   'store*': '\x1b[34m',
   event: '\x1b[35m',
@@ -48,6 +49,12 @@ function brief(value) {
 
 function render(record) {
   const kind = record.kind ?? '?';
+  // The tab order is the one record worth a line each, because reading it as
+  // one long comma-joined string is exactly as hard as not having it.
+  if (kind === 'stops') {
+    const head = `${DIM}${String(record.t ?? 0).padStart(7)}ms${OFF} ${COLOUR.stops}stops  ${OFF} ${record.count}`;
+    return [head, ...(record.order ?? []).map((s) => `${DIM}          ${OFF} ${s}`)].join('\n');
+  }
   const stamp = String(record.t ?? 0).padStart(7);
   const colour = COLOUR[kind] ?? '';
   const where = record.path ?? '';

@@ -87,6 +87,32 @@ const WATCHED: BindingPath[] = [
  * every subscription here is a real subscription and a log left attached to a
  * dead app is a leak.
  */
+/**
+ * What a focus id belongs to, as a path through the component tree.
+ *
+ * `useFocus` names its registration after the instance, so an id is either a
+ * node's own `id` prop or `<instance>:focus`. Both are matched here, because a
+ * log that can only name half the tab order is a log you still have to guess
+ * from.
+ */
+function nameOf(app: TextUIApp, focusId: string): string {
+  const bare = focusId.endsWith(':focus') ? focusId.slice(0, -':focus'.length) : focusId;
+  let found = '?';
+
+  const walk = (node: { id?: string; component?: string; children?: unknown[] } | null, trail: string[]): void => {
+    if (!node || found !== '?') return;
+    const here = node.component ? [...trail, node.component] : trail;
+    if (node.id === focusId || node.id === bare) {
+      found = here.slice(-3).join('>');
+      return;
+    }
+    for (const child of (node.children ?? []) as never[]) walk(child, here);
+  };
+
+  walk(app.inspect() as never, []);
+  return found;
+}
+
 export function attachLog(app: TextUIApp, sink: LogSink, options: LogOptions = {}): Disposable {
   const bag = createBag();
 
@@ -106,6 +132,25 @@ export function attachLog(app: TextUIApp, sink: LogSink, options: LogOptions = {
   bag.add(app.events.on('@/' as EventPath, (payload, path) => {
     sink.write({ kind: 'event', path, payload });
   }, { subtree: true }));
+
+  // Who is in the tab order, by name.
+  //
+  // A focus id is an instance id, which answers "did focus move" and nothing
+  // about *what* it moved to - and "what are these two extra stops" is the
+  // question anyone looking at a tab order actually has. The names come from
+  // the same inspector the test harness reads, so they are what is really
+  // mounted rather than what this file guesses is.
+  let previous = '';
+  const reportStops = (): void => {
+    const order = app.focus.order();
+    const named = order.map((id) => `${id}=${nameOf(app, id)}`);
+    const line = named.join(',');
+    if (line === previous) return;
+    previous = line;
+    sink.write({ kind: 'stops', count: order.length, order: named });
+  };
+
+  bag.add(app.store.subscribe('$/focus/id' as BindingPath, () => reportStops()));
 
   if (options.verbose) {
     bag.add(app.store.subscribe('$/' as BindingPath, (_value, change) => {

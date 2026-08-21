@@ -41,6 +41,8 @@ export interface CodeEditorProps extends BoxProps {
   onCursor?(cursor: { line: number; column: number }): void;
   /** Draw a scrollbar when the file is taller than the view. On by default. */
   scrollbar?: boolean;
+  /** Claim focus on mount, if nothing in this scope already has it. */
+  autoFocus?: boolean;
 }
 
 interface Cursor { line: number; column: number }
@@ -62,12 +64,13 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   const theme = useTheme();
   const {
     uri = null, value, onChange, lineNumbers = true, tabWidth: _tabWidth = 2,
-    readonly: readonlyProp, language, kind, onCursor, scrollbar = true, ...rest
+    readonly: readonlyProp, language, kind, onCursor, scrollbar = true,
+    autoFocus, ...rest
   } = props;
 
   const doc = useDocument(uri);
   const measured = useMeasure();
-  const focus = useFocus({});
+  const focus = useFocus({ autoFocus });
 
   // With a document, the buffer is the document. Without one it is here, so a
   // standalone editor works without a caller wiring state back in - an editor

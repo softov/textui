@@ -111,7 +111,17 @@ export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownView
       key: `fence-${key}`,
       border: { style: theme.border, color: 'borderSubtle' },
       padding: [0, 1],
-    }, h(CodeViewer, { content: fence.join('\n'), lineNumbers: false, scrollbar: false, showCaret: false })));
+    }, h(CodeViewer, {
+      content: fence.join('\n'),
+      lineNumbers: false,
+      scrollbar: false,
+      showCaret: false,
+      // A fence inside a rendered document is typography, not a control. Left
+      // focusable, every code block in a README becomes a tab stop - so a file
+      // with two of them puts two things between the document and the menu bar
+      // that nobody can do anything with.
+      disabled: true,
+    })));
     fence = [];
   };
 
@@ -234,6 +244,14 @@ export interface ResourceViewProps extends BoxProps {
   /** Force a specific registered viewer. */
   viewerId?: string;
   mode?: 'view' | 'edit';
+  /**
+   * Props for whichever component the registry picks.
+   *
+   * The caller does not know which component that is - that is the point of
+   * the registry - but it may still have something to say to it, like "you are
+   * why the mode changed, so take focus".
+   */
+  viewerProps?: Record<string, unknown>;
 }
 
 /**
@@ -243,7 +261,7 @@ export interface ResourceViewProps extends BoxProps {
  */
 export const ResourceView = defineComponent<ResourceViewProps>('ResourceView', (props) => {
   const runtime = useRuntime();
-  const { uri, viewerId, mode, ...rest } = props;
+  const { uri, viewerId, mode, viewerProps, ...rest } = props;
   const app = runtime.app();
 
   const task = useTask(async () => {
@@ -266,7 +284,8 @@ export const ResourceView = defineComponent<ResourceViewProps>('ResourceView', (
   const node = app.resources.nodeFor(resource, { viewerId, mode });
   if (!node) return h(FallbackViewer, { resource, ...rest });
 
-  return h('box', { direction: 'column', flex: 1, ...rest }, node);
+  return h('box', { direction: 'column', flex: 1, ...rest },
+    viewerProps ? { ...node, ...viewerProps } : node);
 });
 
 export interface ResourceExplorerProps extends BoxProps {

@@ -251,7 +251,11 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       // asks the registry for the other one rather than swapping a component.
       run: (_args: Record<string, unknown>, ctx: CommandContext) => {
         const mode = ctx.store.get<string>('$/ui/editor/mode' as BindingPath) ?? 'view';
-        ctx.store.set('$/ui/editor/mode' as BindingPath, mode === 'edit' ? 'view' : 'edit');
+        const next = mode === 'edit' ? 'view' : 'edit';
+        ctx.store.set('$/ui/editor/mode' as BindingPath, next);
+
+        // The editor claims focus as it mounts - see `Editor` in app.tsx. It
+        // is not chased from here, because at this moment it does not exist.
       },
     },
     {

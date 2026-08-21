@@ -82,7 +82,17 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
           fg={active ? 'focus' : 'borderSubtle'}
         />
         <Column flex={1}>
-        <ResourceView uri={uri ?? null} mode={mode} flex={1} />
+        {/*
+          * Entering edit mode means going to the editor. The editor claims
+          * focus as it mounts rather than something outside chasing it once it
+          * has - the mounting render is the first moment it exists.
+          */}
+        <ResourceView
+          uri={uri ?? null}
+          mode={mode}
+          viewerProps={mode === 'edit' ? { autoFocus: true } : undefined}
+          flex={1}
+        />
         <KeyHints
           hints={[
             { keys: 'up/down', label: 'move' },

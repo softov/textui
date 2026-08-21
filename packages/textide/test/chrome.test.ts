@@ -302,18 +302,20 @@ describe('the command palette', () => {
     t.app.execute('file.edit');
     await quiet();
 
-    // Focus starts in the tree, so the pane is not the active scope.
-    expect(t.store.get('$/focus/scope')).not.toBe('pane.main');
-    const bar = (): number => t.lines().filter((l) => l.includes('\u258e')).length;
-    expect(bar(), 'the bar is drawn either way').toBeGreaterThan(3);
-
-    // Tab until focus lands inside the pane; it should take one press from the
-    // tree, because the pane is a scope and not a stop of its own.
-    let hops = 0;
-    while (t.store.get('$/focus/scope') !== 'pane.main' && hops < 6) { t.tab(); t.flush(); hops++; }
-    expect(t.store.get('$/focus/scope'), 'focus reaches the pane').toBe('pane.main');
-    expect(t.app.focus.focused(), 'and lands on the editor, not on a wrapper')
+    // Entering edit mode put focus in the pane, and on the editor inside it
+    // rather than on a wrapper - the pane is a scope, not a control.
+    expect(t.store.get('$/focus/scope')).toBe('pane.main');
+    expect(t.app.focus.focused(), 'lands on the editor, not on the pane')
       .not.toBe('pane.main');
+    const bar = (): number => t.lines().filter((l) => l.includes('\u258e')).length;
+    expect(bar(), 'the bar spans the pane').toBeGreaterThan(3);
+
+    // Leaving it and coming back is one press each way, because the pane
+    // contributes no stop of its own.
+    t.tab(); t.flush();
+    expect(t.store.get('$/focus/scope'), 'one press leaves').not.toBe('pane.main');
+    t.shiftTab(); t.flush();
+    expect(t.store.get('$/focus/scope'), 'and one press returns').toBe('pane.main');
 
     await t.unmount();
     await rm(scratch, { recursive: true, force: true });
@@ -690,6 +692,83 @@ describe('where focus starts and how many stops there are', () => {
     const at = row.indexOf('ctrl+n');
     expect(row.slice(at + 'ctrl+n'.length, at + 'ctrl+n'.length + 1))
       .toMatch(/\s|^$/);
+
+    await t.unmount();
+    await rm(scratch, { recursive: true, force: true });
+  });
+});
+
+describe('what is actually in the tab order', () => {
+  const quiet = async (t: { settle(): Promise<void>; advance(n: number): void; flush(): void }): Promise<void> => {
+    for (let i = 0; i < 10; i++) { await t.settle(); t.advance(50); t.flush(); }
+  };
+
+  /**
+   * A fenced code block is typography, not a control.
+   *
+   * `MarkdownViewer` renders each fence with a `CodeViewer`, and a `CodeViewer`
+   * is focusable - so a README with two fences put two extra stops between the
+   * document and the menu bar, each of them a thing nobody can do anything
+   * with. Found by asking the log to name the tab order rather than by reading
+   * the component and guessing.
+   */
+  it('does not make a tab stop out of every code block in a document', async () => {
+    const scratch = await mkdtemp(join(tmpdir(), 'textide-fences-'));
+    await writeFile(
+      join(scratch, 'a.md'),
+      '# Title\n\ntext\n\n```bash\nls\n```\n\nmore\n\n```json\n{"a":1}\n```\n',
+    );
+    const workspace = await loadWorkspace(scratch);
+    const t = await renderApp({
+      width: 120, height: 40, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    await quiet(t);
+    t.app.store.set('$/ui/editor/uri', `file://${join(scratch, 'a.md')}`);
+    await quiet(t);
+
+    expect(t.hasText('Title'), 'the document rendered').toBe(true);
+
+    // Three menus, the tree, and the document. Not the fences inside it.
+    const stops = t.app.focus.order();
+    expect(stops).toHaveLength(5);
+    expect(stops.filter((id) => t.app.focus.scopeOf(id) === 'pane.main')).toHaveLength(1);
+
+    await t.unmount();
+    await rm(scratch, { recursive: true, force: true });
+  });
+
+  /**
+   * Going to edit means going to the editor. Leaving focus in the tree showed
+   * a caret at 1x1 that no key reached, while the arrows kept moving the file
+   * list - which reads as the editor being broken rather than unfocused.
+   */
+  it('puts focus in the editor when edit mode is entered', async () => {
+    const scratch = await mkdtemp(join(tmpdir(), 'textide-enter-'));
+    await writeFile(join(scratch, 'a.txt'), 'alpha\nbeta\ngamma\n');
+    const workspace = await loadWorkspace(scratch);
+    const t = await renderApp({
+      width: 100, height: 20, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    await quiet(t);
+    t.app.store.set('$/ui/editor/uri', `file://${join(scratch, 'a.txt')}`);
+    await quiet(t);
+    expect(t.store.get('$/focus/scope'), 'focus starts in the tree').toBe('__global__');
+
+    t.app.execute('file.edit');
+    await quiet(t);
+    await new Promise((resolve) => { setTimeout(resolve, 60); });
+    await quiet(t);
+
+    expect(t.store.get('$/focus/scope'), 'and moves into the pane').toBe('pane.main');
+
+    // And the arrows now belong to the caret rather than to the file list.
+    t.press('down');
+    t.press('end');
+    t.type('!');
+    await quiet(t);
+    expect(t.hasText('beta!')).toBe(true);
 
     await t.unmount();
     await rm(scratch, { recursive: true, force: true });

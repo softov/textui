@@ -487,7 +487,9 @@ describe('the command palette', () => {
 
     expect(t.app.surfaces.state('header').visible).toBe(false);
     expect(t.app.layers.entries('modal').map((e) => e.id), 'the list stays').toEqual(['layout']);
-    expect(row('Title Bar'), 'the row redraws as hidden').toBe(g.regionOff);
+    // The glyph is the row's identity and holds still; the state is the word
+    // beside it, asserted in its own test below.
+    expect(row('Title Bar')).toBe(g.regionTop);
     await t.unmount();
   });
 
@@ -512,6 +514,72 @@ describe('the command palette', () => {
     t.press('down');
     for (let i = 0; i < 2; i++) await t.settle();
     expect(selected()).toBe(first);
+    await t.unmount();
+  });
+
+  it('keeps the glyph still and moves the state into the word beside it', async () => {
+    const t = await open(SIZES[0]!);
+    const g = t.app.theme.glyphs;
+    t.app.execute('view.layout');
+    for (let i = 0; i < 5; i++) { await t.settle(); t.advance(50); t.flush(); }
+
+    const line = (title: string): string => t.lines().find((l) => l.includes(`${title} `)) ?? '';
+    const glyph = (title: string): string => {
+      const before = line(title).slice(0, line(title).indexOf(title));
+      const cell = before.slice(before.lastIndexOf('│') + 1).trim().split(/\s+/);
+      return cell[cell.length - 1] ?? '';
+    };
+
+    expect(glyph('Title Bar')).toBe(g.regionTop);
+    expect(line('Title Bar')).toContain('Visible');
+    // The row stands for `view.toggleSidebar`, so it shows that key.
+    expect(line('Sidebar')).toContain('ctrl+b');
+
+    t.press('enter');
+    for (let i = 0; i < 5; i++) { await t.settle(); t.advance(50); t.flush(); }
+
+    // An icon that swapped would make the row you just acted on look like a
+    // different row, so it does not: only the word changes.
+    expect(glyph('Title Bar'), 'the glyph is the row, not its state').toBe(g.regionTop);
+    expect(line('Title Bar')).toContain('Hidden');
+    await t.unmount();
+  });
+
+  /**
+   * Wear it before you buy it.
+   *
+   * The theme applies as the highlight moves so the choice is made by looking
+   * rather than by guessing a name, and goes back if the asking is abandoned.
+   * The command owns the undo, because only it knows what it changed.
+   */
+  it('previews a theme while choosing, and puts it back on escape', async () => {
+    const t = await open(SIZES[0]!);
+    const start = t.app.theme.id;
+
+    t.app.execute('app.palette', { at: 'view.theme' });
+    for (let i = 0; i < 5; i++) { await t.settle(); t.advance(50); t.flush(); }
+    expect(t.app.theme.id, 'drilling changes nothing on its own').toBe(start);
+
+    t.press('down');
+    for (let i = 0; i < 2; i++) await t.settle();
+    const previewed = t.app.theme.id;
+    expect(previewed, 'moving the highlight applies the theme').not.toBe(start);
+
+    t.press('escape');
+    for (let i = 0; i < 3; i++) await t.settle();
+    expect(t.app.theme.id, 'abandoning puts it back').toBe(start);
+
+    // Choosing keeps it.
+    t.press('escape');
+    for (let i = 0; i < 3; i++) await t.settle();
+    t.app.execute('app.palette', { at: 'view.theme' });
+    for (let i = 0; i < 5; i++) { await t.settle(); t.advance(50); t.flush(); }
+    t.press('down');
+    for (let i = 0; i < 2; i++) await t.settle();
+    const chosen = t.app.theme.id;
+    t.press('enter');
+    for (let i = 0; i < 4; i++) { await t.settle(); t.advance(50); t.flush(); }
+    expect(t.app.theme.id).toBe(chosen);
     await t.unmount();
   });
 });

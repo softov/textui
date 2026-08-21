@@ -19,6 +19,16 @@ export interface ArgSpec {
   /** Fixed choices, or a resolver for a picker. */
   choices?: string[] | (() => Promise<string[]> | string[]);
   default?: unknown;
+
+  /**
+   * Show what a choice would do, before it is chosen.
+   *
+   * Called as the highlight moves, and with `null` when the asking is
+   * abandoned - so a theme can be applied while you look at it and put back if
+   * you press escape. The command owns whatever it needs to remember to undo
+   * itself; the palette only reports what is happening.
+   */
+  preview?(value: string | null): void;
 }
 
 export type ArgsSchema = ArgSpec[];
@@ -51,6 +61,20 @@ export interface CommandDefinition {
    * switches is meant to be walked.
    */
   keepOpen?: boolean;
+  /**
+   * A short state word shown beside the row, in place of the category.
+   *
+   * The icon is the row's identity and should not move under the reader as
+   * state changes; this is where the state goes instead.
+   */
+  badge?: string;
+  /**
+   * A key hint, when it is not this command's own keybinding.
+   *
+   * A row built for one list may stand for a command registered under another
+   * id; the binding a person would actually press belongs to that one.
+   */
+  shortcut?: string;
   keywords?: string[];
   scope?: CommandScope;
   /** The instance this registration belongs to, for non-app scopes. */

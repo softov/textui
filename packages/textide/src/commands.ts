@@ -60,6 +60,13 @@ const SURFACE_TITLES: Record<string, string> = {
   status: 'Status Bar',
 };
 
+/** The registered command a surface's switch stands for, where there is one. */
+const TOGGLE_COMMANDS: Record<string, string> = {
+  sidebar: 'view.toggleSidebar',
+  status: 'view.toggleStatusBar',
+  header: 'view.toggleTitleBar',
+};
+
 /** Which edge of the frame a surface lives on, as a theme glyph role. */
 const SURFACE_EDGE: Record<string, keyof ThemeGlyphs> = {
   header: 'regionTop',
@@ -100,16 +107,20 @@ export function layoutCommands(app: TextUIApp): CommandDefinition[] {
     const shown = surface === 'sidebar'
       ? !(app.store.get<boolean>('$/ui/sidebar/collapsed') ?? false)
       : app.surfaces.state(surface).visible !== false;
-    // The glyph is the whole answer: which edge, and whether it is there.
-    // A tick says only the second half, so a column of ticks needs a column of
-    // words beside it saying what each one was about.
+    // The glyph says which edge, and never changes: an icon that swaps as you
+    // toggle makes the row you just acted on look like a different row. The
+    // state goes in the word beside it.
     const edge = SURFACE_EDGE[surface] ?? 'regionCentre';
-    const glyph = app.theme.glyphs;
+    const bound = TOGGLE_COMMANDS[surface];
     return {
       id: `view.toggle:${surface}`,
       title: titleFor(surface),
-      category: 'Visible',
-      icon: shown ? String(glyph[edge]) : glyph.regionOff,
+      category: 'Layout',
+      icon: String(app.theme.glyphs[edge]),
+      badge: shown ? 'Visible' : 'Hidden',
+      description: `${shown ? 'Hide' : 'Show'} the ${titleFor(surface).toLowerCase()}`,
+      // The row stands for a registered command, so it shows that one's key.
+      ...(bound ? { shortcut: app.keybindings.forCommand(bound)[0] } : {}),
       // Flipping one switch should not put the list away.
       keepOpen: true,
       slots: [],
@@ -122,6 +133,9 @@ export function layoutCommands(app: TextUIApp): CommandDefinition[] {
     ? [...toggles, { ...arrangement, category: 'Arrange' }]
     : toggles;
 }
+
+/** What the theme was before a preview started, until it is kept or dropped. */
+let previousTheme: string | null = null;
 
 export function textideCommands(app: TextUIApp): CommandDefinition[] {
   const themes = app.themes.list().map((t) => t.id);
@@ -182,9 +196,27 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       slots: ['palette'],
       // The command says what it needs and the palette asks. That is where a
       // submenu comes from here - not from a menu that hardcoded the list.
-      args: [{ name: 'id', type: 'string' as const, required: true, choices: themes, default: app.theme.id }],
+      args: [{
+        name: 'id', type: 'string' as const, required: true, choices: themes,
+        default: app.theme.id,
+        // Wear it before you buy it. The theme applies as the highlight moves
+        // and goes back if the asking is abandoned - the palette reports the
+        // movement, and this remembers what to put back, because only this
+        // knows what it changed.
+        preview: (value: string | null) => {
+          previousTheme ??= app.theme.id;
+          if (value === null) {
+            if (previousTheme) app.setTheme(previousTheme);
+            previousTheme = null;
+            return;
+          }
+          app.setTheme(value);
+        },
+      }],
       run: (args: Record<string, unknown>, ctx: CommandContext) => {
         const id = String(args.id ?? '');
+        // Chosen, so there is nothing to put back.
+        previousTheme = null;
         if (id) ctx.app.setTheme(id);
       },
     },

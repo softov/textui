@@ -204,9 +204,13 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     : matches.map((command, i) => ({
         id: command.id,
         label: command.title,
-        description: command.category,
+        // `badge` when the row has state to report, the category otherwise.
+        // The icon stays put either way: it is what the row *is*.
+        description: command.badge ?? command.category,
         icon: command.icon,
-        shortcut: app?.keybindings.forCommand(command.id)[0],
+        // A row may stand for a command registered under another id, and the
+        // key a person would press belongs to that one.
+        shortcut: command.shortcut ?? app?.keybindings.forCommand(command.id)[0],
         // A chevron, from `Menu`, for anything that will ask a question.
         children: argumentOf(command) ? [] : undefined,
         separatorBefore:
@@ -214,6 +218,9 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       }));
 
   const back = (): void => {
+    // `null` is "never mind": whatever the preview did gets undone by whoever
+    // did it, because only the command knows what it changed.
+    pending?.arg.preview?.(null);
     setPending(null);
     setChoices([]);
     setQuery('');
@@ -311,8 +318,15 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       // last item is one key from the first.
       const wrap = (n: number): number =>
         rows.length === 0 ? 0 : (n + rows.length) % rows.length;
-      if (event.name === 'up') { setHighlight(wrap(index - 1)); return true; }
-      if (event.name === 'down') { setHighlight(wrap(index + 1)); return true; }
+      const move = (to: number): true => {
+        setHighlight(to);
+        // Show what the choice would do while it is merely highlighted. The
+        // command put the `preview` there; the palette only reports movement.
+        if (pending) pending.arg.preview?.(rows[to] ?? null);
+        return true;
+      };
+      if (event.name === 'up') return move(wrap(index - 1));
+      if (event.name === 'down') return move(wrap(index + 1));
       if (event.name === 'right' && !pending) {
         const command = matches[index];
         if (command && argumentOf(command)) { choose(); return true; }

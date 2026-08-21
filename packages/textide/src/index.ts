@@ -21,3 +21,5 @@ export { MenuBar, MENUS } from './chrome/menubar.js';
 export { textideCommands, paletteOrder, EDITOR_URI, CATEGORIES } from './commands.js';
 export { attachLog, fileSink, unixSink } from './log.js';
 export type { LogSink, LogOptions } from './log.js';
+export { Icon, mono, ICON_WIDTH_SAFE } from './icons.js';
+export type { IconName } from './icons.js';

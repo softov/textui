@@ -4,6 +4,7 @@ import type {
 import { notify } from '@textui/core';
 import { getDocument, isDocumentDirty, revertDocument, saveDocument } from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
+import { Icon } from './icons.js';
 
 /**
  * textide's own commands.
@@ -144,7 +145,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     // --- File: about the thing in front of you -----------------------------
     {
       id: 'file.save',
-      icon: '⌸',
+      icon: Icon.save,
       title: 'Save',
       category: 'File',
       slots: ['palette'],
@@ -161,7 +162,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'file.revert',
-      icon: '↺',
+      icon: Icon.revert,
       title: 'Revert',
       category: 'File',
       slots: ['palette'],
@@ -172,7 +173,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'file.close',
-      icon: '✕',
+      icon: Icon.close,
       title: 'Close',
       category: 'File',
       slots: ['palette'],
@@ -190,7 +191,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     // --- View --------------------------------------------------------------
     {
       id: 'view.theme',
-      icon: '◐',
+      icon: Icon.theme,
       title: 'Theme',
       category: 'View',
       slots: ['palette'],
@@ -222,7 +223,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'view.arrangement',
-      icon: '▦',
+      icon: Icon.arrangement,
       title: 'Main Arrangement',
       category: 'View',
       slots: ['palette'],
@@ -243,7 +244,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'file.edit',
-      icon: '✎',
+      icon: Icon.edit,
       title: 'Toggle Edit Mode',
       category: 'File',
       slots: ['palette'],
@@ -260,7 +261,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'view.layout',
-      icon: '▤',
+      icon: Icon.layout,
       title: 'Layout',
       category: 'View',
       slots: ['palette'],
@@ -288,7 +289,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'view.toggleSidebar',
-      icon: '▤',
+      icon: Icon.sidebar,
       title: 'Toggle Sidebar',
       category: 'View',
       slots: ['palette'],
@@ -296,7 +297,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'view.toggleStatusBar',
-      icon: '▁',
+      icon: Icon.statusBar,
       title: 'Toggle Status Bar',
       category: 'View',
       slots: ['palette'],
@@ -304,7 +305,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'view.toggleTitleBar',
-      icon: '▔',
+      icon: Icon.titleBar,
       title: 'Toggle Title Bar',
       category: 'View',
       slots: ['palette'],
@@ -314,7 +315,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     // --- Help --------------------------------------------------------------
     {
       id: 'help.keys',
-      icon: '⌨',
+      icon: Icon.keys,
       title: 'Keyboard Shortcuts',
       category: 'Help',
       slots: ['palette'],
@@ -342,7 +343,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'help.about',
-      icon: 'ℹ',
+      icon: Icon.about,
       title: 'About textide',
       category: 'Help',
       slots: ['palette'],

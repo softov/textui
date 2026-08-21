@@ -169,3 +169,43 @@ describe('the viewport', () => {
     await t.unmount();
   });
 });
+
+describe('the caret cannot leave the pane', () => {
+  /**
+   * The node a resource registry hands back names a component, not a layout -
+   * so nothing sets `flex` on it, and a viewport that only clamps when it was
+   * told it is layout-sized reported that all four hundred lines fitted. The
+   * editor then grew to four hundred rows inside a twelve-row pane, and the
+   * caret walked out through the status bar.
+   */
+  it('scrolls instead of growing, even when nobody passed it a size', async () => {
+    let value = Array.from({ length: 400 }, (_, i) => `line ${i}`).join('\n');
+    const t = await renderApp({
+      width: 40, height: 12,
+      onBoot: (app) => { registerBuiltins(app); registerDocuments(app); },
+      root: {
+        component: 'box', direction: 'column', flex: 1,
+        // Deliberately no `flex` on the editor: this is the shape the registry
+        // produces.
+        children: [
+          { component: 'CodeEditor', value,
+            onChange: { handler: (v: string) => { value = v; } } },
+          { component: 'text', content: 'STATUS' },
+        ],
+      },
+    });
+    await settle(t);
+    t.tab(); t.flush();
+
+    expect(t.lines()).toHaveLength(12);
+    expect(t.hasText('STATUS'), 'the row below survives').toBe(true);
+
+    for (let i = 0; i < 40; i++) t.press('down');
+    await settle(t);
+
+    expect(t.hasText('line 40'), 'the viewport followed the caret').toBe(true);
+    expect(t.hasText('line 0'), 'and left the top behind').toBe(false);
+    expect(t.hasText('STATUS'), 'without pushing anything off the frame').toBe(true);
+    await t.unmount();
+  });
+});

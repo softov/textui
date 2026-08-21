@@ -156,7 +156,13 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   // --------------------------------------------------------------- layout
 
   const gutterWidth = lineNumbers ? String(lines.length).length + 1 : 0;
-  const rows = viewportRows(props, measured, lines.length);
+  // This component always renders into a `flex: 1` box, so it is layout-sized
+  // whether or not the caller said so - and a caller usually cannot: the node
+  // comes from the resource registry, which names a component and not a
+  // layout. Without this the viewport reports "everything fits", nothing ever
+  // scrolls, and the caret walks off the bottom of the pane and straight
+  // through the status bar.
+  const rows = viewportRows({ flex: 1, ...props }, measured, lines.length);
   const first = Math.max(0, Math.min(top, Math.max(0, lines.length - rows)));
 
   // Keep the caret on screen. Scrolling is a consequence of moving, not a

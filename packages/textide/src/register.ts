@@ -8,6 +8,7 @@ import { TitleBar } from './chrome/titlebar.js';
 import { StatusLine } from './chrome/statusbar.js';
 import { MenuBar } from './chrome/menubar.js';
 import { textideCommands, paletteOrder } from './commands.js';
+import { Icon } from './icons.js';
 
 export interface RegisterOptions {
   workspace: Workspace;
@@ -46,7 +47,7 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     id: 'app.palette',
     title: 'Command Palette',
     category: 'View',
-    icon: '⌕',
+    icon: Icon.palette,
     // Not in its own list. Offering "Command Palette" inside the command
     // palette is an entry whose only effect is to redraw what you are already
     // looking at. The menu and the keybinding reach it by id regardless.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '../src/index.js';
-import { h, defineComponent } from '@textui/core';
+import { h, defineComponent, useFocus, useScreen } from '@textui/core';
 
 /**
  * The acceptance test for the whole architecture.
@@ -198,7 +198,113 @@ describe('surfaces and mounts', () => {
   });
 });
 
+/**
+ * A screen has to be *on screen*.
+ *
+ * The stack kept its own books correctly for a long time while nothing
+ * mounted what was on top of it - every test asserted `current()?.id` and
+ * none asserted that anything had been drawn. So these read the frame.
+ */
 describe('navigation', () => {
+  const Detail = defineComponent<{ taskId?: string }>('Detail', (props) => {
+    const screen = useScreen<{ taskId?: string }>();
+    const focus = useFocus({});
+    return h('text', {
+      id: focus.id,
+      content: `DETAIL prop=${props.taskId ?? '-'} hook=${screen.params.taskId ?? '-'}`,
+    });
+  });
+
+  const stacked = async (options: { surface?: string } = {}) => {
+    const t = await renderApp({
+      shell: 'plain',
+      onBoot: (app) => {
+        app.components.register({ component: 'Detail', renderer: { kind: 'function', render: Detail } });
+        app.screens.register({ id: 'home', component: { component: 'text', content: 'HOME-SCREEN' } });
+        app.screens.register({
+          id: 'detail',
+          component: 'Detail',
+          ...(options.surface ? { surface: options.surface } : {}),
+        });
+        app.screens.reset('home');
+      },
+    });
+    await t.settle();
+    return t;
+  };
+
+  it('draws the screen on top of the stack', async () => {
+    const t = await stacked();
+    expect(t.hasText('HOME-SCREEN')).toBe(true);
+
+    t.app.screens.push('detail');
+    await t.settle();
+
+    // Swapped, not stacked: only the top is mounted.
+    expect(t.hasText('DETAIL')).toBe(true);
+    expect(t.hasText('HOME-SCREEN')).toBe(false);
+
+    t.app.screens.pop();
+    await t.settle();
+    expect(t.hasText('HOME-SCREEN')).toBe(true);
+    expect(t.hasText('DETAIL')).toBe(false);
+    await t.unmount();
+  });
+
+  it('hands the parameters over as props and publishes them too', async () => {
+    const t = await stacked();
+    t.app.screens.push('detail', { taskId: 'abc' });
+    await t.settle();
+
+    // Both, because a screen's own signature is the readable way to take an
+    // id and the store is the only way to read it eight levels down.
+    expect(t.hasText('prop=abc')).toBe(true);
+    expect(t.hasText('hook=abc')).toBe(true);
+    expect(t.store.get('$/layout/screen/params')).toEqual({ taskId: 'abc' });
+    await t.unmount();
+  });
+
+  it('gives each screen its own focus scope', async () => {
+    const t = await stacked();
+    t.app.screens.push('detail', { taskId: 'abc' });
+    await t.settle();
+
+    // Whatever the screen focuses belongs to the screen, so the stack can put
+    // focus back rather than guessing at an id that outlived its component.
+    const inside = t.app.focus.order('screen:detail');
+    expect(inside).toHaveLength(1);
+    expect(t.app.focus.scopeOf(inside[0] as string)).toBe('screen:detail');
+
+    // And it goes with the screen: pop, and the scope holds nothing.
+    t.app.screens.pop();
+    await t.settle();
+    expect(t.app.focus.order('screen:detail')).toEqual([]);
+    await t.unmount();
+  });
+
+  it('mounts a screen into the surface it names', async () => {
+    const t = await stacked({ surface: 'sidebar' });
+    t.app.screens.push('detail');
+    await t.settle();
+
+    // A surface is the application's word. A screen that wants to be a panel
+    // says so, and nothing here has to know what `sidebar` means.
+    expect(t.app.surfaces.mounts('sidebar').some((m) => m.key.includes('detail'))).toBe(true);
+    expect(t.app.surfaces.mounts('main').some((m) => m.key.includes('detail'))).toBe(false);
+    await t.unmount();
+  });
+
+  it('replaces the top without growing the stack', async () => {
+    const t = await stacked();
+    t.app.screens.replace('detail');
+    await t.settle();
+
+    expect(t.hasText('DETAIL')).toBe(true);
+    expect(t.app.screens.stack()).toHaveLength(1);
+    expect(t.app.screens.canGoBack()).toBe(false);
+    await t.unmount();
+  });
+
   it('pushes and pops screens', async () => {
     const t = await renderApp({
       shell: 'plain',

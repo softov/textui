@@ -20,6 +20,14 @@ export class Navigation implements Navigator {
       store: ReactiveStore;
       focus: FocusManager;
       onChange(): void;
+      /**
+       * Put the current screen on screen.
+       *
+       * A callback rather than a surface registry, because what a screen *is*
+       * - a stack entry and a definition - has nothing to do with where the
+       * application decided to draw it.
+       */
+      mount(entry: ScreenEntry | null): void;
     },
   ) {}
 
@@ -32,9 +40,19 @@ export class Navigation implements Navigator {
     return [...this.defs.values()];
   }
 
+  get(id: string): ScreenDefinition | undefined {
+    return this.defs.get(id);
+  }
+
   private publish(): void {
+    const current = this.current();
     this.deps.store.set('$/layout/screen/stack', this.entries.map((e) => e.id));
-    this.deps.store.set('$/layout/screen/current', this.current()?.id ?? null);
+    this.deps.store.set('$/layout/screen/current', current?.id ?? null);
+    // Published as well as passed as props, so a component deep inside a
+    // screen can read the parameters without every layer between forwarding
+    // them.
+    this.deps.store.set('$/layout/screen/params', current?.params ?? {});
+    this.deps.mount(current);
     this.deps.onChange();
   }
 

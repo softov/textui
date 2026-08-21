@@ -37,6 +37,8 @@ export { buildBoxes, paintTree, createRenderContext } from './runtime/paint.js';
 export type { PaintEnv } from './runtime/paint.js';
 export * from './runtime/style.js';
 export * from './runtime/hooks.js';
+export { Screen, SCREEN_COMPONENTS } from './ui/screen.js';
+export type { ScreenProps } from './ui/screen.js';
 
 // The application
 export { App, createApp, WRITER_KEY } from './app/app.js';

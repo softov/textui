@@ -11,6 +11,7 @@ import type { TaskFn, TaskState } from '../types/async.js';
 import type { Stream, StreamSource } from '../types/stream.js';
 import type { TextUIApp } from '../types/app.js';
 import type { I18n } from '../types/i18n.js';
+import type { Navigator } from '../types/navigation.js';
 import type { Resource } from '../types/resource.js';
 import type { SyntaxQuery, SyntaxRegistry, SyntaxToken } from '../types/syntax.js';
 import type { RenderOutput } from '../types/render.js';
@@ -616,6 +617,24 @@ export function useInput(
 }
 
 // --------------------------------------------------------------- commands
+
+/**
+ * The screen this is drawn inside: which one, and what it was given.
+ *
+ * Reads the published entry rather than props, so a control eight levels down
+ * can ask which task it is showing without every box between it and the screen
+ * forwarding an id it does not care about.
+ */
+export function useScreen<P = Record<string, unknown>>(): { id: string | null; params: P } {
+  const id = useStoreValue<string | null>('$/layout/screen/current' as BindingPath, null);
+  const params = useStoreValue<P>('$/layout/screen/params' as BindingPath);
+  return { id: id ?? null, params: (params ?? {}) as P };
+}
+
+/** The stack, for a component that moves between screens. */
+export function useNavigate(): Navigator {
+  return useApp().screens;
+}
 
 export function useCommand(def: Omit<CommandDefinition, 'scopeId'>, deps: unknown[] = []): void {
   const instance = currentInstance();

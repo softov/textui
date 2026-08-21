@@ -36,6 +36,8 @@ import { createAnimation } from '../core/animation.js';
 import { createI18n } from '../core/i18n.js';
 import { createSurfaces, createLayouts, createShells } from '../core/surfaces.js';
 import { createNavigation } from '../core/navigation.js';
+import { SCREEN_COMPONENTS } from '../ui/screen.js';
+import type { ScreenEntry } from '../types/navigation.js';
 import { createResources } from '../core/resources.js';
 import { createSyntax } from '../core/syntax.js';
 import { createManifests } from '../core/manifest.js';
@@ -57,6 +59,7 @@ const FRAME_BUDGET_MS = 8;
 
 /** The mount key an app's `root` option is opened under. */
 const ROOT_KEY = 'root';
+const SCREEN_KEY = 'screen';
 
 /** Render/layout passes per frame. Measurement needs a second one. */
 const MAX_LAYOUT_PASSES = 3;
@@ -84,6 +87,8 @@ export class App implements TextUIApp {
   readonly terminal: NonNullable<CreateAppOptions['terminal']>;
 
   private buffer_: Buffer;
+  /** The mount holding the top of the screen stack, while there is one. */
+  private screenMount: Disposable | null = null;
   private root: Instance | null = null;
   private frameScheduled = false;
   private frameTimer: ReturnType<typeof setTimeout> | null = null;
@@ -164,6 +169,7 @@ export class App implements TextUIApp {
       store: this.store,
       focus: this.focus,
       onChange: () => this.requestRender(),
+      mount: (entry) => this.mountScreen(entry),
     });
 
     this.manifest = createManifests(this);
@@ -172,6 +178,9 @@ export class App implements TextUIApp {
     this.terminal = options.terminal;
 
     this.components.registerMany(PRIMITIVES);
+    // Registered here rather than by `registerBuiltins`, because an
+    // application that never registers the catalog can still navigate.
+    this.components.registerMany(SCREEN_COMPONENTS);
 
     this.themeId = options.theme ?? 'dark';
     this.shellId = options.shell ?? 'plain';
@@ -396,6 +405,37 @@ export class App implements TextUIApp {
    * the terminal's own dark one behind and only dialogs looked light), no
    * status surface, no toast host, and `setShell` did nothing.
    */
+  /**
+   * Put the current screen into its surface.
+   *
+   * A screen is a mount like `root` is a mount: the shell arranges it, the
+   * layouts apply to it, and anything reading the surface registry sees it.
+   * Only the top of the stack is mounted - what a screen underneath keeps is
+   * its store scope, if it asked to, and not its instances.
+   *
+   * Parameters arrive as props. A screen that wants them deeper than its own
+   * signature reads `$/layout/screen/params` instead of forwarding them.
+   */
+  private mountScreen(entry: ScreenEntry | null): void {
+    this.screenMount?.dispose();
+    this.screenMount = null;
+    if (!entry) return;
+
+    const def = this.screens.get(entry.id);
+    if (!def) return;
+
+    const node: ComponentNode = typeof def.component === 'string'
+      ? { component: def.component, ...(entry.params ?? {}) }
+      : { ...def.component, ...(entry.params ?? {}) };
+
+    this.screenMount = this.surfaces.open({
+      surface: def.surface ?? 'main',
+      key: `${SCREEN_KEY}:${entry.id}`,
+      target: { component: 'Screen', screenId: entry.id, children: [node] },
+      ...(def.display ? { display: def.display } : {}),
+    });
+  }
+
   private rootNode(): ComponentNode {
     const shell = this.shells.get(this.shellId);
     if (shell) return { component: shell.component };

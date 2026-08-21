@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { registerTodo } from '../src/app.js';
 import { fileStore } from '../src/storage.js';
-import { getTask, tasksIn } from '../src/data.js';
+import { STATUSES, getTask, navCounts, projects, tasksIn, type View } from '../src/data.js';
 
 /**
  * The example, mounted.
@@ -540,6 +540,64 @@ describe('the sidebar keeps the keyboard', () => {
 
     // Three blocks filter; the fourth navigates.
     expect(t.app.screens.current()?.id).toBe('settings');
+    await t.unmount();
+  });
+});
+
+/**
+ * The counts, against the lists they describe.
+ *
+ * `navCounts` computes twenty-one numbers in one pass that `tasksIn` would
+ * compute in twenty-one, which is only worth doing if the two agree - a fast
+ * count that disagrees with the list under it is a bug wearing a benchmark.
+ * So the test is the slow way, checked against the fast one, for every row of
+ * every block under views that have each axis set and unset.
+ */
+describe('navCounts', () => {
+  const VIEWS: View[] = [
+    { status: 'all', project: null, tag: null },
+    { status: 'today', project: null, tag: null },
+    { status: 'today', project: 'scena', tag: null },
+    { status: 'all', project: null, tag: 'design' },
+    { status: 'today', project: 'scena', tag: 'design' },
+    { status: 'archived', project: 'keepr', tag: null },
+    { status: 'completed', project: null, tag: 'design' },
+  ];
+
+  for (const view of VIEWS) {
+    it(`agrees with tasksIn for ${JSON.stringify(view)}`, async () => {
+      const t = await open();
+      const store = t.app.store;
+      store.set('$/todo/ui/view', view);
+      const counts = navCounts(store, view);
+
+      for (const status of STATUSES) {
+        expect(counts.status[status]).toBe(tasksIn(store, { ...view, status }).length);
+      }
+
+      expect(counts.project['']).toBe(tasksIn(store, { ...view, project: null }).length);
+      for (const project of projects(store)) {
+        expect(counts.project[project.id] ?? 0)
+          .toBe(tasksIn(store, { ...view, project: project.id }).length);
+      }
+
+      expect(counts.tag['']).toBe(tasksIn(store, { ...view, tag: null }).length);
+      for (const tag of counts.tags) {
+        expect(counts.tag[tag] ?? 0).toBe(tasksIn(store, { ...view, tag }).length);
+      }
+
+      await t.unmount();
+    });
+  }
+
+  it('lists every tag whatever the filter hides', async () => {
+    const t = await open();
+    // A tag row that vanishes when its count reaches zero is a row that moves
+    // under the cursor as you filter. Every tag is a row, at zero or not.
+    const wide = navCounts(t.app.store, { status: 'all', project: null, tag: null });
+    const narrow = navCounts(t.app.store, { status: 'archived', project: 'keepr', tag: null });
+    expect(narrow.tags).toEqual(wide.tags);
+    expect(wide.tags.length).toBeGreaterThan(0);
     await t.unmount();
   });
 });

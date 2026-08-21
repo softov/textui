@@ -4,8 +4,8 @@ import {
 } from '@textui/core';
 import type { BoxProps, ListItem, RenderOutput } from '@textui/core';
 import {
-  DEFAULT_VIEW, PROJECTS, TASKS, VIEW, getProject, getTask, projects, setView,
-  tags, tasksIn, toggleTask,
+  DEFAULT_VIEW, PROJECTS, STATUSES, TASKS, VIEW, getProject, getTask, navCounts,
+  projects, setView, tasksIn, toggleTask,
   type Status, type Task, type View,
 } from './data.js';
 
@@ -182,24 +182,23 @@ export const Nav: (props: Record<string, never>) => RenderOutput = defineCompone
    */
   const mark = (on: boolean): string => (on ? theme.glyphs.bulletFilled : ' ');
 
-  /** How many the list would hold if this row were chosen, everything else as it is. */
-  const count = (patch: Partial<View>): string => String(tasksIn(app.store, patch).length);
+  // Every number on this list, in one pass over the tasks rather than one
+  // pass per row. The rows differ only in which axis they hold, and a task's
+  // contribution to all of them falls out of the same three booleans.
+  const counts = navCounts(app.store, view);
 
-  const statuses: [Status, string][] = [
-    ['all', 'All'],
-    ['today', 'Today'],
-    ['upcoming', 'Upcoming'],
-    ['completed', 'Completed'],
-    ['archived', 'Archived'],
-  ];
+  const LABELS: Record<Status, string> = {
+    all: 'All', today: 'Today', upcoming: 'Upcoming',
+    completed: 'Completed', archived: 'Archived',
+  };
 
   const items: ListItem[] = [
     { id: 'h:inbox', label: 'INBOX', disabled: true },
-    ...statuses.map(([status, label]) => ({
+    ...STATUSES.map((status) => ({
       id: `status:${status}`,
-      label,
+      label: LABELS[status],
       icon: mark(view.status === status),
-      meta: count({ status }),
+      meta: String(counts.status[status]),
     })),
 
     { id: 'h:projects', label: 'PROJECTS', disabled: true },
@@ -207,13 +206,13 @@ export const Nav: (props: Record<string, never>) => RenderOutput = defineCompone
       id: 'project:',
       label: 'Any project',
       icon: mark(view.project === null),
-      meta: count({ project: null }),
+      meta: String(counts.project['']),
     },
     ...projects(app.store).map((project) => ({
       id: `project:${project.id}`,
       label: project.name,
       icon: mark(view.project === project.id),
-      meta: count({ project: project.id }),
+      meta: String(counts.project[project.id] ?? 0),
     })),
 
     { id: 'h:tags', label: 'TAGS', disabled: true },
@@ -221,13 +220,13 @@ export const Nav: (props: Record<string, never>) => RenderOutput = defineCompone
       id: 'tag:',
       label: 'Any tag',
       icon: mark(view.tag === null),
-      meta: count({ tag: null }),
+      meta: String(counts.tag['']),
     },
-    ...tags(app.store).map((tag) => ({
+    ...counts.tags.map((tag) => ({
       id: `tag:${tag}`,
       label: `#${tag}`,
       icon: mark(view.tag === tag),
-      meta: count({ tag }),
+      meta: String(counts.tag[tag] ?? 0),
     })),
 
     { id: 'h:more', label: 'MORE', disabled: true },

@@ -117,6 +117,74 @@ export function tasksIn(store: ReactiveStore, view: Partial<View> = {}): Task[] 
     (full.tag === null || task.tags.includes(full.tag)));
 }
 
+/** Every status, in the order the sidebar draws them. */
+export const STATUSES: Status[] = ['all', 'today', 'upcoming', 'completed', 'archived'];
+
+export interface NavCounts {
+  status: Record<Status, number>;
+  /** Keyed by project id. `''` is "any project". */
+  project: Record<string, number>;
+  /** Keyed by tag. `''` is "any tag". */
+  tag: Record<string, number>;
+  /** Every tag any task carries, sorted - the rows to draw. */
+  tags: string[];
+}
+
+/**
+ * Every number the sidebar shows, in one pass.
+ *
+ * Each row answers "how many, if this row were chosen and the other two axes
+ * stayed as they are", which is a different question per row - so the obvious
+ * way to write it is `tasksIn` per row. That is twenty-one filters over every
+ * task, twenty-one arrays allocated, every time anything under `$/todo/tasks`
+ * is written. Toggling one task rescanned the list twenty-one times.
+ *
+ * A task's contribution to all twenty-one is decided by three booleans, so one
+ * pass computes them and adds the task to whichever rows it belongs to. The
+ * status semantics stay in `matchesStatus` rather than being restated here:
+ * counts that disagree with the list they describe are worse than slow ones.
+ */
+export function navCounts(store: ReactiveStore, view: View): NavCounts {
+  const status: Record<Status, number> = { all: 0, today: 0, upcoming: 0, completed: 0, archived: 0 };
+  const project: Record<string, number> = {};
+  const tag: Record<string, number> = {};
+  // The "any" row of each block, kept out of the maps so a project or tag
+  // named by the empty string could never be mistaken for it.
+  let anyProject = 0;
+  let anyTag = 0;
+
+  for (const task of allTasks(store)) {
+    // Every tag is a row even at zero, so rows do not appear and vanish as you
+    // filter. Seeding the key here is the pass `tags()` used to be.
+    for (const name of task.tags) tag[name] ??= 0;
+
+    const okStatus = matchesStatus(task, view.status);
+    const okProject = view.project === null || task.projectId === view.project;
+    const okTag = view.tag === null || task.tags.includes(view.tag);
+
+    if (okProject && okTag) {
+      for (const candidate of STATUSES) if (matchesStatus(task, candidate)) status[candidate] += 1;
+    }
+    if (okStatus && okTag) {
+      anyProject += 1;
+      if (task.projectId !== null) project[task.projectId] = (project[task.projectId] ?? 0) + 1;
+    }
+    if (okStatus && okProject) {
+      anyTag += 1;
+      // A tag listed twice on one task is still one task.
+      for (let i = 0; i < task.tags.length; i += 1) {
+        const name = task.tags[i] as string;
+        if (task.tags.indexOf(name) === i) tag[name] = (tag[name] ?? 0) + 1;
+      }
+    }
+  }
+
+  const names = Object.keys(tag).sort((a, b) => a.localeCompare(b));
+  project[''] = anyProject;
+  tag[''] = anyTag;
+  return { status, project, tag, tags: names };
+}
+
 /** Search is its own screen, and its own question. */
 export function searchTasks(store: ReactiveStore, query: string): Task[] {
   const needle = query.trim().toLowerCase();

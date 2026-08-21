@@ -20,8 +20,14 @@ import { EDITOR_COMPONENTS } from './components/editor.js';
 export {
   DOCUMENTS_ROOT, documentPath, getDocument, isDocumentDirty, openDocuments,
   openDocument, setDocumentContent, revertDocument, closeDocument, saveDocument,
+  undoDocument, redoDocument, canUndoDocument, canRedoDocument, closeDocumentEdit,
 } from './documents.js';
-export type { DocumentState } from './documents.js';
+export type { DocumentState, EditOptions } from './documents.js';
+
+export {
+  EMPTY_HISTORY, HISTORY_LIMIT, canRedo, canUndo, record, redo, undo,
+} from './history.js';
+export type { DocumentCursor, History, Snapshot } from './history.js';
 
 export { useDocument } from './use-document.js';
 export type { DocumentHandle } from './use-document.js';

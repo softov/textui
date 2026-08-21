@@ -60,9 +60,8 @@ directory until it is configured is an editor nobody opens.
 
 ## What is not, yet
 
-- **Undo.** `CodeEditor` has a cursor and edits and saves; it has no history,
-  no selection and no clipboard. Editing without undo is the thing that
-  actually loses work, so it is next.
+- **Selection and the clipboard.** `CodeEditor` has a cursor, edits, saves and
+  undo. It has no selection, so there is nothing to cut, copy or indent yet.
 - **Hot reload.** `pnpm dev` bundles from the workspace sources, so a change to
   the runtime is live on the next run with no build in between - but a running
   editor does not pick it up. The shape it would take is written down in

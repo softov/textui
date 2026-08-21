@@ -5,6 +5,7 @@ import {
   useState, useTheme, viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
+import { EMPTY_HISTORY, record, redo, undo, type History, type Snapshot } from '../history.js';
 
 /**
  * A text editor.
@@ -47,6 +48,15 @@ export interface CodeEditorProps extends BoxProps {
 
 interface Cursor { line: number; column: number }
 
+/**
+ * What kind of edit this was, for folding a run of them into one step back.
+ *
+ * Typing a word is one thing that happened. Deleting is a different thing, so
+ * it closes the run - and so does a newline, because "undo" that swallows the
+ * paragraph you just started is undo you stop trusting.
+ */
+type EditKind = 'type' | 'delete' | undefined;
+
 /** Clamp a cursor into a buffer, so no movement can land outside the text. */
 function clamp(lines: string[], cursor: Cursor): Cursor {
   const line = Math.max(0, Math.min(cursor.line, lines.length - 1));
@@ -76,6 +86,10 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   // standalone editor works without a caller wiring state back in - an editor
   // that computes the next edit from text a frame out of date eats keystrokes.
   const [local, setLocal] = useState(value ?? '');
+  // History follows the buffer. With a document it belongs to the document, so
+  // two panes on one file share it and it survives the pane closing; without
+  // one there is nowhere else for it to live.
+  const [localHistory, setLocalHistory] = useState<History>(EMPTY_HISTORY);
   const text = uri ? doc.content : local;
   const readonly = readonlyProp ?? (uri ? doc.readonly : false);
   const lines = text.split('\n');
@@ -87,17 +101,65 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
 
   const at = clamp(lines, cursor);
 
-  const write = (next: string, to: Cursor): void => {
+  const write = (next: string, to: Cursor, kind?: EditKind): void => {
     if (readonly) return;
-    if (uri) doc.set(next); else setLocal(next);
+    if (uri) {
+      doc.set(next, { cursor: at, ...(kind ? { coalesce: kind } : {}) });
+    } else {
+      setLocalHistory(record(localHistory, { content: local, cursor: at }, kind ?? null));
+      setLocal(next);
+    }
     onChange?.(next);
     const nextLines = next.split('\n');
     setCursor(clamp(nextLines, to));
     setGoal(clamp(nextLines, to).column);
   };
 
+  /** Put the buffer, and the caret, back where a step says they were. */
+  const restore = (to: Snapshot): void => {
+    const nextLines = to.content.split('\n');
+    const nextCursor = clamp(nextLines, to.cursor ?? at);
+    setCursor(nextCursor);
+    setGoal(nextCursor.column);
+    onChange?.(to.content);
+  };
+
+  const stepBack = (): boolean => {
+    if (readonly) return false;
+    if (uri) {
+      const to = doc.undo(at);
+      if (to) restore(to);
+      return to !== null;
+    }
+    const stepped = undo(localHistory, { content: local, cursor: at });
+    if (!stepped) return false;
+    setLocalHistory(stepped.history);
+    setLocal(stepped.to.content);
+    restore(stepped.to);
+    return true;
+  };
+
+  const stepForward = (): boolean => {
+    if (readonly) return false;
+    if (uri) {
+      const to = doc.redo(at);
+      if (to) restore(to);
+      return to !== null;
+    }
+    const stepped = redo(localHistory, { content: local, cursor: at });
+    if (!stepped) return false;
+    setLocalHistory(stepped.history);
+    setLocal(stepped.to.content);
+    restore(stepped.to);
+    return true;
+  };
+
   const move = (to: Cursor, keepGoal = false): void => {
     const next = clamp(lines, to);
+    // Moving ends the run. What comes next is a new step back, wherever the
+    // caret has gone.
+    if (uri) doc.closeEdit();
+    else if (localHistory.open !== null) setLocalHistory({ ...localHistory, open: null });
     setCursor(next);
     if (!keepGoal) setGoal(next.column);
     onCursor?.({ line: next.line + 1, column: next.column + 1 });
@@ -113,11 +175,14 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
 
     if (parts.length === 1) {
       write([...head.slice(0, -1), (head[head.length - 1] ?? '') + after, ...tail].join('\n'),
-        { line: at.line, column: before.length + (parts[0]?.length ?? 0) });
+        { line: at.line, column: before.length + (parts[0]?.length ?? 0) },
+        'type');
       return;
     }
     const middle = parts.slice(1, -1);
     const last = parts[parts.length - 1] ?? '';
+    // A newline is its own step. Undo that swallowed the paragraph you had
+    // just started would be undo nobody presses twice.
     write([...head, ...middle, last + after, ...tail].join('\n'),
       { line: at.line + parts.length - 1, column: last.length });
   };
@@ -127,7 +192,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     if (before.length > 0) {
       const next = [...lines];
       next[at.line] = before.slice(0, -1) + after;
-      write(next.join('\n'), { line: at.line, column: before.length - 1 });
+      write(next.join('\n'), { line: at.line, column: before.length - 1 }, 'delete');
       return;
     }
     // At column zero, backspace joins this line onto the one above it.
@@ -143,7 +208,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     if (after.length > 0) {
       const next = [...lines];
       next[at.line] = before + after.slice(1);
-      write(next.join('\n'), at);
+      write(next.join('\n'), at, 'delete');
       return;
     }
     // At end of line, delete pulls the next line up.
@@ -199,6 +264,14 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     if (key === 'pagedown') { move({ line: at.line + rows, column: goal }, true); return true; }
 
     if (readonly) return false;
+    // Undo before anything that edits, and before the application's own
+    // keybindings, which only see a key the focused control did not take.
+    if (event.ctrl && (key === 'z' || key === 'Z')) {
+      if (event.shift || key === 'Z') { stepForward(); return true; }
+      stepBack();
+      return true;
+    }
+    if (event.ctrl && (key === 'y' || key === 'Y')) { stepForward(); return true; }
     if (key === 'backspace') { backspace(); return true; }
     if (key === 'delete') { del(); return true; }
     if (key === 'enter') { insert('\n'); return true; }

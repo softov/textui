@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { registerBuiltins } from '@textui/core';
-import { renderApp } from '@textui/testing';
-import { registerDocuments } from '../src/index.js';
+import { h, registerBuiltins } from '@textui/core';
+import type { Resource, ResourceProvider } from '@textui/core';
+import { render, renderApp } from '@textui/testing';
+import {
+  CodeEditor, canUndoDocument, getDocument, registerDocuments, revertDocument,
+  setDocumentContent, undoDocument,
+} from '../src/index.js';
 
 /**
  * The editor.
@@ -206,6 +210,249 @@ describe('the caret cannot leave the pane', () => {
     expect(t.hasText('line 40'), 'the viewport followed the caret').toBe(true);
     expect(t.hasText('line 0'), 'and left the top behind').toBe(false);
     expect(t.hasText('STATUS'), 'without pushing anything off the frame').toBe(true);
+    await t.unmount();
+  });
+});
+
+/**
+ * Undo.
+ *
+ * The thing that actually loses work, so what these check is not that a stack
+ * exists but that a step back is the step a person expected: a word rather
+ * than a letter, the caret where it was, and a run that ends when you move
+ * away rather than swallowing two edits made in different places.
+ */
+describe('stepping back', () => {
+  const editor = async (content: string) => {
+    const t = await render(
+      h('box', { direction: 'column', width: 40, height: 8 },
+        h(CodeEditor, { value: content, autoFocus: true, lineNumbers: false, flex: 1 })),
+      { width: 40, height: 8 },
+    );
+    await t.settle();
+    t.focus(t.getByRole('textbox').id);
+    return t;
+  };
+
+  it('takes back a word, not a letter', async () => {
+    const t = await editor('');
+    t.type('hello');
+    await t.settle();
+    expect(t.hasText('hello')).toBe(true);
+
+    t.press('ctrl+z');
+    await t.settle();
+
+    // One press, one word. Five presses for five letters is a stack that
+    // exists rather than an undo somebody uses.
+    expect(t.hasText('hello')).toBe(false);
+    await t.unmount();
+  });
+
+  it('puts it back on redo', async () => {
+    const t = await editor('');
+    t.type('hello');
+    await t.settle();
+    t.press('ctrl+z');
+    await t.settle();
+    t.press('ctrl+y');
+    await t.settle();
+
+    expect(t.hasText('hello')).toBe(true);
+    await t.unmount();
+  });
+
+  it('ends the run when the caret moves', async () => {
+    const t = await editor('');
+    t.type('ab');
+    await t.settle();
+    t.press('home');
+    await t.settle();
+    t.type('X');
+    await t.settle();
+    expect(t.hasText('Xab')).toBe(true);
+
+    t.press('ctrl+z');
+    await t.settle();
+
+    // The X goes, and `ab` stays: two edits in two places are two steps.
+    expect(t.hasText('ab')).toBe(true);
+    expect(t.hasText('Xab')).toBe(false);
+    await t.unmount();
+  });
+
+  it('keeps a newline as its own step', async () => {
+    const t = await editor('');
+    t.type('one');
+    await t.settle();
+    t.press('enter');
+    t.type('two');
+    await t.settle();
+
+    t.press('ctrl+z');
+    await t.settle();
+    // The second line's text goes; the line break does not go with it.
+    expect(t.hasText('two')).toBe(false);
+    expect(t.hasText('one')).toBe(true);
+    await t.unmount();
+  });
+
+  it('separates typing from deleting', async () => {
+    const t = await editor('');
+    t.type('abcd');
+    await t.settle();
+    t.press('backspace');
+    t.press('backspace');
+    await t.settle();
+    expect(t.hasText('ab')).toBe(true);
+
+    t.press('ctrl+z');
+    await t.settle();
+    // Deleting is its own run, so one step back returns the deleted letters.
+    expect(t.hasText('abcd')).toBe(true);
+    await t.unmount();
+  });
+
+  it('does nothing at the bottom of the stack', async () => {
+    const t = await editor('start');
+    for (let i = 0; i < 5; i++) { t.press('ctrl+z'); await t.settle(); }
+
+    expect(t.hasText('start')).toBe(true);
+    await t.unmount();
+  });
+});
+
+/**
+ * The same history, on a document.
+ *
+ * This is the path textide takes, and the one that matters most: the history
+ * belongs to the buffer, so it survives the pane, an action that rewrites the
+ * whole file is one step, and two editors on a file agree about what "back"
+ * means.
+ */
+describe('a buffer remembers', () => {
+  const provider = (files: Record<string, string>): ResourceProvider => ({
+    scheme: 'mem',
+    async stat(uri): Promise<Resource | null> {
+      if (files[uri] === undefined) return null;
+      return {
+        uri,
+        kind: 'file',
+        metadata: { name: uri, size: (files[uri] as string).length },
+        capabilities: ['read', 'write'],
+      };
+    },
+    async read(uri) { return files[uri] ?? ''; },
+    async write(uri, content) { files[uri] = String(content); },
+  });
+
+  const opened = async (initial: string) => {
+    const files = { 'mem://a.txt': initial };
+    const t = await renderApp({
+      width: 40,
+      height: 8,
+      onBoot: (app) => {
+        registerBuiltins(app);
+        registerDocuments(app);
+        app.resources.registerProvider(provider(files));
+        app.resources.registerKind({ id: 'file', title: 'File' });
+      },
+      root: {
+        component: 'box', direction: 'column', flex: 1,
+        children: { component: 'CodeEditor', flex: 1, uri: 'mem://a.txt', lineNumbers: false },
+      },
+    });
+    await settle(t, 6);
+    t.tab(); t.flush();
+    const read = (): string =>
+      (getDocument(t.app.store, 'mem://a.txt') as { content: string }).content;
+    return { t, read };
+  };
+
+  it('steps the buffer back, not just what is drawn', async () => {
+    const { t, read } = await opened('start\n');
+    t.press('end');
+    t.type('ed');
+    await settle(t);
+    expect(read()).toBe('started\n');
+
+    t.press('ctrl+z');
+    await settle(t);
+    expect(read()).toBe('start\n');
+
+    t.press('ctrl+y');
+    await settle(t);
+    expect(read()).toBe('started\n');
+    await t.unmount();
+  });
+
+  it('counts an action that rewrote the file as one step', async () => {
+    const { t, read } = await opened('a\nb\n');
+    // What "format this document" does: replace the buffer wholesale.
+    setDocumentContent(t.app.store, 'mem://a.txt', 'A\nB\n');
+    await settle(t);
+    expect(read()).toBe('A\nB\n');
+
+    expect(canUndoDocument(t.app.store, 'mem://a.txt')).toBe(true);
+    undoDocument(t.app.store, 'mem://a.txt');
+    await settle(t);
+    expect(read()).toBe('a\nb\n');
+    await t.unmount();
+  });
+
+  it('makes revert a step back rather than a cliff', async () => {
+    const { t, read } = await opened('kept\n');
+    t.press('end');
+    t.type('!');
+    await settle(t);
+    expect(read()).toBe('kept!\n');
+
+    revertDocument(t.app.store, 'mem://a.txt');
+    await settle(t);
+    expect(read()).toBe('kept\n');
+
+    // Reverting by accident is exactly when somebody wants one step back.
+    undoDocument(t.app.store, 'mem://a.txt');
+    await settle(t);
+    expect(read()).toBe('kept!\n');
+    await t.unmount();
+  });
+
+  it('is one history for two panes on one file', async () => {
+    const files = { 'mem://a.txt': 'one\n' };
+    const t = await renderApp({
+      width: 60,
+      height: 10,
+      onBoot: (app) => {
+        registerBuiltins(app);
+        registerDocuments(app);
+        app.resources.registerProvider(provider(files));
+        app.resources.registerKind({ id: 'file', title: 'File' });
+      },
+      root: {
+        component: 'box', direction: 'column', flex: 1,
+        children: [
+          { component: 'CodeEditor', flex: 1, uri: 'mem://a.txt', lineNumbers: false },
+          { component: 'CodeEditor', flex: 1, uri: 'mem://a.txt', lineNumbers: false },
+        ],
+      },
+    });
+    await settle(t, 6);
+    const read = (): string =>
+      (getDocument(t.app.store, 'mem://a.txt') as { content: string }).content;
+
+    t.tab(); t.flush();
+    t.press('end');
+    t.type('!');
+    await settle(t);
+    expect(read()).toBe('one!\n');
+
+    // The second pane can take back what the first one typed, because they
+    // are editing the same buffer and there is only one idea of "back".
+    t.tab(); t.flush();
+    t.press('ctrl+z');
+    await settle(t);
+    expect(read()).toBe('one\n');
     await t.unmount();
   });
 });

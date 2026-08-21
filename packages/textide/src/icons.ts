@@ -50,6 +50,8 @@ export const FULL_ICONS = {
   // --- the document ------------------------------------------------------
   save: '⌸',
   revert: '↺',
+  undo: '↶',
+  redo: '↷',
   close: '✕',
   edit: '✎',
   read: '◉',
@@ -140,6 +142,8 @@ export const ASCII_ICONS: IconSet = {
 
   save: '=',
   revert: '<',
+  undo: '[',
+  redo: ']',
   close: 'x',
   edit: 'e',
   read: 'o',

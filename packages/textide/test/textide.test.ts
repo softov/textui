@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
+import { getDocument } from '@textui/documents';
 import { loadWorkspace, registerTextide, CONFIG_FILE } from '../src/index.js';
 import type { Workspace } from '../src/index.js';
 
@@ -251,5 +252,53 @@ describe('editing a file', () => {
 
     await t.unmount();
     await rm(scratch, { recursive: true, force: true });
+  });
+});
+
+/**
+ * Undo, in the editor that ships.
+ *
+ * The component's own tests cover the stack. This one covers the wiring: that
+ * ctrl+z reaches the editor while it has focus, and reaches the command when
+ * it does not - both arriving at the same buffer.
+ */
+describe('stepping back in textide', () => {
+  it('takes back what was typed, from the editor and from the command', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'textide-undo-'));
+    await writeFile(join(dir, 'note.txt'), 'hello\n');
+    const workspace = await loadWorkspace(dir);
+    const uri = `file://${join(dir, 'note.txt')}`;
+
+    const t = await renderApp({
+      width: 96,
+      height: 20,
+      shell: 'workbench',
+      theme: 'workbench',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    for (let i = 0; i < 8; i++) await t.settle();
+
+    t.app.store.set('$/ui/editor/uri', uri);
+    await t.app.execute('file.edit');
+    for (let i = 0; i < 8; i++) await t.settle();
+
+    const read = (): string => getDocument(t.app.store, uri)?.content ?? '';
+
+    t.press('end');
+    t.type(' there');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(read()).toBe('hello there\n');
+
+    t.press('ctrl+z');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(read()).toBe('hello\n');
+
+    // And the same step from the palette, with focus wherever it happens to be.
+    await t.app.execute('edit.redo');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(read()).toBe('hello there\n');
+
+    await t.unmount();
+    await rm(dir, { recursive: true, force: true });
   });
 });

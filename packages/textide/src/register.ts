@@ -125,6 +125,10 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+s', 'file.save'],
     ['ctrl+w', 'file.close'],
     ['ctrl+n', 'fs.newFile'],
+    // The editor takes these while it has focus, because only it can put the
+    // caret back. These are the same step from anywhere else.
+    ['ctrl+z', 'edit.undo'],
+    ['ctrl+y', 'edit.redo'],
     ['ctrl+e', 'file.edit'],
     // F10 enters the bar; alt+letter opens one menu outright. Both exist
     // because the first is discoverable and the second is fast.

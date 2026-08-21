@@ -1,9 +1,12 @@
 import type { TaskState } from '@textui/core';
 import { useEffect, useRuntime, useStoreValue, useTask } from '@textui/core';
 import {
-  documentPath, openDocument, revertDocument, saveDocument, setDocumentContent,
-  type DocumentState,
+  closeDocumentEdit, documentPath, openDocument, redoDocument, revertDocument,
+  saveDocument, setDocumentContent, undoDocument,
+  type DocumentState, type EditOptions,
 } from './documents.js';
+import { canRedo, canUndo, EMPTY_HISTORY } from './history.js';
+import type { DocumentCursor, Snapshot } from './history.js';
 
 /**
  * The document hook.
@@ -25,10 +28,17 @@ export interface DocumentHandle {
   status: TaskState['status'];
   error: unknown;
   /** Replace the buffer. What an action like "format" calls. */
-  set(content: string): void;
+  set(content: string, options?: EditOptions): void;
   revert(): void;
   reload(): void;
   save(): Promise<void>;
+  canUndo: boolean;
+  canRedo: boolean;
+  /** Step back, and say where the caret belongs afterwards. */
+  undo(cursor?: DocumentCursor): Snapshot | null;
+  redo(cursor?: DocumentCursor): Snapshot | null;
+  /** End the run of edits folding into one step. Moving the caret ends it. */
+  closeEdit(): void;
 }
 
 /**
@@ -63,8 +73,17 @@ export function useDocument(uri: string | null): DocumentHandle {
     kind: doc?.kind,
     status: doc ? 'success' : task.status,
     error: task.error,
-    set: (next: string) => {
-      if (uri) setDocumentContent(runtime.store, uri, next);
+    set: (next: string, options?: EditOptions) => {
+      if (uri) setDocumentContent(runtime.store, uri, next, options);
+    },
+    // Read off the value this component is already subscribed to, so a menu
+    // row that asks whether undo is possible redraws when it stops being.
+    canUndo: canUndo(doc?.history ?? EMPTY_HISTORY),
+    canRedo: canRedo(doc?.history ?? EMPTY_HISTORY),
+    undo: (cursor?: DocumentCursor) => (uri ? undoDocument(runtime.store, uri, cursor) : null),
+    redo: (cursor?: DocumentCursor) => (uri ? redoDocument(runtime.store, uri, cursor) : null),
+    closeEdit: () => {
+      if (uri) closeDocumentEdit(runtime.store, uri);
     },
     revert: () => {
       if (uri) revertDocument(runtime.store, uri);

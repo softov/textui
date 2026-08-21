@@ -2,7 +2,10 @@ import type {
   LayoutName, SurfaceName, CommandDefinition, CommandContext, TextUIApp, BindingPath, ThemeGlyphs,
 } from '@textui/core';
 import { notify } from '@textui/core';
-import { getDocument, isDocumentDirty, revertDocument, saveDocument } from '@textui/documents';
+import {
+  canRedoDocument, canUndoDocument, getDocument, isDocumentDirty, redoDocument,
+  revertDocument, saveDocument, undoDocument,
+} from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
 import { iconsFor } from './icons.js';
 
@@ -198,6 +201,47 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
         }
         ctx.store.set(EDITOR_URI, null);
         ctx.store.set(ACTIVE_PATH, {});
+      },
+    },
+
+    // --- Edit --------------------------------------------------------------
+    //
+    // The editor takes ctrl+z itself while it has focus, because only it knows
+    // where the caret should end up. These are the same step, reachable from
+    // the palette and from anywhere else in the application - the buffer is
+    // what remembers, so both arrive at the same place.
+    {
+      id: 'edit.undo',
+      icon: Icon.undo,
+      title: 'Undo',
+      category: 'Edit',
+      slots: ['palette'],
+      when: '$/ui/editor/uri',
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const uri = openUri(ctx);
+        if (!uri) return;
+        if (!canUndoDocument(ctx.store, uri)) {
+          notify(ctx.app, { message: 'Nothing to undo.' });
+          return;
+        }
+        undoDocument(ctx.store, uri);
+      },
+    },
+    {
+      id: 'edit.redo',
+      icon: Icon.redo,
+      title: 'Redo',
+      category: 'Edit',
+      slots: ['palette'],
+      when: '$/ui/editor/uri',
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const uri = openUri(ctx);
+        if (!uri) return;
+        if (!canRedoDocument(ctx.store, uri)) {
+          notify(ctx.app, { message: 'Nothing to redo.' });
+          return;
+        }
+        redoDocument(ctx.store, uri);
       },
     },
 

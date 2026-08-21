@@ -508,7 +508,7 @@ export class Store implements ReactiveStore {
   private schedulePersist(changedKey: string): void {
     for (const adapter of this.persistence) {
       const owns = adapter.paths.some((p) => {
-        const key = pathKey(p.startsWith('$/') ? p : `$/${p}`);
+        const key = adapterKey(p);
         return p.endsWith('/')
           ? changedKey === key || isDescendantKey(changedKey, key)
           : changedKey === key;
@@ -521,7 +521,7 @@ export class Store implements ReactiveStore {
         this.persistTimers.delete(adapter.id);
         const entries: Record<string, unknown> = {};
         for (const p of adapter.paths) {
-          const key = pathKey(p.startsWith('$/') ? p : `$/${p}`);
+          const key = adapterKey(p);
           entries[`$/${key}`] = this.readKey(key);
         }
         try {
@@ -624,4 +624,17 @@ function compileSelect(
 
 export function createStore(): Store {
   return new Store();
+}
+
+/**
+ * The key an adapter's path stands for.
+ *
+ * A trailing slash means "and everything under it", so it has to come off
+ * before the path is turned into a key: `segments` keeps the empty piece it
+ * leaves behind, so `$/a/b/` became the key `a/b/` and matched neither `a/b`
+ * nor anything below it. Every subtree adapter ever registered was inert.
+ */
+function adapterKey(path: string): string {
+  const bare = path.endsWith('/') ? path.slice(0, -1) : path;
+  return pathKey(bare.startsWith('$/') ? bare : `$/${bare}`);
 }

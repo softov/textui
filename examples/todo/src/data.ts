@@ -161,9 +161,20 @@ export function addTask(store: ReactiveStore, partial: Partial<Task> & { title: 
   return task;
 }
 
+/**
+ * The next free id.
+ *
+ * Counting is not enough once anything has been deleted: delete `t3` of three
+ * and the next task is `t3` again, which is a different task wearing a name
+ * the file already used.
+ */
 function nextId(store: ReactiveStore): number {
   const all = Object.keys(store.get<Record<string, Task>>(TASKS) ?? {});
-  return all.length + 1;
+  const highest = all.reduce((top, id) => {
+    const n = Number(id.replace(/^t/, ''));
+    return Number.isFinite(n) && n > top ? n : top;
+  }, 0);
+  return highest + 1;
 }
 
 /**
@@ -275,6 +286,13 @@ export const SEED: { tasks: Task[]; projects: Project[] } = {
   ],
 };
 
+/**
+ * Defaults, not a reset.
+ *
+ * Seeding runs at boot and hydration runs after it, so a file on disk lands on
+ * top of this and wins. An empty workspace gets something to look at; a real
+ * one gets what it had.
+ */
 export function seed(store: ReactiveStore): void {
   store.set('$/todo/now' as BindingPath, '12:00');
   store.set(TASKS, Object.fromEntries(SEED.tasks.map((t) => [t.id, t])));

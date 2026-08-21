@@ -24,7 +24,10 @@ export interface ScreenProps extends BoxProps {
 
 export const Screen = defineComponent<ScreenProps>('Screen', (props) => {
   const { screenId, children, ...rest } = props;
-  useFocusScope({ id: `screen:${screenId}`, restore: true });
+  // A screen takes focus when it arrives. Pushing one unmounts whatever held
+  // focus, so without this the new screen is one no key reaches - and what it
+  // is showing cannot even be scrolled.
+  useFocusScope({ id: `screen:${screenId}`, restore: true, autoFocus: true });
   return h('box', { direction: 'column', flex: 1, ...rest }, children as never);
 });
 

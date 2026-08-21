@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render } from '../src/index.js';
+import { render, renderApp } from '../src/index.js';
 import { h, defineComponent } from '@textui/core';
 import type { RenderError } from '@textui/core';
 
@@ -87,6 +87,62 @@ describe('a component that throws', () => {
     );
     t.resize(60, 10);
     expect(t.hasText('still here')).toBe(true);
+    await t.unmount();
+  });
+});
+
+/**
+ * An error thrown while handling a key.
+ *
+ * The screen is the output, so an uncaught error from a keystroke exits to a
+ * shell with a stack trace and no application - a worse answer than any wrong
+ * frame. It belongs in the diagnostics with every other error.
+ */
+describe('a handler that throws', () => {
+  it('does not take the process with it', async () => {
+    const t = await renderApp({
+      diagnostics: true,
+      onBoot: (app) => {
+        app.commands.register({
+          id: 'boom',
+          title: 'Boom',
+          run: () => { throw new Error('kaboom'); },
+        });
+        app.keybindings.register({ keys: 'b', commandId: 'boom' });
+      },
+    });
+
+    expect(() => t.press('b')).not.toThrow();
+    await t.settle();
+
+    const errors = t.store.get<{ message: string }[]>('$/modus/diagnostics/errors') ?? [];
+    expect(errors.some((e) => e.message.includes('kaboom'))).toBe(true);
+    // Still running, still drawing.
+    expect(t.app.running).toBe(true);
+    await t.unmount();
+  });
+
+  it('refuses a command whose required argument is missing, without dying', async () => {
+    const t = await renderApp({
+      diagnostics: true,
+      onBoot: (app) => {
+        app.commands.register({
+          id: 'named',
+          title: 'Named',
+          args: [{ name: 'title', type: 'string', required: true }],
+          run: () => {},
+        });
+        app.keybindings.register({ keys: 'k', commandId: 'named' });
+      },
+    });
+
+    // The refusal is right - the command said it needed one - but it must
+    // arrive as a diagnostic rather than as an exit.
+    expect(() => t.press('k')).not.toThrow();
+    await t.settle();
+
+    const errors = t.store.get<{ message: string }[]>('$/modus/diagnostics/errors') ?? [];
+    expect(errors.some((e) => e.message.includes('needs: title'))).toBe(true);
     await t.unmount();
   });
 });

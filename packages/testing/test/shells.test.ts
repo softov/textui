@@ -294,6 +294,22 @@ describe('navigation', () => {
     await t.unmount();
   });
 
+  it('takes focus when it arrives', async () => {
+    const t = await stacked();
+    t.app.focus.blur();
+    await t.settle();
+
+    t.app.screens.push('detail', { taskId: 'abc' });
+    await t.settle();
+
+    // Pushing a screen unmounts whatever held focus. Without this the new
+    // screen is one no key reaches, and what it shows cannot be scrolled.
+    const focused = t.app.focus.focused();
+    expect(focused).not.toBeNull();
+    expect(t.app.focus.scopeOf(focused as string)).toBe('screen:detail');
+    await t.unmount();
+  });
+
   it('replaces the top without growing the stack', async () => {
     const t = await stacked();
     t.app.screens.replace('detail');

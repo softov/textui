@@ -5,6 +5,7 @@ A small application with pages, rather than one long list.
 ```bash
 pnpm example todo
 pnpm example todo --static --width 100
+pnpm example todo --data ~/todo.json     # where the file lives
 ```
 
 ## What it is here to show
@@ -41,11 +42,23 @@ Adding "someday" is a filter. Adding notes to a project is a tab inside a page t
 
 **[`test/smoke.test.tsx`](test/smoke.test.tsx)** - checks the three things a screenshot cannot tell you apart: that the sidebar survived navigating, that the screen scope died with its screen, and that one task is one task however many places show it. It also renders the whole thing at `--unicode ascii` and asserts nothing on screen is outside ASCII, which caught a `↑↓` written into this example's own key hints.
 
+## The database is one JSON file
+
+A [persistence adapter](src/storage.ts), not saving. Nothing in this application calls "save": the store owns which paths are written, when the writes coalesce, and when they are read back, so a command that toggles a task and one that adds a project are the same act - a write to the store.
+
+```json
+{ "version": 1, "tasks": { … }, "projects": { … }, "settings": { … } }
+```
+
+What is about *this run* is not in it. The selection and the search box would restore a highlight pointing at a task that has since gone. Seeding happens at boot and hydration after it, so the fixture data is a default and the file is the answer; a missing file is a first run, not an error. The write goes to a temporary file and renames over the target, so a process killed halfway leaves the previous file rather than half of a new one.
+
 ## The sidebar is groups, not a tree
 
 `INBOX`, `PROJECTS`, `TAGS` are headings - rows nobody can select, which is what `disabled` means to a `List`. The keyboard steps over them, so the same flat list draws blocks with titles without anything having to know what a group is. Indenting children under a selectable parent would make "Projects" both a title and somewhere to go, and it is only ever a title.
 
 Moving the selection **is** choosing: arrowing down the sidebar filters the list beside it. A sidebar you have to press enter in filters nothing until you commit to it.
+
+A project and a tag are *views of the same list*, not places of their own - `Advisor` filters the tasks in front of you the way `Today` does. Enter on a project opens the project page, which has notes and activity and is therefore genuinely more than a filter; enter on a tag does the same as selecting it, because a tag is its tasks and nothing else.
 
 ## Nothing here writes a dialog
 

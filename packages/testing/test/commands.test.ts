@@ -212,6 +212,94 @@ describe('the palette component', () => {
     expect(ran).toEqual(['scale']);
     await t.unmount();
   });
+
+  /**
+   * What a command needs, collected before it runs.
+   *
+   * "The command declares what it needs and the palette asks" only half held:
+   * an argument with `choices` was asked about and anything else was skipped,
+   * so a command saying "I need a title" ran with no title. `execute` refuses
+   * that - correctly, and loudly - which looked exactly like a broken key.
+   */
+  const asking = async (args: unknown[], run: (a: Record<string, unknown>) => void) => {
+    const t = await renderApp({
+      width: 60,
+      height: 16,
+      onBoot: (app) => {
+        app.commands.register({
+          id: 'task.new', title: 'New Task', slots: ['palette'],
+          args: args as never, run,
+        });
+        app.open({ surface: 'main', key: 'p', target: { component: 'CommandPalette' } });
+      },
+    });
+    await t.settle();
+    return t;
+  };
+
+  it('asks for a free-text argument by letting you type it', async () => {
+    let got: Record<string, unknown> | null = null;
+    const t = await asking(
+      [{ name: 'title', type: 'string', required: true, description: 'What needs doing' }],
+      (a) => { got = a; },
+    );
+
+    t.press('enter');
+    await t.settle();
+    // Drilled in, not run: the prompt is the argument's description.
+    expect(t.hasText('What needs doing')).toBe(true);
+    expect(got).toBeNull();
+
+    t.type('Buy milk');
+    t.press('enter');
+    await t.settle();
+    expect(got).toEqual({ title: 'Buy milk' });
+    await t.unmount();
+  });
+
+  it('will not run it with the answer left empty', async () => {
+    let ran = 0;
+    const t = await asking(
+      [{ name: 'title', type: 'string', required: true }],
+      () => { ran++; },
+    );
+
+    t.press('enter');
+    await t.settle();
+    t.press('enter');
+    await t.settle();
+
+    // Nothing typed is not an answer, and running anyway hands the command an
+    // empty required argument.
+    expect(ran).toBe(0);
+    await t.unmount();
+  });
+
+  it('asks for every argument, not only the first', async () => {
+    let got: Record<string, unknown> | null = null;
+    const t = await asking(
+      [
+        { name: 'title', type: 'string', required: true },
+        { name: 'priority', type: 'string', choices: ['high', 'low'] },
+      ],
+      (a) => { got = a; },
+    );
+
+    t.press('enter');
+    await t.settle();
+    t.type('Buy milk');
+    t.press('enter');
+    await t.settle();
+
+    // Still asking, now with a list.
+    expect(got).toBeNull();
+    expect(t.hasText('high')).toBe(true);
+
+    t.press('enter');
+    await t.settle();
+    expect(got).toEqual({ title: 'Buy milk', priority: 'high' });
+    await t.unmount();
+  });
 });
 
 describe('scoped commands', () => {

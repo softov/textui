@@ -805,7 +805,15 @@ export class App implements TextUIApp {
    * it cheap.
    */
   handleInput(event: InputEvent): void {
-    this.dispatchInput(event);
+    // A handler that throws must not take the process with it. The screen is
+    // the output, so an uncaught error from a keystroke exits to a shell with
+    // a stack trace and no application - which is a worse answer than any
+    // wrong frame. It goes in the diagnostics like every other error.
+    try {
+      this.dispatchInput(event);
+    } catch (err) {
+      this.handleError(err, `input:${event.type}`);
+    }
     if (this.running_ && this.isDirty()) this.renderFrame();
   }
 

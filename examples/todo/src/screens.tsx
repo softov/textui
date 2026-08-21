@@ -2,7 +2,7 @@ import {
   Badge, Column, EmptyState, KeyValue, List, Panel, Row, SearchBox, Switch,
   defineComponent, useApp, useScreen, useStoreSubtree, useStoreValue,
 } from '@textui/core';
-import type { ListItem, RenderOutput } from '@textui/core';
+import type { ListItem, ReactiveStore, RenderOutput } from '@textui/core';
 import { TaskDetail, TaskList } from './components.js';
 import {
   PROJECTS, QUERY, SETTINGS, TASKS, getProject, projects, settings, tags, tasksIn,
@@ -18,8 +18,30 @@ import {
  * is a new kind of screen, which is the point of there being only five.
  */
 
-/** The sidebar's view names, mapped onto what the list actually filters by. */
-function filterFor(view: string): { filter: Filter; title: string } {
+/**
+ * The sidebar's view names, mapped onto what the list actually filters by.
+ *
+ * A project and a tag are views of the same list, not places of their own -
+ * which is the point. Selecting `Advisor` in the sidebar should filter the
+ * tasks in front of you, the way `Today` does; being sent somewhere with a
+ * different shape instead is how you lose the thing you were looking at.
+ *
+ * One string, because the view is a screen *parameter*: it has to survive
+ * being written into `$/layout/screen/params` and read back, and a name does
+ * that where a predicate does not.
+ */
+function filterFor(store: ReactiveStore, view: string): { filter: Filter; title: string } {
+  if (view.startsWith('project:')) {
+    const projectId = view.slice('project:'.length);
+    return {
+      filter: { kind: 'project', projectId },
+      title: getProject(store, projectId)?.name ?? projectId,
+    };
+  }
+  if (view.startsWith('tag:')) {
+    const tag = view.slice('tag:'.length);
+    return { filter: { kind: 'tag', tag }, title: `#${tag}` };
+  }
   if (view === 'today') return { filter: { kind: 'due', due: 'today' as Due }, title: 'Today' };
   if (view === 'upcoming') return { filter: { kind: 'due', due: 'upcoming' as Due }, title: 'Upcoming' };
   if (view === 'completed') return { filter: { kind: 'state', state: 'completed' as TaskState }, title: 'Completed' };
@@ -36,7 +58,9 @@ function filterFor(view: string): { filter: Filter; title: string } {
  */
 export const TaskListPage: (props: { view?: string }) => RenderOutput = defineComponent<{ view?: string }>('TaskListPage', (props) => {
   const app = useApp();
-  const { filter, title } = filterFor(props.view ?? 'all');
+  const screen = useScreen<{ view?: string }>();
+  useStoreSubtree(PROJECTS);
+  const { filter, title } = filterFor(app.store, props.view ?? screen.params.view ?? 'all');
   const selected = useStoreValue<string | null>('$/todo/ui/selected', null);
 
   return (
@@ -175,24 +199,12 @@ export const TagListPage: (props: Record<string, never>) => RenderOutput = defin
         items={tags(app.store).map(({ tag, count }) => ({ id: tag, label: `#${tag}`, meta: String(count) }))}
         flex={1}
         emptyMessage="No tags"
-        onActivate={(tag: string) => app.screens.push('tag', { tag })}
+        // A tag has nothing behind it but its tasks, so opening one is the
+        // same as filtering by it. A "tag page" would be this list with a
+        // heading.
+        onActivate={(tag: string) => app.screens.replace('tasks', { view: `tag:${tag}` })}
       />
     </Panel>
-  );
-});
-
-export const TagPage: (props: { tag?: string }) => RenderOutput = defineComponent<{ tag?: string }>('TagPage', (props) => {
-  const app = useApp();
-  const screen = useScreen<{ tag?: string }>();
-  const tag = props.tag ?? screen.params.tag ?? '';
-
-  return (
-    <TaskList
-      filter={{ kind: 'tag', tag }}
-      title={`#${tag}`}
-      onOpen={(id: string) => app.screens.push('task', { taskId: id })}
-      flex={1}
-    />
   );
 });
 

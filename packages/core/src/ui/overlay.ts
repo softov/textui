@@ -36,7 +36,12 @@ export const Dialog = defineComponent<DialogProps>('Dialog', (props) => {
   const theme = useTheme();
   const { title, actions = [], onClose, children, width = 50, ...rest } = props;
 
-  useFocusScope({ trap: true, restore: true, autoFocus: true });
+  // No `autoFocus` on the scope: a dialog's own controls say which of them
+  // wants focus - the first action, or the field in a prompt - and the scope
+  // taking it first would hand it to whichever box happened to register
+  // earliest. The flag never fired before, because a scope is empty when it
+  // is activated; now that it works, it has to mean what it says.
+  useFocusScope({ trap: true, restore: true });
 
   // Only consume escape when there is something to do with it. Consuming it
   // regardless would stop the layer manager dismissing a dialog that was
@@ -182,11 +187,17 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   /** The command being asked about, when the palette has drilled in. */
-  const [pending, setPending] = useState<{ command: CommandDefinition; arg: ArgSpec } | null>(null);
+  const [pending, setPending] = useState<{
+    command: CommandDefinition;
+    arg: ArgSpec;
+    /** Answers given so far, for a command that asks for more than one. */
+    collected: Record<string, unknown>;
+  } | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
   /** Bumped after a row that stays, so a `commands` function is read again. */
   const [, setRefresh] = useState(0);
-  useFocusScope({ trap: true, restore: true, autoFocus: true });
+  // The search field asks for focus itself. See `Dialog`.
+  useFocusScope({ trap: true, restore: true });
 
   const app = runtime.app();
   const given = typeof commands === 'function' ? commands() : commands;
@@ -266,13 +277,35 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   };
 
   /** Ask about one command. `choices` may be a function, and may be async. */
-  const drillInto = (command: CommandDefinition, arg: ArgSpec): void => {
+  const drillInto = (
+    command: CommandDefinition,
+    arg: ArgSpec,
+    collected: Record<string, unknown> = {},
+  ): void => {
     const resolved = typeof arg.choices === 'function' ? arg.choices() : arg.choices ?? [];
-    setPending({ command, arg });
+    setPending({ command, arg, collected });
     setQuery('');
     setHighlight(0);
     if (Array.isArray(resolved)) setChoices(resolved);
     else void resolved.then((list) => setChoices(list));
+  };
+
+  /**
+   * Answer one argument, then ask about the next one or run it.
+   *
+   * A command with two things to ask about used to have the first one
+   * collected and the second one skipped, which meant running it with an
+   * argument it said was required - and `execute` refuses that, loudly.
+   */
+  const answer = (value: unknown): void => {
+    if (!pending) return;
+    const collected = { ...pending.collected, [pending.arg.name]: value };
+    const next = argumentOf(pending.command, collected);
+    if (next) {
+      drillInto(pending.command, next, collected);
+      return;
+    }
+    finish(pending.command.id, collected);
   };
 
   const choose = (): void => {
@@ -283,13 +316,15 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       // command that asks for a name could be *opened* and never *answered*.
       if (pending.arg.choices === undefined) {
         const typed = query.trim();
+        // Nothing typed is not an answer. Running anyway hands the command an
+        // empty required argument, which is the error it exists to prevent.
         if (typed === '') return;
-        finish(pending.command.id, { [pending.arg.name]: typed });
+        answer(typed);
         return;
       }
       const value = rows[index];
       if (value === undefined) return;
-      finish(pending.command.id, { [pending.arg.name]: value });
+      answer(value);
       return;
     }
 
@@ -428,9 +463,13 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
  * title" ran with no title and did nothing - the one failure mode that looks
  * exactly like a broken key.
  */
-function argumentOf(command: CommandDefinition): ArgSpec | undefined {
+function argumentOf(
+  command: CommandDefinition,
+  collected: Record<string, unknown> = {},
+): ArgSpec | undefined {
   return (command.args ?? []).find(
-    (arg) => arg.choices !== undefined || (arg.required === true && arg.default === undefined),
+    (arg) => collected[arg.name] === undefined &&
+      (arg.choices !== undefined || (arg.required === true && arg.default === undefined)),
   );
 }
 

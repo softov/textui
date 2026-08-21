@@ -107,6 +107,23 @@ export class Focus implements FocusManager {
     this.nodes.set(options.id, options);
     if (!existing) this.order_.push(options.id);
 
+    // A scope that asked to take focus takes it here, as its first control
+    // arrives - not when it was activated, because a scope is empty then. Its
+    // contents register on the way up, one effect at a time, and effects run
+    // parent-first, so `autoFocus` at activation could only ever have found
+    // something in a scope that already had something in it.
+    //
+    // Only when *nothing at all* holds focus. That is the difference between
+    // the screen this is for - pushed over whatever had focus, which the push
+    // unmounted, leaving none - and a dialog, which opens while its opener
+    // still holds focus and whose own controls say which of them wants it.
+    if (!existing && options.disabled !== true && this.current === null) {
+      const scopeId = options.scopeId ?? GLOBAL_SCOPE;
+      if (this.scopes.get(scopeId)?.autoFocus === true && this.stack.includes(scopeId)) {
+        this.focus(options.id);
+      }
+    }
+
     return toDisposable(() => {
       this.nodes.delete(options.id);
       const i = this.order_.indexOf(options.id);

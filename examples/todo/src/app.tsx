@@ -5,7 +5,7 @@ import {
 import type { BoxProps, CommandDefinition, Disposable, TextUIApp } from '@textui/core';
 import { Nav, TaskDetail, TaskList } from './components.js';
 import {
-  ProjectListPage, ProjectPage, SearchPage, SettingsPage, TagListPage, TagPage,
+  ProjectListPage, ProjectPage, SearchPage, SettingsPage, TagListPage,
   TaskListPage, TaskPage,
 } from './screens.js';
 import {
@@ -102,7 +102,6 @@ export function registerTodo(app: TextUIApp, options: TodoOptions = {}): Disposa
     { component: 'ProjectListPage', render: ProjectListPage },
     { component: 'ProjectPage', render: ProjectPage },
     { component: 'TagListPage', render: TagListPage },
-    { component: 'TagPage', render: TagPage },
     { component: 'SearchPage', render: SearchPage },
     { component: 'SettingsPage', render: SettingsPage },
     { component: 'TodoStatus', render: Status },
@@ -129,7 +128,6 @@ export function registerTodo(app: TextUIApp, options: TodoOptions = {}): Disposa
     // forgets it when it is popped, which is what a screen scope is for.
     { id: 'project', component: 'ProjectPage' },
     { id: 'tags', component: 'TagListPage' },
-    { id: 'tag', component: 'TagPage' },
     { id: 'search', component: 'SearchPage', keepAlive: true },
     { id: 'settings', component: 'SettingsPage' },
   ]) {

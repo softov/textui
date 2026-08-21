@@ -210,16 +210,24 @@ export const Nav: (props: Record<string, never>) => RenderOutput = defineCompone
       // sidebar that filters nothing until you commit to it, and the list
       // beside it is the preview.
       onSelect={(id: string) => go(app, id)}
-      onActivate={(id: string) => go(app, id)}
+      onActivate={(id: string) => open(app, id)}
     />
   );
 });
 
-/** Which nav row stands for what is on screen. */
+/**
+ * Which nav row stands for what is on screen.
+ *
+ * The list's view is one string - `today`, `project:advisor`, `tag:bug` - so
+ * the row for a project and the row for `Today` are the same kind of thing,
+ * which is what makes selecting either of them filter rather than navigate.
+ */
 function selectionFor(screen: string | null, params: Record<string, unknown>): string {
-  if (screen === 'tasks') return `view:${String(params.view ?? 'all')}`;
+  if (screen === 'tasks') {
+    const view = String(params.view ?? 'all');
+    return view.includes(':') ? view : `view:${view}`;
+  }
   if (screen === 'project') return `project:${String(params.projectId ?? '')}`;
-  if (screen === 'tag') return `tag:${String(params.tag ?? '')}`;
   return `nav:${screen ?? ''}`;
 }
 
@@ -231,13 +239,30 @@ function selectionFor(screen: string | null, params: Record<string, unknown>): s
  */
 function go(app: ReturnType<typeof useApp>, id: string): void {
   const [kind, rest] = splitOnce(id, ':');
+  // A project and a tag are views of the list, not places of their own.
+  // Moving onto one filters what is in front of you, the way `Today` does -
+  // being sent somewhere with a different shape is how you lose what you were
+  // looking at.
   if (kind === 'view') app.screens.replace('tasks', { view: rest });
-  else if (kind === 'project') app.screens.replace('project', { projectId: rest });
-  else if (kind === 'tag') app.screens.replace('tag', { tag: rest });
+  else if (kind === 'project' || kind === 'tag') app.screens.replace('tasks', { view: id });
   else if (rest === 'projects') app.screens.replace('projects');
   else if (rest === 'tags') app.screens.replace('tags');
   else if (rest === 'search') app.screens.replace('search');
   else if (rest === 'settings') app.screens.replace('settings');
+}
+
+/**
+ * Enter, which is the other half of it.
+ *
+ * A project has notes and an activity log, so there is somewhere to go that is
+ * more than a filter; a tag is its tasks and nothing else, so opening one is
+ * the same as selecting it. Inventing a tag page to make the two symmetrical
+ * would be a page with nothing on it that the list does not already show.
+ */
+function open(app: ReturnType<typeof useApp>, id: string): void {
+  const [kind, rest] = splitOnce(id, ':');
+  if (kind === 'project') app.screens.push('project', { projectId: rest });
+  else go(app, id);
 }
 
 function splitOnce(text: string, separator: string): [string, string] {

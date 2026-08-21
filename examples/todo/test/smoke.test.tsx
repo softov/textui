@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '@textui/testing';
 import type { Harness } from '@textui/testing';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { registerTodo } from '../src/app.js';
+import { fileStore } from '../src/storage.js';
 import { getTask, tasksIn } from '../src/data.js';
 
 /**
@@ -185,9 +189,22 @@ describe('on a terminal that can only do ASCII', () => {
  * would actually press goes in as bytes.
  */
 describe('driving it', () => {
+  it('opens with focus in the screen, not nowhere', async () => {
+    const t = await open();
+    // A screen takes focus when it arrives, so the first arrow press moves
+    // something instead of being swallowed.
+    const focused = t.app.focus.focused();
+    expect(focused).not.toBeNull();
+    expect(t.app.focus.scopeOf(focused as string)).toBe('screen:tasks');
+    await t.unmount();
+  });
+
   it('filters the list as the sidebar selection moves', async () => {
     const t = await open();
-    t.tab();
+    // The navigation is not in a screen - it is mounted on the sidebar - so
+    // it is the global scope's focusable, and this says which one it is
+    // rather than counting tabs to it.
+    t.focus(t.app.focus.order('__global__')[0] as string);
     await t.settle();
 
     t.press('down');
@@ -201,14 +218,34 @@ describe('driving it', () => {
     t.press('down');
     t.press('down');
     for (let i = 0; i < 4; i++) await t.settle();
+
+    // Still the list, filtered - not a different page. A project is a view of
+    // the tasks, the way `Today` is.
+    expect(t.app.screens.current()?.id).toBe('tasks');
+    expect(t.app.screens.current()?.params?.view).toBe('project:advisor');
+    expect(t.hasText('Advisor')).toBe(true);
+    await t.unmount();
+  });
+
+  it('opens the project page on enter, where there is more than a filter', async () => {
+    const t = await open();
+    t.focus(t.app.focus.order('__global__')[0] as string);
+    await t.settle();
+    for (let i = 0; i < 5; i++) { t.press('down'); await t.settle(); }
+    expect(t.app.screens.current()?.params?.view).toBe('project:advisor');
+
+    t.press('enter');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    // Notes and activity are things a filter cannot show, which is the whole
+    // reason enter goes somewhere at all.
     expect(t.app.screens.current()?.id).toBe('project');
+    expect(t.hasText('Notes')).toBe(true);
     await t.unmount();
   });
 
   it('completes with the space bar', async () => {
     const t = await open();
-    t.tab();
-    t.tab();
     for (let i = 0; i < 4; i++) await t.settle();
 
     const first = t.app.store.get<string>('$/todo/ui/selected') as string;
@@ -233,8 +270,6 @@ describe('driving it', () => {
 
   it('asks for a title rather than making an untitled task', async () => {
     const t = await open();
-    t.tab();
-    t.tab();
     for (let i = 0; i < 4; i++) await t.settle();
 
     t.feed('n');
@@ -281,10 +316,12 @@ describe('driving it', () => {
     for (let i = 0; i < 4; i++) await t.settle();
 
     t.tab();
-    t.tab();
-    t.tab();
     for (let i = 0; i < 4; i++) await t.settle();
-    const before = t.lines().join('\n');
+    // The right-hand column only, so this cannot pass because a highlight
+    // moved somewhere else on the screen.
+    const panel = (): string[] => t.lines().map((line) => line.slice(70)).filter((l) => l.trim() !== '');
+    const before = panel();
+    expect(before.some((l) => l.includes('Project'))).toBe(true);
 
     t.press('down');
     t.press('down');
@@ -292,8 +329,108 @@ describe('driving it', () => {
     for (let i = 0; i < 4; i++) await t.settle();
 
     // A panel with more in it than fits and no way to scroll is a panel with a
-    // hidden bottom half.
-    expect(t.lines().join('\n')).not.toBe(before);
+    // hidden bottom half: the top has to actually leave.
+    expect(panel().some((l) => l.includes('Project  Advisor'))).toBe(false);
     await t.unmount();
+  });
+
+  it('gives a pushed page the keyboard', async () => {
+    const t = await open();
+    t.app.screens.push('task', { taskId: 't1' });
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    // The push unmounted whatever had focus. A page nothing focuses is a page
+    // whose text cannot even be scrolled - which is how this was found.
+    const focused = t.app.focus.focused();
+    expect(focused).not.toBeNull();
+    expect(t.app.focus.scopeOf(focused as string)).toBe('screen:task');
+    await t.unmount();
+  });
+});
+
+/**
+ * The database is a JSON file.
+ *
+ * Not "saving": a persistence adapter, so nothing in the application calls
+ * save and every command writes to the store the same way. What is checked
+ * here is the round trip and the two things around it - that what is on disk
+ * beats the seed, and that what is only about this run is not written.
+ */
+describe('the file it keeps', () => {
+  const withFile = async (path: string) => {
+    const t = await renderApp({
+      width: 100,
+      height: 26,
+      shell: 'workbench',
+      theme: 'workbench',
+      onBoot: (app) => {
+        registerTodo(app);
+        app.store.registerPersistence(fileStore({ path, debounceMs: 1 }));
+      },
+    });
+    for (let i = 0; i < 8; i++) await t.settle();
+    return t;
+  };
+
+  const settleWrite = async (t: { settle(): Promise<void> }) => {
+    // The adapter coalesces; give the timer a turn.
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 5));
+      await t.settle();
+    }
+  };
+
+  it('writes what changed, and reads it back into a new run', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'todo-'));
+    const path = join(dir, 'todo.json');
+
+    const first = await withFile(path);
+    await first.app.execute('task.new', { title: 'From the file' });
+    await settleWrite(first);
+    await first.unmount();
+
+    const saved = JSON.parse(await readFile(path, 'utf8')) as {
+      version: number;
+      tasks: Record<string, { title: string }>;
+      settings: unknown;
+    };
+    expect(saved.version).toBe(1);
+    expect(Object.values(saved.tasks).some((t) => t.title === 'From the file')).toBe(true);
+    // What is about this run, not about the data: a restored selection would
+    // point at whatever happened to be highlighted last time.
+    expect(saved).not.toHaveProperty('ui');
+
+    const second = await withFile(path);
+    expect(second.hasText('From the file')).toBe(true);
+    await second.unmount();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('lets the file win over the seed', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'todo-'));
+    const path = join(dir, 'todo.json');
+    await writeFile(path, JSON.stringify({
+      version: 1,
+      tasks: { z1: { id: 'z1', title: 'Only this', state: 'active', projectId: null, tags: [], due: 'none', priority: 'normal', description: '', subtasks: [], activity: [] } },
+      projects: {},
+    }), 'utf8');
+
+    const t = await withFile(path);
+    // Hydration runs after `onBoot`, so the seed is a default and the file is
+    // the answer.
+    expect(t.hasText('Only this')).toBe(true);
+    expect(t.hasText('Fix authenticati')).toBe(false);
+    await t.unmount();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('starts from the seed when there is no file', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'todo-'));
+    const t = await withFile(join(dir, 'nothing-here.json'));
+
+    // A missing file is a first run, not an error.
+    expect(t.hasText('Release package')).toBe(true);
+    await t.unmount();
+    await rm(dir, { recursive: true, force: true });
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createStore } from '../src/core/store.js';
 import { escapeSegment } from '../src/util/paths.js';
+import type { BindingPath } from '../src/types/graph.js';
 
 describe('read and write', () => {
   it('writes and reads a nested path, creating intermediates', () => {
@@ -307,5 +308,70 @@ describe('a segment that contains a slash', () => {
 
     expect(store.get(a)).toBe('first');
     expect(store.get(b)).toBe('second');
+  });
+});
+
+/**
+ * Persisting a subtree.
+ *
+ * `paths` says "subtree if it ends in `/`", and a trailing slash survived into
+ * the key it was turned into - so `$/a/b/` matched neither `$/a/b` nor
+ * anything under it, and every subtree adapter ever registered was inert. The
+ * exact-path form worked, which is why nothing noticed.
+ */
+describe('persistence', () => {
+  const adapter = (paths: string[], writes: Record<string, unknown>[]) => ({
+    id: 'test',
+    paths,
+    debounceMs: 1,
+    read: () => ({}),
+    write: (entries: Record<string, unknown>) => { writes.push(entries); },
+  });
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+  it('writes when something inside the subtree changes', async () => {
+    const writes: Record<string, unknown>[] = [];
+    const store = createStore();
+    store.registerPersistence(adapter(['$/todo/tasks/'], writes));
+
+    store.set('$/todo/tasks/t1' as BindingPath, { id: 't1' });
+    await settle();
+
+    // The whole subtree, under the path without its slash - which is the path
+    // `hydrate` will set it back to.
+    expect(writes).toEqual([{ '$/todo/tasks': { t1: { id: 't1' } } }]);
+    store.dispose();
+  });
+
+  it('still writes for an exact path', async () => {
+    const writes: Record<string, unknown>[] = [];
+    const store = createStore();
+    store.registerPersistence(adapter(['$/todo/settings'], writes));
+
+    store.set('$/todo/settings' as BindingPath, { dark: true });
+    await settle();
+    expect(writes).toEqual([{ '$/todo/settings': { dark: true } }]);
+
+    // ...and not for something merely underneath it.
+    writes.length = 0;
+    store.set('$/todo/settings/dark' as BindingPath, false);
+    await settle();
+    expect(writes).toEqual([]);
+    store.dispose();
+  });
+
+  it('reads back into the path the entry names', async () => {
+    const store = createStore();
+    store.registerPersistence({
+      id: 'r',
+      paths: ['$/todo/tasks/'],
+      read: () => ({ '$/todo/tasks': { t9: { id: 't9' } } }),
+      write: () => {},
+    });
+
+    await store.hydrate();
+    expect(store.get('$/todo/tasks/t9' as BindingPath)).toEqual({ id: 't9' });
+    store.dispose();
   });
 });

@@ -4,6 +4,7 @@ import {
   captureBuffer, createNodeTerminal, createVirtualTerminal, createWriter,
 } from '@textui/terminal';
 import { registerTodo } from './app.js';
+import { fileStore } from './storage.js';
 
 /**
  * The entry point.
@@ -19,6 +20,7 @@ interface Options {
   height: number;
   unicode?: UnicodeLevel;
   colors?: number;
+  data: string;
 }
 
 function parse(argv: string[]): Options {
@@ -26,6 +28,7 @@ function parse(argv: string[]): Options {
     static_: false,
     width: process.stdout.columns ?? 100,
     height: process.stdout.rows ?? 30,
+    data: 'todo.json',
   };
   for (let i = 0; i < argv.length; i++) {
     switch (argv[i]) {
@@ -34,6 +37,7 @@ function parse(argv: string[]): Options {
       case '--height': options.height = Number(argv[++i]); break;
       case '--unicode': options.unicode = argv[++i] as UnicodeLevel; break;
       case '--colors': options.colors = Number(argv[++i]); break;
+      case '--data': options.data = argv[++i] as string; break;
       default: break;
     }
   }
@@ -93,6 +97,11 @@ async function main(): Promise<void> {
     session: { managed: true, altScreen: true, mouse: true, title: 'todo' },
     onBoot: (booted) => {
       registerTodo(booted);
+      // The file, registered here rather than in `app.tsx`: a test mounts the
+      // application and must not write to the disk, and a host that embeds it
+      // may want the data somewhere else entirely. `start` hydrates after
+      // `onBoot`, so what is on disk lands on top of the seed and wins.
+      booted.store.registerPersistence(fileStore({ path: options.data }));
       booted.commands.register({
         id: 'app.quit',
         title: 'Quit',

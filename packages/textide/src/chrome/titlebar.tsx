@@ -21,7 +21,7 @@ export const TitleBar: (props: Record<string, never>) => RenderOutput =
     const dirty = useStoreValue<boolean>(`${ACTIVE_PATH}/dirty`, false);
 
     return (
-      <Row gap={1} padding={{ left: 1, right: 1 }} bg="surface" fg="text">
+      <Row gap={1} padding={{ left: 1, right: 1 }} bg="surfaceAlt" fg="text">
         <MenuBar />
         <text content={theme.glyphs.separator} fg="subtle" />
         <text content={workspace?.name ?? 'textide'} bold />

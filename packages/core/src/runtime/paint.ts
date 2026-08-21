@@ -191,7 +191,17 @@ function visualFor(
     bg: ownBg === COLOR_DEFAULT ? inherited.bg : ownBg,
     // Attributes accumulate: `bold` on a row is bold for what is in the row.
     attrs: attrsFromStyle(style) | inherited.attrs,
-    ownBg: ownBg !== COLOR_DEFAULT,
+    // Stating a background makes a box opaque, even when the background it
+    // states is the terminal's own. The two are not the same thing: a box
+    // that says nothing inherits what is behind it, and a box that says
+    // `bg: 'default'` fills itself with spaces at the terminal's colour.
+    //
+    // Every colour in the `mono` theme is `default`, so the old test - is the
+    // packed colour something other than the default? - made every surface in
+    // that theme transparent. A palette opened over a document drew its border
+    // and its rows and left the document showing through the gaps between
+    // them, which is unreadable and looked like a compositing bug.
+    ownBg: style.bg !== undefined,
   };
 }
 

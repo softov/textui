@@ -342,3 +342,52 @@ describe('a modal scrim', () => {
     await t.unmount();
   });
 });
+
+/**
+ * A surface has to be opaque, including where the theme has no colours.
+ *
+ * `mono` states every token as `default` - the terminal's own - which is the
+ * whole point of it. The painter used to decide opacity by asking whether a
+ * box's background resolved to something other than the default, so under that
+ * theme nothing filled: a palette opened over a document drew its border and
+ * its rows and left the document showing through the gaps between them.
+ *
+ * Stating a background and stating none are different things, and this is the
+ * theme where the difference is the only thing that matters.
+ */
+describe('an overlay covers what is behind it', () => {
+  const behind = 'ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ';
+
+  const layered = async (theme: string) => {
+    const t = await renderApp({
+      width: 34,
+      height: 6,
+      theme,
+      shell: 'plain',
+      root: h('box', { direction: 'column' },
+        ...Array.from({ length: 6 }, (_, i) => h('text', { key: i, content: behind }))),
+      onBoot: (app) => {
+        app.layers.open({
+          id: 'panel',
+          layer: 'modal',
+          node: { component: 'box', width: 20, height: 3, bg: 'overlay', children: [
+            { component: 'text', content: 'PANEL' },
+          ] },
+        });
+      },
+    });
+    for (let i = 0; i < 4; i++) await t.settle();
+    return t;
+  };
+
+  it.each(['dark', 'mono'])('leaves nothing showing through (%s)', async (theme) => {
+    const t = await layered(theme);
+
+    expect(t.hasText('PANEL')).toBe(true);
+    // Three rows twenty columns wide are covered, so sixty of the Zs behind
+    // are gone. A transparent panel loses only the five under "PANEL".
+    const zs = [...t.text()].filter((c) => c === 'Z').length;
+    expect(zs).toBe(6 * 30 - 3 * 20);
+    await t.unmount();
+  });
+});

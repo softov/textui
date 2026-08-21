@@ -1,5 +1,5 @@
 import {
-  Column, KeyHints, Row, defineComponent, useFocus, useRuntime, useStoreValue,
+  Column, KeyHints, Row, defineComponent, useFocusScope, useRuntime, useStoreValue,
 } from '@textui/core';
 import type { RenderOutput, Resource } from '@textui/core';
 import { ResourceExplorer, ResourceView } from '@textui/documents';
@@ -46,6 +46,10 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
         root={workspace?.rootUri ?? ''}
         onSelect={select}
         onOpen={select}
+        // Somewhere to start. An application that boots with nothing focused
+        // sends the first arrow key to whatever happens to be first in the tab
+        // order, which here is the menu bar.
+        autoFocus
         flex={1}
       />
     );
@@ -58,21 +62,24 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
     const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
 
     /**
-     * The main pane is a tab stop, and says so.
+     * The pane is a focus *scope*, not a focusable.
      *
-     * Without one there was nowhere for tab to land on this side of the
-     * screen, so the whole application read as though focus were welded to the
-     * tree. The bar down the left edge is the answer to "which pane am I in" -
-     * one column, no reflow, and unmissable when it lights.
+     * It was a tab stop, which meant reaching the editor took two presses: one
+     * onto the pane and another onto the thing inside it. A pane is not a
+     * control. Making it a scope means whatever it contains registers inside
+     * it, and "am I in here" is a question about the published focus rather
+     * than about this component holding focus itself.
      */
-    const focus = useFocus({ id: 'pane.main' });
+    const scope = useFocusScope({ id: 'pane.main' });
+    const focusedScope = useStoreValue<string | null>('$/focus/scope', null);
+    const active = focusedScope === scope;
 
     return (
       <Row flex={1} align="stretch" id="pane.main">
         <box
           width={1}
           fill={'\u258e'}
-          fg={focus.focused ? 'focus' : 'borderSubtle'}
+          fg={active ? 'focus' : 'borderSubtle'}
         />
         <Column flex={1}>
         <ResourceView uri={uri ?? null} mode={mode} flex={1} />

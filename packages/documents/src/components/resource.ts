@@ -278,6 +278,8 @@ export interface ResourceExplorerProps extends BoxProps {
   onSelect?(resource: Resource): void;
   selectedUri?: string;
   visibleRows?: number;
+  /** Claim focus on mount, so an application has somewhere to start. */
+  autoFocus?: boolean;
 }
 
 /**
@@ -294,7 +296,7 @@ export interface ResourceExplorerProps extends BoxProps {
  */
 export const ResourceExplorer = defineComponent<ResourceExplorerProps>('ResourceExplorer', (props) => {
   const runtime = useRuntime();
-  const { root, onOpen, onSelect, selectedUri, visibleRows, ...rest } = props;
+  const { root, onOpen, onSelect, selectedUri, visibleRows, autoFocus, ...rest } = props;
   const app = runtime.app();
 
   const [children, setChildren] = useState<Record<string, Resource[]>>({});
@@ -345,6 +347,7 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
   if (error) return h(ErrorState, { error, title: 'Could not list resources', ...rest });
 
   const tree = h(Tree, {
+    autoFocus,
     nodes: roots,
     selectedId: current ?? undefined,
     expandedIds: expanded,

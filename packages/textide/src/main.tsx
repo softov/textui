@@ -109,7 +109,9 @@ async function main(): Promise<void> {
   const terminal = createNodeTerminal();
   const app = createApp({
     terminal,
-    root: { component: 'text', content: '' },
+    // No `root`: everything textide shows is a surface mount. Passing one puts
+    // a second, empty tab beside the editor in `main`, which is a tab strip
+    // nobody asked for and two extra stops in the tab order.
     theme,
     shell: 'workbench',
     session: { managed: true, altScreen: true, mouse: true, title: `textide - ${workspace.name}` },

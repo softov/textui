@@ -1,7 +1,7 @@
 import type {
   CreateAppOptions, InspectorNode, TextUIApp,
 } from '../types/app.js';
-import type { ComponentNode } from '../types/graph.js';
+import type { BindingPath, ComponentNode } from '../types/graph.js';
 import type { Disposable } from '../types/disposable.js';
 import type { ResourceAdapter } from '../types/adapter.js';
 import type { Size, Rect } from '../types/geometry.js';
@@ -120,7 +120,16 @@ export class App implements TextUIApp {
       maxFps: options.maxFps ?? 30,
     });
 
-    this.focus = createFocus(() => this.requestRender());
+    // Focus is published, not just held. A pane that wants to say "you are in
+    // here" would otherwise have to become a focusable itself just to be told
+    // when focus moved - which costs a tab stop for something that is not a
+    // control, and makes tabbing into a pane take two presses.
+    this.focus = createFocus(() => {
+      const id = this.focus.focused();
+      this.store.set('$/focus/id' as BindingPath, id);
+      this.store.set('$/focus/scope' as BindingPath, id ? this.focus.scopeOf(id) : null);
+      this.requestRender();
+    });
     this.layers = createLayers(() => this.requestRender());
 
     this.commands = createCommands({

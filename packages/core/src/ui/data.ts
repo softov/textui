@@ -338,6 +338,8 @@ export interface TreeProps extends BoxProps {
   onToggle?(id: string, expanded: boolean): void;
   visibleRows?: number;
   indent?: number;
+  /** Claim focus on mount, if nothing in this scope already has it. */
+  autoFocus?: boolean;
 }
 
 interface FlatNode {
@@ -361,10 +363,10 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
   const theme = useTheme();
   const {
     nodes, selectedId, expandedIds, onSelect, onActivate, onToggle,
-    visibleRows, indent = 2, ...rest
+    visibleRows, indent = 2, autoFocus, ...rest
   } = props;
 
-  const focus = useFocus({});
+  const focus = useFocus({ autoFocus });
   const measured = useMeasure();
   const treePage = viewportRows(props, measured, 10, { requested: visibleRows });
   const [internalExpanded, setInternalExpanded] = useState<string[]>([]);

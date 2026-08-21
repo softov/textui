@@ -348,6 +348,10 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     bg: 'overlay',
     width,
     direction: 'column',
+    // A border is a gutter as well as a line. Without one - `paper` sets
+    // `border: 'none'` - the rows run flush to the panel edge and the last
+    // character sits against whatever is behind it.
+    ...(theme.border === 'none' ? { padding: { left: 1, right: 1 } } : {}),
     // The crumb names the command, not its argument. "commands › Theme" is
     // where you are; "commands › id" is what the parameter happens to be
     // called, which is the author's business rather than the reader's.

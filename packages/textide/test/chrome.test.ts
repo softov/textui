@@ -285,29 +285,40 @@ describe('the command palette', () => {
     await t.unmount();
   });
 
-  it('makes the main pane a tab stop, so focus is visible on both sides', async () => {
-    const t = await open(SIZES[0]!);
-    const order: string[] = [];
-    for (let i = 0; i < 5; i++) { t.tab(); t.flush(); order.push(t.focused()?.id ?? 'none'); }
-    expect(order).toContain('pane.main');
+  it('lights the main pane when focus is in it, without being a tab stop itself', async () => {
+    const scratch = await mkdtemp(join(tmpdir(), 'textide-pane-'));
+    await writeFile(join(scratch, 'a.txt'), 'alpha\n');
+    const workspace = await loadWorkspace(scratch);
+    const t = await renderApp({
+      width: 90, height: 16, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    const quiet = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) { await t.settle(); t.advance(50); t.flush(); }
+    };
+    await quiet();
+    t.app.store.set('$/ui/editor/uri', `file://${join(scratch, 'a.txt')}`);
+    await quiet();
+    t.app.execute('file.edit');
+    await quiet();
 
-    t.focus('pane.main'); t.flush();
-    expect(t.focused()?.id).toBe('pane.main');
-    // The active-pane bar is drawn down the whole pane, not just beside the text.
-    expect(t.lines().filter((l) => l.includes('\u258e')).length).toBeGreaterThan(5);
+    // Focus starts in the tree, so the pane is not the active scope.
+    expect(t.store.get('$/focus/scope')).not.toBe('pane.main');
+    const bar = (): number => t.lines().filter((l) => l.includes('\u258e')).length;
+    expect(bar(), 'the bar is drawn either way').toBeGreaterThan(3);
+
+    // Tab until focus lands inside the pane; it should take one press from the
+    // tree, because the pane is a scope and not a stop of its own.
+    let hops = 0;
+    while (t.store.get('$/focus/scope') !== 'pane.main' && hops < 6) { t.tab(); t.flush(); hops++; }
+    expect(t.store.get('$/focus/scope'), 'focus reaches the pane').toBe('pane.main');
+    expect(t.app.focus.focused(), 'and lands on the editor, not on a wrapper')
+      .not.toBe('pane.main');
+
     await t.unmount();
+    await rm(scratch, { recursive: true, force: true });
   });
 
-  /**
-   * A trap owns the keyboard.
-   *
-   * The menu bar's labels live in the global scope, and `Focus.dispatch` used
-   * to walk every active scope regardless of who was trapping. So while a
-   * dropdown was open, down reached the label underneath it and re-opened the
-   * menu instead of moving inside it - and a palette opened afterwards read
-   * the same keystroke as the menu, which is why escape had to be pressed
-   * twice to get out of one thing.
-   */
   it('moves inside an open menu instead of reopening it', async () => {
     const t = await open(SIZES[0]!);
     t.press('alt+v');
@@ -581,5 +592,106 @@ describe('the command palette', () => {
     for (let i = 0; i < 4; i++) { await t.settle(); t.advance(50); t.flush(); }
     expect(t.app.theme.id).toBe(chosen);
     await t.unmount();
+  });
+});
+
+describe('where focus starts and how many stops there are', () => {
+  /**
+   * One stop per control.
+   *
+   * Two of them were not controls. `createApp({ root })` mounted an empty node
+   * into `main` beside the editor, which turned the main surface into a tab
+   * strip - so tabbing from the tree reached a strip listing "editor" and
+   * "root" before reaching anything you could type into. And the pane itself
+   * was a focusable, so the editor took a second press after that.
+   */
+  it('gives main one mount, and every tab stop is something you can use', async () => {
+    const scratch = await mkdtemp(join(tmpdir(), 'textide-focus-'));
+    await writeFile(join(scratch, 'a.txt'), 'alpha\n');
+    const workspace = await loadWorkspace(scratch);
+    const t = await renderApp({
+      width: 90, height: 16, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    for (let i = 0; i < 6; i++) { await t.settle(); t.advance(50); t.flush(); }
+
+    expect(t.app.surfaces.mounts('main').map((m) => m.key)).toEqual(['editor']);
+    expect(t.hasText('root'), 'no phantom tab').toBe(false);
+
+    // Somewhere to start, so the first arrow key is not read by the menu bar.
+    expect(t.app.focus.focused()).not.toBeNull();
+    const explorer = t.app.focus.focused();
+
+    const seen: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      t.tab(); t.flush();
+      const id = t.app.focus.focused() ?? 'none';
+      if (seen.includes(id)) break;
+      seen.push(id);
+    }
+    // The three menus and the tree. Nothing is open, so `main` has no control
+    // in it - and the pane is a scope now rather than a stop of its own, so it
+    // contributes nothing on its own account.
+    expect(seen).toHaveLength(4);
+    expect(seen.filter((id) => id.startsWith('menubar.'))).toHaveLength(3);
+    expect(seen).toContain(explorer);
+    expect(seen).not.toContain('pane.main');
+
+    await t.unmount();
+    await rm(scratch, { recursive: true, force: true });
+  });
+
+  it('does not open a menu when an arrow is pressed after toggling edit mode', async () => {
+    const scratch = await mkdtemp(join(tmpdir(), 'textide-mode-'));
+    await writeFile(join(scratch, 'a.txt'), 'alpha\nbeta\n');
+    const workspace = await loadWorkspace(scratch);
+    const t = await renderApp({
+      width: 90, height: 16, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    const quiet = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) { await t.settle(); t.advance(50); t.flush(); }
+    };
+    await quiet();
+
+    t.app.store.set('$/ui/editor/uri', `file://${join(scratch, 'a.txt')}`);
+    await quiet();
+    t.app.execute('file.edit');
+    await quiet();
+
+    t.press('down');
+    await quiet();
+    // With nothing focused, this arrow used to reach the menu bar.
+    expect(t.app.layers.entries('floating'), 'an arrow is not a menu').toHaveLength(0);
+
+    await t.unmount();
+    await rm(scratch, { recursive: true, force: true });
+  });
+
+  /**
+   * A border is a gutter as well as a line, and `paper` has no border - so its
+   * overlays ran flush to the panel edge and the last character of a row sat
+   * against whatever was drawn behind it.
+   */
+  it('keeps a gutter in a borderless theme', async () => {
+    const scratch = await mkdtemp(join(tmpdir(), 'textide-paper-'));
+    await writeFile(join(scratch, 'a.txt'), 'x\n');
+    const workspace = await loadWorkspace(scratch);
+    const t = await renderApp({
+      width: 92, height: 20, shell: 'workbench', theme: 'paper',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    for (let i = 0; i < 5; i++) { await t.settle(); t.advance(50); t.flush(); }
+    expect(t.app.theme.border).toBe('none');
+
+    t.press('alt+f');
+    for (let i = 0; i < 4; i++) await t.settle();
+    const row = t.lines().find((l) => l.includes('ctrl+n')) ?? '';
+    const at = row.indexOf('ctrl+n');
+    expect(row.slice(at + 'ctrl+n'.length, at + 'ctrl+n'.length + 1))
+      .toMatch(/\s|^$/);
+
+    await t.unmount();
+    await rm(scratch, { recursive: true, force: true });
   });
 });

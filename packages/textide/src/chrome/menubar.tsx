@@ -187,6 +187,10 @@ export const MenuBar: (props: Record<string, never>) => RenderOutput =
           fg: 'text',
           border: app.theme.border,
           width: 34,
+          // A borderless theme has no gutter, so the rows would run flush to
+          // the panel edge and read as though they were part of the screen
+          // behind them.
+          ...(app.theme.border === 'none' ? { padding: { left: 1, right: 1 } } : {}),
           // The panel itself takes a key only after the menu inside has
           // declined it, which is how left and right walk the bar while a
           // dropdown is open without the menu losing its own arrows.

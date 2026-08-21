@@ -379,6 +379,24 @@ export function useMeasure(): Rect {
   return instance.measured ?? EMPTY_RECT;
 }
 
+/**
+ * How big the content is, when it is bigger than the box holding it.
+ *
+ * `null` when everything fits. The layout has always recorded this - the
+ * comment where it does says "so a scroll container knows how far it can go" -
+ * but nothing read it, so no scroll container knew, and every one of them
+ * scrolled for ever past its own last line.
+ *
+ * Reported for the nearest *scroll container* at or below this component's own
+ * box - a viewport is a row holding the scrolling part beside a scrollbar, and
+ * the row is not the part that scrolls.
+ */
+export function useScrollExtent(): Size | null {
+  const instance = currentInstance();
+  measureWatchers.add(instance);
+  return instance.scrollExtent ?? null;
+}
+
 const EMPTY_RECT: Rect = { x: 0, y: 0, width: 0, height: 0 };
 
 /** Instances that called `useMeasure`. Pruned as they unmount. */
@@ -388,6 +406,29 @@ function firstHostBox(instance: Instance): LayoutBox | undefined {
   if (instance.kind === 'host') return instance.box;
   for (const child of instance.children) {
     const found = firstHostBox(child);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/**
+ * The nearest box below this one that scrolls and has somewhere to scroll to.
+ *
+ * Not always the component's own first box: a viewport is usually a row
+ * holding the scrolling part beside a scrollbar, and it is the part, not the
+ * row, that overflows.
+ *
+ * It has to be a scroll container, not merely a box with more in it than fits.
+ * The layout records an extent on anything that overflows, including a row of
+ * text too wide for its pane - and a detail panel with one such row in it
+ * reported that row's width as its own scroll extent, which is a number about
+ * a different box on a different axis.
+ */
+function firstScrollingBox(box: LayoutBox | undefined): LayoutBox | undefined {
+  if (!box) return undefined;
+  if (box.style.overflow === 'scroll' && box.scrollSize) return box;
+  for (const child of box.children) {
+    const found = firstScrollingBox(child);
     if (found) return found;
   }
   return undefined;
@@ -406,11 +447,19 @@ export function flushMeasures(): boolean {
       measureWatchers.delete(instance);
       continue;
     }
-    const rect = firstHostBox(instance)?.content;
+    const box = firstHostBox(instance);
+    const rect = box?.content;
     if (!rect) continue;
+
+    const extent = firstScrollingBox(box)?.scrollSize;
+    const was = instance.scrollExtent;
+    const extentSame = extent === undefined
+      ? was === undefined
+      : was !== undefined && was.width === extent.width && was.height === extent.height;
 
     const previous = instance.measured;
     if (
+      extentSame &&
       previous &&
       previous.x === rect.x && previous.y === rect.y &&
       previous.width === rect.width && previous.height === rect.height
@@ -418,6 +467,7 @@ export function flushMeasures(): boolean {
       continue;
     }
     instance.measured = { ...rect };
+    instance.scrollExtent = extent ? { ...extent } : undefined;
     markDirty(instance, 'useMeasure');
     changed = true;
   }

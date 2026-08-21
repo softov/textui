@@ -633,8 +633,11 @@ describe('the gallery display section', () => {
     await t.settle();
 
     expect(t.hasText('A card is a titled box')).toBe(true);
-    // The closing paragraph is out of view until something scrolls.
-    expect(t.hasText('below the fold')).toBe(false);
+    // The closing words, out of view until something scrolls. Not a phrase
+    // from the middle of a sentence: the wrapper breaks those across two
+    // lines and `hasText` would never find them however far it scrolled,
+    // which is a test that passes without ever looking.
+    expect(t.hasText('rows wrong.')).toBe(false);
     await t.unmount();
   });
 
@@ -654,14 +657,18 @@ describe('the gallery display section', () => {
   it('lets the keyboard reach what did not fit', async () => {
     const t = await mount('gallery', { width: 92, height: 30 });
     await t.settle();
-    expect(t.hasText('below the fold')).toBe(false);
+    expect(t.hasText('rows wrong.')).toBe(false);
 
     // Tab leaves the strip for the card's viewport, and then down is its own.
     t.press('tab');
     await t.settle();
-    for (let i = 0; i < 8; i++) { t.press('down'); await t.settle(); }
+    for (let i = 0; i < 40; i++) { t.press('down'); await t.settle(); }
 
-    expect(t.hasText('below the fold')).toBe(true);
+    // Forty presses for a dozen rows of overflow: the viewport stops at its
+    // last line rather than walking the text off the top, so pressing past
+    // the end is not the same as pressing past the content.
+    expect(t.hasText('rows wrong.')).toBe(true);
+    expect(t.hasText('A card is a titled box')).toBe(false);
     await t.unmount();
   });
 

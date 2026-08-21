@@ -3,7 +3,7 @@ import type { ComponentDefinition } from '../types/component-registry.js';
 import type { Disposable } from '../types/disposable.js';
 import type { FunctionComponent, HostComponent, RenderOutput } from '../types/render.js';
 import type { LayoutBox } from '../render/layout.js';
-import type { Rect } from '../types/geometry.js';
+import type { Rect, Size } from '../types/geometry.js';
 import type { Runtime } from './runtime.js';
 import { isComponentNode } from '../types/graph.js';
 import { ZERO_EDGES } from '../types/geometry.js';
@@ -72,6 +72,8 @@ export interface Instance {
   box?: LayoutBox;
   /** Last content rect observed by `useMeasure`, if this instance asked. */
   measured?: Rect;
+  /** Content extent when it overflows that rect, for `useScrollExtent`. */
+  scrollExtent?: Size;
   /** The child nodes produced by the last render, for a children-only pass. */
   lastChildren: { node: ComponentNode; dataContext?: BindingPath }[];
   /** Effects queued during this render, flushed after the frame commits. */

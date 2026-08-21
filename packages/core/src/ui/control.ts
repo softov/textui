@@ -54,9 +54,6 @@ export const Button = defineComponent<ButtonProps>('Button', (props) => {
     { focusId: focus.id },
   );
 
-  const color = disabled ? 'disabled' : TONE[tone];
-  const onColor = disabled ? 'text' : ON_TONE[tone];
-
   // Selection inverts.
   //
   // At rest a button is a line and a label in its tone; selected, the tone
@@ -65,6 +62,10 @@ export const Button = defineComponent<ButtonProps>('Button', (props) => {
   // button it read backwards, because the filled one looked like the selected
   // one however hard the border tried.
   const filled = (focus.focused || props.selected === true) && !disabled;
+  const resolvedTone = filled && tone === 'default' ? 'primary' : tone;
+
+  const color = disabled ? 'disabled' : TONE[resolvedTone];
+  const onColor = disabled ? 'text' : ON_TONE[resolvedTone];
 
   // A solid button reserves the same ring an outline one draws, filled with
   // its own background rather than left out. Without it the two are one row
@@ -189,7 +190,7 @@ export const Switch = defineComponent<SwitchProps>('Switch', (props) => {
     label ? h('text', { content: label }) : null,
     h('text', {
       content: value ? `[${labels[1]}]` : `[${labels[0]}]`,
-      fg: disabled ? 'disabled' : value ? 'success' : 'muted',
+      fg: disabled ? 'disabled' : value ? 'accent' : 'muted',
     }),
   );
 });

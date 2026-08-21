@@ -317,8 +317,11 @@ describe('driving it', () => {
     await t.unmount();
   });
 
-  it('scrolls the detail panel', async () => {
-    const t = await open();
+  it('scrolls the detail panel when there is more of it than fits', async () => {
+    // Short on purpose. At the full height this task's detail fits with rows
+    // to spare, and a viewport that scrolls what already fits is the bug -
+    // it walks the content off the top and leaves an empty box.
+    const t = await open({ width: 100, height: 16 });
     t.app.store.set('$/todo/ui/selected', 't1');
     for (let i = 0; i < 4; i++) await t.settle();
 
@@ -327,17 +330,29 @@ describe('driving it', () => {
     // The right-hand column only, so this cannot pass because a highlight
     // moved somewhere else on the screen.
     const panel = (): string[] => t.lines().map((line) => line.slice(70)).filter((l) => l.trim() !== '');
-    const before = panel();
-    expect(before.some((l) => l.includes('Project'))).toBe(true);
+    expect(panel().some((l) => l.includes('Project'))).toBe(true);
 
-    t.press('down');
-    t.press('down');
-    t.press('down');
+    for (let i = 0; i < 3; i++) t.press('down');
     for (let i = 0; i < 4; i++) await t.settle();
 
     // A panel with more in it than fits and no way to scroll is a panel with a
     // hidden bottom half: the top has to actually leave.
     expect(panel().some((l) => l.includes('Project  Advisor'))).toBe(false);
+    await t.unmount();
+  });
+
+  it('leaves the detail panel alone when all of it fits', async () => {
+    const t = await open();
+    t.app.store.set('$/todo/ui/selected', 't1');
+    for (let i = 0; i < 4; i++) await t.settle();
+    t.tab();
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    const panel = (): string[] => t.lines().map((line) => line.slice(70)).filter((l) => l.trim() !== '');
+    const before = panel();
+    for (let i = 0; i < 20; i++) { t.press('down'); await t.settle(); }
+
+    expect(panel()).toEqual(before);
     await t.unmount();
   });
 

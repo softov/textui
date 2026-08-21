@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, renderApp } from '../src/index.js';
-import { h, Select, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
+import { h, Column, ScrollView, Select, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
 
 const ROWS = [
   { id: 'api', name: 'api-gateway', status: 'up', cpu: '12.4', mem: '310' },
@@ -576,6 +576,71 @@ describe('Select', () => {
     // Accent, and underlined.
     expect(active?.fg).not.toEqual(plain?.fg);
     expect((active?.attrs ?? 0) & 8).toBe(8);
+    await t.unmount();
+  });
+});
+
+/**
+ * A viewport that knows where its content ends.
+ *
+ * The layout has always recorded how far a scroll container can go - the
+ * comment where it does says so - and nothing read it, so `scrollTo` clamped
+ * at zero and nowhere else. Holding down an arrow walked the content off the
+ * top of the view and left an empty box, with no way back but `home`.
+ */
+describe('ScrollView', () => {
+  function lines(count: number) {
+    return h(Column, {}, ...Array.from({ length: count }, (_, i) =>
+      h('text', { key: i, content: `line ${i + 1}` })));
+  }
+
+  async function open(count: number, height = 8) {
+    const t = await render(h(ScrollView, { flex: 1 }, lines(count)), { width: 24, height });
+    await t.settle();
+    t.focus(t.app.focus.order('__global__')[0] as string);
+    return t;
+  }
+
+  it('stops with the last line at the bottom', async () => {
+    const t = await open(20);
+    for (let i = 0; i < 60; i++) { t.press('down'); await t.settle(); }
+
+    // Eight rows of viewport, so the last screen is lines 13 to 20 - not a
+    // blank box below line 20, which is where it used to end up.
+    expect(t.lines()[0]).toContain('line 13');
+    expect(t.lines()[7]).toContain('line 20');
+    await t.unmount();
+  });
+
+  it('comes back to the top and stops there', async () => {
+    const t = await open(20);
+    for (let i = 0; i < 30; i++) { t.press('down'); await t.settle(); }
+    for (let i = 0; i < 60; i++) { t.press('up'); await t.settle(); }
+
+    expect(t.lines()[0]).toContain('line 1');
+    await t.unmount();
+  });
+
+  it('does not move at all when everything already fits', async () => {
+    const t = await open(4);
+    const before = t.lines();
+    for (let i = 0; i < 10; i++) { t.press('down'); await t.settle(); }
+
+    expect(t.lines()).toEqual(before);
+    await t.unmount();
+  });
+
+  it('re-clamps when the terminal gets taller', async () => {
+    const t = await open(20);
+    for (let i = 0; i < 60; i++) { t.press('down'); await t.settle(); }
+    expect(t.lines()[0]).toContain('line 13');
+
+    // More room means less to scroll, and an offset from before must not
+    // leave the content hanging above the top of a now-taller view.
+    await t.resize(24, 16);
+    await t.settle();
+    expect(t.lines()[0]).toContain('line 5');
+    expect(t.lines()[15]).toContain('line 20');
     await t.unmount();
   });
 });

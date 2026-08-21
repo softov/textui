@@ -2,7 +2,7 @@ import type { ComponentDefinition } from '../types/component-registry.js';
 import type { BoxProps } from '../jsx/intrinsics.js';
 import type { BorderSpec, Dimension, StyleColor } from '../types/style.js';
 import { h, defineComponent } from '../jsx/factory.js';
-import { useFocus, useInput, useState, useTheme } from '../runtime/hooks.js';
+import { useFocus, useInput, useMeasure, useScrollExtent, useState, useTheme } from '../runtime/hooks.js';
 
 /**
  * Layout and containers.
@@ -208,9 +208,18 @@ export const ScrollView = defineComponent<ScrollViewProps>('ScrollView', (props)
   const focus = useFocus({ disabled: !focusable, autoFocus });
   const [internal, setInternal] = useState(0);
   const top = offset ?? internal;
+  // How far down this can go before the last line leaves the bottom. Written
+  // by the viewport during its render, read here when a key arrives - so a
+  // limit that changed with the terminal's height needs no round trip.
+  const measured = useMeasure();
+  const extent = useScrollExtent();
+  // How far the top can go before the last line leaves the bottom of the view.
+  // Zero when everything fits, which is also what makes the arrows do nothing
+  // in a viewport that has nothing to scroll.
+  const limit = Math.max(0, (extent?.height ?? 0) - measured.height);
 
   const scrollTo = (next: number): void => {
-    const clamped = Math.max(0, next);
+    const clamped = Math.max(0, Math.min(next, limit));
     if (offset === undefined) setInternal(clamped);
     onScroll?.(clamped);
   };
@@ -227,12 +236,17 @@ export const ScrollView = defineComponent<ScrollViewProps>('ScrollView', (props)
     { focusId: focus.id, enabled: focusable },
   );
 
+  // The outer box holds the viewport beside the scrollbar and does not scroll
+  // itself. It used to say `overflow: 'scroll'` with a `scrollTop`, on a row -
+  // where the scrolling axis is horizontal, so the offset did nothing and the
+  // only real effect was to stop the viewport being clamped to the width it
+  // had. That made the row report *its own* sideways overflow as this view's
+  // scroll extent: a number about a different box on a different axis.
   return h('box', {
     id: id ?? focus.id,
     role: 'region',
     ...rest,
-    overflow: 'scroll',
-    scrollTop: top,
+    overflow: 'hidden',
     direction: 'row',
     onMouse: (event: { action: string; wheel?: number }) => {
       if (event.action !== 'wheel') return false;
@@ -240,7 +254,7 @@ export const ScrollView = defineComponent<ScrollViewProps>('ScrollView', (props)
       return true;
     },
   },
-    h('box', { flex: 1, direction: 'column', scrollTop: top, overflow: 'scroll' }, children),
+    h('box', { flex: 1, direction: 'column', scrollTop: Math.min(top, limit), overflow: 'scroll' }, children),
     scrollbar ? h(Scrollbar, { offset: top }) : null,
   );
 });

@@ -90,8 +90,11 @@ function DisplaySection() {
         */}
       {/* `stretch`, because a row centres its children by default - and a pane
         * that is only as tall as its content is a pane that never scrolls. */}
+      {/* Half each, stated rather than flexed: `flex` grows from natural size,
+        * and four paragraphs of prose have a natural width of one very long
+        * line - so the card took the row and left the facts a gutter. */}
       <Row gap={1} flex={1} vAlign="stretch">
-        <Card title="Card" subtitle="with a subtitle" flex={1}>
+        <Card title="Card" subtitle="with a subtitle" width="50%">
           <ScrollView flex={1}>
             <Column gap={1}>
               {CARD_TEXT.map((paragraph, i) => (
@@ -106,6 +109,7 @@ function DisplaySection() {
             <KeyValue items={FACTS} />
           </ScrollView>
         </Panel>
+
       </Row>
     </Column>
   );

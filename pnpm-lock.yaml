@@ -14,6 +14,9 @@ importers:
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.1
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
       eslint:
         specifier: ^9.17.0
         version: 9.39.5
@@ -35,6 +38,9 @@ importers:
       '@textui/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@textui/documents':
+        specifier: workspace:*
+        version: link:../packages/documents
 
   packages/cli:
     dependencies:
@@ -46,6 +52,19 @@ importers:
         version: link:../terminal
 
   packages/core: {}
+
+  packages/documents:
+    dependencies:
+      '@textui/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@textui/terminal':
+        specifier: workspace:*
+        version: link:../terminal
+      '@textui/testing':
+        specifier: workspace:*
+        version: link:../testing
 
   packages/terminal:
     dependencies:
@@ -62,11 +81,33 @@ importers:
         specifier: workspace:*
         version: link:../terminal
 
+  packages/textide:
+    dependencies:
+      '@textui/core':
+        specifier: workspace:*
+        version: link:../core
+      '@textui/documents':
+        specifier: workspace:*
+        version: link:../documents
+      '@textui/terminal':
+        specifier: workspace:*
+        version: link:../terminal
+    devDependencies:
+      '@textui/testing':
+        specifier: workspace:*
+        version: link:../testing
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+
   playground:
     dependencies:
       '@textui/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@textui/documents':
+        specifier: workspace:*
+        version: link:../packages/documents
       '@textui/terminal':
         specifier: workspace:*
         version: link:../packages/terminal

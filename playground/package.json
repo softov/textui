@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@textui/core": "workspace:*",
-    "@textui/terminal": "workspace:*"
+    "@textui/terminal": "workspace:*",
+    "@textui/documents": "workspace:*"
   },
   "devDependencies": {
     "@textui/testing": "workspace:*",

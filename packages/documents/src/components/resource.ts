@@ -1,15 +1,16 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { BoxProps } from '../jsx/intrinsics.js';
-import type { Resource, ResourceViewerDefinition } from '../types/resource.js';
-import { h, defineComponent } from '../jsx/factory.js';
+import type { ComponentDefinition } from '@textui/core';
+import type { BoxProps } from '@textui/core';
+import type { Resource, ResourceViewerDefinition } from '@textui/core';
+import { h, defineComponent } from '@textui/core';
 import {
-  useDocument, useFocus, useInput, useMeasure, useRuntime, useState, useTheme,
+  useFocus, useInput, useMeasure, useRuntime, useState, useTheme,
   useTask, useEffect,
-} from '../runtime/hooks.js';
-import { Tree, CodeViewer, type TreeNode } from './data.js';
-import { EmptyState, ErrorState, KeyValue, Spinner } from './display.js';
-import { Breadcrumb, Menu } from './navigation.js';
-import { viewportRows } from './viewport.js';
+} from '@textui/core';
+import { useDocument } from '../use-document.js';
+import { Tree, CodeViewer, type TreeNode } from '@textui/core';
+import { EmptyState, ErrorState, KeyValue, Spinner } from '@textui/core';
+import { Breadcrumb, Menu } from '@textui/core';
+import { viewportRows } from '@textui/core';
 
 /**
  * Resource components.
@@ -271,24 +272,29 @@ export const ResourceView = defineComponent<ResourceViewProps>('ResourceView', (
 export interface ResourceExplorerProps extends BoxProps {
   /** Root URI to browse. */
   root: string;
-  /** Called when a resource is opened. */
+  /** Called when a resource is activated - enter, or a double click. */
   onOpen?(resource: Resource): void;
+  /** Called as the selection moves, before anything is opened. */
+  onSelect?(resource: Resource): void;
   selectedUri?: string;
-  /** Show the viewer beside the tree rather than only emitting onOpen. */
-  preview?: boolean;
   visibleRows?: number;
 }
 
 /**
- * Browse resources and open them.
+ * Browse resources.
+ *
+ * It lists and selects; it does not show what is selected. A viewer is
+ * `ResourceView`, and keeping them apart is what lets one tree drive two
+ * views - or none - and what stops "the selected resource" from having to be
+ * a single value somewhere global. The screen owns that relationship, because
+ * only the screen knows how many views it has.
  *
  * Children load lazily on expand, because a provider may be a network and a
  * tree that eagerly walks one is a tree that hangs.
  */
 export const ResourceExplorer = defineComponent<ResourceExplorerProps>('ResourceExplorer', (props) => {
   const runtime = useRuntime();
-  const theme = useTheme();
-  const { root, onOpen, selectedUri, preview = true, visibleRows, ...rest } = props;
+  const { root, onOpen, onSelect, selectedUri, visibleRows, ...rest } = props;
   const app = runtime.app();
 
   const [children, setChildren] = useState<Record<string, Resource[]>>({});
@@ -308,8 +314,9 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
     load(root);
   }, [root]);
 
-  // Select the first entry once the root has listed, so a preview pane has
-  // something to show rather than an empty state nobody asked for.
+  // Select the first entry once the root has listed, so whatever is watching
+  // the selection has something to show rather than an empty state nobody
+  // asked for.
   const rootChildren = children[root];
   useEffect(() => {
     if (selectedUri !== undefined || selected !== null) return;
@@ -323,9 +330,9 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
     return {
       id: resource.uri,
       label: resource.metadata.name,
-      icon: container
-        ? (expanded.includes(resource.uri) ? theme.glyphs.chevronDown : theme.glyphs.chevronRight)
-        : undefined,
+      // No icon for a container: `Tree` already draws the twisty for anything
+      // expandable, and setting a chevron here too is how a folder ends up
+      // wearing two of them.
       hasChildren: container,
       children: kids?.map(toNode),
       meta: resource.metadata.size !== undefined ? formatSize(resource.metadata.size) : undefined,
@@ -346,23 +353,20 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
       setExpanded(isExpanded ? [...expanded, id] : expanded.filter((e) => e !== id));
       if (isExpanded) load(id);
     },
-    onSelect: (id: string) => setSelected(id),
+    onSelect: (id: string) => {
+      setSelected(id);
+      const found = findResource(children, id);
+      if (found) onSelect?.(found);
+    },
     onActivate: (id: string) => {
       setSelected(id);
       const found = findResource(children, id);
       if (found) onOpen?.(found);
     },
-    flex: preview ? undefined : 1,
-    width: preview ? 30 : undefined,
+    flex: 1,
   });
 
-  if (!preview) return h('box', { direction: 'column', flex: 1, ...rest }, tree);
-
-  return h('box', { direction: 'row', flex: 1, gap: 1, ...rest },
-    tree,
-    h('box', { flex: 1, border: { style: theme.border, sides: { left: true } }, padding: { left: 1 } },
-      h(ResourceView, { uri: current })),
-  );
+  return h('box', { direction: 'column', flex: 1, ...rest }, tree);
 });
 
 function findResource(children: Record<string, Resource[]>, uri: string): Resource | null {

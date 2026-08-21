@@ -13,7 +13,6 @@ import { OVERLAY_COMPONENTS } from './overlay.js';
 import { CHART_COMPONENTS } from './chart.js';
 import { SURFACE_COMPONENTS, BUILTIN_LAYOUTS } from './surface.js';
 import { SHELL_COMPONENTS, BUILTIN_SHELLS } from './shells.js';
-import { RESOURCE_COMPONENTS } from './resource.js';
 
 export * from './primitives.js';
 export * from './layout.js';
@@ -26,8 +25,6 @@ export * from './overlay.js';
 export * from './chart.js';
 export * from './surface.js';
 export * from './shells.js';
-export * from './resource.js';
-export * from './json.js';
 export * from './viewport.js';
 export * from './tone.js';
 
@@ -44,7 +41,6 @@ export const CATALOG: ComponentDefinition[] = [
   ...CHART_COMPONENTS,
   ...SURFACE_COMPONENTS,
   ...SHELL_COMPONENTS,
-  ...RESOURCE_COMPONENTS,
 ];
 
 /**

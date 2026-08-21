@@ -462,12 +462,22 @@ export class App implements TextUIApp {
     const position = entry.position ?? { kind: 'center' };
     const zIndex = entry.layer === 'notification' ? 200 : entry.layer === 'modal' ? 100 : 60;
 
+    // Every layer gets a focus scope, so `trapFocus` is a fact rather than a
+    // flag. Without it a layer assembled from plain nodes cannot trap, and tab
+    // leaves the open thing on the first press.
+    const scoped: ComponentNode = {
+      component: 'LayerScope',
+      scopeId: entry.id,
+      trap: entry.trapFocus === true,
+      children: entry.node,
+    };
+
     const wrap = (style: Record<string, unknown>): ComponentNode => ({
       component: 'box',
       key: entry.id,
       position: 'absolute',
       zIndex,
-      children: entry.node,
+      children: scoped,
       ...style,
     });
 

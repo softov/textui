@@ -1,5 +1,5 @@
 import type { Disposable } from './disposable.js';
-import type { ComponentNode } from './graph.js';
+import type { ComponentNode, ErrorFallback } from './graph.js';
 import type { WhenClause } from './when.js';
 import type { CapabilityName } from './capabilities.js';
 import type { FunctionComponent, HostComponent } from './render.js';
@@ -43,7 +43,7 @@ export interface ComponentDefinition {
   /** Variants this component understands, for the theme and the CLI. */
   variants?: string[];
   /** Rendered instead when this subtree throws. */
-  fallback?: ComponentNode;
+  fallback?: ErrorFallback;
   /** Degrades or refuses to mount without these. */
   requires?: CapabilityName[];
   /** Uses these when present, works without them. */

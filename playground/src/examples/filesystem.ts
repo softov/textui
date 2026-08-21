@@ -1,7 +1,7 @@
 import { readdir, readFile, stat, writeFile, rename, rm } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
-import { isDocumentDirty, revertDocument } from '@textui/core';
+import { isDocumentDirty, revertDocument } from '@textui/documents';
 import type { TextUIApp, Resource, ResourceProvider } from '@textui/core';
 
 /**

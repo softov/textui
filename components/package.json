@@ -8,6 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@textui/core": "workspace:*"
+    "@textui/core": "workspace:*",
+    "@textui/documents": "workspace:*"
   }
 }

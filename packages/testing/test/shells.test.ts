@@ -248,3 +248,116 @@ describe('navigation', () => {
     await t.unmount();
   });
 });
+
+/**
+ * Regions, and what they cost when they are empty.
+ *
+ * Both of these were found by an application rather than by a test: a sidebar
+ * nobody mounted still reserved its column, and a sidebar with one panel in it
+ * got a rule underneath separating it from nothing.
+ */
+describe('empty and single-mount regions', () => {
+  // A layout checked at one size is a layout that breaks at the second.
+  const SIZES = [
+    { width: 96, height: 16 },
+    { width: 140, height: 40 },
+  ];
+
+  for (const size of SIZES) {
+    const at = `${size.width}x${size.height}`;
+
+    it(`spends no width on a sidebar nothing is mounted on, at ${at}`, async () => {
+      const t = await renderApp({
+        ...size,
+        shell: 'workbench',
+        onBoot: (app) => {
+          app.open({ surface: 'main', key: 'm', target: { component: 'text', content: 'MAIN' } });
+        },
+      });
+      await t.settle();
+
+      const row = t.lines().find((l) => l.includes('MAIN'));
+      // Inside the frame and its padding, and nowhere near column 24.
+      expect(row?.indexOf('MAIN')).toBeLessThan(4);
+      await t.unmount();
+    });
+
+    it(`draws no rule under a single stacked mount, at ${at}`, async () => {
+      const t = await renderApp({
+        ...size,
+        shell: 'workbench',
+        onBoot: (app) => {
+          app.open({ surface: 'sidebar', key: 's', target: { component: 'text', content: 'ONLY' } });
+          app.open({ surface: 'main', key: 'm', target: { component: 'text', content: 'MAIN' } });
+        },
+      });
+      await t.settle();
+
+      const index = t.lines().findIndex((l) => l.includes('ONLY'));
+      expect(index).toBeGreaterThanOrEqual(0);
+      // The row under the only mount belongs to nobody, so it stays blank.
+      const under = t.lines()[index + 1] ?? '';
+      expect(under).not.toMatch(/[─━]{4,}/);
+      await t.unmount();
+    });
+
+    it(`still rules between two stacked mounts, at ${at}`, async () => {
+      const t = await renderApp({
+        ...size,
+        shell: 'workbench',
+        onBoot: (app) => {
+          app.open({ surface: 'sidebar', key: 'a', target: { component: 'text', content: 'FIRST' } });
+          app.open({ surface: 'sidebar', key: 'b', target: { component: 'text', content: 'SECOND' } });
+          app.open({ surface: 'main', key: 'm', target: { component: 'text', content: 'MAIN' } });
+        },
+      });
+      await t.settle();
+
+      // Stacked mounts share the surface rather than each taking only the
+      // height of its own content, so the rule sits at the boundary between
+      // the two shares - somewhere between the labels, not pinned under the
+      // first line of text.
+      const first = t.lines().findIndex((l) => l.includes('FIRST'));
+      const second = t.lines().findIndex((l) => l.includes('SECOND'));
+      expect(first).toBeGreaterThanOrEqual(0);
+      expect(second).toBeGreaterThan(first);
+      const between = t.lines().slice(first + 1, second);
+      expect(between.some((l) => /[─━]{4,}/.test(l)), 'a rule should separate the two mounts').toBe(true);
+      await t.unmount();
+    });
+  }
+});
+
+describe('surfaces are the application\'s vocabulary', () => {
+  /**
+   * A surface name is not a library constraint.
+   *
+   * `SurfaceName` lists the names the shipped shells use so an editor can
+   * complete them, and nothing more: the type stays open and the runtime never
+   * checks one. An application that wants `lateral1` and `lateral2` says so
+   * and mounts onto them.
+   */
+  it('accepts a name the library has never heard of', async () => {
+    const t = await renderApp({
+      width: 60, height: 12,
+      onBoot: (app) => {
+        app.open({ surface: 'lateral1', key: 'a', target: { component: 'text', content: 'ONE' } });
+        app.open({ surface: 'inspector', key: 'b', target: { component: 'text', content: 'TWO' } });
+      },
+    });
+    await t.settle();
+
+    // Default state on first use, so no reader has to handle a hole.
+    expect(t.app.surfaces.state('lateral1')).toMatchObject({ visible: true, layout: 'single' });
+    expect(t.app.surfaces.mounts('lateral1')).toHaveLength(1);
+    expect(t.app.surfaces.mounts('inspector')).toHaveLength(1);
+
+    // `single` is the fallback: a surface the library has never seen cannot be
+    // assumed to want tabs.
+    expect(t.app.surfaces.state('inspector').layout).toBe('single');
+
+    t.app.surfaces.setState('lateral2', { visible: false });
+    expect(t.app.surfaces.state('lateral2')).toMatchObject({ visible: false, layout: 'single' });
+    await t.unmount();
+  });
+});

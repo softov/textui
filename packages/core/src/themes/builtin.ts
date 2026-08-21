@@ -138,6 +138,15 @@ export const PAPER: ThemeDefinition = {
     muted: '#7a756c',
     accent: '#b4531f',
     primary: '#b4531f',
+    // Selection as a tint of the page, not a block of another colour.
+    // `paper` inherits from `light`, whose selection is a saturated blue -
+    // dropped onto cream it reads as damage rather than as a highlight, and
+    // every component that fills with `selected` inherits that.
+    hover: '#f7f1e7',
+    active: '#efe4d2',
+    selected: '#eadcc6',
+    inverted: '#2b2a27',
+    focus: '#b4531f',
   },
   spacing: { none: 0, xs: 1, sm: 1, md: 2, lg: 3, xl: 4 },
   components: {
@@ -225,6 +234,45 @@ export const MONO: ThemeDefinition = {
   },
 };
 
+/**
+ * Paper, after dark.
+ *
+ * The same airy, borderless, warm-accented character as `paper` - the point of
+ * it is the restraint, not the brightness - with the ink and the page swapped.
+ * A warm dark rather than a blue one, so the two read as one family and a
+ * reader moving between them is not moving between two different products.
+ */
+export const PAPER_DARK: ThemeDefinition = {
+  id: 'paper-dark',
+  name: 'Paper Dark',
+  appearance: 'dark',
+  extends: 'dark',
+  border: 'none',
+  density: 'airy',
+  colors: {
+    canvas: '#1c1a17',
+    surface: '#1c1a17',
+    surfaceAlt: '#26231f',
+    border: '#3a352e',
+    borderSubtle: '#2a2621',
+    text: '#e8e3d9',
+    muted: '#9a9287',
+    accent: '#e0873f',
+    primary: '#e0873f',
+    // The same restraint, the other way up.
+    hover: '#26231f',
+    active: '#332e27',
+    selected: '#3d362c',
+    inverted: '#f4efe6',
+    focus: '#e0873f',
+  },
+  spacing: { none: 0, xs: 1, sm: 1, md: 2, lg: 3, xl: 4 },
+  components: {
+    Panel: { base: { border: 'none', padding: [1, 2] } },
+    Button: { base: { padding: [0, 2] } },
+  },
+};
+
 export const BUILTIN_THEMES: ThemeDefinition[] = [
-  DARK, LIGHT, CONSOLE, PAPER, WORKBENCH, MONO,
+  DARK, LIGHT, CONSOLE, PAPER, PAPER_DARK, WORKBENCH, MONO,
 ];

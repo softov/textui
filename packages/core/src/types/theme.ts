@@ -52,6 +52,20 @@ export interface ThemeGlyphs {
   separator: string;
   /** Path separator in a breadcrumb. */
   breadcrumb: string;
+  /**
+   * Where a region sits in the frame.
+   *
+   * One family, so a list of regions reads as a diagram rather than as six
+   * unrelated marks: the glyph says *where*, and `regionOff` says the region
+   * is not on screen. A tick cannot say where, which is why a list of ticks
+   * needs a second column of words to be readable at all.
+   */
+  regionTop: string;
+  regionBottom: string;
+  regionLeft: string;
+  regionRight: string;
+  regionCentre: string;
+  regionOff: string;
 }
 
 export interface ThemeDefinition {

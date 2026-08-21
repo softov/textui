@@ -1,4 +1,4 @@
-import type { BindingPath, ComponentNode } from '../types/graph.js';
+import type { BindingPath, ComponentNode, ErrorFallback, RenderError } from '../types/graph.js';
 import type { Runtime } from './runtime.js';
 import type { Instance } from './instance.js';
 import {
@@ -196,7 +196,14 @@ function missingNode(instance: Instance, options: RenderOptions): ComponentNode 
     return { component: 'text', content: '', dim: true };
   }
   const fallback = instance.node.$meta?.fallback;
-  if (fallback) return fallback;
+  if (fallback) {
+    // A miss is not a throw, but it is the same question - what does this
+    // render instead - so a fallback answers both.
+    const message = `no component registered as "${instance.component}"`;
+    return applyFallback(fallback, {
+      error: new Error(message), message, component: instance.component,
+    });
+  }
   return {
     component: 'text',
     content: options.diagnostics
@@ -206,10 +213,26 @@ function missingNode(instance: Instance, options: RenderOptions): ComponentNode 
   };
 }
 
+/**
+ * Render a declared fallback.
+ *
+ * A function fallback is handed the failure. A node fallback is handed it as
+ * the `error` and `errorMessage` props, so the graph stays data and a
+ * registered component can render the failure without the registry holding a
+ * function. Props the fallback declares itself win.
+ */
+function applyFallback(fallback: ErrorFallback, failure: RenderError): ComponentNode {
+  if (typeof fallback === 'function') return fallback(failure);
+  return { error: failure.error, errorMessage: failure.message, ...fallback };
+}
+
 function fallbackFor(instance: Instance, err: unknown): ComponentNode {
   const fallback = instance.node.$meta?.fallback ?? instance.definition?.fallback;
-  if (fallback) return fallback;
   const message = err instanceof Error ? err.message : String(err);
+  if (fallback) {
+    return applyFallback(fallback, { error: err, message, component: instance.component });
+  }
+
   return {
     component: 'text',
     content: `${instance.component}: ${message}`,

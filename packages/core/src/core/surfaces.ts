@@ -10,11 +10,25 @@ import type { BindingPath } from '../types/graph.js';
 import type { Disposable } from '../types/disposable.js';
 import { toDisposable } from '../util/disposable.js';
 
+/**
+ * The surfaces the shipped shells use.
+ *
+ * A convenience, not a constraint: it is what gets seeded at boot so the
+ * built-in shells have state to read. An application is free to mount onto a
+ * name that is not here, and nothing checks.
+ */
 export const SURFACE_NAMES: SurfaceName[] = [
   'header', 'rail', 'sidebar', 'aside', 'main', 'panel', 'status', 'overlay', 'notify',
 ];
 
-const DEFAULT_LAYOUTS: Record<SurfaceName, LayoutName> = {
+/**
+ * How a surface arranges its mounts when nobody has said.
+ *
+ * Only the shipped names have an opinion. Anything else gets `single`, which
+ * shows the active mount and is the one answer that is never wrong - a surface
+ * the library has never heard of cannot be assumed to want tabs.
+ */
+const DEFAULT_LAYOUTS: Record<string, LayoutName> = {
   header: 'bar',
   rail: 'rail',
   sidebar: 'stack',
@@ -25,6 +39,16 @@ const DEFAULT_LAYOUTS: Record<SurfaceName, LayoutName> = {
   overlay: 'floating',
   notify: 'toast',
 };
+
+const FALLBACK_LAYOUT: LayoutName = 'single';
+
+function defaultLayout(surface: SurfaceName): LayoutName {
+  return DEFAULT_LAYOUTS[surface] ?? FALLBACK_LAYOUT;
+}
+
+function defaultState(surface: SurfaceName): SurfaceState {
+  return { layout: defaultLayout(surface), activeKey: null, visible: true };
+}
 
 function statePath(surface: SurfaceName): BindingPath {
   return `$/layout/surfaces/${surface}` as BindingPath;
@@ -37,10 +61,14 @@ function mountsPath(surface: SurfaceName): BindingPath {
 /**
  * Surfaces, mounts and their state.
  *
- * Nine surface names, fixed, because they are the vocabulary a layout, a
- * keybinding scope and a shell all have to share. Which layout a surface uses
- * is store state rather than code, which is what makes it switchable at
- * runtime and persistable per user.
+ * A surface is whatever the application calls a region. The runtime keeps
+ * state per name and never validates one: mounting onto `lateral1` works
+ * exactly as well as mounting onto `sidebar`, and needs no registration. The
+ * shipped names are seeded at boot only so the shipped shells have something
+ * to read.
+ *
+ * Which layout a surface uses is store state rather than code, which is what
+ * makes it switchable at runtime and persistable per user.
  */
 export class Surfaces implements SurfaceRegistry {
   private byKey = new Map<string, Mount>();
@@ -57,11 +85,7 @@ export class Surfaces implements SurfaceRegistry {
   ) {
     for (const surface of SURFACE_NAMES) {
       if (this.deps.store.get(statePath(surface)) === undefined) {
-        this.deps.store.set(statePath(surface), {
-          layout: DEFAULT_LAYOUTS[surface],
-          activeKey: null,
-          visible: true,
-        } satisfies SurfaceState);
+        this.deps.store.set(statePath(surface), defaultState(surface));
       }
     }
   }
@@ -163,16 +187,16 @@ export class Surfaces implements SurfaceRegistry {
   }
 
   state(surface: SurfaceName): SurfaceState {
-    return (
-      this.deps.store.get<SurfaceState>(statePath(surface)) ?? {
-        layout: DEFAULT_LAYOUTS[surface],
-        activeKey: null,
-        visible: true,
-      }
-    );
+    return this.deps.store.get<SurfaceState>(statePath(surface)) ?? defaultState(surface);
   }
 
   setState(surface: SurfaceName, patch: Partial<SurfaceState>): void {
+    // A name nobody seeded is still a surface. Give it defaults on first use
+    // rather than patching a hole, or `visible` and `layout` arrive undefined
+    // and every reader has to guess what an unseeded surface meant.
+    if (this.deps.store.get(statePath(surface)) === undefined) {
+      this.deps.store.set(statePath(surface), defaultState(surface));
+    }
     this.deps.store.patch(statePath(surface), patch as Record<string, unknown>);
     this.deps.onChange();
   }

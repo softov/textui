@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  defineComponent, h, jsonAdapter, openDocument, getDocument, isDocumentDirty,
-  saveDocument, setDocumentContent, useState, useStore, useStoreValue, notify,
+  defineComponent, h, useState, useStore, useStoreValue, notify,
 } from '@textui/core';
 import type { TextUIApp, Resource, ResourceProvider } from '@textui/core';
-import { render, renderApp } from '../src/index.js';
+import { render, renderApp } from '@textui/testing';
+import {
+  jsonAdapter, openDocument, getDocument, isDocumentDirty, saveDocument,
+  setDocumentContent,
+} from '../src/index.js';
 
 /**
  * The file viewer, the document buffer and the adapter that colours them.
@@ -379,6 +382,30 @@ describe('the JSON adapter', () => {
     const { t } = await withJson('{"a":1}');
     t.app.store.set('$/active/resource', { uri: 'mem:///a.json', kind: 'file.data.json' });
 
+    await t.app.execute('json.minify');
+    expect(getDocument(t.app.store, 'mem:///a.json')?.content).toBe('{"a":1}');
+    await t.unmount();
+  });
+
+  it('reads the selection from wherever the application keeps it', async () => {
+    const files = { 'mem:///a.json': '{\n  "a": 1\n}' };
+    const t = await renderApp({
+      width: 60, height: 10,
+      onBoot: (app) => {
+        app.resources.registerProvider(memoryProvider(files));
+        app.resources.registerKind({ id: 'file', title: 'File' });
+        app.resources.registerKind({ id: 'file.data', title: 'Data', extends: 'file' });
+        app.registerAdapter(jsonAdapter({ activePath: '$/app/editor/open' }));
+      },
+    });
+    await openDocument(t.app, 'mem:///a.json');
+
+    // The default path is not this application's, so a selection there means
+    // nothing: the command's `when` never opens and it stays unreachable.
+    t.app.store.set('$/active/resource', { uri: 'mem:///a.json', kind: 'file.data.json' });
+    await expect(t.app.execute('json.minify')).rejects.toThrow(/json\.minify/);
+
+    t.app.store.set('$/app/editor/open', { uri: 'mem:///a.json', kind: 'file.data.json' });
     await t.app.execute('json.minify');
     expect(getDocument(t.app.store, 'mem:///a.json')?.content).toBe('{"a":1}');
     await t.unmount();

@@ -1,8 +1,10 @@
 import type { ComponentDefinition } from '../types/component-registry.js';
 import type { ShellDefinition } from '../types/shell.js';
+import type { SurfaceName } from '../types/surface.js';
+import type { BindingPath } from '../types/graph.js';
 import type { BoxProps } from '../jsx/intrinsics.js';
 import { h, defineComponent } from '../jsx/factory.js';
-import { useSize, useStoreValue, useTheme } from '../runtime/hooks.js';
+import { useRuntime, useSize, useStoreSubtree, useStoreValue, useTheme } from '../runtime/hooks.js';
 import { SurfaceArea } from './surface.js';
 import { ToastHost } from './overlay.js';
 
@@ -35,6 +37,27 @@ export const PlainShell = defineComponent<ShellProps>('PlainShell', (props) =>
   ),
 );
 
+
+/**
+ * Whether a surface has anything to show.
+ *
+ * `SurfaceArea` already renders nothing for an empty surface, but a region
+ * with a fixed width reserves its column either way - which is how an
+ * application that never mounts a sidebar still gets an empty gutter down the
+ * left of every screen. A shell has to ask before it spends the space.
+ */
+function useSurfaceMounted(surface: SurfaceName): boolean {
+  const runtime = useRuntime();
+  useStoreSubtree(`$/layout/surfaces/${surface}` as BindingPath);
+  useStoreSubtree(`$/layout/mounts/${surface}` as BindingPath);
+
+  const app = runtime.app();
+  if (!app) return false;
+  const state = app.surfaces.state(surface);
+  if (!state.visible || state.collapsed) return false;
+  return app.surfaces.mounts(surface).length > 0;
+}
+
 /**
  * Direction A: the dense operator console.
  *
@@ -45,6 +68,7 @@ export const ConsoleShell = defineComponent<ShellProps>('ConsoleShell', (props) 
   const theme = useTheme();
   const size = useSize();
   const sidebarCollapsed = useStoreValue<boolean>('$/ui/sidebar/collapsed', false);
+  const sidebar = useSurfaceMounted('sidebar');
   const narrow = size.width < 80;
 
   return h('box', {
@@ -57,7 +81,7 @@ export const ConsoleShell = defineComponent<ShellProps>('ConsoleShell', (props) 
     h(SurfaceArea, { surface: 'header' }),
 
     h('box', { direction: 'row', flex: 1 },
-      !narrow && !sidebarCollapsed
+      sidebar && !narrow && !sidebarCollapsed
         ? h('box', {
             width: 18,
             border: { style: theme.border, sides: { right: true } },
@@ -115,6 +139,8 @@ export const WorkbenchShell = defineComponent<ShellProps>('WorkbenchShell', (pro
   const size = useSize();
   const sidebarCollapsed = useStoreValue<boolean>('$/ui/sidebar/collapsed', false);
   const asideVisible = useStoreValue<boolean>('$/ui/aside/visible', false);
+  const sidebar = useSurfaceMounted('sidebar');
+  const aside = useSurfaceMounted('aside');
   const narrow = size.width < 90;
 
   return h('box', {
@@ -131,7 +157,7 @@ export const WorkbenchShell = defineComponent<ShellProps>('WorkbenchShell', (pro
     h('box', { direction: 'row', flex: 1 },
       h(SurfaceArea, { surface: 'rail' }),
 
-      !sidebarCollapsed && !narrow
+      sidebar && !sidebarCollapsed && !narrow
         ? h('box', {
             width: 24,
             border: { style: theme.border, sides: { right: true } },
@@ -144,7 +170,7 @@ export const WorkbenchShell = defineComponent<ShellProps>('WorkbenchShell', (pro
         h(SurfaceArea, { surface: 'main', flex: 1 }),
         h(SurfaceArea, { surface: 'panel' })),
 
-      asideVisible && !narrow
+      aside && asideVisible && !narrow
         ? h('box', {
             width: 30,
             border: { style: theme.border, sides: { left: true } },

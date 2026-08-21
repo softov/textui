@@ -4,9 +4,16 @@ import type { WhenClause } from './when.js';
 import type { StyleColor } from './style.js';
 
 /**
- * Nine surface names, fixed, because they are the vocabulary a layout, a
- * keybinding scope and a shell all have to share. A shell decides where they
- * go on screen; some shells render only a few of them.
+ * Where something is mounted.
+ *
+ * A surface is the application's word, not the library's. The names below are
+ * the ones the shipped shells happen to use, and they are listed so an editor
+ * can complete them - `(string & {})` keeps the type open, so `lateral1`,
+ * `inspector` or `panel:bottom` are all equally valid and need no change here.
+ *
+ * The runtime never checks a surface name against a list. A name it has not
+ * seen gets default state the first time it is used, and a shell renders
+ * whichever surfaces it decides to render.
  */
 export type SurfaceName =
   | 'header'      // title bar / tab strip
@@ -17,7 +24,8 @@ export type SurfaceName =
   | 'panel'       // bottom drawer: logs, output, terminal
   | 'status'      // one-line status bar
   | 'overlay'     // modals, palettes, popovers, tooltips
-  | 'notify';     // toasts
+  | 'notify'      // toasts
+  | (string & {});
 
 export interface MountDisplay {
   title?: string;

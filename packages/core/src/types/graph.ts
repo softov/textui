@@ -78,11 +78,33 @@ export type PropValue =
   | PropValue[]
   | ((...args: any[]) => unknown);
 
+/** What a component threw, and which component threw it. */
+export interface RenderError {
+  /** The thrown value, whatever it was. */
+  error: unknown;
+  /** `error.message`, or the value stringified. */
+  message: string;
+  /** The component that threw. */
+  component: string;
+}
+
+/**
+ * What to render when a component throws.
+ *
+ * A node keeps the graph data, and is handed the failure as the `error` and
+ * `errorMessage` props - so a registered `ErrorPanel` can show what happened
+ * without the registry holding a function. A function is for the local case,
+ * where the fallback wants the failure itself rather than two props.
+ */
+export type ErrorFallback =
+  | ComponentNode
+  | ((failure: RenderError) => ComponentNode);
+
 /** Internal only - stripped before a node is serialized back to a sender. */
 export type NodeMeta = {
   origin?: { format: string; version?: string; sourceNodeId?: NodeId };
   /** Rendered instead when this node's subtree throws. */
-  fallback?: ComponentNode;
+  fallback?: ErrorFallback;
   /** Set by the JSX factory for a function component, so the registry can
    *  resolve the same function without a name collision. */
   fn?: unknown;

@@ -82,11 +82,13 @@ Two consequences are worth stating plainly. A name that was never registered is 
 
 ## Surfaces, shells and the acceptance test
 
+A surface name is the application's word, not the library's. `SurfaceName` lists the ones the shipped shells use so an editor can complete them, but the type stays open and the runtime never validates one - `app.open({ surface: 'lateral1', ... })` works with no registration, and gets default state the first time it is used. Which surfaces exist is therefore a property of the shell you wrote, not of this package.
+
 A shell decides where surfaces go, and that is all it decides. The three shipped shells are the same application in three house styles:
 
 | | `console` | `paper` | `workbench` |
 | --- | --- | --- | --- |
-| surfaces | header, sidebar, main, panel, status | header, main, status | all nine |
+| surfaces | header, sidebar, main, panel, status | header, main, status | header, rail, sidebar, aside, main, panel, status |
 | border | `single` | `none` | `round` |
 | density | compact | airy | normal |
 

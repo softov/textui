@@ -1,7 +1,7 @@
-import type { BindingPath } from '../types/graph.js';
-import type { ReactiveStore } from '../types/store.js';
-import type { TextUIApp } from '../types/app.js';
-import { escapeSegment } from '../util/paths.js';
+import type { BindingPath } from '@textui/core';
+import type { ReactiveStore } from '@textui/core';
+import type { TextUIApp } from '@textui/core';
+import { escapeSegment } from '@textui/core';
 
 /**
  * Document buffers.

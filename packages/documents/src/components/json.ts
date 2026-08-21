@@ -1,10 +1,11 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { BoxProps } from '../jsx/intrinsics.js';
-import type { Resource } from '../types/resource.js';
-import { h, defineComponent } from '../jsx/factory.js';
-import { useDocument, useMemo, useTheme } from '../runtime/hooks.js';
-import { CodeViewer, Tree, type TreeNode } from './data.js';
-import { EmptyState, ErrorState, Spinner } from './display.js';
+import type { ComponentDefinition } from '@textui/core';
+import type { BoxProps } from '@textui/core';
+import type { Resource } from '@textui/core';
+import { h, defineComponent } from '@textui/core';
+import { useMemo, useTheme } from '@textui/core';
+import { useDocument } from '../use-document.js';
+import { CodeViewer, Tree, type TreeNode } from '@textui/core';
+import { EmptyState, ErrorState, Spinner } from '@textui/core';
 
 /**
  * The two ways to look at a JSON file.

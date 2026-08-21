@@ -2,6 +2,8 @@ import type { ComponentDefinition } from '../types/component-registry.js';
 import type { BoxProps } from '../jsx/intrinsics.js';
 import type { SemanticVariant } from '../types/style.js';
 import type { LayerEntry, LayerPosition } from '../types/layer.js';
+import type { ComponentNode } from '../types/graph.js';
+import type { RenderOutput } from '../types/render.js';
 import type { ArgSpec, CommandDefinition } from '../types/command.js';
 import type { TextUIApp } from '../types/app.js';
 import type { Disposable } from '../types/disposable.js';
@@ -126,8 +128,14 @@ export const Toast = defineComponent<ToastProps>('Toast', (props) => {
 });
 
 export interface CommandPaletteProps extends BoxProps {
-  /** Rows to search. Defaults to every enabled command in the `palette` slot. */
-  commands?: CommandDefinition[];
+  /**
+   * Rows to search. Defaults to every enabled command in the `palette` slot.
+   *
+   * A function is re-read every render, which is what a list of switches
+   * needs: after one is flipped the row has to show its new state, and a
+   * snapshot taken when the palette opened cannot.
+   */
+  commands?: CommandDefinition[] | (() => CommandDefinition[]);
   placeholder?: string;
   /** Notified after a command runs. The palette runs it itself. */
   onRun?(id: string, args?: Record<string, unknown>): void;
@@ -138,6 +146,14 @@ export interface CommandPaletteProps extends BoxProps {
   grouped?: boolean;
   visibleRows?: number;
   width?: number;
+  /**
+   * Open already drilled into this command's choices.
+   *
+   * For a caller that has decided *which* question is being asked and only
+   * wants the palette to ask it - a menu item for "Theme" should offer the
+   * themes, not the whole command list with "Theme" typed into the search box.
+   */
+  openAt?: string;
 }
 
 /**
@@ -159,7 +175,7 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const runtime = useRuntime();
   const {
     commands, placeholder = 'Type a command…', onRun, onClose, execute = true,
-    grouped = true, visibleRows = 8, width = 60, ...rest
+    grouped = true, visibleRows = 8, width = 60, openAt, ...rest
   } = props;
 
   const [query, setQuery] = useState('');
@@ -167,10 +183,13 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   /** The command being asked about, when the palette has drilled in. */
   const [pending, setPending] = useState<{ command: CommandDefinition; arg: ArgSpec } | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
+  /** Bumped after a row that stays, so a `commands` function is read again. */
+  const [, setRefresh] = useState(0);
   useFocusScope({ trap: true, restore: true, autoFocus: true });
 
   const app = runtime.app();
-  const all = commands ?? app?.commands.list({ slot: 'palette', enabledOnly: true }) ?? [];
+  const given = typeof commands === 'function' ? commands() : commands;
+  const all = given ?? app?.commands.list({ slot: 'palette', enabledOnly: true }) ?? [];
 
   const matches = pending ? [] : filterCommands(all, query);
   const rows = pending ? filterStrings(choices, query) : matches.map((c) => c.id);
@@ -202,11 +221,50 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   };
 
   const finish = (id: string, args?: Record<string, unknown>): void => {
+    // A row that only flips something stays: closing after every switch means
+    // reopening the list to reach the next one, which is the wrong answer for
+    // a list of switches and the right one for a list of actions. The command
+    // says which it is.
+    const definition = given?.find((c) => c.id === id) ?? app?.commands.get(id);
+    const dismiss = definition?.keepOpen !== true;
+
     // Close first: the command may open a layer of its own, and the palette
     // should be gone by the time it does rather than sitting underneath it.
-    onClose?.();
-    if (execute) void app?.execute(id, args, 'palette');
+    if (dismiss) onClose?.();
+
+    if (execute) {
+      // A caller may hand the palette rows the registry has never seen - a
+      // list built for one screen, a switch per surface the running shell
+      // happens to have. Running those through `execute` would find nothing
+      // and silently do nothing, so a definition that came in through `commands`
+      // and is not registered is run directly.
+      const local = given?.find((c) => c.id === id);
+      if (local && !app?.commands.get(id)) {
+        void local.run?.(args ?? {}, {
+          app: app as TextUIApp,
+          store: runtime.store,
+          args: args ?? {},
+        } as never);
+      } else {
+        void app?.execute(id, args, 'palette');
+      }
+    }
+    // A row that stayed just changed something the list is describing, so the
+    // list has to be asked again. Nothing else will invalidate this component:
+    // it is not subscribed to whatever the row touched, and should not be.
+    if (!dismiss) setRefresh((n) => n + 1);
+
     onRun?.(id, args);
+  };
+
+  /** Ask about one command. `choices` may be a function, and may be async. */
+  const drillInto = (command: CommandDefinition, arg: ArgSpec): void => {
+    const resolved = typeof arg.choices === 'function' ? arg.choices() : arg.choices ?? [];
+    setPending({ command, arg });
+    setQuery('');
+    setHighlight(0);
+    if (Array.isArray(resolved)) setChoices(resolved);
+    else void resolved.then((list) => setChoices(list));
   };
 
   const choose = (): void => {
@@ -226,14 +284,16 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       return;
     }
 
-    // Ask. `choices` may be a function, and may be async.
-    const resolved = typeof arg.choices === 'function' ? arg.choices() : arg.choices ?? [];
-    setPending({ command, arg });
-    setQuery('');
-    setHighlight(0);
-    if (Array.isArray(resolved)) setChoices(resolved);
-    else void resolved.then((list) => setChoices(list));
+    drillInto(command, arg);
   };
+
+  // Opening at a command is the same act as choosing it, minus the choosing.
+  useEffect(() => {
+    if (!openAt) return;
+    const command = all.find((c) => c.id === openAt) ?? app?.commands.get(openAt);
+    const arg = command ? argumentOf(command) : undefined;
+    if (command && arg) drillInto(command, arg);
+  }, [openAt]);
 
   // The field owns typing; the list owns up, down and enter. Without this
   // split, Enter submits the search box and the highlighted command is
@@ -246,8 +306,13 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
         return true;
       }
       if (event.name === 'left' && pending && query === '') { back(); return true; }
-      if (event.name === 'up') { setHighlight(Math.max(0, index - 1)); return true; }
-      if (event.name === 'down') { setHighlight(Math.min(rows.length - 1, index + 1)); return true; }
+      // Wrapping, both ways. A list you can walk off the end of makes you
+      // check where you are before every press; one that comes round means the
+      // last item is one key from the first.
+      const wrap = (n: number): number =>
+        rows.length === 0 ? 0 : (n + rows.length) % rows.length;
+      if (event.name === 'up') { setHighlight(wrap(index - 1)); return true; }
+      if (event.name === 'down') { setHighlight(wrap(index + 1)); return true; }
       if (event.name === 'right' && !pending) {
         const command = matches[index];
         if (command && argumentOf(command)) { choose(); return true; }
@@ -269,7 +334,12 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     bg: 'overlay',
     width,
     direction: 'column',
-    title: pending ? ` commands ${theme.glyphs.breadcrumb} ${pending.arg.name} ` : ' commands ',
+    // The crumb names the command, not its argument. "commands › Theme" is
+    // where you are; "commands › id" is what the parameter happens to be
+    // called, which is the author's business rather than the reader's.
+    title: pending
+      ? ` commands ${theme.glyphs.breadcrumb} ${pending.command.title} `
+      : ' commands ',
     ...rest,
   },
     h(TextInput, {
@@ -279,7 +349,9 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
         setHighlight(0);
       },
       onSubmit: choose,
-      placeholder: pending ? `Choose a ${pending.arg.name}…` : placeholder,
+      placeholder: pending
+        ? (pending.arg.description ?? `Choose ${pending.command.title.toLowerCase()}…`)
+        : placeholder,
       search: true,
       autoFocus: true,
       border: 'none',
@@ -566,11 +638,36 @@ export function toastPosition(anchor: ToastHostProps['anchor']): LayerPosition {
   }
 }
 
+/**
+ * The focus scope a layer lives in.
+ *
+ * `trapFocus` on a layer used to be a flag nothing read: `Dialog` and
+ * `CommandPalette` trapped because they each called `useFocusScope`
+ * themselves, and any layer built out of plain nodes - a menu dropdown, say -
+ * silently did not. Tab then walked straight out of the open thing and into
+ * whatever was behind it, and the next key went with it.
+ *
+ * Wrapping every layer in this makes the flag mean what it says, once, for all
+ * of them. It renders its child rather than a box of its own, so a layer's
+ * measurements are unchanged by being scoped.
+ */
+export interface LayerScopeProps {
+  scopeId: string;
+  trap?: boolean;
+  children?: ComponentNode | ComponentNode[];
+}
+
+export const LayerScope = defineComponent<LayerScopeProps>('LayerScope', (props) => {
+  useFocusScope({ id: `layer:${props.scopeId}`, trap: props.trap === true, restore: true });
+  return (props.children ?? null) as RenderOutput;
+});
+
 export const OVERLAY_COMPONENTS: ComponentDefinition[] = [
   { component: 'Dialog', category: 'overlay', renderer: { kind: 'function', render: Dialog }, role: 'dialog', description: 'Modal box with actions; traps focus and restores it.' },
   { component: 'PromptDialog', category: 'overlay', renderer: { kind: 'function', render: PromptDialog }, role: 'dialog', description: 'One-field dialog behind the `prompt` helper.' },
   { component: 'Tooltip', category: 'overlay', renderer: { kind: 'function', render: Tooltip }, role: 'tooltip', description: 'Small anchored hint.' },
   { component: 'Toast', category: 'overlay', renderer: { kind: 'function', render: Toast }, role: 'status', description: 'Transient notification.' },
   { component: 'ToastHost', category: 'overlay', renderer: { kind: 'function', render: ToastHost }, description: 'Where toasts stack.' },
+  { component: 'LayerScope', category: 'overlay', renderer: { kind: 'function', render: LayerScope }, description: 'The focus scope a layer lives in; makes `trapFocus` real.' },
   { component: 'CommandPalette', category: 'overlay', renderer: { kind: 'function', render: CommandPalette }, role: 'dialog', description: 'Fuzzy search over the command registry.' },
 ];

@@ -1,0 +1,28 @@
+{
+  "name": "@textui/textide",
+  "version": "0.1.0",
+  "description": "An IDE that runs in a terminal, built on TextUI",
+  "type": "module",
+  "license": "MIT",
+  "bin": { "textide": "./dist/main.js" },
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/documents": "workspace:*",
+    "@textui/terminal": "workspace:*"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*",
+    "esbuild": "^0.25.0"
+  },
+  "publishConfig": { "access": "public" }
+}

@@ -6,12 +6,14 @@
   "description": "Workspace root for TextUI - a graph-mounted terminal UI runtime",
   "scripts": {
     "dev": "pnpm --filter @textui/playground dev",
-    "build": "tsc -b packages/core packages/terminal packages/testing packages/cli",
+    "example": "node examples/run.mjs",
+    "textide": "pnpm --filter @textui/textide dev",
+    "build": "tsc -b packages/core packages/terminal packages/documents packages/testing packages/cli packages/textide",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo playground/.dev"
+    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo playground/.dev examples/*/.dev packages/textide/.dev"
   },
   "packageManager": "pnpm@10.28.0",
   "engines": {
@@ -24,6 +26,7 @@
     "typescript-eslint": "^8.19.0",
     "vitest": "^3.0.0",
     "@eslint/js": "^9.17.0",
+    "esbuild": "^0.25.0",
     "globals": "^15.14.0"
   }
 }

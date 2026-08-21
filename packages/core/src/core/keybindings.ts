@@ -10,19 +10,48 @@ function parseChord(chord: Chord): string[] {
   return chord.trim().split(/\s+/).map(normalizeStroke);
 }
 
-function normalizeStroke(stroke: string): string {
-  const parts = stroke.toLowerCase().split('+').filter((p) => p !== '');
-  const mods = new Set<string>();
-  let key = '';
-  for (const part of parts) {
-    if (part === 'ctrl' || part === 'control') mods.add('ctrl');
-    else if (part === 'alt' || part === 'option') mods.add('alt');
-    else if (part === 'shift') mods.add('shift');
-    else if (part === 'meta' || part === 'cmd' || part === 'super') mods.add('meta');
-    else key = part;
+const MODIFIER = /^(ctrl|control|alt|option|shift|meta|cmd|super)\+/i;
+
+/**
+ * Split one stroke into its modifiers and its key.
+ *
+ * Modifiers are consumed off the front by name and whatever survives is the
+ * key, verbatim. Splitting on `+` cannot work here: `+` is the separator and
+ * a key, so `'+'.split('+')` loses the only thing it was asked about. Parsing
+ * forwards means `+` is `+`, and `ctrl++` is ctrl and `+`.
+ *
+ * One parser, exported, because a chord that the test harness presses and a
+ * chord that the registry stored have to agree - and two implementations of
+ * one grammar disagree eventually.
+ */
+export function splitStroke(stroke: string): { mods: string[]; key: string } {
+  const mods: string[] = [];
+  let rest = stroke.trim();
+  for (let match = MODIFIER.exec(rest); match !== null; match = MODIFIER.exec(rest)) {
+    const [whole, name = ''] = match;
+    mods.push(name.toLowerCase());
+    rest = rest.slice(whole.length);
   }
+  return { mods, key: rest };
+}
+
+/** The canonical stroke a chord is filed under. `strokeOf` must agree with it. */
+export function normalizeStroke(stroke: string): string {
+  const { mods: names, key } = splitStroke(stroke);
+  const mods = new Set<string>();
+  for (const name of names) {
+    if (name === 'ctrl' || name === 'control') mods.add('ctrl');
+    else if (name === 'alt' || name === 'option') mods.add('alt');
+    else if (name === 'shift') mods.add('shift');
+    else mods.add('meta');
+  }
+  // Shift is not part of a stroke for a single character. A terminal reports
+  // shift+p as `P`, and `strokeOf` reads it back that way, so a binding filed
+  // under `ctrl+shift+p` would wait for a stroke no keypress can produce.
+  if ([...key].length === 1) mods.delete('shift');
+
   const order = ['ctrl', 'alt', 'shift', 'meta'].filter((m) => mods.has(m));
-  return [...order, key].join('+');
+  return [...order, key.toLowerCase()].join('+');
 }
 
 export function strokeOf(event: KeyEvent): string {

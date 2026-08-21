@@ -1,12 +1,12 @@
-import type { SyntaxSpan } from '../types/syntax.js';
-import type { ResourceAdapter } from '../types/adapter.js';
-import type { CommandContext } from '../types/command.js';
-import type { TextUIApp } from '../types/app.js';
-import type { BindingPath } from '../types/graph.js';
-import { spanHighlighter } from '../core/syntax.js';
-import { getDocument, openDocument, setDocumentContent } from '../core/documents.js';
-import { JSON_COMPONENTS } from '../ui/json.js';
-import { notify } from '../ui/overlay.js';
+import type { SyntaxSpan } from '@textui/core';
+import type { ResourceAdapter } from '@textui/core';
+import type { CommandContext } from '@textui/core';
+import type { TextUIApp } from '@textui/core';
+import type { BindingPath } from '@textui/core';
+import { spanHighlighter } from '@textui/core';
+import { getDocument, openDocument, setDocumentContent } from '../documents.js';
+import { JSON_COMPONENTS } from '../components/json.js';
+import { notify } from '@textui/core';
 
 /**
  * The JSON adapter.
@@ -216,14 +216,24 @@ export function validateJson(text: string): JsonProblem | null {
 
 // ----------------------------------------------------------------- actions
 
-/** Where an action looks for its target when nothing was passed. */
-export const ACTIVE_RESOURCE_PATH = '$/active/resource/uri' as BindingPath;
+/**
+ * Where an application publishes what is selected, by convention.
+ *
+ * `active` is the scope - a lifetime, not a folder - so the selection lives
+ * under it and `clearScope('active')` forgets every selection at once. The
+ * adapter reads `uri` and `kind` below this path; an application that keeps
+ * its selection somewhere else passes `activePath` instead of moving to meet
+ * a default chosen by a package it installed.
+ */
+export const ACTIVE_RESOURCE_PATH = '$/active/resource' as BindingPath;
 
-function targetUri(args: Record<string, unknown>, ctx: CommandContext): string | null {
-  const explicit = args.uri;
-  if (typeof explicit === 'string' && explicit !== '') return explicit;
-  const active = ctx.store.get<string>(ACTIVE_RESOURCE_PATH);
-  return typeof active === 'string' && active !== '' ? active : null;
+function targetUriFrom(activePath: BindingPath) {
+  return (args: Record<string, unknown>, ctx: CommandContext): string | null => {
+    const explicit = args.uri;
+    if (typeof explicit === 'string' && explicit !== '') return explicit;
+    const active = ctx.store.get<string>(`${activePath}/uri` as BindingPath);
+    return typeof active === 'string' && active !== '' ? active : null;
+  };
 }
 
 /**
@@ -268,11 +278,18 @@ export interface JsonAdapterOptions {
   indent?: number;
   /** Also claim `.jsonc` and `.webmanifest`. On by default. */
   extensions?: string[];
+  /**
+   * Where this application publishes the selected resource. The adapter reads
+   * `uri` and `kind` below it. Defaults to `ACTIVE_RESOURCE_PATH`.
+   */
+  activePath?: BindingPath;
 }
 
 export function jsonAdapter(options: JsonAdapterOptions = {}): ResourceAdapter {
   const indent = options.indent ?? 2;
   const extensions = options.extensions ?? ['*.json', '*.jsonc', '*.webmanifest'];
+  const activePath = options.activePath ?? ACTIVE_RESOURCE_PATH;
+  const targetUri = targetUriFrom(activePath);
 
   const operations: {
     id: string;
@@ -362,7 +379,7 @@ export function jsonAdapter(options: JsonAdapterOptions = {}): ResourceAdapter {
         title: `JSON: ${op.title}`,
         category: 'JSON',
         slots: ['palette'],
-        when: `$/active/resource/kind == 'file.data.json'`,
+        when: `${activePath}/kind == 'file.data.json'`,
         run: async (args: Record<string, unknown>, ctx: CommandContext) => {
           const uri = targetUri(args, ctx);
           if (uri) await transform(ctx.app, uri, op.title, op.run);

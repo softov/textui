@@ -22,10 +22,6 @@ import { resolvePath } from '../util/paths.js';
 import { toStream } from '../util/stream.js';
 import { GLOBAL_SCOPE } from '../core/focus.js';
 import { plainTokens } from '../core/syntax.js';
-import {
-  documentPath, openDocument, revertDocument, saveDocument, setDocumentContent,
-  type DocumentState,
-} from '../core/documents.js';
 
 /**
  * Hooks.
@@ -595,10 +591,15 @@ export function useInput(
     // this component already registered - re-registering the same id would
     // replace it, quietly dropping its tab order and its focus callbacks.
     if (options.global) {
+      // "Global" means the handler is not tied to a focusable, not that it
+      // outranks a modal. A component inside a trapping scope - or one that
+      // opened the trap itself, like the palette - files its handler there, or
+      // the trap that owns the keyboard would exclude the very keys the layer
+      // exists to read.
       const registration = runtime.focus.register({
         id: `${instance.id}:global`,
         skipTab: true,
-        scopeId: '__global__',
+        scopeId: focusScopeOf(instance) ?? '__global__',
         onKey,
       });
       return () => registration.dispose();
@@ -734,72 +735,6 @@ export function useResourceUri(uri: string | null): {
     status: task.status,
     error: task.error,
     refresh: task.refresh,
-  };
-}
-
-// ------------------------------------------------------------- documents
-
-export interface DocumentHandle {
-  uri: string | null;
-  /** What to show. The buffer's content, not necessarily the file's. */
-  content: string;
-  original: string;
-  dirty: boolean;
-  readonly: boolean;
-  kind: string | undefined;
-  status: TaskState['status'];
-  error: unknown;
-  /** Replace the buffer. What an action like "format" calls. */
-  set(content: string): void;
-  revert(): void;
-  reload(): void;
-  save(): Promise<void>;
-}
-
-/**
- * Open a resource as an editable buffer.
- *
- * The difference from `useResourceUri` is that this can be changed: an action
- * that formats or minifies writes to the buffer, every viewer showing that URI
- * updates, and nothing has touched the provider until `save`.
- */
-export function useDocument(uri: string | null): DocumentHandle {
-  const runtime = useRuntime();
-  const app = runtime.app();
-  const path = documentPath(uri ?? '\u0000');
-  const doc = useStoreValue<DocumentState>(path);
-
-  const task = useTask(async () => {
-    if (!uri || !app) return null;
-    return openDocument(app, uri);
-  }, [uri]);
-
-  useEffect(() => {
-    if (uri && app && !doc) void task.run();
-  }, [uri]);
-
-  const content = doc?.content ?? '';
-  return {
-    uri,
-    content,
-    original: doc?.original ?? '',
-    dirty: doc !== undefined && doc.content !== doc.original,
-    readonly: doc?.readonly ?? true,
-    kind: doc?.kind,
-    status: doc ? 'success' : task.status,
-    error: task.error,
-    set: (next: string) => {
-      if (uri) setDocumentContent(runtime.store, uri, next);
-    },
-    revert: () => {
-      if (uri) revertDocument(runtime.store, uri);
-    },
-    reload: () => {
-      if (uri && app) void openDocument(app, uri, { reload: true });
-    },
-    save: async () => {
-      if (uri && app) await saveDocument(app, uri);
-    },
   };
 }
 

@@ -1,0 +1,25 @@
+{
+  "name": "@textui/documents",
+  "version": "0.1.0",
+  "description": "Document buffers, resource viewers and content adapters for TextUI",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*",
+    "@textui/terminal": "workspace:*"
+  },
+  "publishConfig": { "access": "public" }
+}

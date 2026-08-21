@@ -1,7 +1,8 @@
 import {
-  Breadcrumb, Column, KeyHints, KeyValue, Menu, Panel, ResourceView, Row, Tree,
-  useDocument, useEffect, useRuntime, useState, useTheme,
+  Breadcrumb, Column, KeyHints, KeyValue, Menu, Panel, Row, Tree,
+  useEffect, useRuntime, useState, useTheme,
 } from '@textui/core';
+import { ResourceView, useDocument } from '@textui/documents';
 import type { Resource, TreeNode } from '@textui/core';
 import { extensionOf } from './filesystem.js';
 

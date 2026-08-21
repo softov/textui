@@ -260,15 +260,33 @@ export class Focus implements FocusManager {
     return found;
   }
 
-  /** Focused node first, then outward through active scopes, then global. */
+  /**
+   * Focused node first, then outward through active scopes, then global -
+   * except that a trap stops the walk at itself.
+   *
+   * `order` and `move` already honoured the trap, so tab could not leave a
+   * modal; keys could, and did. A menu bar whose labels live in the global
+   * scope kept receiving every arrow while its own dropdown was open, so down
+   * re-opened the menu instead of moving inside it, and a palette opened over
+   * the top inherited the same problem - two layers reading one keystroke, and
+   * two escapes needed to get out.
+   *
+   * A trap owns the keyboard. Nothing outside it is a target, including a
+   * focused node left over from before it opened.
+   */
   dispatch(event: KeyEvent): boolean {
+    const trap = this.trappingScope();
+    const inTrap = (node: { scopeId?: string }): boolean =>
+      trap === null || (node.scopeId ?? GLOBAL_SCOPE) === trap;
+
     if (this.current) {
       const node = this.nodes.get(this.current);
-      if (node?.onKey?.(event) === true || event.handled) return true;
+      if (node && inTrap(node) && (node.onKey?.(event) === true || event.handled)) return true;
     }
 
     for (let i = this.stack.length - 1; i >= 0; i--) {
       const scopeId = this.stack[i] as string;
+      if (trap !== null && scopeId !== trap) continue;
       for (const node of this.nodes.values()) {
         if (node.id === this.current) continue;
         if ((node.scopeId ?? GLOBAL_SCOPE) !== scopeId) continue;

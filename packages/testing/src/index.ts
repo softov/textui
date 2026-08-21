@@ -2,7 +2,7 @@ import type {
   CapabilityOverrides, ComponentDefinition, ComponentNode, InspectorNode,
   KeyEvent, TextUIApp, ReactiveStore, SemanticRole, ThemeDefinition,
 } from '@textui/core';
-import { WRITER_KEY, createApp, strokeOf, type App } from '@textui/core';
+import { WRITER_KEY, createApp, strokeOf, splitStroke, type App } from '@textui/core';
 import { createVirtualTerminal, createWriter, type VirtualTerminalAdapter } from '@textui/terminal';
 import { registerBuiltins } from '@textui/core';
 
@@ -422,19 +422,21 @@ export function chordToEvents(chord: string): KeyEvent[] {
     .trim()
     .split(/\s+/)
     .map((stroke) => {
-      const parts = stroke.split('+');
-      const name = parts.pop() ?? '';
-      const mods = new Set(parts.map((p) => p.toLowerCase()));
-      const printable = name.length === 1;
+      // The registry's parser, not a second one: a chord pressed here has to
+      // produce the stroke the registry stored it under, or a binding that
+      // works in a terminal fails in a test and nobody can tell which is right.
+      const { mods: names, key } = splitStroke(stroke);
+      const mods = new Set(names);
+      const printable = [...key].length === 1;
 
       return {
         type: 'key' as const,
-        name,
-        char: printable ? name : undefined,
+        name: key,
+        char: printable ? key : undefined,
         ctrl: mods.has('ctrl') || mods.has('control'),
         alt: mods.has('alt') || mods.has('option'),
         shift: mods.has('shift'),
-        meta: mods.has('meta') || mods.has('cmd'),
+        meta: mods.has('meta') || mods.has('cmd') || mods.has('super'),
         raw: stroke,
         handled: false,
       };

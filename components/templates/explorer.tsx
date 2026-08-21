@@ -1,6 +1,7 @@
 import {
-  Column, KeyHints, Panel, ResourceExplorer, Row, defineComponent, useRuntime, useState,
+  Column, KeyHints, Panel, Row, defineComponent, useRuntime, useState,
 } from '@textui/core';
+import { ResourceExplorer, ResourceView } from '@textui/documents';
 import type { Resource } from '@textui/core';
 
 /**
@@ -9,6 +10,10 @@ import type { Resource } from '@textui/core';
  * The screen knows nothing about file types. It browses a URI and hands what
  * it finds to the registry, which decides what opens it - so adding a viewer
  * for a new kind makes it work here without touching this file.
+ *
+ * The tree and the viewer are two components, composed here. That is the only
+ * place that knows there is exactly one viewer; a screen wanting two panes
+ * puts two `ResourceView`s side by side and feeds them different URIs.
  */
 export interface ExplorerScreenProps {
   root?: string;
@@ -28,17 +33,22 @@ export function ExplorerScreen({ root = 'file:///', title = 'Explorer' }: Explor
         {current ? <text content={current.kind} fg="subtle" /> : null}
       </Row>
 
-      <Panel flex={1}>
-        <ResourceExplorer
-          root={root}
-          preview
-          visibleRows={16}
-          onOpen={(resource) => {
-            setCurrent(resource);
-            void app?.openResource(resource.uri);
-          }}
-        />
-      </Panel>
+      <Row flex={1} gap={1}>
+        <Panel width={30}>
+          <ResourceExplorer
+            root={root}
+            visibleRows={16}
+            onSelect={setCurrent}
+            onOpen={(resource) => {
+              setCurrent(resource);
+              void app?.openResource(resource.uri);
+            }}
+          />
+        </Panel>
+        <Panel flex={1}>
+          <ResourceView uri={current?.uri ?? null} />
+        </Panel>
+      </Row>
 
       <KeyHints
         hints={[

@@ -10,6 +10,7 @@ export default defineConfig({
       '@textui/core/jsx-dev-runtime': resolve(__dirname, '../packages/core/src/jsx/jsx-dev-runtime.ts'),
       '@textui/core': resolve(__dirname, '../packages/core/src/index.ts'),
       '@textui/terminal': resolve(__dirname, '../packages/terminal/src/index.ts'),
+      '@textui/documents': resolve(__dirname, '../packages/documents/src/index.ts'),
       '@textui/testing': resolve(__dirname, '../packages/testing/src/index.ts'),
     },
   },

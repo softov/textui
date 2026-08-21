@@ -43,6 +43,14 @@ export interface CommandDefinition {
   description?: string;
   category?: string;
   icon?: string;
+  /**
+   * Leave the surface that ran this open.
+   *
+   * For a command whose whole effect is to flip something: closing the palette
+   * after each one means reopening it to reach the next, and a list of
+   * switches is meant to be walked.
+   */
+  keepOpen?: boolean;
   keywords?: string[];
   scope?: CommandScope;
   /** The instance this registration belongs to, for non-app scopes. */

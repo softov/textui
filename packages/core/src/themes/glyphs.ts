@@ -37,6 +37,12 @@ export const FULL_GLYPHS: ThemeGlyphs = {
   caret: '▏',
   separator: '·',
   breadcrumb: '›',
+  regionTop: '⬒',
+  regionBottom: '⬓',
+  regionLeft: '◧',
+  regionRight: '◨',
+  regionCentre: '▣',
+  regionOff: '□',
 };
 
 /** Box-drawing and geometric shapes only - no braille, no dingbats. */
@@ -80,6 +86,12 @@ export const ASCII_GLYPHS: ThemeGlyphs = {
   caret: '_',
   separator: '-',
   breadcrumb: '>',
+  regionTop: '^',
+  regionBottom: 'v',
+  regionLeft: '[',
+  regionRight: ']',
+  regionCentre: '+',
+  regionOff: '.',
 };
 
 export function glyphsFor(unicode: UnicodeLevel): ThemeGlyphs {

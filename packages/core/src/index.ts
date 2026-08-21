@@ -12,7 +12,7 @@ export { createWhen, When } from './core/when.js';
 export { createComponents, Components } from './core/components.js';
 export { createServices, Services } from './core/services.js';
 export { createCommands, Commands } from './core/commands.js';
-export { createKeybindings, Keybindings, strokeOf } from './core/keybindings.js';
+export { createKeybindings, Keybindings, strokeOf, splitStroke, normalizeStroke } from './core/keybindings.js';
 export { createFocus, Focus, GLOBAL_SCOPE } from './core/focus.js';
 export { createLayers, Layers } from './core/layers.js';
 export { createAnimation, Animation } from './core/animation.js';
@@ -49,12 +49,6 @@ export { createResources, Resources } from './core/resources.js';
 export {
   createSyntax, Syntax, plainTokens, tokensFromSpans, spanHighlighter,
 } from './core/syntax.js';
-export {
-  DOCUMENTS_ROOT, documentPath, getDocument, openDocument, openDocuments,
-  setDocumentContent, revertDocument, closeDocument, saveDocument,
-  isDocumentDirty,
-} from './core/documents.js';
-export type { DocumentState } from './core/documents.js';
 export { createManifests, Manifests } from './core/manifest.js';
 
 // Themes and the component catalog

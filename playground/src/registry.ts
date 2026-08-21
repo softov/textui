@@ -16,7 +16,7 @@ import { StressPlayground } from './playgrounds/stress.js';
 import { ShellsPlayground } from './playgrounds/shells.js';
 import { Explorer } from './examples/explorer.js';
 import { registerFilesystem } from './examples/filesystem.js';
-import { jsonAdapter } from '@textui/core';
+import { jsonAdapter, registerDocuments } from '@textui/documents';
 import { seedStore } from './data.js';
 
 /**
@@ -156,6 +156,8 @@ export const PLAYGROUNDS: Playground[] = [
     node: () => h(Explorer, { root: process.cwd() }),
     setup: (app) => {
       registerFilesystem(app, { readonly: true });
+      // The viewers are no longer part of `registerBuiltins`.
+      registerDocuments(app);
       // One line is what "JSON is understood here" costs: a kind, a
       // highlighter, two viewers and the transforms, none of which the
       // explorer knows about.

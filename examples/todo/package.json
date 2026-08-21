@@ -1,0 +1,19 @@
+{
+  "name": "@textui/example-todo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A small application with pages: list, detail, collection, search, settings",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/terminal": "workspace:*"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*"
+  }
+}

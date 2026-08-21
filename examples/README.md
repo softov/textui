@@ -37,6 +37,12 @@ examples/<name>/
 *run*. That is what lets the smoke test exist, and the rule from the playground
 holds here too: an example nothing checks is an example that is already broken.
 
+## What is here
+
+| | |
+|---|---|
+| [`todo/`](todo) | pages and a stack: list, detail, collection, search, settings - and the difference between a surface, a screen and a layer |
+
 ## Running
 
 ```bash

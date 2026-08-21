@@ -572,12 +572,12 @@ describe('MarkdownViewer', () => {
     'after',
   ].join('\n');
 
-  const open = async (content: string, height = 12) => {
+  const open = async (content: string, height = 12, theme = 'dark') => {
     const t = await render(
       h('box', { direction: 'column', width: 40, height },
         h(MarkdownViewer, { content, flex: 1, autoFocus: true }),
         h('text', { content: 'STATUS' })),
-      { width: 40, height },
+      { width: 40, height, theme },
     );
     await t.settle();
     // A fence renders a CodeViewer, which is a document too. The outermost is
@@ -624,6 +624,39 @@ describe('MarkdownViewer', () => {
     expect(t.line(0)).toBe(second);
     await t.unmount();
   });
+
+  /**
+   * Both themes, because the fence is the one block whose height depends on
+   * one - a borderless theme draws no rules, and a fence that counted two
+   * anyway left two blank rows at the foot of every screen and stopped two
+   * rows short of the end. `paper` is borderless, and it is a default.
+   */
+  it.each([['ruled', 'dark'], ['borderless', 'paper']])(
+    'fills its pane with a fenced document (%s)',
+    async (_name, theme) => {
+      const t = await open(FENCED, 12, theme);
+
+      const drawn = t.lines().slice(0, 11).filter((line) => line.trim() !== '').length;
+      // Eleven rows for the viewer, and a fenced document long enough to fill
+      // them. Blank rows at the bottom mean rows were counted and not drawn.
+      expect(drawn).toBeGreaterThanOrEqual(9);
+      expect(t.hasText('STATUS')).toBe(true);
+      await t.unmount();
+    },
+  );
+
+  it.each([['ruled', 'dark'], ['borderless', 'paper']])(
+    'reaches the end past a fence (%s)',
+    async (_name, theme) => {
+      const t = await open(FENCED, 12, theme);
+      t.press('end');
+      await t.settle();
+
+      expect(t.hasText('after')).toBe(true);
+      expect(t.hasText('STATUS')).toBe(true);
+      await t.unmount();
+    },
+  );
 
   it('keeps a fence in one box when the window cuts through it', async () => {
     const t = await open(FENCED, 8);

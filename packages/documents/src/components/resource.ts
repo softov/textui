@@ -82,9 +82,16 @@ export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownView
   // last few rows off every screen and made the tail of a long file
   // unreachable - `end` would stop three paragraphs early, because the scroll
   // limit was counted in the wrong unit.
+  //
+  // Whether a fence is *ruled* is part of that count and not a detail of how
+  // it is painted: a borderless theme draws no top and bottom rule, so a fence
+  // that reserved two rows for them left two blank rows at the foot of every
+  // screen and stopped two rows short of the end. `paper` is borderless, and
+  // it is the default.
+  const ruled = theme.border !== 'none';
   const rowsOfDoc = useMemo(
-    () => layoutMarkdown(text.split('\n'), measured.width, theme),
-    [text, measured.width, theme],
+    () => layoutMarkdown(text.split('\n'), measured.width, theme, ruled),
+    [text, measured.width, theme, ruled],
   );
 
   if (content === undefined && doc.status === 'running') {
@@ -134,7 +141,17 @@ export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownView
       const group = window.slice(i, end) as Extract<MarkdownRow, { kind: 'fence' }>[];
       const code = group.filter((r) => r.part === 'code').map((r) => r.text ?? '');
 
-      if (code.length === 0) {
+      if (!ruled) {
+        // No rules to draw, so none are counted. The fence is still not prose:
+        // it keeps its own ground and its indent.
+        out.push(h('box', { key, padding: [0, 1], bg: 'surfaceAlt' }, h(CodeViewer, {
+          content: code.join('\n'),
+          lineNumbers: false,
+          scrollbar: false,
+          showCaret: false,
+          disabled: true,
+        })));
+      } else if (code.length === 0) {
         // Only one edge of the box is on screen, and a box one row tall cannot
         // say which. Drawn directly, so the seam between this row and the rest
         // of the fence is invisible as it scrolls past.
@@ -269,14 +286,20 @@ function withPrefix(
  * fences, block quotes. Not a parser - a formatter for the subset that appears
  * in READMEs and notes, which is what a terminal viewer is for.
  */
-function layoutMarkdown(lines: string[], width: number, theme: ResolvedTheme): MarkdownRow[] {
+function layoutMarkdown(
+  lines: string[],
+  width: number,
+  theme: ResolvedTheme,
+  ruled: boolean,
+): MarkdownRow[] {
   const rows: MarkdownRow[] = [];
   let fence = 0;
   let inFence = false;
 
   for (const line of lines) {
     if (line.trimStart().startsWith('```')) {
-      rows.push({ kind: 'fence', fence, part: inFence ? 'close' : 'open' });
+      // A rule is a row only where a rule is drawn.
+      if (ruled) rows.push({ kind: 'fence', fence, part: inFence ? 'close' : 'open' });
       if (inFence) fence++;
       inFence = !inFence;
       continue;
@@ -340,7 +363,7 @@ function layoutMarkdown(lines: string[], width: number, theme: ResolvedTheme): M
 
   // An unterminated fence still gets its closing rule, so the box reads as a
   // box rather than as something the renderer forgot to finish.
-  if (inFence) rows.push({ kind: 'fence', fence, part: 'close' });
+  if (inFence && ruled) rows.push({ kind: 'fence', fence, part: 'close' });
 
   return rows;
 }

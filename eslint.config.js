@@ -10,7 +10,17 @@ import globals from 'globals';
  * control characters that would corrupt a frame if one slipped into a string.
  */
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/.dev/**', '**/coverage/**'] },
+  {
+    // Nothing generated and nothing vendored. `_site` is what Jekyll builds and
+    // `vendor` is the gems it builds with - both gitignored already, but eslint
+    // does not read .gitignore, so it was reporting four hundred problems in
+    // somebody else's minified javascript. Matched at any depth, like the rest
+    // of this list, so a second docs site does not bring them all back.
+    ignores: [
+      '**/dist/**', '**/node_modules/**', '**/.dev/**', '**/coverage/**',
+      '**/_site/**', '**/vendor/**', '**/.jekyll-cache/**',
+    ],
+  },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -39,8 +49,12 @@ export default tseslint.config(
   },
 
   {
-    // The CLI and the playground runner are console programs.
-    files: ['packages/cli/**', 'playground/scripts/**', 'playground/src/main.tsx'],
+    // The CLI, the playground runner and the repo's own scripts are console
+    // programs. Printing is what they are for.
+    files: [
+      'packages/cli/**', 'playground/scripts/**', 'playground/src/main.tsx',
+      'scripts/**',
+    ],
     rules: { 'no-console': 'off' },
   },
 

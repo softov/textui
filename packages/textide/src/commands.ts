@@ -815,12 +815,13 @@ export function shortcutSheet(app: TextUIApp): string {
   for (const binding of app.keybindings.list()) {
     const command = app.commands.get(binding.commandId);
     const category = command?.category ?? 'Other';
-    const title = command?.title ?? binding.commandId;
+    // The binding's own title first: a key that carries arguments runs one
+    // invocation, so `ctrl+b` is "Toggle Sidebar" while the command it runs is
+    // "Toggle Surface", and the sheet is the page that has to say which.
+    const title = binding.title ?? command?.title ?? binding.commandId;
     const byTitle = groups.get(category) ?? new Map<string, string[]>();
-    // Normalised, so the sheet says the stroke that actually arrives.
-    // `alt+shift+?` is registered as it is meant and filed as `alt+?`, because
-    // a terminal reports shift through the character it produced rather than
-    // beside it - and the sheet has to agree with the footer.
+    // Normalised, so the sheet says the stroke that actually arrives - and so
+    // it agrees with the footer, which reads the same registry.
     byTitle.set(title, [...(byTitle.get(title) ?? []), normalizeStroke(binding.keys)]);
     groups.set(category, byTitle);
   }

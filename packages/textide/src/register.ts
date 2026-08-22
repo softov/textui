@@ -158,6 +158,26 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
   // to show the key beside the row.
   bag.add(app.keybindings.register({
     keys: 'ctrl+b', commandId: TOGGLE_COMMAND, args: { surface: 'sidebar' },
+    title: 'Show or Hide the Sidebar',
+  }));
+
+  /*
+   * And the same key with shift for *which* panel, rather than whether.
+   *
+   * It opens the palette already drilled into `view.sidebarPanel` instead of
+   * being a second command: the question "which panel" is one the palette
+   * knows how to ask, off the surface registry, so a panel an extension
+   * mounted is in the list by having been mounted. A key that reached past it
+   * would be a second answer to a question already answered.
+   *
+   * `ctrl+shift+<letter>` only arrives where the session negotiated a keyboard
+   * protocol - a plain terminal sends one control byte for both, and this key
+   * toggles the sidebar there instead. That is why the command keeps its place
+   * in the palette and the View menu, which is the route that always works.
+   */
+  bag.add(app.keybindings.register({
+    keys: 'ctrl+shift+b', commandId: 'app.palette', args: { at: 'view.sidebarPanel' },
+    title: 'Choose a Sidebar Panel',
   }));
 
   // Keybindings are registered here, not in `main`, because a host that
@@ -229,20 +249,26 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
      * The shortcut list, which is where every key that is not on the footer
      * has to be findable - so it cannot itself be hard to press.
      *
-     * `f1` is the one that always arrives. `alt+?` needs shift to make the `?`
-     * and terminals disagree about what to send when it is held: some send
-     * `ESC ?`, some send `ESC /` with a shift bit, and one of those two is a
-     * stroke nothing is filed under. Both are bound, and `f1` is the one the
-     * footer offers, because a documented key that does not work is worse than
-     * no key at all.
+     * `f1` is the one that always arrives. The others are the same physical
+     * key - `?` *is* shift and `/` - and terminals disagree about what to
+     * report: a plain one sends `ESC /` or `ESC ?` and says nothing about
+     * shift, and one speaking a keyboard protocol sends the unshifted `/`
+     * with a shift bit beside it. Those are three strokes, `alt+/`, `alt+?`
+     * and `alt+shift+/`, and all three are bound.
+     *
+     * In that order, because the shortcut sheet's key column has a budget and
+     * drops from the end: registration order is how reliably each arrives, so
+     * what falls off is the one worth having least. `f1` is what the footer
+     * offers - a documented key that does not work is worse than no key.
      */
     // The other half of a split. `f6` is what a window manager and half the
     // editors in existence use for "the next pane", and it is not a chord over
     // a key that means something else.
     ['f6', 'go.otherGroup'],
     ['f1', 'help.keys'],
-    ['alt+shift+?', 'help.keys'],
     ['alt+/', 'help.keys'],
+    ['alt+?', 'help.keys'],
+    ['alt+shift+/', 'help.keys'],
     // F10 enters the bar; alt+letter opens one menu outright. Both exist
     // because the first is discoverable and the second is fast.
     ['f10', 'menu.focus'],

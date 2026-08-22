@@ -45,10 +45,17 @@ export function normalizeStroke(stroke: string): string {
     else if (name === 'shift') mods.add('shift');
     else mods.add('meta');
   }
-  // Shift is not part of a stroke for a single character. A terminal reports
-  // shift+p as `P`, and `strokeOf` reads it back that way, so a binding filed
-  // under `ctrl+shift+p` would wait for a stroke no keypress can produce.
-  if ([...key].length === 1) mods.delete('shift');
+  // Shift is not part of a stroke for a single character it *shifted*. A
+  // terminal reports a bare shift+p as the character `P`, and `strokeOf` reads
+  // it back that way, so `shift+p` would wait for a stroke no keypress makes.
+  //
+  // Held with another modifier it is the opposite. `ctrl+shift+p` cannot
+  // arrive as an uppercase letter, because a control code carries no case:
+  // a terminal speaking a keyboard protocol reports the *unshifted* key and a
+  // shift bit beside it. Dropping shift here filed `ctrl+shift+f` under
+  // `ctrl+f`, where it sat behind whichever binding registered first - so the
+  // workspace search had a documented key that ran the in-file search.
+  if ([...key].length === 1 && mods.size === 1 && mods.has('shift')) mods.delete('shift');
 
   const order = ['ctrl', 'alt', 'shift', 'meta'].filter((m) => mods.has(m));
   return [...order, key.toLowerCase()].join('+');
@@ -58,8 +65,12 @@ export function strokeOf(event: KeyEvent): string {
   const mods: string[] = [];
   if (event.ctrl) mods.push('ctrl');
   if (event.alt) mods.push('alt');
-  // Shift is implied by an uppercase character; only name it for named keys.
-  if (event.shift && event.name.length > 1) mods.push('shift');
+  // Shift is implied by an uppercase character, so it is not named for a
+  // single character on its own. Beside another modifier nothing is implied -
+  // the name is the unshifted key - so there it has to be said. Must agree
+  // with `normalizeStroke`.
+  const modified = event.ctrl || event.alt || event.meta;
+  if (event.shift && (event.name.length > 1 || modified)) mods.push('shift');
   if (event.meta) mods.push('meta');
   return [...mods, event.name.toLowerCase()].join('+');
 }
@@ -108,7 +119,13 @@ export class Keybindings implements KeybindingRegistry {
   }
 
   forCommand(commandId: string): Chord[] {
-    return this.bindings.filter((b) => b.commandId === commandId).map((b) => b.keys);
+    return this.bindings
+      // An argument-bearing binding is a key for one invocation, not for the
+      // command. `ctrl+shift+b` opens the palette at the sidebar panels; it is
+      // not the key for "Command Palette", and offering it as one put a wrong
+      // - and wider - hint beside that menu row.
+      .filter((b) => b.commandId === commandId && b.args === undefined)
+      .map((b) => b.keys);
   }
 
   private applicable(binding: KeybindingDefinition): boolean {

@@ -876,9 +876,9 @@ describe('the keyboard shortcuts', () => {
     for (let i = 0; i < 10; i++) { await t.settle(); t.advance(50); t.flush(); }
   };
 
-  it('opens on alt+shift+? and closes on escape', async () => {
+  it.each(['alt+/', 'alt+?', 'alt+shift+/'])('opens on %s and closes on escape', async (chord) => {
     const t = await open(SIZES[0]!);
-    t.press('alt+shift+?');
+    t.press(chord);
     await quiet(t);
     expect(t.hasText('Keyboard Shortcuts')).toBe(true);
     expect(t.hasText('Command Palette'), 'and lists what the keys run').toBe(true);
@@ -896,7 +896,11 @@ describe('the keyboard shortcuts', () => {
     // a digit, and one switch that carries which surface. Neither is in the
     // palette and both are bound.
     expect(sheet).toContain('Go To File By Number');
-    expect(sheet).toContain('Toggle Surface');
+    // Under the binding's own title, not the command's. `ctrl+b` flips the
+    // sidebar; "Toggle Surface" is what the command it runs is called, and
+    // saying that here would name a key that does something more general.
+    expect(sheet).toContain('Show or Hide the Sidebar');
+    expect(sheet).not.toContain('Toggle Surface');
     await t.unmount();
   });
 
@@ -913,14 +917,15 @@ describe('the keyboard shortcuts', () => {
   });
 
   /**
-   * A terminal reports shift through the character it produced, never beside
-   * it, so `alt+shift+?` is filed and pressed as `alt+?`. The sheet has to say
-   * the stroke that arrives, and to agree with the footer that names it.
+   * `?` is already shift and `/`, so `alt+shift+?` is a chord no keyboard can
+   * produce - a terminal reports either the character it made (`alt+?`) or the
+   * unshifted key with a shift bit (`alt+shift+/`), never both at once. The
+   * sheet has to say strokes that arrive, and to agree with the footer.
    */
   it('prints the stroke that actually arrives', async () => {
     const t = await open(SIZES[0]!);
     const sheet = shortcutSheet(t.app);
-    expect(sheet).toContain('alt+?');
+    expect(sheet).toContain('alt+/');
     expect(sheet).not.toContain('alt+shift+?');
     await t.unmount();
   });
@@ -950,7 +955,9 @@ describe('the keyboard shortcuts', () => {
     const t = await open(SIZES[0]!);
     const sheet = shortcutSheet(t.app);
     expect(sheet).not.toContain('f1 .. ');
-    expect(sheet).toContain('f1, alt+?, alt+/');
+    // In registration order, which is reliability order, because the key
+    // column has a budget and what does not fit falls off the end.
+    expect(sheet).toContain('f1, alt+/, alt+?');
     await t.unmount();
   });
 

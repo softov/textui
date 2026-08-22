@@ -118,3 +118,84 @@ describe('a key pressed as bytes', () => {
     await t.unmount();
   });
 });
+
+/**
+ * Shift, beside another modifier.
+ *
+ * The round-trip property above is satisfied by *any* consistent collapse -
+ * including one that maps two different chords onto the same stroke, which is
+ * what happened: `ctrl+shift+f` was filed under `ctrl+f`, so the workspace
+ * search sat behind the in-file search and its documented key ran the other
+ * command. The missing property is that distinct chords stay distinct.
+ */
+describe('shift is part of a stroke when it is not the only modifier', () => {
+  it.each([
+    ['ctrl+shift+f',  'ctrl+shift+f'],
+    ['ctrl+shift+b',  'ctrl+shift+b'],
+    ['alt+shift+/',   'alt+shift+/'],
+    // Canonical order is ctrl, alt, shift, meta - so shift lands before it.
+    ['meta+shift+p',  'shift+meta+p'],
+    ['ctrl+shift+tab','ctrl+shift+tab'],
+  ])('%j stays %j', (chord, stroke) => {
+    expect(normalizeStroke(chord)).toBe(stroke);
+  });
+
+  // The half that is deliberate. A bare shift+p is the character `P`, and the
+  // terminal reports no shift bit beside it, so a binding naming shift there
+  // would wait for a stroke nothing sends.
+  it.each([
+    ['shift+p', 'p'],
+    ['shift+/', '/'],
+    ['P',       'p'],
+  ])('%j collapses to %j, because a shifted character carries no shift bit', (chord, stroke) => {
+    expect(normalizeStroke(chord)).toBe(stroke);
+  });
+
+  it('gives every distinguishable chord its own stroke', () => {
+    const chords = [
+      'f', 'ctrl+f', 'ctrl+shift+f', 'alt+f', 'alt+shift+f', 'ctrl+alt+f',
+      'b', 'ctrl+b', 'ctrl+shift+b', 'tab', 'shift+tab', 'ctrl+tab',
+      'ctrl+shift+tab', '/', 'alt+/', 'alt+shift+/', 'alt+?',
+    ];
+    const strokes = chords.map(normalizeStroke);
+    expect(new Set(strokes).size, `collided: ${strokes.join(' ')}`).toBe(chords.length);
+  });
+
+  // `strokeOf` reads events, `normalizeStroke` reads text, and a disagreement
+  // between them is a binding that never fires. Meta is the one that ordering
+  // could break, because it is pushed after shift.
+  it.each(['ctrl+shift+f', 'alt+shift+/', 'meta+shift+p', 'ctrl+alt+shift+p'])(
+    'reads %j back off the event',
+    (chord) => {
+      const events = chordToEvents(chord);
+      expect(strokeOf(events[0]!)).toBe(normalizeStroke(chord));
+    },
+  );
+
+  it('runs the shifted binding and not the one it used to hide behind', async () => {
+    const plain = vi.fn();
+    const shifted = vi.fn();
+    const t = await renderApp({
+      onBoot: (app) => {
+        app.commands.register({ id: 'test.plain', title: 'Plain', run: plain });
+        app.commands.register({ id: 'test.shifted', title: 'Shifted', run: shifted });
+        // Registered in this order on purpose: the collision resolved to
+        // whichever came first, so the plain one won every time.
+        app.keybindings.register({ keys: 'ctrl+f', commandId: 'test.plain' });
+        app.keybindings.register({ keys: 'ctrl+shift+f', commandId: 'test.shifted' });
+      },
+    });
+
+    t.press('ctrl+shift+f');
+    await t.settle();
+    expect(shifted).toHaveBeenCalledTimes(1);
+    expect(plain).not.toHaveBeenCalled();
+
+    t.press('ctrl+f');
+    await t.settle();
+    expect(plain).toHaveBeenCalledTimes(1);
+    expect(shifted).toHaveBeenCalledTimes(1);
+
+    await t.unmount();
+  });
+});

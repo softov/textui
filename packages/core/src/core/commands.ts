@@ -112,7 +112,16 @@ export class Commands implements CommandRegistry {
   ): Promise<unknown> {
     const def = this.resolve(id);
     if (!def) {
-      // Not throwing would let a typo in a keybinding vanish silently.
+      // Registered but gated is not the same as absent, and it used to be
+      // reported as absent: `alt+left` with nothing open said "no command
+      // registered as go.previousTab" about a command registered forty lines
+      // away, whose `when` simply did not pass.
+      //
+      // A `when` that does not pass is the command saying "not now", which is
+      // what it is for - so this does nothing, and the key does nothing. A
+      // typo still throws, because a keybinding pointing at a name that was
+      // never registered has to be findable.
+      if ((this.byId.get(id) ?? []).length > 0) return undefined;
       throw new Error(`[textui] no command registered as "${id}"`);
     }
 

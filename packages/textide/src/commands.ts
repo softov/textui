@@ -620,6 +620,10 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
         // long enough that a panel with nothing in it looks broken.
         ctx.store.set(SEARCH_STATE, { query: text, scanned: 0, done: false });
         ctx.store.set(SEARCH_RESULTS, []);
+        // And shown, because the panel is hidden until there is something in
+        // it. Here rather than at boot: a region reserved for a component
+        // that renders nothing is a region spent on nothing.
+        ctx.app.surfaces.setState('panel', { visible: true });
 
         const { hits, state } = await searchWorkspace(
           ctx.app, workspace.rootUri, { text },
@@ -656,6 +660,11 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       slots: ['palette'],
       run: (_args: Record<string, unknown>, ctx: CommandContext) => {
         setQuery(ctx.store, '');
+        // And the results with it. Clearing the query while leaving seven rows
+        // of the last search underneath is clearing half of it.
+        ctx.store.set(SEARCH_RESULTS, []);
+        ctx.store.set(SEARCH_STATE, null);
+        ctx.app.surfaces.setState('panel', { visible: false });
       },
     },
     {

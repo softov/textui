@@ -335,3 +335,45 @@ describe('scoped commands', () => {
     await t.unmount();
   });
 });
+
+/**
+ * Registered but gated is not the same as absent.
+ *
+ * `alt+left` with no file open used to report "no command registered as
+ * go.previousTab" about a command registered forty lines away, whose `when`
+ * simply did not pass. A `when` that does not pass is the command saying "not
+ * now", which is what it is for.
+ */
+describe('a command whose when does not pass', () => {
+  it('does nothing, rather than claiming it does not exist', async () => {
+    let ran = 0;
+    const t = await renderApp({
+      width: 40, height: 6,
+      root: { component: 'text', content: 'hi' },
+      onBoot: (app) => app.commands.register({
+        id: 'test.gated',
+        title: 'Gated',
+        when: '$/test/open',
+        run: () => { ran++; },
+      }),
+    });
+
+    await expect(t.app.execute('test.gated')).resolves.toBeUndefined();
+    expect(ran, 'and it did not run').toBe(0);
+
+    t.app.store.set('$/test/open' as never, true);
+    await t.app.execute('test.gated');
+    expect(ran, 'and it runs once the clause passes').toBe(1);
+    await t.unmount();
+  });
+
+  it('still throws for a name nothing was ever registered under', async () => {
+    const t = await renderApp({
+      width: 40, height: 6,
+      root: { component: 'text', content: 'hi' },
+    });
+    // A keybinding pointing at a typo has to be findable.
+    await expect(t.app.execute('test.nosuch')).rejects.toThrow(/no command registered/);
+    await t.unmount();
+  });
+});

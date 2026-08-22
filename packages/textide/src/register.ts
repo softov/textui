@@ -304,12 +304,18 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
   }));
   bag.add(app.open({ surface: 'main', key: 'editor', target: { component: 'Editor' } }));
   bag.add(app.open({ surface: 'status', key: 'status', target: { component: 'StatusLine' } }));
-  // The bottom panel, which stays hidden until a search puts something in it.
+  // The bottom panel, hidden until a search puts something in it.
+  //
+  // It was mounted visible and nothing ever hid it, so an empty results panel
+  // took seven rows of a twenty-two row terminal and drew nothing in them -
+  // a third of the screen, reserved for a component whose empty state is
+  // `return null`. `find.inWorkspace` shows it; `find.clear` puts it away.
   bag.add(app.open({
     surface: 'panel',
     key: 'results',
     target: { component: 'SearchResults' },
     display: { title: 'Search' },
   }));
+  app.surfaces.setState('panel', { visible: false });
   return bag;
 }

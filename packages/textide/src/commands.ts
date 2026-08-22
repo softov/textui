@@ -1,5 +1,5 @@
 import type {
-  LayoutName, SurfaceName, CommandDefinition, CommandContext, TextUIApp, BindingPath, ThemeGlyphs,
+  SurfaceName, CommandDefinition, CommandContext, TextUIApp, BindingPath, ThemeGlyphs,
 } from '@textui/core';
 import { notify } from '@textui/core';
 import {
@@ -296,7 +296,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
         const name = String(args.name ?? '');
         // The registry is the authority on which names exist, so a name that
         // came out of it is a layout by construction.
-        if (name) ctx.app.surfaces.setState('main', { layout: name as LayoutName });
+        if (name) ctx.app.surfaces.setState('main', { layout: name });
       },
     },
     {

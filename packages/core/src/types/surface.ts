@@ -75,7 +75,13 @@ export type LayoutName =
   | 'toast';    // stacked, ephemeral
 
 export interface SurfaceState {
-  layout: LayoutName;
+  /**
+   * Open, like `SurfaceName` and like `LayoutDefinition.name`. An application
+   * that registers a layout has to be able to put a surface into it, and the
+   * runtime never assumed a closed set anyway - `SurfaceArea` looks the name
+   * up in the registry and renders a diagnostic when nothing answers to it.
+   */
+  layout: LayoutName | (string & {});
   activeKey: string | null;
   visible: boolean;
   /** Cells along the surface's cross axis. Unset lets the shell decide. */

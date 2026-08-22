@@ -47,13 +47,14 @@ export interface BadgeProps extends BoxProps {
 }
 
 export const Badge = defineComponent<BadgeProps>('Badge', (props) => {
-  const { label, tone = 'default', variant = 'soft', icon, ...rest } = props;
+  const { label, tone = 'default', variant = 'ghost', icon, ...rest } = props;
   const color = TONE_COLOR[tone];
 
+  // `ghost` is chrome-less: the tone, and nothing around it. That is the
+  // default because it is the badge that fits in a sentence, and it is what
+  // `ghost` already means on Button - one word, one meaning, both components.
   const style =
-    variant === 'solid' ? { bg: color, fg: ON_TONE[tone] }
-      : variant === 'ghost' ? { fg: color, dim: true }
-        : { fg: color };
+    variant === 'solid' ? { bg: color, fg: ON_TONE[tone] } : { fg: color };
 
   // A badge is inline: it sits in a row of text and must stay one line tall.
   // The outline variant is therefore brackets rather than a box border - a
@@ -350,7 +351,7 @@ export const Timeline = defineComponent<TimelineProps>('Timeline', ({ items, ...
 export const DISPLAY_COMPONENTS: ComponentDefinition[] = [
   { component: 'Heading', category: 'display', renderer: { kind: 'function', render: Heading }, role: 'heading', description: 'Section heading, three levels.' },
   { component: 'Label', category: 'display', renderer: { kind: 'function', render: Label }, role: 'label', description: 'Secondary text with a semantic tone.' },
-  { component: 'Badge', category: 'display', renderer: { kind: 'function', render: Badge }, variants: ['solid', 'outline', 'ghost', 'soft'], description: 'Small status marker; carries a glyph as well as a colour.' },
+  { component: 'Badge', category: 'display', renderer: { kind: 'function', render: Badge }, variants: ['solid', 'outline', 'ghost'], description: 'Small status marker; carries a glyph as well as a colour.' },
   { component: 'StatusDot', category: 'display', renderer: { kind: 'function', render: StatusDot }, role: 'status', description: 'The shared status vocabulary: up, degraded, down.' },
   { component: 'Alert', category: 'feedback', renderer: { kind: 'function', render: Alert }, role: 'alert', description: 'A message with an icon and a tone.' },
   { component: 'Card', category: 'display', renderer: { kind: 'function', render: Card }, description: 'Bordered block with a title.' },

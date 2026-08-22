@@ -503,3 +503,86 @@ describe('a focused button', () => {
     await t.unmount();
   });
 });
+
+/**
+ * The frame, coloured edge by edge.
+ *
+ * A cell holds one foreground, so an edge and the box it belongs to can
+ * disagree and only one of them can be right on any given cell. These pin down
+ * which: the edge that names a colour gets it, the corners follow the
+ * horizontal rules, and `dim` stops at the frame.
+ */
+describe('border colours', () => {
+  /** The cell at (x, y), by absolute position rather than by the text on it. */
+  const at = (t: Harness, x: number, y: number) => t.app.buffer().get(x, y);
+
+  it('gives each named edge its own colour', async () => {
+    const t = await render(
+      {
+        component: 'box',
+        width: 8,
+        height: 3,
+        border: { style: 'single', color: 'muted', colors: { top: 'success', bottom: 'danger' } },
+      },
+      { width: 12, height: 5 },
+    );
+
+    const top = at(t, 3, 0)?.fg;
+    const bottom = at(t, 3, 2)?.fg;
+    const left = at(t, 0, 1)?.fg;
+
+    expect(top).not.toEqual(bottom);
+    expect(left).not.toEqual(top);
+    expect(left).not.toEqual(bottom);
+    await t.unmount();
+  });
+
+  it('gives a corner to the rule that runs through it', async () => {
+    const t = await render(
+      {
+        component: 'box',
+        width: 8,
+        height: 3,
+        border: { style: 'single', colors: { top: 'success', left: 'danger' } },
+      },
+      { width: 12, height: 5 },
+    );
+    // Top-left belongs to the top rule, not the left one.
+    expect(at(t, 0, 0)?.fg).toEqual(at(t, 3, 0)?.fg);
+    expect(at(t, 0, 0)?.fg).not.toEqual(at(t, 0, 1)?.fg);
+    await t.unmount();
+  });
+
+  it('falls back to the border colour for an edge that named none', async () => {
+    const t = await render(
+      {
+        component: 'box',
+        width: 8,
+        height: 3,
+        border: { style: 'single', color: 'success', colors: { top: 'danger' } },
+      },
+      { width: 12, height: 5 },
+    );
+    expect(at(t, 0, 1)?.fg).toEqual(at(t, 7, 1)?.fg);
+    expect(at(t, 3, 0)?.fg).not.toEqual(at(t, 0, 1)?.fg);
+    await t.unmount();
+  });
+
+  it('dims the frame and leaves the content alone', async () => {
+    const t = await render(
+      {
+        component: 'box',
+        width: 12,
+        height: 3,
+        border: { style: 'single', dim: true },
+        children: { component: 'text', content: 'plain' },
+      },
+      { width: 16, height: 5 },
+    );
+    const frame = at(t, 3, 0);
+    const content = cellUnder(t, 'plain');
+    expect(frame?.attrs).not.toBe(0);
+    expect(content?.attrs).toBe(0);
+    await t.unmount();
+  });
+});

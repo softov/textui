@@ -1042,3 +1042,49 @@ describe('Button size', () => {
     expect(await height(solid(), 'paper')).toBe(1);
   });
 });
+
+/** The screen behind everything: a corner no component reaches. */
+function backdrop(t: { app: { buffer(): { get(x: number, y: number): { bg: unknown } | undefined }; size: { width: number; height: number } } }) {
+  return t.app.buffer().get(t.app.size.width - 1, t.app.size.height - 1)?.bg;
+}
+
+/**
+ * Badge, which is mostly about what it does *not* draw.
+ *
+ * Its default used to be a variant no branch handled, so it rendered as
+ * `outline` minus the brackets - the right picture reached by accident. It is
+ * `ghost` now, which is the name that already meant "the tone and no chrome"
+ * on Button.
+ */
+describe('Badge', () => {
+  it('draws nothing around the label by default', async () => {
+    const t = await render({ component: 'Badge', label: 'up', tone: 'success' }, { width: 20, height: 3 });
+    expect(t.lines()[0]?.trim()).toBe('up');
+    await t.unmount();
+  });
+
+  it('brackets the outline variant, so it stays one row tall', async () => {
+    const t = await render(
+      { component: 'Badge', label: 'up', tone: 'success', variant: 'outline' },
+      { width: 20, height: 3 },
+    );
+    expect(t.lines()[0]?.trim()).toBe('[up]');
+    expect(t.lines()[1]?.trim()).toBe('');
+    await t.unmount();
+  });
+
+  it('pads the solid variant so the fill is not flush with the text', async () => {
+    const t = await render(
+      { component: 'Badge', label: 'up', tone: 'success', variant: 'solid' },
+      { width: 20, height: 3 },
+    );
+    // `lines()` trims the row, so the pad is read as colour instead: a filled
+    // space before the label, in the tone the label is written on.
+    const buffer = t.app.buffer();
+    expect(buffer.get(0, 0)?.char).toBe(' ');
+    expect(buffer.get(1, 0)?.char).toBe('u');
+    expect(buffer.get(0, 0)?.bg).toEqual(buffer.get(1, 0)?.bg);
+    expect(buffer.get(0, 0)?.bg).not.toEqual(backdrop(t));
+    await t.unmount();
+  });
+});

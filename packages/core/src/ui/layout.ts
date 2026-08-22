@@ -42,9 +42,6 @@ export const Center = defineComponent<CenterProps>('Center', ({ axis = 'both', .
 
 export interface GridProps extends BoxProps {
   columns: number;
-  /** Space between columns. Falls back to `gap`. */
-  columnGap?: number;
-  rowGap?: number;
 }
 
 /**

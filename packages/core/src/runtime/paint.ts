@@ -58,12 +58,28 @@ class Surface implements PaintSurface {
     );
   }
 
+  /*
+   * One style, packed once.
+   *
+   * `put` packs both colours out of the style it is handed, which is right for
+   * one cell and wrong for the two callers that write a *run* of them: a
+   * twenty-character label was twenty pairs of `packColor` calls on the same
+   * two values, and a filled box was one pair per cell of the box. Packing is
+   * what a colour becomes, and it becomes the same thing every time.
+   */
   text(x: number, y: number, text: string, style?: CellStyle): number {
+    const fg = style?.fg === undefined ? COLOR_DEFAULT : packColor(style.fg);
+    const bg = style?.bg === undefined ? COLOR_DEFAULT : packColor(style.bg);
+    const attrs = style?.attrs ?? 0;
+    const link = style?.link;
+    const oy = this.rect.y + y;
+
     let cx = x;
     for (const g of graphemes(sanitize(text))) {
       const w = graphemeWidth(g);
       if (w === 0) continue;
-      this.put(cx, y, g, style);
+      const ax = this.rect.x + cx;
+      if (this.visible(ax, oy)) this.buffer.put(ax, oy, g, fg, bg, attrs, link);
       cx += w;
     }
     return cx - x;
@@ -71,9 +87,16 @@ class Surface implements PaintSurface {
 
   fill(rect: Rect | undefined, char: string, style?: CellStyle): void {
     const r = rect ?? { x: 0, y: 0, width: this.rect.width, height: this.rect.height };
+    const fg = style?.fg === undefined ? COLOR_DEFAULT : packColor(style.fg);
+    const bg = style?.bg === undefined ? COLOR_DEFAULT : packColor(style.bg);
+    const attrs = style?.attrs ?? 0;
+    const link = style?.link;
+
     for (let y = r.y; y < r.y + r.height; y++) {
+      const ay = this.rect.y + y;
       for (let x = r.x; x < r.x + r.width; x++) {
-        this.put(x, y, char, style);
+        const ax = this.rect.x + x;
+        if (this.visible(ax, ay)) this.buffer.put(ax, ay, char, fg, bg, attrs, link);
       }
     }
   }
@@ -356,10 +379,23 @@ export function paintTree(
   // painted by whoever owns it, and filling it again per nested box would be
   // the same cells written several times a frame.
   if (visual.ownBg || visual.style.fill) {
+    /*
+     * Straight to the buffer, with the colours it already has.
+     *
+     * This loop used to build a style object per cell and call `colorOf` twice
+     * to fill it - unpacking two packed colours into `Color` values so that
+     * `put` could pack them straight back. On a full-screen background that is
+     * five allocations a cell and sixty thousand a frame, all of it to arrive
+     * at the two integers `visual.fg` and `visual.bg` already held.
+     *
+     * Iterating the clipped rect rather than the box's own also drops the
+     * per-cell visibility test: `own` is the intersection, so every cell in it
+     * is visible by construction.
+     */
     const fill = visual.style.fill ?? ' ';
-    for (let y = rect.y; y < rect.y + rect.height; y++) {
-      for (let x = rect.x; x < rect.x + rect.width; x++) {
-        surface.put(x, y, fill, { bg: colorOf(visual.bg), fg: colorOf(visual.fg) });
+    for (let y = own.y; y < own.y + own.height; y++) {
+      for (let x = own.x; x < own.x + own.width; x++) {
+        buffer.put(x, y, fill, visual.fg, visual.bg);
       }
     }
   }

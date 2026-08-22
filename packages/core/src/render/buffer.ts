@@ -135,7 +135,15 @@ export class Buffer implements CellBuffer {
       this.flags[i + 1] = 0;
     }
 
-    const w = graphemeWidth(char);
+    /*
+     * The width of one printable ASCII character, without asking.
+     *
+     * `graphemeWidth` is a function call per cell painted - twelve thousand of
+     * them a frame on a full screen - to answer "is `a` one cell wide". It is,
+     * and the character code says so.
+     */
+    const only = char.length === 1 ? char.charCodeAt(0) : -1;
+    const w = only >= 0x20 && only <= 0x7e ? 1 : graphemeWidth(char);
     if (w === 0) return;
 
     this.chars[i] = char;
@@ -165,21 +173,41 @@ export class Buffer implements CellBuffer {
     }
   }
 
+  /**
+   * Blank a region, or the whole buffer.
+   *
+   * By span rather than by cell. Clearing everything happens once a frame, and
+   * a cell-at-a-time loop over twelve thousand of them - each with two bounds
+   * checks and an index multiply - was costing more than painting the content
+   * that replaced it. `fill` is one call into the engine per array, and the
+   * four that matter are typed.
+   */
   clear(rect?: Rect, bg: PackedColor = COLOR_DEFAULT): void {
-    const r = rect ?? { x: 0, y: 0, width: this.width, height: this.height };
-    for (let y = r.y; y < r.y + r.height; y++) {
-      if (y < 0 || y >= this.height) continue;
-      for (let x = r.x; x < r.x + r.width; x++) {
-        if (x < 0 || x >= this.width) continue;
-        const i = this.index(x, y);
-        this.chars[i] = ' ';
-        this.fg[i] = COLOR_DEFAULT;
-        this.bg[i] = bg;
-        this.attrs[i] = 0;
-        this.flags[i] = 0;
-        this.links[i] = undefined;
-      }
+    if (rect === undefined) {
+      this.fillSpan(0, this.width * this.height, bg);
+      return;
     }
+
+    const x0 = Math.max(0, rect.x);
+    const x1 = Math.min(this.width, rect.x + rect.width);
+    const y0 = Math.max(0, rect.y);
+    const y1 = Math.min(this.height, rect.y + rect.height);
+    if (x1 <= x0 || y1 <= y0) return;
+
+    // A row at a time: rows are contiguous, columns are not.
+    for (let y = y0; y < y1; y++) {
+      const start = y * this.width;
+      this.fillSpan(start + x0, start + x1, bg);
+    }
+  }
+
+  private fillSpan(from: number, to: number, bg: PackedColor): void {
+    this.chars.fill(' ', from, to);
+    this.fg.fill(COLOR_DEFAULT, from, to);
+    this.bg.fill(bg, from, to);
+    this.attrs.fill(0, from, to);
+    this.flags.fill(0, from, to);
+    this.links.fill(undefined, from, to);
   }
 
   resize(width: number, height: number): void {

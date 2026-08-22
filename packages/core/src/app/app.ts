@@ -656,7 +656,9 @@ export class App implements TextUIApp {
     this.syncDeclaredFocusables();
     this.updateFocusRects();
 
-    this.buffer_.clear(undefined, 0);
+    // Once. There were two, the first blanking to palette 0 and the second to
+    // the default background over the top of it - a whole extra pass over
+    // every cell on screen, every frame, with nothing to show for it.
     this.buffer_.clear();
     paintTree(this.buffer_, this.root, env, viewport);
 

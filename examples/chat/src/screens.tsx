@@ -486,6 +486,22 @@ export const HostsScreen: (props: Record<string, never>) => RenderOutput =
         <Column gap={1} flex={1}>
           <ConnectionBadge url={host?.url ?? ''} state={host?.state ?? 'offline'} />
           <text content="An agent host is a sessions server. Several clients watch and drive the same sessions; none of them owns the process running the agent." fg="muted" wrap="word" />
+          {/* Which of the two is answering, and how to ask for the other. The
+              seam is one interface, so this is the only screen that has any
+              reason to mention that there are two implementations of it. */}
+          {host?.id === 'fake' ? (
+            <text
+              content="This is the scripted host: five seeded sessions and an agent that answers four ways. Start with --host ws://… to drive a real one instead."
+              fg="subtle"
+              wrap="word"
+            />
+          ) : (
+            <text
+              content="A live host. What it says is what it sent."
+              fg="subtle"
+              wrap="word"
+            />
+          )}
           {agents.map((agent) => (
             <Column key={agent.provider} gap={0}>
               <Row gap={1}>

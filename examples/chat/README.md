@@ -33,13 +33,47 @@ reduced it, and somebody else may be answering the same question in an editor
 on another machine while you look at it.
 
 `src/ahp/` is the protocol as a client reads it, and `HostConnection` is the
-seam. `fakeHost` implements it with a scripted agent, which is what lets the
-example run and be tested with nothing installed; a real client implements the
-same interface over a WebSocket and nothing above it changes.
+seam. There are two implementations of it, and nothing above either can tell
+which is answering:
 
-Time in the fake is a `pump`, not a timer: the application drives it from an
-interval and the test calls it in a loop, so the streaming path is what gets
-exercised rather than a fixture that arrived all at once.
+```
+pnpm --filter @textui/example-chat dev                      # the scripted host
+pnpm --filter @textui/example-chat dev -- --host ws://…     # a real one
+```
+
+[`fake.ts`](src/ahp/fake.ts) is a **script**, and it is not a lesser version of
+the other one - it is the only way to arrive at a *particular* state on
+purpose. Five seeded sessions, one of them blocked on a confirmation, one
+mid-turn, one failed, one archived; an agent that answers four different ways
+depending on what was said. Time in it is a `pump`, not a timer: the
+application drives it from an interval and a test calls it in a loop, so the
+streaming path is what gets exercised rather than a fixture that arrived all at
+once. Two rules keep it honest - **the status is derived, never assigned**, so
+a session cannot claim to be waiting on you with nothing waiting; and the
+sessions and the replies differ, because one canned answer only ever proves the
+client can render that answer.
+
+[`live.ts`](src/ahp/live.ts) is a **socket**. It loads
+`@microsoft/agent-host-protocol` at runtime - an optional dependency, so the
+example still runs and is checked with nothing installed:
+
+```
+pnpm --filter @textui/example-chat add @microsoft/agent-host-protocol
+```
+
+The reducers are the protocol's own. Eighty typed mutations across six channels
+is not a thing to reimplement in an example, and a hand-written second path
+from action to screen would be a second answer to "what is the state now". So
+the package owns the transport, the subscriptions and the state, and this file
+is translation in both directions: its shapes into the flattened ones in
+`types.ts`, and back out as the seven client-dispatchable actions that drive
+and answer a turn. Every action rebuilds the view and re-emits it as a
+snapshot, which the transcript already renders from - that is what it does when
+you open one.
+
+It is written from protocol 0.7.0's own `src/types/` and from Advisor's client,
+and it has **not** been driven against a live host from here. The scripted one
+is what the tests cover.
 
 ## Layout
 

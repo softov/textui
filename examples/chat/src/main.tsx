@@ -6,6 +6,8 @@ import {
 import { registerChat } from './app.js';
 import { CONTROLLER } from './control.js';
 import { fakeHost } from './ahp/fake.js';
+import { MissingProtocolPackage, liveHost } from './ahp/live.js';
+import type { HostConnection } from './ahp/connection.js';
 
 /**
  * The entry point.
@@ -38,6 +40,16 @@ interface Options {
   approve: boolean;
   /** ...and then answer the question, to reach the end of the turn. */
   answer: boolean;
+  /**
+   * A real host: `ws://127.0.0.1:9187`, or wherever the editor advertises one.
+   *
+   * Left off, the scripted host runs - which is the point of the seam. The
+   * fake is for driving a shape on purpose (a blocked confirmation, a failing
+   * turn, a question) and the real one is for finding out what a host actually
+   * sends. Nothing above `HostConnection` knows which is which.
+   */
+  host?: string;
+  token?: string;
 }
 
 function parse(argv: string[]): Options {
@@ -70,6 +82,8 @@ function parse(argv: string[]): Options {
       case '--theme': options.theme = String(argv[++i]); break;
       case '--shell': options.shell = String(argv[++i]); break;
       case '--session': options.session = String(argv[++i]); break;
+      case '--host': options.host = String(argv[++i]); break;
+      case '--token': options.token = String(argv[++i]); break;
       default: break;
     }
   }
@@ -83,6 +97,29 @@ function overrides(options: Options): CapabilityOverrides {
   };
 }
 
+/**
+ * The host this run talks to.
+ *
+ * The one place the choice is made, and the only place either implementation
+ * is named. A live connection is asked for by URL; anything else is the script.
+ */
+async function connect(options: Options): Promise<HostConnection & { pump?(): boolean }> {
+  if (!options.host) return fakeHost();
+  try {
+    return await liveHost({
+      url: options.host,
+      ...(options.token ? { token: options.token } : {}),
+    });
+  } catch (error) {
+    if (error instanceof MissingProtocolPackage) {
+      process.stderr.write(`${error.message}\n`);
+      process.exit(1);
+    }
+    process.stderr.write(`Could not reach ${options.host}: ${String(error)}\n`);
+    process.exit(1);
+  }
+}
+
 /** One frame, to stdout. The same application, against a terminal that is a size. */
 async function still(options: Options): Promise<void> {
   const terminal = createVirtualTerminal({
@@ -90,7 +127,7 @@ async function still(options: Options): Promise<void> {
     height: options.height,
     capabilities: overrides(options),
   });
-  const host = fakeHost();
+  const host = await connect(options);
   const app = createApp({
     terminal,
     theme: options.theme,
@@ -112,14 +149,14 @@ async function still(options: Options): Promise<void> {
   // agent had got to. `--settled` runs until the script has nothing left it
   // can do without being answered, which is how the confirmation is reached.
   const steps = options.pump ?? (options.settled ? 100_000 : 0);
-  for (let i = 0; i < steps; i++) if (!host.pump()) break;
+  for (let i = 0; i < steps; i++) if (host.pump?.() !== true) break;
   if (options.approve) {
     controller.approve();
-    for (let i = 0; i < 100_000; i++) if (!host.pump()) break;
+    for (let i = 0; i < 100_000; i++) if (host.pump?.() !== true) break;
   }
   if (options.answer) {
     controller.answer({ q1: { kind: 'selected', value: 'transcript-scope' } }, true);
-    for (let i = 0; i < 100_000; i++) if (!host.pump()) break;
+    for (let i = 0; i < 100_000; i++) if (host.pump?.() !== true) break;
   }
 
   for (let i = 0; i < 12; i++) await new Promise((r) => setTimeout(r, 4));
@@ -136,7 +173,7 @@ async function main(): Promise<void> {
   }
 
   const terminal = createNodeTerminal();
-  const host = fakeHost();
+  const host = await connect(options);
   const app = createApp({
     terminal,
     // A starting point, not a fixture. `ctrl+t` and the palette change both
@@ -169,10 +206,13 @@ async function main(): Promise<void> {
   app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
   await app.start();
 
-  // The clock. A real connection has a socket pushing actions; the scripted
-  // one has this, and everything above it cannot tell the difference.
-  const timer = setInterval(() => { host.pump(); }, Math.max(1, options.tick));
-  timer.unref?.();
+  // The clock, for the scripted host only. A real connection has a socket
+  // pushing actions, and everything above it cannot tell the difference -
+  // which is why this is the only line that has to know.
+  if (host.pump) {
+    const timer = setInterval(() => { host.pump?.(); }, Math.max(1, options.tick));
+    timer.unref?.();
+  }
 }
 
 await main();

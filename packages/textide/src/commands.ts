@@ -413,6 +413,41 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       },
     },
     {
+      /*
+       * Which sidebar panel is showing.
+       *
+       * The choices come off the surface registry rather than off a list kept
+       * here, so a panel an extension brought appears by having been mounted -
+       * which is the whole reason panels are declared in a manifest and put up
+       * by the loader. The explorer is in the same list, mounted by textide
+       * itself, and this command cannot tell the difference.
+       */
+      id: 'view.sidebarPanel',
+      icon: Icon.sidebar,
+      title: 'Sidebar Panel',
+      category: 'View',
+      slots: ['palette'],
+      // Offered even while the explorer is the only panel. It is a question
+      // with one answer today and the right question the moment an extension
+      // brings a second, and a row that appears and disappears with the
+      // extension list is harder to find than one that is always there.
+      args: [{
+        name: 'key', type: 'string' as const, required: true,
+        choices: () => app.surfaces.mounts('sidebar').map((m) => m.key),
+        default: app.surfaces.state('sidebar').activeKey
+          ?? app.surfaces.mounts('sidebar')[0]?.key
+          ?? '',
+      }],
+      run: (args: Record<string, unknown>, ctx: CommandContext) => {
+        const key = String(args.key ?? '');
+        if (!key) return;
+        ctx.app.surfaces.activate('sidebar', key);
+        // Choosing a panel is also asking to see it. Leaving the sidebar
+        // collapsed after picking one is answering a question with silence.
+        ctx.store.set('$/ui/sidebar/collapsed' as BindingPath, false);
+      },
+    },
+    {
       id: 'view.arrangement',
       icon: Icon.arrangement,
       title: 'Main Arrangement',

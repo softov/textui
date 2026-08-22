@@ -45,7 +45,7 @@ export const MENUS: MenuSpec[] = [
     // resource registry, so it grows when an extension registers a renderer.
     items: [
       'panel.openWith', null,
-      'view.theme', 'view.layout', 'view.markLines', null,
+      'view.theme', 'view.layout', 'view.sidebarPanel', 'view.markLines', null,
       'app.palette',
     ],
   },

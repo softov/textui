@@ -31,7 +31,11 @@ export const SURFACE_NAMES: SurfaceName[] = [
 const DEFAULT_LAYOUTS: Record<string, LayoutName> = {
   header: 'bar',
   rail: 'rail',
-  sidebar: 'stack',
+  // One at a time, not stacked. A second panel arriving under the first
+  // halves both of them; a sidebar is a narrow column and the panels in it -
+  // a tree, a source control list, a search - each want the whole height.
+  // `activeKey` picks, and `single` falls back to the first mount.
+  sidebar: 'single',
   aside: 'stack',
   main: 'tabs',
   panel: 'tabs',

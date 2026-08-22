@@ -253,7 +253,14 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
   // unregisters the components and leaves four surfaces pointing at names
   // nothing answers to, which is what a hot reload would do twice a minute.
   bag.add(app.open({ surface: 'header', key: 'titlebar', target: { component: 'TitleBar' } }));
-  bag.add(app.open({ surface: 'sidebar', key: 'explorer', target: { component: 'Explorer' } }));
+  // Named, because the sidebar shows one panel at a time and the heading is
+  // how you know which. It had no title while it was the only thing there.
+  bag.add(app.open({
+    surface: 'sidebar',
+    key: 'explorer',
+    target: { component: 'Explorer' },
+    display: { title: 'Explorer' },
+  }));
   bag.add(app.open({ surface: 'main', key: 'editor', target: { component: 'Editor' } }));
   bag.add(app.open({ surface: 'status', key: 'status', target: { component: 'StatusLine' } }));
   // The bottom panel, which stays hidden until a search puts something in it.

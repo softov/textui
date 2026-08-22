@@ -234,6 +234,10 @@ describe('the command palette', () => {
    * look identical in the frame. The rect is the only honest measurement -
    * before the fix it read 3 rows with two files and 0 once the content
    * overflowed, in a sidebar twenty rows tall.
+   *
+   * Nineteen of those twenty now: the sidebar shows one panel at a time and
+   * spends a row naming which. What is being asserted is that the tree takes
+   * everything left over whatever the file count, not the number itself.
    */
   it('gives the explorer the whole sidebar, however many files there are', async () => {
     for (const files of [2, 40]) {
@@ -247,7 +251,7 @@ describe('the command palette', () => {
       for (let i = 0; i < 6; i++) { await t.settle(); t.advance(50); t.flush(); }
 
       const tree = t.queryByRole('tree');
-      expect(tree?.rect?.height, `${files} files should still fill the sidebar`).toBe(20);
+      expect(tree?.rect?.height, `${files} files should still fill the sidebar`).toBe(19);
       await t.unmount();
       await rm(many, { recursive: true, force: true });
     }
@@ -349,14 +353,16 @@ describe('the command palette', () => {
     expect(open_layers()).toBe(1);
 
     const seen: string[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       t.press('down');
       for (let j = 0; j < 2; j++) await t.settle();
       seen.push(highlighted());
       // The menu must still be the one menu that is open.
       expect(open_layers(), 'down must not reopen or close the dropdown').toBe(1);
     }
-    expect(seen).toEqual(['Theme', 'Layout', 'Highlight Changed Lines', 'Command Palette']);
+    expect(seen).toEqual([
+      'Theme', 'Layout', 'Sidebar Panel', 'Highlight Changed Lines', 'Command Palette',
+    ]);
     await t.unmount();
   });
 

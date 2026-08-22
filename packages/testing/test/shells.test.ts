@@ -404,12 +404,15 @@ describe('empty and single-mount regions', () => {
       await t.unmount();
     });
 
+    // `aside`, not `sidebar`: the sidebar shows one panel at a time now, and
+    // these two are about what a *stacked* surface draws between its mounts.
     it(`draws no rule under a single stacked mount, at ${at}`, async () => {
       const t = await renderApp({
         ...size,
         shell: 'workbench',
         onBoot: (app) => {
-          app.open({ surface: 'sidebar', key: 's', target: { component: 'text', content: 'ONLY' } });
+          app.store.set('$/ui/aside/visible', true);
+          app.open({ surface: 'aside', key: 's', target: { component: 'text', content: 'ONLY' } });
           app.open({ surface: 'main', key: 'm', target: { component: 'text', content: 'MAIN' } });
         },
       });
@@ -428,8 +431,9 @@ describe('empty and single-mount regions', () => {
         ...size,
         shell: 'workbench',
         onBoot: (app) => {
-          app.open({ surface: 'sidebar', key: 'a', target: { component: 'text', content: 'FIRST' } });
-          app.open({ surface: 'sidebar', key: 'b', target: { component: 'text', content: 'SECOND' } });
+          app.store.set('$/ui/aside/visible', true);
+          app.open({ surface: 'aside', key: 'a', target: { component: 'text', content: 'FIRST' } });
+          app.open({ surface: 'aside', key: 'b', target: { component: 'text', content: 'SECOND' } });
           app.open({ surface: 'main', key: 'm', target: { component: 'text', content: 'MAIN' } });
         },
       });
@@ -482,4 +486,70 @@ describe('surfaces are the application\'s vocabulary', () => {
     expect(t.app.surfaces.state('lateral2')).toMatchObject({ visible: false, layout: 'single' });
     await t.unmount();
   });
+});
+
+/**
+ * The sidebar shows one panel at a time.
+ *
+ * A second panel arriving under the first halves both of them, and a sidebar
+ * is a narrow column where a tree, a source control list and a search each
+ * want the whole height. Which one is showing is `activeKey`, and the heading
+ * is the only thing that answers "which one am I looking at".
+ */
+describe('the sidebar with more than one panel in it', () => {
+  // A layout checked at one size is a layout that breaks at the second.
+  const SIZES = [
+    { width: 96, height: 16 },
+    { width: 140, height: 40 },
+  ];
+
+  for (const size of SIZES) {
+    const at = `${size.width}x${size.height}`;
+
+    const open = async () => {
+      const t = await renderApp({
+        ...size,
+        shell: 'workbench',
+        onBoot: (app) => {
+          app.open({
+            surface: 'sidebar', key: 'tree',
+            target: { component: 'text', content: 'THE-TREE' },
+            display: { title: 'Explorer' },
+          });
+          app.open({
+            surface: 'sidebar', key: 'scm',
+            target: { component: 'text', content: 'THE-CHANGES' },
+            display: { title: 'Source Control' },
+          });
+          app.open({ surface: 'main', key: 'm', target: { component: 'text', content: 'MAIN' } });
+        },
+      });
+      await t.settle();
+      return t;
+    };
+
+    it(`shows the first one and not the second, at ${at}`, async () => {
+      const t = await open();
+      expect(t.hasText('THE-TREE')).toBe(true);
+      expect(t.hasText('THE-CHANGES'), 'the second must not stack under it').toBe(false);
+      await t.unmount();
+    });
+
+    it(`names the panel it is showing, at ${at}`, async () => {
+      const t = await open();
+      expect(t.hasText('Explorer')).toBe(true);
+      await t.unmount();
+    });
+
+    it(`swaps to the other one, and only the other one, at ${at}`, async () => {
+      const t = await open();
+      t.app.surfaces.activate('sidebar', 'scm');
+      await t.settle();
+
+      expect(t.hasText('THE-CHANGES')).toBe(true);
+      expect(t.hasText('THE-TREE')).toBe(false);
+      expect(t.hasText('Source Control'), 'and says which it swapped to').toBe(true);
+      await t.unmount();
+    });
+  }
 });

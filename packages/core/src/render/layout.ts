@@ -1,15 +1,20 @@
 import type { Edges, EdgeSpec, Rect, Size } from '../types/geometry.js';
-import type { Align, Dimension, Justify, Style } from '../types/style.js';
+import type { Align, Dimension, Justify, Overflow, Style } from '../types/style.js';
 import { ZERO_EDGES } from '../types/geometry.js';
 
 /**
  * Layout is a flexbox subset sized in whole cells.
  *
- * The subset is deliberate: one line per container (no wrapping), grow and
- * shrink along the main axis, stretch or align on the cross axis, and absolute
+ * The subset is deliberate: grow and shrink along the main axis, stretch or
+ * align on the cross axis, optional wrapping into further lines, and absolute
  * positioning for layers. Everything a terminal UI actually needs fits in
  * that, and leaving out the rest keeps a pass over a full screen cheap enough
  * to run on every frame.
+ *
+ * Wrapping is off by default, and that is a performance decision as much as a
+ * design one: a non-wrapping container measures each child once, and a
+ * wrapping one has to measure them all before it knows where the first line
+ * ends.
  *
  * Sizes are integers throughout. A "half cell" does not exist, so fractions
  * are distributed by largest-remainder rather than rounded independently -
@@ -97,6 +102,67 @@ function isHidden(box: LayoutBox): boolean {
   return box.style.display === 'none';
 }
 
+function isWrapping(box: LayoutBox): boolean {
+  return box.style.flexWrap === 'wrap';
+}
+
+/**
+ * `overflow` for one axis. The specific prop wins over the shorthand, so
+ * `overflow: 'hidden', overflowY: 'scroll'` is a pane that scrolls down and
+ * clips sideways - which is what a log viewer is.
+ */
+export function overflowOn(style: Style, axis: 'x' | 'y'): Overflow {
+  return (axis === 'x' ? style.overflowX : style.overflowY) ?? style.overflow ?? 'visible';
+}
+
+/** The overflow governing this container's own main axis. */
+function mainOverflow(box: LayoutBox): Overflow {
+  return overflowOn(box.style, isColumn(box) ? 'y' : 'x');
+}
+
+/**
+ * Gaps, resolved to this container's axes.
+ *
+ * `columnGap` and `rowGap` are named for the screen, not for the container:
+ * `columnGap` is always the horizontal one. So on a row it is the gap between
+ * children and on a column it is the gap between wrapped lines, and a style
+ * that sets both reads the same either way round.
+ */
+function gapsOf(box: LayoutBox): { main: number; cross: number } {
+  const vertical = box.style.rowGap ?? box.style.gap ?? 0;
+  const horizontal = box.style.columnGap ?? box.style.gap ?? 0;
+  return isColumn(box)
+    ? { main: vertical, cross: horizontal }
+    : { main: horizontal, cross: vertical };
+}
+
+/**
+ * Cut a run of main-axis sizes into lines that each fit `limit`.
+ *
+ * A child bigger than the whole line still gets a line to itself rather than
+ * an empty one pushed in front of it: it is going to overflow either way, and
+ * a blank row above it helps nobody.
+ */
+function splitLines(mains: number[], gap: number, limit: number): [number, number][] {
+  const lines: [number, number][] = [];
+  let start = 0;
+  let used = 0;
+
+  for (let i = 0; i < mains.length; i++) {
+    const size = mains[i] as number;
+    const next = used === 0 ? size : used + gap + size;
+    if (used > 0 && next > limit) {
+      lines.push([start, i]);
+      start = i;
+      used = size;
+      continue;
+    }
+    used = next;
+  }
+  lines.push([start, mains.length]);
+  return lines;
+}
+
 /** Space this box consumes outside its content: margin, border, padding. */
 function frameOf(box: LayoutBox): { margin: Edges; inset: Edges } {
   const margin = resolveEdges(box.style.margin);
@@ -122,11 +188,21 @@ export function measureBox(box: LayoutBox, availW: number, availH: number): Size
   if (isHidden(box)) return { width: 0, height: 0 };
 
   const { margin, inset } = frameOf(box);
-  const innerAvailW = Math.max(0, availW - edgeH(margin) - edgeH(inset));
-  const innerAvailH = Math.max(0, availH - edgeV(margin) - edgeV(inset));
 
   const fixedW = resolveDimension(box.style.width, availW);
   const fixedH = resolveDimension(box.style.height, availH);
+
+  // What the children get to measure against.
+  //
+  // A stated width is a promise to the children, not just to the parent: a
+  // paragraph inside `width: 7` wraps at seven cells, and measuring it against
+  // whatever room the *parent* had leaves it one row tall with half of it
+  // unpainted. `maxWidth` binds the same way - it is the width the content
+  // will end up with, so it is the width the content should be measured at.
+  const boundW = Math.min(fixedW ?? availW - edgeH(margin), box.style.maxWidth ?? Infinity);
+  const boundH = Math.min(fixedH ?? availH - edgeV(margin), box.style.maxHeight ?? Infinity);
+  const innerAvailW = Math.max(0, boundW - edgeH(inset));
+  const innerAvailH = Math.max(0, boundH - edgeV(inset));
 
   let contentW = 0;
   let contentH = 0;
@@ -135,30 +211,51 @@ export function measureBox(box: LayoutBox, availW: number, availH: number): Size
     contentW = Math.max(0, fixedW - edgeH(inset));
     contentH = Math.max(0, fixedH - edgeV(inset));
   } else if (box.measure) {
-    const m = box.measure(
-      fixedW !== null ? Math.max(0, fixedW - edgeH(inset)) : innerAvailW,
-      fixedH !== null ? Math.max(0, fixedH - edgeV(inset)) : innerAvailH,
-    );
+    const m = box.measure(innerAvailW, innerAvailH);
     contentW = fixedW !== null ? Math.max(0, fixedW - edgeH(inset)) : m.width;
     contentH = fixedH !== null ? Math.max(0, fixedH - edgeV(inset)) : m.height;
   } else {
     const flow = box.children.filter((c) => !isAbsolute(c) && !isHidden(c));
-    const gap = box.style.gap ?? 0;
+    const gaps = gapsOf(box);
     const column = isColumn(box);
 
-    let main = 0;
-    let cross = 0;
-    let count = 0;
+    const mains: number[] = [];
+    const crosses: number[] = [];
     for (const child of flow) {
       const m = measureBox(child, innerAvailW, innerAvailH);
       const cm = resolveEdges(child.style.margin);
-      const childMain = column ? m.height + edgeV(cm) : m.width + edgeH(cm);
-      const childCross = column ? m.width + edgeH(cm) : m.height + edgeV(cm);
-      main += childMain;
-      cross = Math.max(cross, childCross);
-      count++;
+      mains.push(column ? m.height + edgeV(cm) : m.width + edgeH(cm));
+      crosses.push(column ? m.width + edgeH(cm) : m.height + edgeV(cm));
     }
-    if (count > 1) main += gap * (count - 1);
+
+    let main = 0;
+    let cross = 0;
+    if (isWrapping(box) && flow.length > 1) {
+      // Wrapping trades one axis for the other: the main extent is whatever
+      // the widest line came to - never more than the room it was given - and
+      // the cross extent grows by a line at a time. Measuring it any other way
+      // makes the parent size this box as though it were still one long line,
+      // and then it wraps inside a box too short to hold what it wrapped into.
+      const limit = column ? innerAvailH : innerAvailW;
+      const lines = splitLines(mains, gaps.main, limit);
+      for (const [from, to] of lines) {
+        let lineMain = 0;
+        let lineCross = 0;
+        for (let i = from; i < to; i++) {
+          lineMain += (mains[i] as number) + (i > from ? gaps.main : 0);
+          lineCross = Math.max(lineCross, crosses[i] as number);
+        }
+        main = Math.max(main, lineMain);
+        cross += lineCross;
+      }
+      if (lines.length > 1) cross += gaps.cross * (lines.length - 1);
+    } else {
+      for (let i = 0; i < mains.length; i++) {
+        main += mains[i] as number;
+        cross = Math.max(cross, crosses[i] as number);
+      }
+      if (mains.length > 1) main += gaps.main * (mains.length - 1);
+    }
 
     contentW = column ? cross : main;
     contentH = column ? main : cross;
@@ -168,7 +265,7 @@ export function measureBox(box: LayoutBox, availW: number, availH: number): Size
     // intrinsic size makes every sibling move when the document changes -
     // which is what a file viewer does to a pane it shares. Grow decides its
     // size; `minHeight`/`minWidth` still set the floor, via `clamp` below.
-    if (box.style.overflow === 'scroll' && (box.style.flex ?? 0) > 0) {
+    if (mainOverflow(box) === 'scroll' && (box.style.flex ?? 0) > 0) {
       if (column) contentH = 0;
       else contentW = 0;
     }
@@ -303,9 +400,102 @@ function layoutBox(box: LayoutBox, rect: Rect): void {
 }
 
 function layoutFlow(box: LayoutBox, flow: LayoutBox[]): void {
+  if (!isWrapping(box) || flow.length < 2) {
+    const column = isColumn(box);
+    const mainAvail = column ? box.content.height : box.content.width;
+    const scrolling = mainOverflow(box) === 'scroll';
+    const extent = layoutLine(
+      box, flow, box.content,
+      scrolling ? (column ? box.scrollTop ?? 0 : box.scrollLeft ?? 0) : 0,
+    );
+    box.scrollSize = extent > mainAvail
+      ? (column
+          ? { width: box.content.width, height: extent }
+          : { width: extent, height: box.content.height })
+      : undefined;
+    return;
+  }
+  layoutWrapped(box, flow);
+}
+
+/**
+ * Wrapping: cut the children into lines, then lay each line out on its own.
+ *
+ * Each line is a flow in its own right - it grows, shrinks, justifies and
+ * aligns exactly as an unwrapped container does - which is why this is a loop
+ * around `layoutLine` rather than a second layout algorithm. The lines
+ * themselves stack along the cross axis at their natural heights.
+ *
+ * A wrapping container overflows across, not along: the main axis is the one
+ * it just fitted everything into. So its scroll offset and its recorded
+ * `scrollSize` are both the cross axis here, which is what a wrapping row
+ * inside a ScrollView needs to scroll down through its lines.
+ */
+function layoutWrapped(box: LayoutBox, flow: LayoutBox[]): void {
   const column = isColumn(box);
-  const gap = box.style.gap ?? 0;
   const content = box.content;
+  const gaps = gapsOf(box);
+  const mainAvail = column ? content.height : content.width;
+  const crossAvail = column ? content.width : content.height;
+
+  const mains: number[] = [];
+  const crosses: number[] = [];
+  for (const child of flow) {
+    const margin = resolveEdges(child.style.margin);
+    const basis = child.style.basis ?? (column ? child.style.height : child.style.width);
+    const fixed = resolveDimension(basis, mainAvail);
+    const m = measureBox(
+      child,
+      column ? crossAvail : mainAvail,
+      column ? mainAvail : crossAvail,
+    );
+    mains.push((fixed ?? (column ? m.height : m.width)) + (column ? edgeV(margin) : edgeH(margin)));
+    crosses.push((column ? m.width + edgeH(margin) : m.height + edgeV(margin)));
+  }
+
+  const lines = splitLines(mains, gaps.main, mainAvail);
+  const scrolling = overflowOn(box.style, column ? 'x' : 'y') === 'scroll';
+  const offset = scrolling ? (column ? box.scrollLeft ?? 0 : box.scrollTop ?? 0) : 0;
+  const origin = column ? content.x : content.y;
+  let cursor = origin - offset;
+
+  for (const [from, to] of lines) {
+    let lineCross = 0;
+    for (let i = from; i < to; i++) lineCross = Math.max(lineCross, crosses[i] as number);
+
+    layoutLine(
+      box,
+      flow.slice(from, to),
+      column
+        ? { x: cursor, y: content.y, width: lineCross, height: content.height }
+        : { x: content.x, y: cursor, width: content.width, height: lineCross },
+      0,
+    );
+    cursor += lineCross + gaps.cross;
+  }
+
+  const extent = cursor + offset - origin - gaps.cross;
+  box.scrollSize = extent > crossAvail
+    ? (column
+        ? { width: extent, height: content.height }
+        : { width: content.width, height: extent })
+    : undefined;
+}
+
+/**
+ * One line of a flow, laid out into `region`.
+ *
+ * Returns the main-axis extent the children actually came to, which is what
+ * tells the caller whether there is anything to scroll.
+ */
+function layoutLine(
+  box: LayoutBox,
+  flow: LayoutBox[],
+  content: Rect,
+  scrollOffset: number,
+): number {
+  const column = isColumn(box);
+  const gap = gapsOf(box).main;
 
   const mainAvail = column ? content.height : content.width;
   const crossAvail = column ? content.width : content.height;
@@ -338,7 +528,7 @@ function layoutFlow(box: LayoutBox, flow: LayoutBox[]): void {
   //
   // A scroll container is the exception: shrinking its children to fit is
   // exactly what it must not do, because then there is nothing to scroll.
-  const scrolling = box.style.overflow === 'scroll';
+  const scrolling = mainOverflow(box) === 'scroll';
   const used = bases.reduce((a, b) => a + b, 0) + gapTotal;
   let free = scrolling ? Math.max(0, mainAvail - used) : mainAvail - used;
   const sizes = bases.slice();
@@ -406,7 +596,6 @@ function layoutFlow(box: LayoutBox, flow: LayoutBox[]): void {
 
   // 3. place
   const spacing = justifySpacing(box.style.justify ?? 'start', Math.max(0, free), flow.length);
-  const scrollOffset = scrolling ? (column ? box.scrollTop ?? 0 : box.scrollLeft ?? 0) : 0;
   const origin = (column ? content.y : content.x) + spacing.leading;
   let cursor = origin - scrollOffset;
 
@@ -457,15 +646,8 @@ function layoutFlow(box: LayoutBox, flow: LayoutBox[]): void {
     cursor += (sizes[i] as number) + gap + (i < flow.length - 1 ? spacing.between : 0);
   }
 
-  // 4. record overflow, so a scroll container knows how far it can go
-  const contentExtent = cursor + scrollOffset - origin - gap;
-  if (contentExtent > mainAvail) {
-    box.scrollSize = column
-      ? { width: content.width, height: contentExtent }
-      : { width: contentExtent, height: content.height };
-  } else {
-    box.scrollSize = undefined;
-  }
+  // 4. hand back the extent, so the caller knows how far it can scroll
+  return cursor + scrollOffset - origin - gap;
 }
 
 /**

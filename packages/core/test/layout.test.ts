@@ -361,3 +361,124 @@ describe('content must not resize its container', () => {
     expect(large.children[1]?.rect).toEqual(small.children[1]?.rect);
   });
 });
+
+describe('per-axis gap', () => {
+  it('uses columnGap between the children of a row', () => {
+    const b = leaf({}, 4, 1);
+    const root = box({ direction: 'row', gap: 1, columnGap: 3 }, [leaf({}, 4, 1), b]);
+    layout(root, { x: 0, y: 0, width: 40, height: 3 });
+    expect(b.rect.x).toBe(7);
+  });
+
+  it('uses rowGap between the children of a column', () => {
+    const b = leaf({}, 4, 1);
+    const root = box({ direction: 'column', gap: 1, rowGap: 3 }, [leaf({}, 4, 1), b]);
+    layout(root, { x: 0, y: 0, width: 40, height: 10 });
+    expect(b.rect.y).toBe(4);
+  });
+
+  it('leaves the other axis on the gap shorthand', () => {
+    // `columnGap` on a column is the gap between *lines*, so a column that
+    // does not wrap must not pick it up as the gap between its children.
+    const b = leaf({}, 4, 1);
+    const root = box({ direction: 'column', gap: 2, columnGap: 9 }, [leaf({}, 4, 1), b]);
+    layout(root, { x: 0, y: 0, width: 40, height: 10 });
+    expect(b.rect.y).toBe(3);
+  });
+});
+
+describe('flexWrap', () => {
+  const four = (): LayoutBox[] => [leaf({}, 6, 1), leaf({}, 6, 1), leaf({}, 6, 1), leaf({}, 6, 1)];
+
+  it('starts a new line when the next child does not fit', () => {
+    const items = four();
+    const root = box({ direction: 'row', flexWrap: 'wrap', columnGap: 1, rowGap: 0 }, items);
+    layout(root, { x: 0, y: 0, width: 14, height: 6 });
+
+    // 6 + 1 + 6 = 13 fits in 14; a third would need 20.
+    expect(items.map((i) => i.rect.y)).toEqual([0, 0, 1, 1]);
+    expect(items.map((i) => i.rect.x)).toEqual([0, 7, 0, 7]);
+  });
+
+  it('reads the gap shorthand on both axes, so wrapped lines are spaced too', () => {
+    const items = four();
+    const root = box({ direction: 'row', flexWrap: 'wrap', gap: 1 }, items);
+    layout(root, { x: 0, y: 0, width: 14, height: 6 });
+    expect(items.map((i) => i.rect.y)).toEqual([0, 0, 2, 2]);
+  });
+
+  it('stacks lines by rowGap, not by the main-axis gap', () => {
+    const items = four();
+    const root = box({ direction: 'row', flexWrap: 'wrap', columnGap: 1, rowGap: 2 }, items);
+    layout(root, { x: 0, y: 0, width: 14, height: 8 });
+    expect(items.map((i) => i.rect.y)).toEqual([0, 0, 3, 3]);
+  });
+
+  it('measures to the wrapped height, so the parent leaves room for the lines', () => {
+    const root = box({ direction: 'row', flexWrap: 'wrap', columnGap: 1, rowGap: 0 }, four());
+    expect(measureBox(root, 14, 20)).toEqual({ width: 13, height: 2 });
+  });
+
+  it('measures to one line when it is not wrapping', () => {
+    const root = box({ direction: 'row', gap: 1 }, four());
+    expect(measureBox(root, 14, 20)).toEqual({ width: 27, height: 1 });
+  });
+
+  it('gives a child too big for a whole line that line to itself', () => {
+    const wide = leaf({}, 30, 1);
+    const items = [leaf({}, 6, 1), wide, leaf({}, 6, 1)];
+    const root = box({ direction: 'row', flexWrap: 'wrap', columnGap: 1, rowGap: 0 }, items);
+    layout(root, { x: 0, y: 0, width: 14, height: 6 });
+    expect(items.map((i) => i.rect.y)).toEqual([0, 1, 2]);
+  });
+
+  it('records the cross extent as the scroll size, because that is what overflows', () => {
+    const root = box(
+      { direction: 'row', flexWrap: 'wrap', columnGap: 1, rowGap: 0, overflow: 'scroll' },
+      four(),
+    );
+    layout(root, { x: 0, y: 0, width: 14, height: 1 });
+    expect(root.scrollSize?.height).toBe(2);
+  });
+});
+
+describe('per-axis overflow', () => {
+  it('lets overflowY scroll while overflow clips sideways', () => {
+    const root = box({ direction: 'column', overflow: 'hidden', overflowY: 'scroll' }, [
+      leaf({}, 5, 4), leaf({}, 5, 4), leaf({}, 5, 4),
+    ]);
+    layout(root, { x: 0, y: 0, width: 20, height: 6 });
+    expect(root.scrollSize?.height).toBe(12);
+  });
+
+  it('does not treat a sideways scroller as a vertical one', () => {
+    const a = leaf({}, 5, 4);
+    const root = box({ direction: 'column', overflowX: 'scroll' }, [a, leaf({}, 5, 4)]);
+    layout(root, { x: 0, y: 0, width: 20, height: 6 });
+    // A column's own axis is vertical, so `overflowX` leaves the clamp on:
+    // the second child is cut to fit rather than left hanging below.
+    expect(root.scrollSize).toBeUndefined();
+  });
+});
+
+describe('a fixed size is a promise to the children', () => {
+  it('measures children against a stated width, not the room the parent had', () => {
+    // The child asks for 20 when it is measured at 20 and 8 when measured at
+    // 7 - a paragraph. The box says 7, so the box gets 7 and the child two rows.
+    const wrapping: LayoutBox = {
+      ...box({}),
+      measure: (maxWidth: number) => (maxWidth >= 20 ? { width: 20, height: 1 } : { width: maxWidth, height: 2 }),
+    };
+    const root = box({ width: 7 }, [wrapping]);
+    expect(measureBox(root, 40, 10)).toEqual({ width: 7, height: 2 });
+  });
+
+  it('binds them by maxWidth too', () => {
+    const wrapping: LayoutBox = {
+      ...box({}),
+      measure: (maxWidth: number) => (maxWidth >= 20 ? { width: 20, height: 1 } : { width: maxWidth, height: 2 }),
+    };
+    const root = box({ maxWidth: 7 }, [wrapping]);
+    expect(measureBox(root, 40, 10)).toEqual({ width: 7, height: 2 });
+  });
+});

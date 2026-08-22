@@ -7,7 +7,7 @@ import {
   useState, useTheme, useEffect,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
-import { Tree, CodeViewer, MarkdownView, ResourcePanel, layoutMarkdown, type TreeNode } from '@textui/core';
+import { Tree, CodeViewer, MarkdownView, ResourcePanel, layoutMarkdown, useDecorations, type TreeNode } from '@textui/core';
 import { EmptyState, ErrorState, KeyValue, Spinner } from '@textui/core';
 import { Breadcrumb, Menu } from '@textui/core';
 import { viewportRows } from '@textui/core';
@@ -261,6 +261,15 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
   } = props;
   const app = runtime.app();
 
+  /*
+   * Whatever anything has to say about these files.
+   *
+   * The explorer knows nothing about git, or errors, or search results - it
+   * asks for the mark on a URI and draws it. One subscription for the whole
+   * tree, because a hook per row would move the hook count as the list does.
+   */
+  const decorationFor = useDecorations();
+
   const [children, setChildren] = useState<Record<string, Resource[]>>({});
   const [expanded, setExpanded] = useState<string[]>([root]);
   const [selected, setSelected] = useState<string | null>(selectedUri ?? null);
@@ -291,6 +300,10 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
   const toNode = (resource: Resource): TreeNode => {
     const kids = children[resource.uri];
     const container = resource.capabilities.includes('list');
+    const mark = decorationFor(resource.uri);
+    const size = resource.metadata.size !== undefined
+      ? formatSize(resource.metadata.size)
+      : undefined;
     return {
       id: resource.uri,
       label: resource.metadata.name,
@@ -299,7 +312,11 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
       // wearing two of them.
       hasChildren: container,
       children: kids?.map(toNode),
-      meta: resource.metadata.size !== undefined ? formatSize(resource.metadata.size) : undefined,
+      // A mark wins the column: that a file is modified is worth more than how
+      // many bytes it is, and the size is still one keystroke away.
+      ...(mark?.badge !== undefined ? { meta: mark.badge } : size !== undefined ? { meta: size } : {}),
+      ...(mark?.tone !== undefined ? { tone: mark.tone } : {}),
+      ...(mark?.icon !== undefined ? { icon: mark.icon } : {}),
     };
   };
 

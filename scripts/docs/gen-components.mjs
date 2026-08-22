@@ -10,9 +10,10 @@
 //     nobody types by hand.
 //
 // Run with --check to fail instead of write, which is what CI wants.
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { EXAMPLES } from './examples.mjs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
+import { ROOT, at } from './root.mjs';
 
 const CHECK = process.argv.includes('--check');
 
@@ -35,7 +36,7 @@ const NOT_IN_CATALOG = new Set(['Screen']);
 function declaredInSource() {
   const names = new Set();
   for (const pkg of ['core', 'documents']) {
-    const dir = `packages/${pkg}/src`;
+    const dir = at(`packages/${pkg}/src`);
     for (const f of readdirSync(dir, { recursive: true })) {
       if (!String(f).endsWith('.ts')) continue;
       const text = readFileSync(join(dir, String(f)), 'utf8');
@@ -48,7 +49,7 @@ function declaredInSource() {
 const core = await import('../../packages/core/dist/ui/index.js');
 const docs = await import('../../packages/documents/dist/index.js');
 const { interfaces, byFile, components, aliases } = JSON.parse(
-  readFileSync('scripts/docs/props.json', 'utf8'),
+  readFileSync(at('scripts/docs/props.json'), 'utf8'),
 );
 
 const CATALOG = [
@@ -215,17 +216,12 @@ for (const entry of CATALOG) {
     : SECTIONS[OVERRIDES[entry.component] ?? entry.category];
   if (!section) { console.warn(`no section for category ${entry.category} (${entry.component})`); continue; }
 
-  const dir = join('docs/components', section.dir);
+  const dir = join(at('docs/components'), section.dir);
   mkdirSync(dir, { recursive: true });
   const slug = entry.component.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
   const file = join(dir, `${slug}.md`);
 
   const table = propsTable(entry);
-  const pkg = entry.pkg ?? '@textui/core';
-  const importLine = PRIMITIVES.has(entry.component)
-    ? 'A host primitive - no import, it is part of the JSX namespace.'
-    : `\`\`\`ts\nimport { ${entry.component} } from '${pkg}';\n\`\`\``;
-
   if (!existsSync(file)) {
     const authored = EXAMPLES[entry.component];
     if (!authored) { unwritten.push(entry.component); continue; }
@@ -266,7 +262,7 @@ ${entry.role && entry.role !== 'presentation' ? `\nRole: \`${entry.role}\`.\n` :
     `${START}\n${table}${END}`,
   );
   if (next !== current) {
-    if (CHECK) stale.push(file);
+    if (CHECK) stale.push(relative(ROOT, file));
     else writeFileSync(file, next);
     synced++;
   }
@@ -277,7 +273,7 @@ ${entry.role && entry.role !== 'presentation' ? `\nRole: \`${entry.role}\`.\n` :
 // Generated because the count is a moving target - it went 91, 94 in a single
 // afternoon. A hand-kept list is a list that is missing the last three.
 {
-  const CATALOG_PAGE = 'docs/components/README.md';
+  const CATALOG_PAGE = at('docs/components/README.md');
   if (existsSync(CATALOG_PAGE)) {
     const slugOf = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
     const dirOf = (entry) => (PRIMITIVES.has(entry.component)
@@ -308,7 +304,7 @@ ${entry.role && entry.role !== 'presentation' ? `\nRole: \`${entry.role}\`.\n` :
     const current = readFileSync(CATALOG_PAGE, 'utf8');
     const next = current.replace(new RegExp(`${START}[\\s\\S]*?${END}`), `${START}\n${table}${END}`);
     if (next !== current) {
-      if (CHECK) stale.push(CATALOG_PAGE);
+      if (CHECK) stale.push(relative(ROOT, CATALOG_PAGE));
       else writeFileSync(CATALOG_PAGE, next);
       synced++;
     }
@@ -316,7 +312,7 @@ ${entry.role && entry.role !== 'presentation' ? `\nRole: \`${entry.role}\`.\n` :
 }
 
 // The shared bases, documented once. Same marker, same guarantee.
-const SHARED_PAGE = 'docs/components/base-props.md';
+const SHARED_PAGE = at('docs/components/base-props.md');
 if (existsSync(SHARED_PAGE)) {
   let tables = '';
   for (const name of ['BaseProps', 'BoxProps', 'TextProps', 'CanvasProps', 'SpacerProps']) {
@@ -332,7 +328,7 @@ if (existsSync(SHARED_PAGE)) {
   const current = readFileSync(SHARED_PAGE, 'utf8');
   const next = current.replace(new RegExp(`${START}[\\s\\S]*?${END}`), `${START}\n${tables}${END}`);
   if (next !== current) {
-    if (CHECK) stale.push(SHARED_PAGE);
+    if (CHECK) stale.push(relative(ROOT, SHARED_PAGE));
     else writeFileSync(SHARED_PAGE, next);
     synced++;
   }

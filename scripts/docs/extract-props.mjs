@@ -6,22 +6,23 @@
 // eighty components a hand-kept one disagrees within a release.
 import ts from 'typescript';
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, relative } from 'node:path';
+import { ROOT, at } from './root.mjs';
 
-const UI_DIR = resolve('packages/core/src/ui');
-const JSX_DIR = resolve('packages/core/src/jsx');
+const UI_DIR = at('packages/core/src/ui');
+const JSX_DIR = at('packages/core/src/jsx');
 
 const files = [
   ...readdirSync(UI_DIR).filter((f) => f.endsWith('.ts')).map((f) => join(UI_DIR, f)),
   join(JSX_DIR, 'intrinsics.ts'),
-  ...readdirSync(resolve('packages/core/src/types'))
+  ...readdirSync(at('packages/core/src/types'))
     .filter((f) => f.endsWith('.ts'))
-    .map((f) => join(resolve('packages/core/src/types'), f)),
+    .map((f) => join(at('packages/core/src/types'), f)),
   // The resource, JSON and editor components ship from @textui/documents, so
   // their props live outside core and would otherwise come out empty.
-  ...readdirSync(resolve('packages/documents/src'), { recursive: true })
+  ...readdirSync(at('packages/documents/src'), { recursive: true })
     .filter((f) => String(f).endsWith('.ts'))
-    .map((f) => join(resolve('packages/documents/src'), String(f))),
+    .map((f) => join(at('packages/documents/src'), String(f))),
 ];
 
 /** JSDoc immediately above a node, as plain text. */
@@ -58,7 +59,7 @@ for (const file of files) {
         .flatMap((h) => h.types.map((t) => t.getText(source)));
       const record = {
         name: node.name.text,
-        file: file.replace(resolve('.') + '/', ''),
+        file: relative(ROOT, file),
         extends: heritage,
         doc: docOf(node, source),
         members: node.members.flatMap((m) => {
@@ -105,7 +106,7 @@ for (const file of files) {
         }
         defaults[nameArg.text] = {
           propsType: init.typeArguments?.[0]?.getText(source) ?? null,
-          file: file.replace(resolve('.') + '/', ''),
+          file: relative(ROOT, file),
           defaults: found,
         };
       }
@@ -114,5 +115,5 @@ for (const file of files) {
 }
 
 const out = { interfaces, byFile, components: defaults, aliases };
-writeFileSync('scripts/docs/props.json', JSON.stringify(out, null, 2));
+writeFileSync(at('scripts/docs/props.json'), JSON.stringify(out, null, 2));
 console.log(`interfaces: ${Object.keys(interfaces).length}  components: ${Object.keys(defaults).length}  aliases: ${Object.keys(aliases).length}`);

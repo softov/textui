@@ -19,6 +19,11 @@ export default tseslint.config(
     ignores: [
       '**/dist/**', '**/node_modules/**', '**/.dev/**', '**/coverage/**',
       '**/_site/**', '**/vendor/**', '**/.jekyll-cache/**',
+      // Doc snippets, lifted out of the markdown by `docs:check`. Their unused
+      // imports are the point - an example imports what it demonstrates - and
+      // the `declare const app: import('...')` preamble is written for `tsc`,
+      // which is the only tool that should have an opinion about them.
+      'scripts/docs/snippets/src/**',
     ],
   },
 

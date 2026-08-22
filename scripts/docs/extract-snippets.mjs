@@ -13,10 +13,11 @@
 // the page and never rendered. That is what keeps `<Button onPress={save} />`
 // in the prose instead of twelve lines of imports declaring what `save` is.
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative } from 'node:path';
+import { ROOT, at } from './root.mjs';
 
-const DOCS = resolve('docs');
-const OUT = resolve('scripts/docs/snippets/src');
+const DOCS = at('docs');
+const OUT = at('scripts/docs/snippets/src');
 
 function markdownFiles(dir) {
   const out = [];
@@ -80,7 +81,7 @@ for (const file of markdownFiles(DOCS)) {
     }
 
     const header =
-      `// Extracted from ${relative(resolve('.'), file)}:${startLine}\n` +
+      `// Extracted from ${relative(ROOT, file)}:${startLine}\n` +
       `// Edit the markdown, not this file.\n` +
       (setup ? `${setup}\n` : '') +
       (local ? `${local}\n` : '');

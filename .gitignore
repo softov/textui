@@ -10,3 +10,8 @@ brief/
 # Saved state the examples write, into whatever directory they were run from.
 /arcade.json
 /todo.json
+
+# textide writes its settings back as they change, so running it here leaves
+# one behind. Anchored to the root: a project that uses textide should commit
+# its own, and only this repo's happens to be somebody's editor state.
+/.textide.json

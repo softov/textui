@@ -5,8 +5,9 @@
 // github.com. Cheap to check, and the only thing that catches a rename.
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join, dirname, resolve, relative } from 'node:path';
+import { ROOT, at } from './root.mjs';
 
-const DOCS = resolve('docs');
+const DOCS = at('docs');
 const files = [];
 (function walk(dir) {
   for (const e of readdirSync(dir)) {
@@ -34,7 +35,7 @@ for (const file of files) {
     const ok = existsSync(abs) && (statSync(abs).isFile() || existsSync(join(abs, 'README.md')));
     if (!ok) {
       broken++;
-      console.error(`${relative(resolve('.'), file)}  ->  ${raw}`);
+      console.error(`${relative(ROOT, file)}  ->  ${raw}`);
     }
   }
 }

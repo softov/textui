@@ -154,6 +154,10 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
      * footer offers, because a documented key that does not work is worse than
      * no key at all.
      */
+    // The other half of a split. `f6` is what a window manager and half the
+    // editors in existence use for "the next pane", and it is not a chord over
+    // a key that means something else.
+    ['f6', 'go.otherGroup'],
     ['f1', 'help.keys'],
     ['alt+shift+?', 'help.keys'],
     ['alt+/', 'help.keys'],

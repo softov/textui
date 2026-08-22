@@ -8,7 +8,8 @@ import { ACTIVE_PATH } from './filesystem.js';
 import { WORKSPACE_PATH, type Workspace } from './workspace.js';
 import { iconsFor } from './icons.js';
 import {
-  EDITOR_SELECTION, EDITOR_URI, SPLIT_PATH, TABS_PATH, openTab, reconcileTabs, tabLabel,
+  EDITOR_SELECTION, EDITOR_URI, GROUPS_PATH, GROUP_PATH, LAYOUT_PATH, activateTab,
+  openTab, paneScope, reconcileTabs, tabLabel, type EditorLayout, type Group,
 } from './tabs.js';
 
 /**
@@ -83,8 +84,10 @@ interface PaneProps {
   uri: string | null;
   /** The focus scope this pane registers, so "am I in here" has an answer. */
   scopeId: string;
-  /** Only one pane takes focus when edit mode is entered. */
-  primary?: boolean;
+  /** Which group this pane draws. */
+  group: number;
+  /** True for the group the keyboard is in. Only that one claims focus. */
+  primary: boolean;
 }
 
 /**
@@ -98,7 +101,7 @@ interface PaneProps {
  * in here" is a question about the published focus rather than about this
  * component holding focus itself.
  */
-const Pane = defineComponent<PaneProps>('EditorPane', ({ uri, scopeId, primary }) => {
+const Pane = defineComponent<PaneProps>('EditorPane', ({ uri, scopeId, group, primary }) => {
   const runtime = useRuntime();
   const Icon = iconsFor(useCapabilities().unicode);
   const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
@@ -115,9 +118,16 @@ const Pane = defineComponent<PaneProps>('EditorPane', ({ uri, scopeId, primary }
    * Only the primary pane asks. Two panes both claiming an unclaimed keyboard
    * is a race whose winner is whichever rendered first.
    */
-  const scope = useFocusScope({ id: scopeId, autoFocus: primary === true });
+  const scope = useFocusScope({ id: scopeId, autoFocus: primary });
   const focusedScope = useStoreValue<string | null>('$/focus/scope', null);
   const active = focusedScope === scope;
+
+  // The group the keyboard is in is wherever the keyboard actually is. A pane
+  // that reported it only when clicked would disagree with focus the moment
+  // anything moved focus another way.
+  useEffect(() => {
+    if (active) runtime.store.set(GROUP_PATH, group);
+  }, [active, group]);
 
   return (
     <Row flex={1} align="stretch" id={scopeId}>
@@ -158,8 +168,9 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
     const runtime = useRuntime();
     const uri = useStoreValue<string | null>(EDITOR_URI, null);
     const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
-    const tabs = useStoreValue<string[]>(TABS_PATH, []) ?? [];
-    const split = useStoreValue<string | null>(SPLIT_PATH, null);
+    const groups = useStoreValue<Group[]>(GROUPS_PATH, []) ?? [];
+    const focused = useStoreValue<number>(GROUP_PATH, 0) ?? 0;
+    const layout = useStoreValue<EditorLayout>(LAYOUT_PATH, 'tabs') ?? 'tabs';
     const Icon = iconsFor(useCapabilities().unicode);
     // The unsaved marker is the buffer's, so this has to hear about the buffer
     // changing - a strip that reads dirtiness without subscribing to it shows
@@ -167,36 +178,56 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
     useStoreSubtree(DOCUMENTS_ROOT);
 
     // Anything may set the active URI - a command, a test, an extension that
-    // has never heard of a strip - so the strip agrees with it rather than
+    // has never heard of a group - so the strips agree with it rather than
     // being the only way to open a file.
     useEffect(() => { reconcileTabs(runtime.store); }, [uri]);
 
-    return (
-      <Column flex={1}>
-        {tabs.length > 1
+    const live: Group[] = groups.length > 0 ? groups : [{ tabs: [], active: null }];
+    const at = Math.max(0, Math.min(focused, live.length - 1));
+    /**
+     * One group: its own strip, and the file that strip has forward.
+     *
+     * The strip is drawn for a group with one tab as soon as there are two
+     * groups, because in a split the strip is what says which half is showing
+     * what - and dropped for a single group with a single tab, where it would
+     * be a row costing a line to say what the titlebar already says.
+     */
+    const groupNode = (group: Group, index: number): RenderOutput => (
+      <Column key={String(index)} flex={1}>
+        {group.tabs.length > 1 || live.length > 1
           ? (
             <Tabs
-              items={tabs.map((tab) => ({
+              items={group.tabs.map((tab) => ({
                 id: tab,
                 label: tabLabel(tab),
                 // A glyph, not only a colour: a screenshot and a 16-colour
                 // session both lose the colour and neither loses the dot.
                 ...(isDocumentDirty(runtime.store, tab) ? { badge: Icon.dirty } : {}),
               }))}
-              activeId={uri ?? undefined}
-              onChange={(next: string) => { runtime.store.set(EDITOR_URI, next); }}
+              activeId={group.active ?? undefined}
+              onChange={(next: string) => { activateTab(runtime.store, index, next); }}
             />
             )
           : null}
+        <Pane
+          uri={group.active}
+          scopeId={paneScope(index)}
+          group={index}
+          primary={index === at}
+        />
+      </Column>
+    );
 
-        {split
-          ? (
-            <Row flex={1} gap={1}>
-              <Pane uri={uri ?? null} scopeId="pane.main" primary />
-              <Pane uri={split} scopeId="pane.split" />
-            </Row>
-            )
-          : <Pane uri={uri ?? null} scopeId="pane.main" primary />}
+    return (
+      <Column flex={1}>
+        {live.length === 1
+          ? groupNode(live[0] as Group, 0)
+          : layout === 'stack'
+            ? <Column flex={1} gap={1}>{live.map(groupNode)}</Column>
+            // `stretch`, or a row sizes its children to their content and
+            // centres them: two half-height panes floating in the middle of a
+            // pane that is the right height.
+            : <Row flex={1} gap={1} align="stretch">{live.map(groupNode)}</Row>}
 
         {/*
           * The hints are what you can do *here*, so editing gets the editing

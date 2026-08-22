@@ -9,8 +9,9 @@ import {
 import { ACTIVE_PATH } from './filesystem.js';
 import { iconsFor } from './icons.js';
 import {
-  EDITOR_URI, closeTab, openTabs, selectTab, stepTab, tabFromPath, tabLabel, tabPath,
-  toggleSplit,
+  EDITOR_LAYOUTS, EDITOR_URI, allTabs, closeTab, focusedIndex, layoutOf, otherGroup,
+  paneScope, readGroups, selectTab, setLayout, splitEditor, stepTab, tabFromPath,
+  tabPath, unsplit, type EditorLayout,
 } from './tabs.js';
 
 /**
@@ -261,7 +262,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       when: '$/ui/editor/uri',
       args: [{
         name: 'path', type: 'string' as const, required: true,
-        choices: () => openTabs(app.store).map((uri) => tabPath(app.store, uri)),
+        choices: () => allTabs(app.store).map((uri) => tabPath(app.store, uri)),
       }],
       run: (args: Record<string, unknown>, ctx: CommandContext) => {
         const uri = tabFromPath(ctx.store, String(args.path ?? ''));
@@ -371,14 +372,64 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       category: 'View',
       slots: ['palette'],
       when: '$/ui/editor/uri',
-      // A split is a second URI beside the first one, so there is nothing to
-      // create and nothing to tear down - which is why closing it cannot lose
-      // an edit, and why two panes on one file share a buffer and a history.
+      // A group is a list of URIs and which one is forward, so splitting
+      // creates nothing and merging destroys nothing - which is why closing a
+      // split cannot lose an edit, and why two panes on one file share a
+      // buffer and a history.
       run: (_args: Record<string, unknown>, ctx: CommandContext) => {
-        const beside = toggleSplit(ctx.store);
-        notify(ctx.app, {
-          message: beside ? `Split with ${tabLabel(beside)}.` : 'One pane.',
-        });
+        if (readGroups(ctx.store).length > 1) {
+          unsplit(ctx.store);
+          notify(ctx.app, { message: 'One group.' });
+          return;
+        }
+        if (!splitEditor(ctx.store)) {
+          notify(ctx.app, { tone: 'warning', message: 'Nothing open to split.' });
+        }
+      },
+    },
+    {
+      id: 'view.editorLayout',
+      icon: Icon.arrangement,
+      title: 'Editor Layout',
+      category: 'View',
+      slots: ['palette'],
+      // The same shape as Theme: the command names what it needs and what the
+      // answers are, and whatever is asking reads that rather than keeping its
+      // own copy of the list. Choosing an arrangement that needs two groups
+      // makes the second one, so this is also how a split is opened.
+      args: [{
+        name: 'layout', type: 'string' as const, required: true,
+        choices: [...EDITOR_LAYOUTS],
+        default: layoutOf(app.store),
+      }],
+      run: (args: Record<string, unknown>, ctx: CommandContext) => {
+        const layout = String(args.layout ?? '') as EditorLayout;
+        if (EDITOR_LAYOUTS.includes(layout)) setLayout(ctx.store, layout);
+      },
+    },
+    {
+      id: 'go.otherGroup',
+      icon: Icon.split,
+      title: 'Other Group',
+      category: 'Go',
+      slots: ['palette'],
+      when: '$/ui/editor/uri',
+      /*
+       * The keyboard goes too.
+       *
+       * Which group is focused and where focus actually is are one fact, and a
+       * command that moved only the first half would leave the caret in the
+       * pane you just left while the next file you opened landed in the other
+       * one. The pane reports focus back the other way, so anything that moves
+       * focus by any other means stays in step without this.
+       */
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        if (!otherGroup(ctx.store)) {
+          notify(ctx.app, { message: 'Only one group. Split first.' });
+          return;
+        }
+        const first = ctx.app.focus.order(paneScope(focusedIndex(ctx.store)))[0];
+        if (first) ctx.app.focus.focus(first);
       },
     },
     {

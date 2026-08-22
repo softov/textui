@@ -30,6 +30,32 @@ Every glyph has three tiers - the theme's in [`glyphs.ts`](../core/src/themes/gl
 
 **`--log-file` and `--log-unix` send a running commentary somewhere else.** What has focus, what the chrome did, every command that ran. `examples/logtail.mjs` listens on a socket.
 
+## Groups
+
+A group is a strip of tabs and which of them is showing. One group looks like
+an ordinary tab bar. Two groups is a split - side by side or one above the
+other - and **each half keeps its own strip**, because a split whose halves
+share one strip is two panes showing whatever the last click did rather than
+two places to be.
+
+```
+Editor Layout  ▸  tabs | split | stack
+Split Editor      the file you are on moves into a group beside the one you were on
+f6                the other group, keyboard and all
+```
+
+Choosing an arrangement that needs two groups makes the second one, so the
+layout command is also how a split opens. Splitting creates nothing and
+merging destroys nothing: a group is a list of URIs, so closing a split cannot
+lose an edit, and two panes on one file share a buffer and a history because
+the buffer is the document and not the pane.
+
+Two rules fall out of that and are worth stating. A file the *other* group
+already has moves the keyboard there rather than opening a second copy - two
+tabs on one file in two groups is a split nobody can reason about. And a group
+whose last tab closes goes away, because a group with nothing in it is not a
+pane, it is a hole.
+
 ## Keys that are chords on purpose
 
 Switching file is `alt+←`, `alt+→` and `alt+1`…`alt+9` rather than something
@@ -147,7 +173,8 @@ commands, a component and a mount, and unloading it leaves nothing behind.
 | Explorer | The filesystem through the resource registry - lazy, sorted, filtered |
 | Viewer | Whatever the registry says opens the selected kind |
 | Editing | Selection, cut, copy, paste, indent, undo - `ctrl+c` is copy only while something is selected, so quit is never lost |
-| Tabs | Every open file. `alt+←`/`alt+→` between them, `alt+1`…`alt+9` straight to one, `ctrl+w` to close |
+| Groups | A strip of tabs and which one is showing. `alt+←`/`alt+→` between them, `alt+1`…`alt+9` straight to one, `ctrl+w` to close |
+| Layout | One group is a tab bar; two is a split, side by side or stacked, each half with its own strip. `f6` between them |
 | Keys | `f1` opens the sheet - the footer holds five, and there are thirty |
 | Split | A second pane beside the first, on another file or the same one |
 | Reload | `pnpm dev:watch`, then f5 or a save - the screen is rebuilt, the store is not |

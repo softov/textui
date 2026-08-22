@@ -7,7 +7,7 @@ import { getDocument, isDocumentDirty } from '@textui/documents';
 import { loadWorkspace, registerTextide } from '../src/index.js';
 import { createReloader, STATUS_SEGMENTS } from '../src/reload.js';
 import type { Registrar } from '../src/reload.js';
-import { EDITOR_URI, TABS_PATH } from '../src/tabs.js';
+import { EDITOR_URI, allTabs } from '../src/tabs.js';
 
 /**
  * Everything above the status bar.
@@ -111,7 +111,7 @@ describe('a reload', () => {
     await quiet();
 
     expect(t.app.store.get(EDITOR_URI)).toBe(uri('beta.txt'));
-    expect(t.app.store.get(TABS_PATH)).toEqual([uri('alpha.txt'), uri('beta.txt')]);
+    expect(allTabs(t.app.store)).toEqual([uri('alpha.txt'), uri('beta.txt')]);
     expect(isDocumentDirty(t.app.store, uri('beta.txt')), 'the edit survived').toBe(true);
     expect(getDocument(t.app.store, uri('beta.txt'))?.content).toBe('!beta one\n');
     await t.unmount();

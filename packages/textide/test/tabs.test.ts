@@ -5,7 +5,9 @@ import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
 import { getDocument } from '@textui/documents';
 import { loadWorkspace, registerTextide } from '../src/index.js';
-import { EDITOR_URI, SPLIT_PATH, TABS_PATH } from '../src/tabs.js';
+import {
+  EDITOR_URI, GROUP_PATH, LAYOUT_PATH, allTabs, readGroups,
+} from '../src/tabs.js';
 
 /**
  * Tabs and splits.
@@ -31,6 +33,16 @@ beforeAll(async () => {
 afterAll(async () => {
   await rm(dir, { recursive: true, force: true });
 });
+
+/** The open files of the group the keyboard is in. */
+function tabsOf(t: { app: { store: Parameters<typeof readGroups>[0] } }): string[] {
+  return readGroups(t.app.store)[
+    Math.max(0, Math.min(
+      (t.app.store.get<number>(GROUP_PATH) ?? 0),
+      readGroups(t.app.store).length - 1,
+    ))
+  ]?.tabs ?? [];
+}
 
 interface Size { width: number; height: number }
 const SIZES: Size[] = [
@@ -62,7 +74,7 @@ describe('the strip', () => {
       t.app.store.set(EDITOR_URI, uri('beta.txt'));
       await quiet();
 
-      expect(t.app.store.get(TABS_PATH)).toEqual([uri('alpha.txt'), uri('beta.txt')]);
+      expect(tabsOf(t)).toEqual([uri('alpha.txt'), uri('beta.txt')]);
       expect(t.hasText('alpha.txt'), 'the strip names the one you left').toBe(true);
       expect(t.hasText('beta one'), 'and shows the one you are on').toBe(true);
       await t.unmount();
@@ -78,7 +90,7 @@ describe('the strip', () => {
     const { t, quiet, uri } = await open(SIZES[0]!);
     t.app.store.set(EDITOR_URI, uri('gamma.txt'));
     await quiet();
-    expect(t.app.store.get(TABS_PATH)).toEqual([uri('gamma.txt')]);
+    expect(tabsOf(t)).toEqual([uri('gamma.txt')]);
     await t.unmount();
   });
 
@@ -120,7 +132,7 @@ describe('the strip', () => {
 
     t.app.execute('file.close');
     await quiet();
-    expect(t.app.store.get(TABS_PATH)).toEqual([uri('alpha.txt'), uri('gamma.txt')]);
+    expect(tabsOf(t)).toEqual([uri('alpha.txt'), uri('gamma.txt')]);
     expect(t.app.store.get(EDITOR_URI)).toBe(uri('gamma.txt'));
     await t.unmount();
   });
@@ -131,7 +143,7 @@ describe('the strip', () => {
     await quiet();
     t.app.execute('file.close');
     await quiet();
-    expect(t.app.store.get(TABS_PATH)).toEqual([]);
+    expect(tabsOf(t)).toEqual([]);
     expect(t.app.store.get(EDITOR_URI)).toBe(null);
     await t.unmount();
   });
@@ -147,31 +159,44 @@ describe('the strip', () => {
 
     t.app.execute('file.close');
     await quiet();
-    expect(t.app.store.get(TABS_PATH)).toEqual([uri('alpha.txt')]);
+    expect(tabsOf(t)).toEqual([uri('alpha.txt')]);
     await t.unmount();
   });
 });
 
+/**
+ * Groups.
+ *
+ * A group is a strip of tabs and which of them is showing. One group looks
+ * like a tab bar; two groups is a split, and each half keeps its own strip -
+ * because a split whose halves share one strip is two panes showing whatever
+ * the last click did, rather than two places to be.
+ */
 describe('the split', () => {
   for (const size of SIZES) {
-    it(`shows two files at once, at ${label(size)}`, async () => {
+    it(`gives each half its own strip, at ${label(size)}`, async () => {
       const { t, quiet, uri } = await open(size);
-      t.app.store.set(EDITOR_URI, uri('alpha.txt'));
-      await quiet();
-      t.app.store.set(EDITOR_URI, uri('beta.txt'));
-      await quiet();
+      for (const name of ['alpha.txt', 'beta.txt']) {
+        t.app.store.set(EDITOR_URI, uri(name));
+        await quiet();
+      }
 
       t.app.execute('view.split');
       await quiet();
-      expect(t.app.store.get(SPLIT_PATH)).toBe(uri('alpha.txt'));
-
-      // The command says what it did, and the toast that says it floats over
-      // the panes this is about. Reading the frame underneath means putting it
-      // away first rather than asserting on whichever half it happens to miss.
       t.app.layers.closeLayer('notification');
       await quiet();
-      expect(t.hasText('beta one')).toBe(true);
+
+      const groups = readGroups(t.app.store);
+      expect(groups).toHaveLength(2);
+      expect(groups[0]?.tabs, 'the file you split off left the first group')
+        .toEqual([uri('alpha.txt')]);
+      expect(groups[1]?.tabs).toEqual([uri('beta.txt')]);
+      expect(t.app.store.get(GROUP_PATH), 'and the keyboard went with it').toBe(1);
+
       expect(t.hasText('alpha one')).toBe(true);
+      expect(t.hasText('beta one')).toBe(true);
+      // Two strips, not one: each half says what it is showing.
+      expect(t.getAllByRole('tablist')).toHaveLength(2);
       await t.unmount();
     });
   }
@@ -181,43 +206,122 @@ describe('the split', () => {
    * split has nothing of its own to lose, so it costs nothing to open on a
    * file too long to see at once.
    */
-  it('pins the same file when there is no other one open', async () => {
+  it('shows the same file twice when there is only one open', async () => {
     const { t, quiet, uri } = await open(SIZES[0]!);
     t.app.store.set(EDITOR_URI, uri('alpha.txt'));
     await quiet();
     t.app.execute('view.split');
     await quiet();
-    expect(t.app.store.get(SPLIT_PATH)).toBe(uri('alpha.txt'));
+
+    const groups = readGroups(t.app.store);
+    expect(groups.map((g) => g.active)).toEqual([uri('alpha.txt'), uri('alpha.txt')]);
     await t.unmount();
   });
 
-  it('goes back to one pane on the second call', async () => {
+  it('goes back to one group on the second call, keeping every file', async () => {
     const { t, quiet, uri } = await open(SIZES[0]!);
-    t.app.store.set(EDITOR_URI, uri('alpha.txt'));
-    await quiet();
+    for (const name of ['alpha.txt', 'beta.txt', 'gamma.txt']) {
+      t.app.store.set(EDITOR_URI, uri(name));
+      await quiet();
+    }
     t.app.execute('view.split');
     await quiet();
     t.app.execute('view.split');
     await quiet();
-    expect(t.app.store.get(SPLIT_PATH)).toBe(null);
+
+    expect(readGroups(t.app.store)).toHaveLength(1);
+    expect(allTabs(t.app.store), 'nothing was closed by merging')
+      .toEqual([uri('alpha.txt'), uri('beta.txt'), uri('gamma.txt')]);
     await t.unmount();
   });
 
-  it('closes the split rather than leaving it on a file nobody has open', async () => {
+  it('arranges the groups as a row or a column', async () => {
+    const { t, quiet, uri } = await open(SIZES[1]!);
+    for (const name of ['alpha.txt', 'beta.txt']) {
+      t.app.store.set(EDITOR_URI, uri(name));
+      await quiet();
+    }
+
+    // Choosing an arrangement that needs two groups is also how a split opens.
+    t.app.execute('view.editorLayout', { layout: 'stack' });
+    await quiet();
+    expect(t.app.store.get(LAYOUT_PATH)).toBe('stack');
+    expect(readGroups(t.app.store)).toHaveLength(2);
+    const stacked = t.lines().findIndex((line) => line.includes('alpha one'));
+    const stackedBelow = t.lines().findIndex((line) => line.includes('beta one'));
+    expect(stacked, 'one above the other').not.toBe(stackedBelow);
+
+    t.app.execute('view.editorLayout', { layout: 'split' });
+    await quiet();
+    expect(t.app.store.get(LAYOUT_PATH)).toBe('split');
+    // Side by side is one row carrying both.
+    expect(t.lines().some((line) => line.includes('alpha one') && line.includes('beta one')))
+      .toBe(true);
+
+    t.app.execute('view.editorLayout', { layout: 'tabs' });
+    await quiet();
+    expect(readGroups(t.app.store), 'tabs is one group by definition').toHaveLength(1);
+    await t.unmount();
+  });
+
+  it('moves the keyboard between the groups with f6', async () => {
     const { t, quiet, uri } = await open(SIZES[0]!);
-    t.app.store.set(EDITOR_URI, uri('alpha.txt'));
-    await quiet();
-    t.app.store.set(EDITOR_URI, uri('beta.txt'));
-    await quiet();
+    for (const name of ['alpha.txt', 'beta.txt']) {
+      t.app.store.set(EDITOR_URI, uri(name));
+      await quiet();
+    }
     t.app.execute('view.split');
     await quiet();
-    expect(t.app.store.get(SPLIT_PATH)).toBe(uri('alpha.txt'));
+    expect(t.app.store.get(EDITOR_URI)).toBe(uri('beta.txt'));
 
-    t.app.store.set(EDITOR_URI, uri('alpha.txt'));
+    t.press('f6');
     await quiet();
+    expect(t.app.store.get(GROUP_PATH)).toBe(0);
+    expect(t.app.store.get(EDITOR_URI), 'and the open file follows it')
+      .toBe(uri('alpha.txt'));
+    await t.unmount();
+  });
+
+  /**
+   * A group with nothing in it is not a pane, it is a hole.
+   */
+  it('drops a group when its last tab closes', async () => {
+    const { t, quiet, uri } = await open(SIZES[0]!);
+    for (const name of ['alpha.txt', 'beta.txt']) {
+      t.app.store.set(EDITOR_URI, uri(name));
+      await quiet();
+    }
+    t.app.execute('view.split');
+    await quiet();
+    expect(readGroups(t.app.store)).toHaveLength(2);
+
     t.app.execute('file.close');
     await quiet();
-    expect(t.app.store.get(SPLIT_PATH)).toBe(null);
+    expect(readGroups(t.app.store)).toHaveLength(1);
+    expect(allTabs(t.app.store)).toEqual([uri('alpha.txt')]);
+    await t.unmount();
+  });
+
+  /**
+   * A file the other group already has moves the keyboard there rather than
+   * opening a second copy of it - two tabs on one file in two groups is a
+   * split nobody can reason about.
+   */
+  it('goes to the group that already has the file', async () => {
+    const { t, quiet, uri } = await open(SIZES[0]!);
+    for (const name of ['alpha.txt', 'beta.txt']) {
+      t.app.store.set(EDITOR_URI, uri(name));
+      await quiet();
+    }
+    t.app.execute('view.split');
+    await quiet();
+    expect(t.app.store.get(GROUP_PATH)).toBe(1);
+
+    t.app.store.set(EDITOR_URI, uri('alpha.txt'));
+    await quiet();
+    expect(t.app.store.get(GROUP_PATH), 'the group holding it took the keyboard').toBe(0);
+    expect(readGroups(t.app.store).map((g) => g.tabs))
+      .toEqual([[uri('alpha.txt')], [uri('beta.txt')]]);
     await t.unmount();
   });
 
@@ -225,7 +329,7 @@ describe('the split', () => {
    * One caret claims focus when edit mode is entered. Two panes both claiming
    * it is a race whose winner is whichever happened to render first.
    */
-  it('puts the caret in the primary pane, not in whichever drew first', async () => {
+  it('puts the caret in the group the keyboard is in', async () => {
     const { t, quiet, uri } = await open(SIZES[0]!);
     t.app.store.set(EDITOR_URI, uri('alpha.txt'));
     await quiet();
@@ -233,7 +337,11 @@ describe('the split', () => {
     await quiet();
     t.app.execute('file.edit');
     await quiet();
-    expect(t.app.focus.focused()).toBe(t.app.focus.order('pane.main')[0]);
+    expect(t.store.get('$/focus/scope')).toBe('pane.split');
+
+    t.press('f6');
+    await quiet();
+    expect(t.store.get('$/focus/scope')).toBe('pane.main');
     await t.unmount();
   });
 });
@@ -326,7 +434,7 @@ describe('the explorer', () => {
     expect(t.app.focus.focused(), 'the tree has the keyboard').not.toBe(null);
 
     for (let i = 0; i < 6; i++) { t.press('down'); await quiet(); }
-    expect(t.app.store.get(TABS_PATH) ?? [], 'nothing opened').toEqual([]);
+    expect(tabsOf(t) ?? [], 'nothing opened').toEqual([]);
     expect(t.app.store.get(EDITOR_URI) ?? null).toBe(null);
     await t.unmount();
   });
@@ -337,12 +445,12 @@ describe('the explorer', () => {
     const { t, quiet, uri } = await open(SIZES[0]!);
     t.press('enter');
     await quiet();
-    expect(t.app.store.get(TABS_PATH)).toEqual([uri('alpha.txt')]);
+    expect(tabsOf(t)).toEqual([uri('alpha.txt')]);
 
     t.press('down');
     t.press('enter');
     await quiet();
-    expect(t.app.store.get(TABS_PATH)).toEqual([uri('alpha.txt'), uri('beta.txt')]);
+    expect(tabsOf(t)).toEqual([uri('alpha.txt'), uri('beta.txt')]);
     await t.unmount();
   });
 

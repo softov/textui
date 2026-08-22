@@ -31,13 +31,27 @@ export interface ButtonProps extends BoxProps {
   hint?: string;
   onPress?(): void;
   autoFocus?: boolean;
+  /**
+   * How much of the screen the button takes, and how heavy its edge is.
+   *
+   * `md` is a button: three rows, the theme's edge. `sm` is one row with no
+   * edge at all, for a toolbar or a row of buttons that must not out-weigh
+   * the fields beside them. `lg` is three rows with a heavy one.
+   *
+   * It matters most when filled. A solid `md` draws its edge in half-blocks,
+   * so it stands the same height as the outline button next to it without
+   * reading as a heavier object; `lg` fills the edge cells too and becomes
+   * the whole rectangle, which is what solid used to do at every size - and
+   * why one row of buttons looked bigger than the row above it.
+   */
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export const Button = defineComponent<ButtonProps>('Button', (props) => {
   const theme = useTheme();
   const {
     label, tone = 'default', variant = 'outline', icon, hint,
-    onPress, disabled, autoFocus, ...rest
+    onPress, disabled, autoFocus, size = 'md', ...rest
   } = props;
 
   const focus = useFocus({ disabled, autoFocus });
@@ -66,6 +80,9 @@ export const Button = defineComponent<ButtonProps>('Button', (props) => {
   const color = disabled ? 'disabled' : TONE[resolvedTone];
   const onColor = disabled ? 'text' : ON_TONE[resolvedTone];
 
+  // `sm` has no ring, so nothing here reserves one.
+  const ringed = size !== 'sm' && theme.border !== 'none';
+
   // A solid button reserves the same ring an outline one draws, filled with
   // its own background rather than left out. Without it the two are one row
   // and three rows tall, and a dialog's OK sits a line above its Cancel.
@@ -81,7 +98,15 @@ export const Button = defineComponent<ButtonProps>('Button', (props) => {
   // a coloured block rather than a filled button. Hanging the fill on an inner
   // box leaves the ring on whatever is behind it. The wrapper is there whether
   // or not the button is filled, so focusing one does not reshape its tree.
-  const inset = variant !== 'solid' && variant !== 'ghost' && variant !== 'link';
+  //
+  // A solid button is inset too at `md`, which is the whole of the size fix:
+  // hanging the fill on an inner box leaves the ring to be drawn in
+  // half-blocks rather than filled through, so it weighs what the outline
+  // button beside it weighs. `lg` keeps the fill on the outer box - the ring
+  // cells take the tone as well and the button becomes a solid rectangle.
+  const inset = variant === 'ghost' || variant === 'link'
+    ? false
+    : variant !== 'solid' || (ringed && size === 'md');
 
   // Filled, the frame becomes the fill's own edge.
   //
@@ -99,12 +124,26 @@ export const Button = defineComponent<ButtonProps>('Button', (props) => {
   const filledBorder: BorderStyle =
     theme.border === 'none' || theme.border === 'ascii' ? theme.border : 'half';
 
+  // The edge, by size. `lg` asks for the heaviest line the theme can draw and
+  // falls back to the theme's own where there is none to ask for.
+  const edge: BorderStyle = size === 'lg' && theme.border !== 'ascii' ? 'bold' : theme.border;
+
   const style =
     variant === 'solid'
-      ? { bg: color, fg: onColor, border: solidBorder }
+      ? size === 'sm' || !ringed
+        // One row, filled. No ring to reserve and nothing to align to.
+        ? { bg: color, fg: onColor }
+        : size === 'lg'
+          // The fill runs under the ring, so the whole rectangle is the button.
+          ? { bg: color, fg: onColor, border: solidBorder }
+          // The ring is drawn from block elements whose coloured half faces
+          // inward: it meets the fill with no gap and stands half as heavy.
+          : { border: { style: filledBorder, color }, fg: color }
       : variant === 'ghost' || variant === 'link'
         ? (filled ? { bg: color, fg: onColor } : { fg: color })
-        : { border: { style: filled ? filledBorder : theme.border, color }, fg: color };
+        : size === 'sm' || !ringed
+          ? (filled ? { bg: color, fg: onColor } : { fg: color })
+          : { border: { style: filled ? filledBorder : edge, color }, fg: color };
 
   const padding = variant === 'ghost' || variant === 'link' ? 0 : ([0, 1] as [number, number]);
 
@@ -143,7 +182,9 @@ export const Button = defineComponent<ButtonProps>('Button', (props) => {
           align: 'center',
           padding,
           bold: focus.focused,
-          ...(filled ? { bg: color, fg: onColor } : {}),
+          // A solid button is filled whether or not it has focus - that is
+          // what solid means. An outline one fills only when it takes focus.
+          ...(variant === 'solid' || filled ? { bg: color, fg: onColor } : {}),
         }, ...content)
       : content,
   );

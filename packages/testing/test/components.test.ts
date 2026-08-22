@@ -1015,7 +1015,9 @@ describe('Button size', () => {
       await t.settle();
       const y = t.lines().findIndex((l) => l.includes('Go'));
       const cell = t.app.buffer().get((t.lines()[y] as string).indexOf('Go'), y);
-      expect(cell?.bg, `${size} should be filled`).toBeDefined();
+      // Against the backdrop, not merely "defined": every cell carries the
+      // canvas colour, so `toBeDefined` here would pass on an empty screen.
+      expect(cell?.bg, `${size} should be filled`).not.toEqual(t.app.buffer().get(19, 5)?.bg);
       await t.unmount();
     }
   });

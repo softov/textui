@@ -44,6 +44,7 @@ holds here too: an example nothing checks is an example that is already broken.
 | [`todo/`](todo) | pages and a stack: list, detail, collection, search, settings - and the difference between a surface, a screen and a layer |
 | [`arcade/`](arcade) | snake, tetris and breakout: the ticker as a game loop, the canvas as a playfield, and a key that means two things in two places |
 | [`surfaces/`](surfaces) | chrome with no shell: naming your own surfaces, nesting one inside another, and writing a layout |
+| [`chat/`](chat) | an agent chat client over AHP: a streaming transcript, a composer, and the block that appears when the agent stops and waits for a person |
 
 ## Running
 

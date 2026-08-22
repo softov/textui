@@ -1,0 +1,213 @@
+# chat
+
+An agent chat client, as an application: a catalogue of sessions on a host, a
+conversation that streams, and the block that appears when the agent stops and
+waits for a person.
+
+```bash
+pnpm example chat                       # run it
+pnpm example chat --static --width 100  # one frame, to stdout
+pnpm example chat --tick 15             # stream faster
+```
+
+It exists to answer one question: **which components does a chat application
+need that the catalog does not have?** The answer is at the bottom, and it is
+shorter than it looks - two components are genuinely missing, one is missing
+and needed by everything, and the rest is composition.
+
+## What it talks to
+
+[AHP](https://microsoft.github.io/agent-host-protocol/), the Agent Host
+Protocol, as Advisor speaks it. An agent host is a *sessions server*: several
+clients watch and drive the same sessions and none of them owns the process
+running the agent. That shape is why this is not "a chat UI with a backend" -
+every send is a fire-and-forget dispatch, the turn appears when the host has
+reduced it, and somebody else may be answering the same question in an editor
+on another machine while you look at it.
+
+`src/ahp/` is the protocol as a client reads it, and `HostConnection` is the
+seam. `fakeHost` implements it with a scripted agent, which is what lets the
+example run and be tested with nothing installed; a real client implements the
+same interface over a WebSocket and nothing above it changes.
+
+Time in the fake is a `pump`, not a timer: the application drives it from an
+interval and the test calls it in a loop, so the streaming path is what gets
+exercised rather than a fixture that arrived all at once.
+
+## Layout
+
+```
+src/
+  ahp/          the protocol: types, the status bitset, the connection, a scripted host
+  blocks.ts     a conversation → the entries a feed scrolls. No rendering
+  state.ts      the store paths, and the fold from host action to store write
+  control.ts    the controller, the commands, the keybindings
+  view/         the components, and nothing else
+  screens.tsx   which component goes where
+  app.tsx       registration: components, screens, surfaces
+  main.tsx      the terminal, the quit key, and the clock
+```
+
+The split that matters is `control.ts` against `view/`. They change for
+different reasons: a new screen is a rendering change, and answering a new kind
+of request is a change in control. Written as one file, a small protocol change
+touches every component that draws a bubble.
+
+`blocks.ts` is pure for the same reason - it is where a bug is a wrong *value*
+rather than a wrong picture, and a test for it needs no terminal.
+
+## The screens
+
+Six, and each is a different question.
+
+| | Screen | Is | Reached by |
+|---|---|---|---|
+| 1 | `sessions` | The catalogue: what is running, what is waiting on you, what errored | opens here, `esc` |
+| 2 | `chat` | One conversation: transcript, the block that waits, the composer | `enter` on a row |
+| 3 | `new` | Harness, model, thinking level, workspace, first message | `n`, `ctrl+n` |
+| 4 | `changes` | What the session changed on disk, from the changeset channel | `c` |
+| 5 | `settings` | The session's own config schema, and what may be changed while it runs | `s` |
+| 6 | `hosts` | Which host, whether it is answering, what it advertises | palette |
+
+Everything else that came up is **not** a screen:
+
+- the **command palette** and a **confirm** are layers - over a screen, belonging to none;
+- a **tool call's output** expands in place, because it is part of the row it belongs to;
+- the **block that waits** is inside the chat screen, between the transcript and the composer, where it cannot scroll away and cannot be typed past.
+
+Only `chat` is `keepAlive`. Coming back from the changes list to a conversation
+that had scrolled itself to the top is losing your place in a document that is
+still being written.
+
+## The keys
+
+Two tiers, and the split is not cosmetic.
+
+**Modified keys are global** because nothing types them. **Single letters are
+scoped to a screen**, because on the conversation screen `d` is a letter in a
+word and on the catalogue it disposes a session.
+
+The runtime already offers a key to the focused node before any keybinding, so
+a letter typed into the composer is a letter - that is the mechanism, and it is
+why there is no `q` for quit anywhere. A quit key that works only where nothing
+happens to be reading it is not a quit key.
+
+| Everywhere | |
+|---|---|
+| `ctrl+p` | commands |
+| `ctrl+c` | stop the running turn |
+| `ctrl+n` | new session |
+| `ctrl+r` | refresh the catalogue |
+| `ctrl+q` | quit |
+| `esc` | back, and out of the composer |
+
+| On the catalogue | |
+|---|---|
+| `↑ ↓` | move · `enter` open |
+| `n` `r` | new · refresh |
+| `a` `x` | archive · show archived |
+| `d` | dispose (asks first) |
+| `/` | into the filter |
+
+| In a conversation | |
+|---|---|
+| `i` | write - into the composer |
+| `esc` | back out of the composer, into the transcript |
+| `↑ ↓` `j` `k` | move the cursor between blocks |
+| `enter` `space` | expand what the cursor is on |
+| `pgup` `pgdn` | scroll · `g` top · `G` follow the tail |
+| `f` | stop following / follow again |
+| `c` `s` | changes · settings |
+| `t` | stop the turn |
+
+| In the composer | |
+|---|---|
+| `enter` | send - or queue, while a turn is running |
+| `alt+enter`, `ctrl+j` | a newline. Not `shift+enter`: most terminals cannot tell it from `enter` |
+| `↑` at the top | the last thing you sent |
+| `/` at the start | commands |
+
+| While the agent is waiting | |
+|---|---|
+| `a` `d` | approve · deny — *a confirmation only* |
+| `1`-`9` | a named option, by number: option ids are opaque and a live host sends whole sentences as ids |
+| `tab` `space` | move between questions · choose — *a question only* |
+| `enter` | send the answers, from the Send button |
+| `esc` | give the keyboard back without answering |
+
+A question is not a confirmation, and the hint row says so: offering "a
+approve" over an elicitation is the same mistake as rendering one as the other,
+made in the row that exists to explain it.
+
+## What this needed that the catalog does not have
+
+Writing it turned up three things that were missing, and they are **now in
+`@textui/core`** - this example imports them like anything else.
+
+| In core | Why it was not a composition |
+|---|---|
+| [`Feed`](../../packages/core/src/ui/data.ts) | `List` is fixed-height rows with a selection; `ScrollView` is a viewport that knows nothing about its contents. A conversation needs both at once: entries whose height is whatever the text wrapped to, a cursor that moves between them, and a tail it follows until the reader scrolls away. Heights are **measured and reported upward**, because what a paragraph wraps to is the layout's decision. Nothing about it is chat - a transcript, an activity stream, results with snippets and a diff whose files expand are the same component. |
+| [`TextArea`](../../packages/core/src/ui/control.ts) | `TextInput` is one line. A message is a paragraph with a path in it: it has to grow, take a newline that is not a send, walk a history, and hand back the keys it does not want. |
+| [`MarkdownView`](../../packages/core/src/ui/data.ts) + [`layoutMarkdown`](../../packages/core/src/util/markdown.ts) | Everything a host writes for a person is markdown. There was already a renderer inside `@textui/documents`, and it threw the emphasis away - correct for a README viewer, wrong for prose where **bold** is meaning. The layout is now one pure function in core with styled runs; `MarkdownView` paints it, and `MarkdownViewer` in `documents` windows the same rows and gained emphasis, inline code and links by doing so. |
+
+`TextInput` and `TextArea` also take a `focusId` now, which is what lets `/`
+mean "focus the filter": without one, a control's id comes from its instance
+and a command has nothing to name.
+
+**Still in this example, and probably application-shaped:** `ChatBubble`,
+`StreamingText`, `ReasoningBlock`, `ToolCallRow`, `ChatComposer`, `ChatHitl`
+and its `ConfirmRequest`/`QuestionForm`, `ChatTranscript`, `SessionList`,
+`ChangesList`, `ConnectionBadge`, `Gutter`. Every one is a composition of what
+the catalog ships - `ChatTranscript` is a `Feed` and a switch on the block
+kind, and the composer is a `TextArea` and a row of ghost buttons. The useful
+finding is that they *are* compositions, and that the vocabulary they share is
+a gutter, a status glyph and a tone.
+
+**Used unchanged, and enough:** `List` for the catalogue - rows are one line
+and the height does not depend on the content, which is exactly what a
+transcript is not - plus `Panel`, `Row`/`Column`, `RadioGroup`, `Checkbox`,
+`TextInput`, `Select`, `SearchBox`, `KeyValue`, `Badge`, `EmptyState`,
+`KeyHints`, `CommandPalette`, `confirm()`, and `Button` - including
+`variant="ghost"`, which is what the composer's action row is made of.
+
+**Still missing, and known:**
+
+- the composer's action row truncates below ~80 cells rather than dropping labels for glyphs. It needs `breakpoints`, which the primitives have and this does not use yet.
+- `1`-`9` does not answer a *question*, only a confirmation, because the same keys are letters in its freeform field. Numbering a question's options needs the field to say when it does not want a digit.
+- a tool call with four hundred lines of output expands to four hundred rows. `CodeViewer` is the right thing inside the row, and the row has to stop being as tall as its content for that to work.
+
+## Findings worth keeping
+
+**A running turn is not in the history.** `ChatState.turns` is the completed
+turns; the one in flight is `activeTurn`. A client that renders only `turns`
+shows an empty conversation for exactly as long as somebody is watching one
+happen.
+
+**Prose and tool calls are one ordered stream.** Splitting them apart puts
+every sentence at the top and every command at the bottom, and the sentence
+explaining a command ends up fifteen rows above it.
+
+**Status is two things in one number.** `InputNeeded` is 24 and carries
+`InProgress`, so it has to be tested first - otherwise the one session that
+wants a person reads as merely running.
+
+**A question carries no tool call.** Its prose is the request's message, and
+what is being asked is its questions. Read as a confirmation, the choices
+vanish and what is left on screen is a heading and an Approve button.
+
+**Accepting with no answers resumes the agent on the answers it already had**,
+which for a question it has just asked is none. So a required question that is
+unanswered is not sendable.
+
+## What to look at first
+
+[`src/view/hitl.tsx`](src/view/hitl.tsx), for the two kinds of waiting and why
+they are not one; then [`src/control.ts`](src/control.ts), which is every
+action the application has in one list; then
+[`src/view/transcript.tsx`](src/view/transcript.tsx), which is now short enough
+to read in a sitting because the viewport underneath it moved into the catalog.
+
+The measure-report-scroll loop itself is in
+[`Feed`](../../packages/core/src/ui/data.ts) - that is where to look for "how
+tall did that turn out to be", which is the question anything with entries of
+mixed height has to answer.

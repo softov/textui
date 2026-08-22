@@ -1,0 +1,19 @@
+{
+  "name": "@textui/example-chat",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "An agent chat client: sessions, a streaming transcript, and answering what the agent asks",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/terminal": "workspace:*"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*"
+  }
+}

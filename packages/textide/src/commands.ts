@@ -687,11 +687,16 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       run: (_args: Record<string, unknown>, ctx: CommandContext) => {
         const on = ctx.store.get<boolean>(MARK_LINES as BindingPath) === true;
         ctx.store.set(MARK_LINES as BindingPath, !on);
-        // Turning it on below 24-bit colour does nothing at all: the wash
-        // mixes 14% of a tone into the canvas, and two of sixteen palette
-        // colours blend to a third that already means something else. Silence
-        // here is a switch that looks broken, so say it instead.
-        if (!on && ctx.app.terminal.capabilities().colorDepth < 24) {
+        // At sixteen colours the wash cannot run: mixing 14% of a tone into
+        // the canvas lands on one of sixteen *named* colours that already
+        // means something else, so it is refused rather than drawn wrong.
+        // Silence here is a switch that looks broken, so say it instead - and
+        // say the true half, which is that the gutter marks are unaffected.
+        //
+        // 256 is not this case. It used to be, and the feature was off for the
+        // commonest terminal there is over an argument about a palette it was
+        // not using.
+        if (!on && ctx.app.terminal.capabilities().colorDepth < 8) {
           notify(ctx.app, {
             tone: 'warning',
             message: 'This terminal has too few colours to wash a line. The gutter marks do show.',

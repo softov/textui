@@ -10,9 +10,10 @@ import { openDocument, registerDocuments } from '../src/index.js';
  * "This line changed" is true of the file, not of whether you happen to be
  * editing it - and it lived only in `CodeEditor`, so turning the setting on
  * while *reading* did nothing at all. The failure was silent and it looked
- * like a colour problem: the wash needs 24-bit, so the warning about colours
- * fired, and the marks that were supposed to be the fallback were never drawn
- * by the viewer in the first place.
+ * like a colour problem: the wash was refused below 24-bit, so the warning
+ * about colours fired, and the marks that were supposed to be the fallback
+ * were never drawn by the viewer in the first place. The threshold has since
+ * come down to 256 (see `tint.test.ts`); the marks never needed either.
  */
 
 const URI = 'mem:///a.ts';
@@ -60,7 +61,7 @@ async function open(component: string, colorDepth: 24 | 8) {
 describe('marks in the gutter', () => {
   // Both renderers, because they draw the same file and used to disagree.
   for (const component of ['CodeViewer', 'CodeEditor']) {
-    // Both depths, because the wash needs 24-bit and the marks never did.
+    // Both depths, because the wash has a threshold and the marks never did.
     for (const depth of [24, 8] as const) {
       it(`${component} draws them at ${depth}-bit colour`, async () => {
         const { t } = await open(component, depth);

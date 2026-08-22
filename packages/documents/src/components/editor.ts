@@ -1,9 +1,10 @@
 import type { BoxProps } from '@textui/core';
 import type {
-  Color, ComponentDefinition, LineMark, RenderOutput, ResolvedTheme, StyleColor, SyntaxToken,
+  Color, ColorDepth, ComponentDefinition, LineMark, RenderOutput, ResolvedTheme, StyleColor,
+  SyntaxToken,
 } from '@textui/core';
 import {
-  findMatches, h, chorded, defineComponent, MARK_GLYPH, MARK_TONE, matchAt, mix,
+  downsample, findMatches, h, chorded, defineComponent, MARK_GLYPH, MARK_TONE, matchAt, mix,
   packColor, ScrollThumb,
   sliceColumns, stepMatch, stringWidth, unpackColor, useCapabilities, useClipboard, useEffect,
   useFind, useFocus, useHighlight, useInput, useLineMarks, useMeasure, useMemo, usePanelState,
@@ -212,14 +213,28 @@ const TINT = 0.14;
 /**
  * A tone washed into the background, or nothing.
  *
- * Nothing on a palette-only terminal: mixing two of the sixteen colours lands
- * on a third one that means something else entirely, and a line tinted the
- * wrong colour is worse than a line that is not tinted. The gutter mark works
- * everywhere and is unaffected.
+ * Nothing at sixteen colours. `rgbTo16` maps whatever it is handed onto one of
+ * sixteen *named* colours, so a canvas mixed 14% toward green can land on
+ * "bright black" - and a line tinted the wrong colour is worse than a line
+ * that is not tinted at all.
+ *
+ * Two hundred and fifty-six is a different number, and used to be refused by
+ * that argument about the first. The 6x6x6 cube and the grey ramp are fine
+ * enough to carry a wash this faint, the renderer already downsamples into
+ * them, and a `COLORTERM`-less `xterm-256color` is the common terminal rather
+ * than the exotic one - so the feature was off for most people over a claim
+ * about a palette they were not using.
+ *
+ * Where the cube is *not* fine enough the tint and the canvas quantise to the
+ * same cell. That is a wash that would not be visible, so it is reported as
+ * no wash rather than as a colour that paints the canvas back onto itself.
  */
-function tintOf(base: Color, tone: Color, depth: number): Color | undefined {
-  if (depth < 24) return undefined;
-  return unpackColor(mix(packColor(base), packColor(tone), TINT));
+export function tintOf(base: Color, tone: Color, depth: ColorDepth): Color | undefined {
+  if (depth < 8) return undefined;
+  const canvas = packColor(base);
+  const tinted = mix(canvas, packColor(tone), TINT);
+  if (downsample(tinted, depth) === downsample(canvas, depth)) return undefined;
+  return unpackColor(tinted);
 }
 
 /**

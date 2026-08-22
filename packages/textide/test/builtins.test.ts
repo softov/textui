@@ -115,3 +115,22 @@ describe('git in a repository', () => {
     await t.unmount();
   });
 });
+
+describe('git in the gutter', () => {
+  it('marks the changed lines of the file you are editing', async () => {
+    const { t, quiet, bag } = await open(repo);
+    t.app.store.set('$/ui/editor/uri', `file://${join(repo, 'tracked.txt')}`);
+    await quiet();
+    await t.app.execute('file.edit');
+    await quiet();
+
+    // `two` was added to a file that had only `one`. The editor draws the
+    // column and has never heard of git; git said which lines and stopped.
+    const gutterRows = t.lines().filter((l) => /[+~_]\s*\d+ /.test(l));
+    expect(gutterRows.length, 'a marked row').toBeGreaterThan(0);
+    expect(gutterRows.some((l) => l.includes('+') || l.includes('~'))).toBe(true);
+
+    bag.dispose();
+    await t.unmount();
+  }, 20_000);
+});

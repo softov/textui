@@ -89,3 +89,70 @@ export function useDecorations(): (uri: string) => ResourceDecoration | null {
   useStoreSubtree(DECORATIONS_ROOT as BindingPath);
   return (uri: string) => decorationFor(runtime.store, uri);
 }
+
+// ------------------------------------------------------------------ lines
+
+/**
+ * Marks on lines, which is the same idea one level down.
+ *
+ * A gutter belongs to whatever is drawing the file, and what a line *means* -
+ * added since the last commit, covered by a test, carrying an error - belongs
+ * to whatever knows that. Same bargain as the tree: the editor draws a column
+ * of marks and has never heard of git.
+ *
+ * Kept per resource rather than per panel, because "this line is new" is true
+ * of the file and not of where you happen to be looking at it.
+ */
+export const LINE_MARKS_ROOT = '$/ui/line-marks';
+
+export type LineMark = 'added' | 'changed' | 'removed';
+
+/** Line numbers count from zero, like an index, because a caret does. */
+export type LineMarks = Record<number, LineMark>;
+
+export function lineMarksPath(source: string, uri: string): BindingPath {
+  return `${LINE_MARKS_ROOT}/${escapeSegment(source)}/${escapeSegment(uri)}` as BindingPath;
+}
+
+export function setLineMarks(
+  store: ReactiveStore,
+  source: string,
+  uri: string,
+  marks: LineMarks | null,
+): void {
+  store.set(lineMarksPath(source, uri), marks);
+}
+
+/** Drop everything one contributor said, wherever it said it. */
+export function clearLineMarks(store: ReactiveStore, source: string): void {
+  store.set(`${LINE_MARKS_ROOT}/${escapeSegment(source)}` as BindingPath, null);
+}
+
+export function lineMarksFor(store: ReactiveStore, uri: string | null): LineMarks {
+  if (uri === null) return {};
+  const all = store.get<Record<string, Record<string, LineMarks>>>(
+    LINE_MARKS_ROOT as BindingPath,
+  );
+  if (!all) return {};
+
+  const key = escapeSegment(uri);
+  let merged: LineMarks = {};
+  for (const bySource of Object.values(all)) {
+    const found = bySource?.[key];
+    if (found) merged = { ...merged, ...found };
+  }
+  return merged;
+}
+
+/**
+ * The marks on one file, redrawn when they change.
+ *
+ * One subscription, and an empty object when nobody has said anything - so a
+ * renderer can ask unconditionally and draw no column at all when the answer
+ * is empty.
+ */
+export function useLineMarks(uri: string | null): LineMarks {
+  const runtime = useRuntime();
+  useStoreSubtree(LINE_MARKS_ROOT as BindingPath);
+  return lineMarksFor(runtime.store, uri);
+}

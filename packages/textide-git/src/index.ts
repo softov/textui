@@ -1,11 +1,12 @@
-import type { Disposable, TextUIApp } from '@textui/core';
-import { clearDecorations, createBag, setDecorations } from '@textui/core';
+import type { BindingPath, Disposable, TextUIApp } from '@textui/core';
+import { clearDecorations, clearLineMarks, createBag, setDecorations, setLineMarks } from '@textui/core';
 import { createGit, type Git } from './git.js';
 import { GIT_KINDS, GIT_VIEWERS, createGitProvider, safeStatus } from './provider.js';
 import { DIFF_COMPONENTS } from './diff.js';
 import { GitChanges, STATUS_PATH, STATUS_SEGMENTS } from './changes.js';
 import { gitCommands, refresh } from './commands.js';
 import { GIT_SOURCE, decorationsOf } from './decorate.js';
+import { GUTTER_SOURCE, gutterFor } from './gutter.js';
 import type { Status } from './git.js';
 
 /**
@@ -29,10 +30,14 @@ export { GitDiff, classify, scrollDiff, DIFF_COMPONENTS } from './diff.js';
 export { GitChanges, codeOf, toneOf, summarize, GIT_ROOT, STATUS_PATH, SELECTED_PATH } from './changes.js';
 export { gitCommands, refresh } from './commands.js';
 export { GIT_SOURCE, decorationsOf } from './decorate.js';
+export { GUTTER_SOURCE, marksOf, gutterFor } from './gutter.js';
 export {
   SCHEME, DIFF_PREFIX, diffUri, diffPath, createGitProvider, safeStatus,
   GIT_KINDS, GIT_VIEWERS,
 } from './provider.js';
+
+/** Where a host publishes what it has open. Read, never written. */
+const EDITOR_OPEN = '$/ui/editor/uri' as BindingPath;
 
 export interface GitExtensionOptions {
   /** The working tree. Usually the workspace root. */
@@ -106,6 +111,30 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
     ));
   }));
 
+  /*
+   * And the gutter of whatever is open, for the same reason and by the same
+   * route - except that this one costs a process, so it is asked only about
+   * the one file on screen and only when that file or the status changes.
+   *
+   * `$/ui/editor/uri` is read, never written: it is where a host publishes
+   * what it has open, and a host that publishes nothing simply gets no gutter.
+   */
+  let generation = 0;
+  const regutter = (): void => {
+    const at = ++generation;
+    const uri = app.store.get<string>(EDITOR_OPEN) ?? null;
+    void gutterFor(git, app.store.get<Status>(STATUS_PATH) ?? null, options.root, uri)
+      .then((marks) => {
+        // A slower answer about a file that is no longer open would draw the
+        // last file's changes over this one.
+        if (at !== generation || uri === null) return;
+        setLineMarks(app.store, GUTTER_SOURCE, uri, marks);
+      })
+      .catch(() => { /* a diff that will not run is a gutter that stays empty */ });
+  };
+  bag.add(app.store.subscribe(STATUS_PATH, regutter));
+  bag.add(app.store.subscribe(EDITOR_OPEN, regutter));
+
   // The status is store state like everything else, so the panel, the status
   // bar and every command read one answer. Seeding it here means the first
   // frame after loading already says which branch you are on.
@@ -114,6 +143,7 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
   bag.add({
     dispose: () => {
       clearDecorations(app.store, GIT_SOURCE);
+      clearLineMarks(app.store, GUTTER_SOURCE);
       app.store.set(STATUS_PATH, null);
       const rest = (app.store.get<{ id: string }[]>(STATUS_SEGMENTS) ?? [])
         .filter((s) => s.id !== 'git');

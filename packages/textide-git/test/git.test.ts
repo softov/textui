@@ -5,11 +5,11 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
-import { decorationsPath, registerBuiltins } from '@textui/core';
+import { decorationsPath, lineMarksFor, registerBuiltins } from '@textui/core';
 import { registerDocuments } from '@textui/documents';
 import {
   classify, codeOf, createGit, decorationsOf, diffPath, diffUri, parseStatus, readDiff,
-  readStatus, registerGit, summarize, GIT_SOURCE, STATUS_PATH, SELECTED_PATH,
+  readStatus, registerGit, summarize, marksOf, GIT_SOURCE, STATUS_PATH, SELECTED_PATH,
 } from '../src/index.js';
 import type { Change, Status } from '../src/index.js';
 
@@ -361,6 +361,75 @@ describe('marks on the tree', () => {
     await quiet();
     expect(t.app.store.get(decorationsPath(GIT_SOURCE))).toBeFalsy();
 
+    await git('checkout', '--', 'tracked.txt');
+    await t.unmount();
+  });
+});
+
+/**
+ * Git in the gutter.
+ *
+ * A unified diff already says which lines moved, so reading the hunk headers
+ * is the whole job. The editor draws the column and has never heard of git.
+ */
+describe('marks in the gutter', () => {
+  async function mounted() {
+    const t = await renderApp({
+      width: 100, height: 20, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => { registerBuiltins(app); registerDocuments(app); },
+    });
+    const quiet = async (): Promise<void> => {
+      for (let i = 0; i < 10; i++) { await t.settle(); t.advance(50); t.flush(); }
+    };
+    await quiet();
+    return { t, quiet };
+  }
+
+  it('reads a hunk that adds', () => {
+    expect(marksOf('@@ -3,0 +4,2 @@\n+one\n+two\n'))
+      .toEqual({ 3: 'added', 4: 'added' });
+  });
+
+  it('reads a hunk that changes', () => {
+    expect(marksOf('@@ -4,2 +4,2 @@\n-old\n-old\n+new\n+new\n'))
+      .toEqual({ 3: 'changed', 4: 'changed' });
+  });
+
+  it('puts a deletion on the line above the gap it left', () => {
+    // There is no line to mark, so the mark goes where the line was.
+    expect(marksOf('@@ -7,3 +6,0 @@\n-gone\n-gone\n-gone\n'))
+      .toEqual({ 5: 'removed' });
+  });
+
+  it('takes a missing count to mean one line', () => {
+    expect(marksOf('@@ -2 +2 @@\n-old\n+new\n')).toEqual({ 1: 'changed' });
+  });
+
+  it('says nothing about a file with no diff', () => {
+    expect(marksOf('')).toEqual({});
+  });
+
+  it('marks the file that is open, and nothing else', async () => {
+    const { t, quiet } = await mounted();
+    await writeFile(join(dir, 'tracked.txt'), 'one\nCHANGED\nthree\n');
+    const bag = registerGit(t.app, { root: dir });
+    await quiet();
+
+    const uri = `file://${join(dir, 'tracked.txt')}`;
+    t.app.store.set('$/ui/editor/uri', uri);
+    await quiet();
+    expect(lineMarksFor(t.app.store, uri), 'the changed line').toEqual({ 1: 'changed' });
+
+    // A file git is not tracking gets no column at all, rather than a column
+    // of spaces.
+    const other = `file://${join(dir, 'untracked-nothing.txt')}`;
+    t.app.store.set('$/ui/editor/uri', other);
+    await quiet();
+    expect(lineMarksFor(t.app.store, other)).toEqual({});
+
+    bag.dispose();
+    await quiet();
+    expect(lineMarksFor(t.app.store, uri)).toEqual({});
     await git('checkout', '--', 'tracked.txt');
     await t.unmount();
   });

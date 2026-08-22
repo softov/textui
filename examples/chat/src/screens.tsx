@@ -18,6 +18,7 @@ import type {
 import { decodeStatus } from './ahp/status.js';
 import { ChatTranscript } from './view/transcript.js';
 import { ChatComposer } from './view/composer.js';
+import { Creature } from './view/creature.js';
 import { ChatHitl } from './view/hitl.js';
 import { ChangesList } from './view/changes.js';
 import { ConnectionBadge, SessionList } from './view/sessions.js';
@@ -396,6 +397,10 @@ export const NewSessionScreen: (props: Record<string, never>) => RenderOutput =
             What fills the space is the invitation, and it stays out of the way
             of the one control that matters. */}
         <Column flex={1} justify="center" align="center" gap={0}>
+          {/* One of six, picked when the screen mounts. Only here: an empty
+              screen is the one place a client can afford a figure, and every
+              other screen has a conversation to show instead. */}
+          <Creature mood="happy" margin={[0, 0, 1, 0]} />
           <text content="A new session" fg="muted" />
           <text content="The first message is what starts it." fg="subtle" />
           <text content={`${theme.glyphs.chevronLeft} esc for the sessions you already have`} fg="subtle" />

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderApp } from '@textui/testing';
 import type { Harness } from '@textui/testing';
 import { registerChat } from '../src/app.js';
+import { CREATURES, MOODS, drawCreature } from '../src/view/creature.js';
 import { CONTROLLER } from '../src/control.js';
 import { fakeHost } from '../src/ahp/fake.js';
 import type { FakeHost } from '../src/ahp/fake.js';
@@ -942,6 +943,56 @@ describe('status is two things in one number', () => {
     expect(decodeStatus(40).activity).toBe('running');
     expect(decodeStatus(33)).toMatchObject({ activity: 'idle', read: true });
     expect(decodeStatus(65)).toMatchObject({ activity: 'idle', archived: true });
+  });
+});
+
+describe('the figure on an empty screen', () => {
+  /**
+   * Rectangular, every mood.
+   *
+   * The rows of one drawing have to be the same length or a centred figure
+   * leans: the compositor pads to the widest row it was given, and a short
+   * row is padded on one side only. This is checked rather than eyeballed
+   * because it is invisible until the terminal is a different width.
+   */
+  it('draws every creature as a block, in every mood', () => {
+    for (const name of CREATURES) {
+      for (const mood of MOODS) {
+        const rows = drawCreature(name, mood);
+        expect(rows.length).toBeGreaterThan(2);
+        expect(new Set(rows.map((row) => row.length)).size).toBe(1);
+      }
+    }
+  });
+
+  /**
+   * Plain ASCII, and it is checked rather than claimed.
+   *
+   * A glyph whose width the terminal decides is what eats art on a CJK font
+   * setting - and art that is one cell wider on somebody else's machine does
+   * not look narrow, it looks broken.
+   */
+  it('uses nothing whose width a terminal gets to decide', () => {
+    for (const name of CREATURES) {
+      for (const mood of MOODS) {
+        for (const row of drawCreature(name, mood)) {
+          expect(row).toMatch(/^[\x20-\x7e]*$/);
+        }
+      }
+    }
+  });
+
+  it('puts one above the invitation, at either size', async () => {
+    for (const size of SIZES) {
+      const { t } = await open(size);
+      // Which one is a coin toss, so the assertion is that whichever it was is
+      // on screen whole - every row of it, above the words.
+      const drawn = CREATURES.map((name) => drawCreature(name, 'happy'))
+        .find((rows) => rows.every((row) => t.hasText(row.trim())));
+      expect(drawn).toBeTruthy();
+      expect(t.hasText('A new session')).toBe(true);
+      await t.unmount();
+    }
   });
 });
 

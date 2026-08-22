@@ -102,8 +102,11 @@ describe('the gallery', () => {
     expect(t.hasText('degraded')).toBe(true);
 
     t.focus(t.getByRole('tablist').id);
-    t.press('right');
-    expect(t.hasText('Follow tail')).toBe(true);
+    // Display, Type, Controls - two rights to reach the third.
+    t.press('right'); await t.settle();
+    expect(t.hasText('breaks between words')).toBe(true);
+    t.press('right'); await t.settle();
+    expect(t.hasText('Type here')).toBe(true);
     await t.unmount();
   });
 });
@@ -602,6 +605,8 @@ describe('the gallery', () => {
   it('leaves the Data list alone until it is focused', async () => {
     const t = await mount('gallery');
     await t.settle();
+    // Display, Type, Controls, Data.
+    t.press('right'); await t.settle();
     t.press('right'); await t.settle();
     t.press('right'); await t.settle();
     expect(t.hasText('billing-worker')).toBe(true);

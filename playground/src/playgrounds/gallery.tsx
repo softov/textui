@@ -1,8 +1,8 @@
 import {
-  Alert, Badge, Breadcrumb, Button, Card, Checkbox, Column, Divider, Grid,
-  Heading, KeyValue, Label, List, Menu, Panel, Progress, RadioGroup, Row,
-  ScrollView, Select, Slider, Spinner, StatusDot, Switch, Tabs, TextInput, Timeline,
-  Wizard, useState,
+  Alert, Badge, Breadcrumb, Button, Card, Checkbox, Column, Divider, Feed, Grid,
+  Heading, KeyValue, Label, List, MarkdownView, Menu, Panel, Progress, RadioGroup,
+  Row, ScrollView, Select, Slider, Spinner, StatusDot, Switch, Tabs,
+  TextInput, Timeline, Wizard, useState,
 } from '@textui/core';
 import { EVENTS } from '../data.js';
 
@@ -16,6 +16,7 @@ import { EVENTS } from '../data.js';
 
 const SECTIONS = [
   { id: 'display', label: 'Display' },
+  { id: 'typography', label: 'Type' },
   { id: 'controls', label: 'Controls' },
   { id: 'data', label: 'Data' },
   { id: 'feedback', label: 'Feedback' },
@@ -40,6 +41,7 @@ export function Gallery() {
       <Divider />
 
       {section === 'display' ? <DisplaySection /> : null}
+      {section === 'typography' ? <TypographySection /> : null}
       {section === 'controls' ? <ControlsSection /> : null}
       {section === 'data' ? <DataSection /> : null}
       {section === 'feedback' ? <FeedbackSection /> : null}
@@ -163,10 +165,52 @@ function ControlsSection() {
     <Column gap={1} flex={1}>
       <Row gap={1}>
         <Button label="Default" />
-        <Button label="Primary" tone="primary" variant="solid" />
+        <Button label="Primary" tone="primary" />
+        <Button label="Secondary" tone="secondary" />
+        <Button label="Success" tone="success" />
+        <Button label="Info" tone="info" />
+        <Button label="Warning" tone="warning" />
         <Button label="Danger" tone="danger" />
-        <Button label="Ghost" variant="ghost" hint="ctrl+g" />
         <Button label="Disabled" disabled />
+      </Row>
+      {/* The three sizes, so the row above has something to be compared to. */}
+      <Row gap={1} vAlign="center">
+        <Button label="Small" tone="primary" variant="solid" size="sm" />
+        <Button label="Medium" tone="primary" variant="solid" />
+        <Button label="Large" tone="primary" variant="solid" size="lg" />
+        <Button label="Small" size="sm" />
+        <Button label="Medium" />
+        <Button label="Large" size="lg" />
+      </Row>
+      <Row gap={1}>
+        <Button label="Default" variant="solid" />
+        <Button label="Primary" tone="primary" variant="solid" />
+        <Button label="Secondary" tone="secondary" variant="solid" />
+        <Button label="Disabled" disabled variant="solid" />
+        <Button label="Success" tone="success" variant="solid" />
+        <Button label="Info" tone="info" variant="solid" />
+        <Button label="Warning" tone="warning" variant="solid" />
+        <Button label="Danger" tone="danger" variant="solid" />
+      </Row>
+      <Row gap={1}>
+        <Button label="Default" variant="outline" />
+        <Button label="Primary" tone="primary" variant="outline" />
+        <Button label="Secondary" tone="secondary" variant="outline" />
+        <Button label="Disabled" disabled variant="outline" />
+        <Button label="Success" tone="success" variant="outline" />
+        <Button label="Warning" tone="warning" variant="outline" />
+        <Button label="Info" tone="info" variant="outline" />
+        <Button label="Danger" tone="danger" variant="outline" />
+      </Row>
+      <Row gap={1}>
+        <Button label="Default" variant="ghost" />
+        <Button label="Primary" tone="primary" variant="ghost" />
+        <Button label="Secondary" tone="secondary" variant="ghost" />
+        <Button label="Disabled" disabled variant="ghost" />
+        <Button label="Success" tone="success" variant="ghost" />
+        <Button label="Info" tone="info" variant="ghost" />
+        <Button label="Danger" tone="danger" variant="ghost" />
+        <Button label="Warning" tone="warning" variant="ghost" />
       </Row>
 
       <TextInput value={text} onChange={setText} label="Name" placeholder="Type here" />
@@ -218,6 +262,7 @@ function ControlsSection() {
 
 function DataSection() {
   const [selected, setSelected] = useState<string | undefined>('two');
+  const [entry, setEntry] = useState(0);
 
   return (
     <Grid columns={2} gap={1} flex={1}>
@@ -236,9 +281,48 @@ function DataSection() {
       <Panel title="Timeline">
         <Timeline items={EVENTS} />
       </Panel>
+
+      <Panel title="MarkdownView">
+        <MarkdownView content={NOTE} />
+      </Panel>
+
+      {/* Entries of different heights, a cursor that moves between them, and a
+        * tail it follows - none of which `List` does, and all of which a
+        * transcript, an activity stream and a result list all want.
+        *
+        * A height, because that is what asks it to fill and scroll. Left to
+        * the content it would draw all four and grow, which is the same
+        * component and the other half of the rule. */}
+      <Panel title="Feed" meta="follows the tail">
+        <Feed height={6} selectedIndex={entry} onSelect={setEntry}>
+          {ENTRIES.map((text, i) => (
+            <Row key={i} gap={1} {...(entry === i ? { bg: 'selected' as const } : {})}>
+              <text content={`${i + 1}`} fg="subtle" />
+              <text content={text} wrap="word" flex={1} />
+            </Row>
+          ))}
+        </Feed>
+      </Panel>
     </Grid>
   );
 }
+
+const NOTE = [
+  '## What a feed is for',
+  '',
+  'Entries that are **not one line tall** - a message, a result with a snippet,',
+  'a file whose diff expands. `List` cannot, because its rows are one line.',
+  '',
+  '- measured, not computed',
+  '- follows the tail until you scroll',
+].join('\n');
+
+const ENTRIES = [
+  'A short one.',
+  'A longer entry that wraps onto several rows, which is the point: a feed measures what it drew.',
+  'Another short one.',
+  'And one more, so there is something below the fold.',
+];
 
 function FeedbackSection() {
   return (
@@ -308,5 +392,116 @@ function NavigationSection() {
         />
       </Panel>
     </Column>
+  );
+}
+
+/**
+ * Type.
+ *
+ * Every wrap mode on one string, at one width, so the difference between them
+ * is a thing you can see rather than a sentence in the docs. The width is
+ * fixed rather than flexible for the same reason: a truncation that only shows
+ * up on a narrow terminal is a truncation nobody reviews.
+ */
+const SAMPLE = 'Deployment finished in 4m 12s across eleven regions.';
+
+const WRAP_MODES = [
+  { mode: 'none', note: 'one row, clipped at the edge' },
+  { mode: 'word', note: 'breaks between words' },
+  { mode: 'char', note: 'fills every row, breaks words' },
+  { mode: 'truncate', note: 'alias of truncate-end' },
+  { mode: 'truncate-start', note: 'the tail is what matters' },
+  { mode: 'truncate-middle', note: 'both ends kept' },
+  { mode: 'truncate-end', note: 'the usual one' },
+] as const;
+
+const COLUMN = 26;
+
+function TypographySection() {
+  return (
+    <ScrollView flex={1}>
+      <Column gap={1}>
+        <Panel title="Wrap" subtitle={`${COLUMN} columns, one string`}>
+          <Column gap={1}>
+            {WRAP_MODES.map(({ mode, note }) => (
+              <Row key={mode} gap={1} vAlign="start">
+                <Label content={mode} width={16} />
+                <box width={COLUMN} border="single" padding={[0, 1]}>
+                  <text content={SAMPLE} wrap={mode} />
+                </box>
+                <Label content={note} fg="muted" flex={1} wrap="word" />
+              </Row>
+            ))}
+          </Column>
+        </Panel>
+
+        <Panel title="Align">
+          <Row gap={1}>
+            {(['left', 'center', 'right'] as const).map((align) => (
+              <box key={align} flex={1} border="single" padding={[0, 1]}>
+                <text content={align} textAlign={align} />
+                <text content="the quick brown fox" textAlign={align} wrap="word" fg="muted" />
+              </box>
+            ))}
+          </Row>
+        </Panel>
+
+        <Panel title="Emphasis">
+          <Column>
+            <Heading content="Heading" />
+            <text content="plain" />
+            <text content="bold" bold />
+            <text content="dim" dim />
+            <text content="italic" italic />
+            <text content="underline" underline />
+            <text content="strike" strike />
+            <text content="inverse" inverse />
+            <Row gap={1}>
+              <text content="ellipsis, explicitly:" fg="muted" />
+              <box width={14}>
+                <text content="truncated here" wrap="truncate" ellipsis=".." />
+              </box>
+            </Row>
+          </Column>
+        </Panel>
+
+        {/*
+          * `flexWrap` is the only thing on this page that is about the box
+          * rather than the text, and it belongs here anyway: a row of words
+          * that will not wrap is the commonest way a terminal layout breaks.
+          */}
+        <Panel title="flexWrap" subtitle="a row that runs out of room">
+          <Column gap={1}>
+            <Row gap={1} flexWrap="wrap">
+              {SAMPLE.split(' ').map((word, i) => (
+                <Badge key={i} label={word} tone={i % 3 === 0 ? 'info' : 'muted'} />
+              ))}
+            </Row>
+            <Divider />
+            <Row gap={1}>
+              {SAMPLE.split(' ').slice(0, 6).map((word, i) => (
+                <Badge key={i} label={word} tone="muted" />
+              ))}
+              <Label content="nowrap: the rest is off the edge" fg="muted" />
+            </Row>
+          </Column>
+        </Panel>
+
+        <Panel title="Border colours" subtitle="one colour per edge, and a dim frame">
+          <Row gap={2}>
+            <box
+              width={22}
+              padding={[0, 1]}
+              border={{ style: 'single', colors: { top: 'success', bottom: 'danger' } }}
+            >
+              <text content="top and bottom" />
+            </box>
+            <box width={22} padding={[0, 1]} border={{ style: 'round', dim: true }}>
+              <text content="dim frame, plain text" wrap="word" />
+            </box>
+          </Row>
+        </Panel>
+      </Column>
+    </ScrollView>
   );
 }

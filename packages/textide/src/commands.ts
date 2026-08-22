@@ -29,7 +29,7 @@ import {
 // The editor's own paths live with the tab model, because that is what keeps
 // them in agreement. Re-exported so nothing that already imported them here
 // has to learn where they moved.
-export { EDITOR_URI, EDITOR_SELECTION } from './tabs.js';
+export { EDITOR_URI } from './tabs.js';
 export const CHROME_PATH = '$/ui/chrome' as BindingPath;
 
 /** Categories, in the order the palette should offer them. */
@@ -438,15 +438,25 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       title: 'Toggle Edit Mode',
       category: 'File',
       slots: ['palette'],
-      // View and edit are the same resource through two registrations, so this
-      // asks the registry for the other one rather than swapping a component.
-      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
-        const mode = ctx.store.get<string>('$/ui/editor/mode' as BindingPath) ?? 'view';
-        const next = mode === 'edit' ? 'view' : 'edit';
-        ctx.store.set('$/ui/editor/mode' as BindingPath, next);
-
-        // The editor claims focus as it mounts - see `Editor` in app.tsx. It
-        // is not chased from here, because at this moment it does not exist.
+      // View and edit are two renderers registered for one kind, so this is
+      // the panel command with a name from this application's vocabulary -
+      // not a second implementation of it. Which panel it acts on is the one
+      // the keyboard is in, which the panel itself publishes.
+      /*
+       * Which pane and which file, both said outright.
+       *
+       * A panel publishes what it is showing from an effect and takes the
+       * active mark when it is focused, so a caller that opens a file and asks
+       * to edit it in the same tick would be a frame ahead of both - and after
+       * a split, the group the keyboard is in is this application's answer,
+       * which is not the same question as which panel was last focused.
+       */
+      run: async (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const uri = ctx.store.get<string>(EDITOR_URI);
+        return ctx.app.execute('panel.toggleEdit', {
+          panel: paneScope(focusedIndex(ctx.store)),
+          ...(uri ? { uri } : {}),
+        });
       },
     },
     {

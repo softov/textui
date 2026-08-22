@@ -270,7 +270,11 @@ describe('the command palette', () => {
     expect(t.hasText('Theme')).toBe(true);
     expect(t.hasText('Layout')).toBe(true);
 
-    t.press('enter');                      // Theme is the first item
+    // Down to Theme first: the View menu opens on "Open With", which is about
+    // the file in front of you rather than about the whole application.
+    t.press('down');
+    for (let i = 0; i < 2; i++) await t.settle();
+    t.press('enter');
     for (let i = 0; i < 4; i++) await t.settle();
 
     // The menu closes and the palette asks, rather than the menu growing a
@@ -335,7 +339,7 @@ describe('the command palette', () => {
     };
     const open_layers = (): number => t.app.layers.entries('floating').length;
 
-    expect(highlighted()).toBe('Theme');
+    expect(highlighted()).toBe('Open With…');
     expect(open_layers()).toBe(1);
 
     const seen: string[] = [];
@@ -346,7 +350,7 @@ describe('the command palette', () => {
       // The menu must still be the one menu that is open.
       expect(open_layers(), 'down must not reopen or close the dropdown').toBe(1);
     }
-    expect(seen).toEqual(['Layout', 'Command Palette', 'Theme']);
+    expect(seen).toEqual(['Theme', 'Layout', 'Command Palette']);
     await t.unmount();
   });
 
@@ -579,13 +583,15 @@ describe('the command palette', () => {
     const previewed = t.app.theme.id;
     expect(previewed, 'moving the highlight applies the theme').not.toBe(start);
 
+    // One press, not two. A palette opened *at* a command has no list behind
+    // the question that anybody chose to be at, so escape closes it outright -
+    // and what a highlighted choice previewed is put back on the way out.
     t.press('escape');
     for (let i = 0; i < 3; i++) await t.settle();
     expect(t.app.theme.id, 'abandoning puts it back').toBe(start);
+    expect(t.app.layers.entries('modal'), 'and closes it').toHaveLength(0);
 
     // Choosing keeps it.
-    t.press('escape');
-    for (let i = 0; i < 3; i++) await t.settle();
     t.app.execute('app.palette', { at: 'view.theme' });
     for (let i = 0; i < 5; i++) { await t.settle(); t.advance(50); t.flush(); }
     t.press('down');

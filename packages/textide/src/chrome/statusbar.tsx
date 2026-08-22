@@ -1,9 +1,8 @@
-import { StatusBar, useStoreValue, defineComponent } from '@textui/core';
+import { PANEL_PATH, StatusBar, panelStatusPath, useStoreValue, defineComponent } from '@textui/core';
 import type { RenderOutput, StatusSegment } from '@textui/core';
 import type { Workspace } from '../workspace.js';
 import { WORKSPACE_PATH } from '../workspace.js';
 import { ACTIVE_PATH } from '../filesystem.js';
-import { EDITOR_SELECTION } from '../tabs.js';
 
 /**
  * The statusbar.
@@ -18,20 +17,25 @@ export const StatusLine: (props: Record<string, never>) => RenderOutput =
   const kind = useStoreValue<string>(`${ACTIVE_PATH}/kind`);
   const size = useStoreValue<number>(`${ACTIVE_PATH}/size`);
   const extra = useStoreValue<StatusSegment[]>('$/ui/status/segments', []);
-  const mode = useStoreValue<string>('$/ui/editor/mode', 'view');
-  const selection = useStoreValue<{ chars: number; lines: number }>(EDITOR_SELECTION);
+  /*
+   * Whatever the panel the keyboard is in has to say.
+   *
+   * The bar used to read a selection count the editor was wired to publish,
+   * which meant the one renderer that had been thought of got a status line
+   * and no other could. A panel publishes for whatever is inside it, so a
+   * diff saying which hunk, or a search saying how many are left, arrives
+   * here without this file learning about either.
+   */
+  const panel = useStoreValue<string | null>(PANEL_PATH, null);
+  const status = useStoreValue<string | null>(panelStatusPath(panel ?? 'none'), null);
 
   const leading: StatusSegment[] = [
     { id: 'root', label: workspace?.root ?? '' },
     ...(kind ? [{ id: 'kind', label: kind }] : []),
   ];
 
-  // Only while editing: a count left over from the last file you had open is
-  // a number about nothing.
-  const selecting = mode === 'edit' && selection !== undefined && selection.chars > 0;
-
   const trailing: StatusSegment[] = [
-    ...(selecting ? [{ id: 'selection', label: describe(selection) }] : []),
+    ...(panel !== null && status ? [{ id: 'panel', label: status }] : []),
     ...(extra ?? []),
     ...(size !== undefined ? [{ id: 'size', label: formatSize(size) }] : []),
     { id: 'help', label: 'f1 for keys' },
@@ -39,12 +43,6 @@ export const StatusLine: (props: Record<string, never>) => RenderOutput =
 
   return <StatusBar leading={leading} trailing={trailing} />;
 });
-
-/** What is selected, in the units a person counts it in. */
-function describe(selection: { chars: number; lines: number }): string {
-  const chars = `${selection.chars} selected`;
-  return selection.lines > 1 ? `${chars} (${selection.lines} lines)` : chars;
-}
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

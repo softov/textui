@@ -21,8 +21,6 @@ import { WORKSPACE_PATH, type Workspace } from './workspace.js';
 
 export const EDITOR_URI = '$/ui/editor/uri' as BindingPath;
 export const EDITOR_MODE = '$/ui/editor/mode' as BindingPath;
-/** How much the editor has selected, for the status bar. */
-export const EDITOR_SELECTION = '$/ui/editor/selection' as BindingPath;
 /** Every group, in the order they are drawn. */
 export const GROUPS_PATH = '$/ui/editor/groups' as BindingPath;
 /** Which group the keyboard is in. */

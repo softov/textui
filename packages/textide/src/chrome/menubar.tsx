@@ -41,7 +41,9 @@ export const MENUS: MenuSpec[] = [
     // Layout owns the switches. One entry that opens the list beats one line
     // per hideable part, and the list then grows with the shell instead of
     // with this array.
-    items: ['view.theme', 'view.layout', null, 'app.palette'],
+    // "Open With" is core's, not this application's: the list comes off the
+    // resource registry, so it grows when an extension registers a renderer.
+    items: ['panel.openWith', null, 'view.theme', 'view.layout', null, 'app.palette'],
   },
   { id: 'help', label: 'Help', items: ['help.keys', 'help.about'] },
 ];

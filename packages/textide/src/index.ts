@@ -24,7 +24,7 @@ export type { ExtensionContext, ExtensionModule, LoadOptions } from './extension
 export { createReloader, STATUS_SEGMENTS } from './reload.js';
 export type { Reloader, ReloaderOptions, ReloadOutcome, Registrar } from './reload.js';
 export {
-  EDITOR_LAYOUTS, EDITOR_MODE, EDITOR_SELECTION, GROUPS_PATH, GROUP_PATH, LAYOUT_PATH,
+  EDITOR_LAYOUTS, EDITOR_MODE, GROUPS_PATH, GROUP_PATH, LAYOUT_PATH,
   activateTab, activeTab, allTabs, closeTab, focusGroup, focusedGroup, focusedIndex,
   PANE_SCOPES, layoutOf, openTab, openTabs, otherGroup, paneScope, readGroups,
   reconcileTabs, selectTab,

@@ -1,14 +1,14 @@
 import {
-  Column, KeyHints, Row, Tabs, defineComponent, useCapabilities, useEffect, useFocusScope,
-  useRuntime, useStoreSubtree, useStoreValue,
+  Column, KeyHints, Row, Tabs, defineComponent, panelRendererPath, useCapabilities,
+  useEffect, useRuntime, useStoreSubtree, useStoreValue,
 } from '@textui/core';
-import type { RenderOutput, Resource } from '@textui/core';
+import type { PanelRenderer, RenderOutput, Resource } from '@textui/core';
 import { DOCUMENTS_ROOT, ResourceExplorer, ResourceView, isDocumentDirty } from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
 import { WORKSPACE_PATH, type Workspace } from './workspace.js';
 import { iconsFor } from './icons.js';
 import {
-  EDITOR_SELECTION, EDITOR_URI, GROUPS_PATH, GROUP_PATH, LAYOUT_PATH, activateTab,
+  EDITOR_MODE, EDITOR_URI, GROUPS_PATH, GROUP_PATH, LAYOUT_PATH, activateTab,
   openTab, paneScope, reconcileTabs, tabLabel, type EditorLayout, type Group,
 } from './tabs.js';
 
@@ -104,23 +104,18 @@ interface PaneProps {
 const Pane = defineComponent<PaneProps>('EditorPane', ({ uri, scopeId, group, primary }) => {
   const runtime = useRuntime();
   const Icon = iconsFor(useCapabilities().unicode);
-  const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
-  /*
-   * The scope takes the keyboard back when whatever had it goes away.
-   *
-   * Leaving edit mode unmounts the editor, and unregistering the focused
-   * control leaves focus null - so the viewer that replaced it drew fine and
-   * read no keys, and the markdown you had been scrolling a moment ago stopped
-   * scrolling. `autoFocus` on the scope fires as its first control arrives and
-   * only when *nothing at all* holds focus, which is the difference between
-   * this and stealing focus off the tree when a file is opened.
-   *
-   * Only the primary pane asks. Two panes both claiming an unclaimed keyboard
-   * is a race whose winner is whichever rendered first.
-   */
-  const scope = useFocusScope({ id: scopeId, autoFocus: primary });
   const focusedScope = useStoreValue<string | null>('$/focus/scope', null);
-  const active = focusedScope === scope;
+  const active = focusedScope === scopeId;
+  /*
+   * What is on screen is the panel's answer, not a mode this file keeps.
+   *
+   * A file is a resource; a panel is where one is shown; which component draws
+   * it is a late choice between everything registered for its kind. "Edit" is
+   * one of those choices - the one that writes back - so it is read off the
+   * renderer rather than being a flag that has to be kept in step with it.
+   */
+  const renderer = useStoreValue<PanelRenderer | null>(panelRendererPath(scopeId), null);
+  const editing = renderer?.saves === true;
 
   // The group the keyboard is in is wherever the keyboard actually is. A pane
   // that reported it only when clicked would disagree with focus the moment
@@ -129,33 +124,27 @@ const Pane = defineComponent<PaneProps>('EditorPane', ({ uri, scopeId, group, pr
     if (active) runtime.store.set(GROUP_PATH, group);
   }, [active, group]);
 
+  // Republished under the old name for the chrome that asks "are we editing" -
+  // the status bar, the key hints - so one question has one answer whichever
+  // way it is asked.
+  useEffect(() => {
+    if (primary) runtime.store.set(EDITOR_MODE, editing ? 'edit' : 'view');
+  }, [primary, editing]);
+
   return (
-    <Row flex={1} align="stretch" id={scopeId}>
+    <Row flex={1} align="stretch" id={`${scopeId}:pane`}>
       <box width={1} fill={Icon.activeRule} fg={active ? 'focus' : 'borderSubtle'} />
       {/*
-        * Entering edit mode means going to the editor. The editor claims focus
-        * as it mounts rather than something outside chasing it once it has -
-        * the mounting render is the first moment it exists. Only the primary
-        * pane does it, because two panes both claiming focus is a race whose
-        * winner depends on the order they happen to render in.
+        * The panel is the focus scope, so entering the editor is one press and
+        * not two, and leaving it hands the keyboard to whatever replaced it.
+        * `autoFocus` fires only when nothing at all holds focus - two panes
+        * both claiming an unclaimed keyboard is a race whose winner is
+        * whichever rendered first, so only the primary asks.
         */}
       <ResourceView
+        id={scopeId}
         uri={uri ?? null}
-        mode={mode}
-        // How much is selected is a fact about the screen, so it goes in the
-        // store and the status bar reads it there. The editor keeps the
-        // selection itself - where the caret is is nobody else's business -
-        // and reports the one number somebody outside it wants.
-        viewerProps={mode === 'edit'
-          ? {
-              ...(primary ? { autoFocus: true } : {}),
-              onSelection: {
-                handler: (selection: { chars: number; lines: number }) => {
-                  if (primary) runtime.store.set(EDITOR_SELECTION, selection);
-                },
-              },
-            }
-          : undefined}
+        autoFocus={primary}
         flex={1}
       />
     </Row>

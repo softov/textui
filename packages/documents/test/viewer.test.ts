@@ -401,9 +401,13 @@ describe('the JSON adapter', () => {
     await openDocument(t.app, 'mem:///a.json');
 
     // The default path is not this application's, so a selection there means
-    // nothing: the command's `when` never opens and it stays unreachable.
+    // nothing: the command's `when` never opens and it does nothing. Asserted
+    // on the buffer rather than on a throw - a clause that does not pass is
+    // the command saying "not now", and it stopped being an error when
+    // `alt+left` with nothing open turned out to be reporting one.
     t.app.store.set('$/active/resource', { uri: 'mem:///a.json', kind: 'file.data.json' });
-    await expect(t.app.execute('json.minify')).rejects.toThrow(/json\.minify/);
+    await t.app.execute('json.minify');
+    expect(getDocument(t.app.store, 'mem:///a.json')?.content).toBe('{\n  "a": 1\n}');
 
     t.app.store.set('$/app/editor/open', { uri: 'mem:///a.json', kind: 'file.data.json' });
     await t.app.execute('json.minify');

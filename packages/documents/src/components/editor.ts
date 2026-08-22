@@ -168,6 +168,35 @@ function reindent(lines: string[], from: number, to: number, unit: string, out: 
 /** One coloured run inside a row. The unit both syntax and selection paint. */
 interface Piece { text: string; fg?: StyleColor; bg?: StyleColor }
 
+/**
+ * Where the horizontal window sits, given where the caret is.
+ *
+ * Extracted because it has to be a **fixed point**: feeding its own answer
+ * back in must give the same answer, or the view oscillates and the screen
+ * flickers. It did, one column wide, at the end of the longest line - the
+ * scroll-into-view branch asked for `caretColumn - textWidth + 1` and the
+ * clamp allowed only `longest - textWidth`, so each frame undid the last.
+ *
+ * The clamp is `longest + 1` because the caret sits *after* the last
+ * character and needs a cell of its own to stand in. Two expressions
+ * disagreeing about whether the caret is part of the line is the whole bug.
+ */
+export function horizontalWindow(options: {
+  caretColumn: number;
+  left: number;
+  textWidth: number;
+  longest: number;
+}): number {
+  const { caretColumn, left, textWidth, longest } = options;
+  const maxLeft = Math.max(0, longest + 1 - textWidth);
+  // Every branch clamps, so one step always lands on the answer. Leaving the
+  // first unclamped converged too, but a frame later - and a rule that needs a
+  // second frame to agree with itself is one narrowing away from not agreeing.
+  if (caretColumn < left) return Math.min(caretColumn, maxLeft);
+  if (caretColumn >= left + textWidth) return Math.min(caretColumn - textWidth + 1, maxLeft);
+  return Math.min(left, maxLeft);
+}
+
 /** What a marked line looks like. ASCII, so every terminal draws one cell. */
 const MARK_GLYPH: Record<LineMark, string> = {
   added: '+',
@@ -634,7 +663,16 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     () => lines.reduce((max, line) => Math.max(max, stringWidth(line)), 0),
     [text],
   );
-  const maxLeft = Math.max(0, longest - textWidth);
+  /*
+   * One column past the longest line, because the caret sits *after* the last
+   * character and needs a cell of its own to sit in.
+   *
+   * Without the `+ 1` the caret at the end of the longest line oscillated
+   * forever, one column wide: scrolling to show it wants
+   * `longest - textWidth + 1`, the clamp allowed only `longest - textWidth`,
+   * and each frame undid the last one. It reads as a flicker and it is two
+   * expressions disagreeing about whether the caret is part of the line.
+   */
   /*
    * Where the caret is on screen, which is not where it is in the string.
    *
@@ -644,9 +682,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
    * in the second one or a CJK line scrolls by the wrong amount.
    */
   const caretColumn = stringWidth((lines[at.line] ?? '').slice(0, at.column));
-  const visibleLeft = caretColumn < left ? caretColumn
-    : caretColumn >= left + textWidth ? caretColumn - textWidth + 1
-      : Math.min(left, maxLeft);
+  const visibleLeft = horizontalWindow({ caretColumn, left, textWidth, longest });
   if (visibleLeft !== left) setLeft(visibleLeft);
 
   const tokens: SyntaxToken[][] = useHighlight(text, { kind, language, uri: uri ?? undefined });

@@ -848,6 +848,24 @@ export class App implements TextUIApp {
    * the focused node gets first refusal, then chords, then global handlers.
    */
   private handleKey(event: KeyEvent): void {
+    /*
+     * Every key, before anything decides what to do with it.
+     *
+     * "My binding does not fire" has two very different answers - the key
+     * never arrived, or something upstream took it - and from inside a
+     * full-screen application they look identical. A terminal that keeps
+     * `ctrl+s` for flow control, or an editor hosting the terminal that keeps
+     * it for itself, is invisible until the log can be asked whether the key
+     * was ever seen. `@/input/paste` was already here; this is the other half.
+     */
+    this.events.emit('@/input/key', {
+      name: event.name,
+      ...(event.ctrl ? { ctrl: true } : {}),
+      ...(event.alt ? { alt: true } : {}),
+      ...(event.shift ? { shift: true } : {}),
+      ...(event.meta ? { meta: true } : {}),
+    });
+
     const focusedNode = this.focus.focused();
 
     if (focusedNode && this.focus.dispatch(event)) {

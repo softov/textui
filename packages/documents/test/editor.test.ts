@@ -456,3 +456,74 @@ describe('a buffer remembers', () => {
     await t.unmount();
   });
 });
+
+/**
+ * A line wider than the pane.
+ *
+ * The editor had a vertical viewport and no horizontal one, so a long line was
+ * handed to the layout whole and the layout did the only thing it could:
+ * shrink every child of that row to fit. The line came back as fragments with
+ * ellipses through it, and the gutter - which is a child of the same row -
+ * came back as `3…`.
+ */
+describe('the line is wider than the pane', () => {
+  const LONG = `const x = '${'abcdefghij'.repeat(12)}';`;
+
+  it('scrolls sideways rather than shrinking the row to fit', async () => {
+    const { t } = await editing(`short\n${LONG}\n`);
+    t.press('down');
+    t.press('end');
+    await settle(t);
+
+    const frame = t.text();
+    expect(frame, 'nothing was ellipsised').not.toContain('…');
+    // The caret is at the end of the line, so the end of the line is what is
+    // on screen - and the start of it is not.
+    expect(t.hasText("';"), 'the end of the line followed the caret').toBe(true);
+    expect(t.hasText('const x ='), 'and the start scrolled off').toBe(false);
+    await t.unmount();
+  });
+
+  it('keeps the gutter a gutter, whatever the row is carrying', async () => {
+    const { t } = await editing(`short\n${LONG}\n`);
+    t.press('down');
+    t.press('end');
+    await settle(t);
+    // Not `2…`: the line number is a child of the row and used to be shrunk
+    // along with everything else in it.
+    expect(t.lines().some((line) => line.startsWith('2 '))).toBe(true);
+    await t.unmount();
+  });
+
+  it('brings the start back when the caret goes back', async () => {
+    const { t } = await editing(`short\n${LONG}\n`);
+    t.press('down');
+    t.press('end');
+    await settle(t);
+    expect(t.hasText('const x =')).toBe(false);
+
+    t.press('home');
+    await settle(t);
+    expect(t.hasText('const x ='), 'home is a scroll as well as a move').toBe(true);
+    await t.unmount();
+  });
+
+  it('never draws a row wider than the pane it was given', async () => {
+    const { t } = await editing(`${LONG}\n${LONG}\n`, { width: 40, height: 6 });
+    t.press('end');
+    await settle(t);
+    for (const line of t.lines()) {
+      expect(line.length).toBeLessThanOrEqual(40);
+    }
+    await t.unmount();
+  });
+
+  it('edits at the caret even when the caret is off the left of the file', async () => {
+    const { t, read } = await editing(`${LONG}\n`);
+    t.press('end');
+    t.type('!');
+    await settle(t);
+    expect(read()).toBe(`${LONG}!\n`);
+    await t.unmount();
+  });
+});

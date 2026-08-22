@@ -1,8 +1,10 @@
 import type { BoxProps } from '@textui/core';
-import type { ComponentDefinition, ResolvedTheme, StyleColor, SyntaxToken } from '@textui/core';
+import type {
+  ComponentDefinition, RenderOutput, ResolvedTheme, StyleColor, SyntaxToken,
+} from '@textui/core';
 import {
-  h, defineComponent, ScrollThumb, useClipboard, useEffect, useFocus, useHighlight,
-  useInput, useMeasure, useState, useTheme, viewportRows,
+  h, defineComponent, ScrollThumb, sliceColumns, stringWidth, useClipboard, useEffect,
+  useFocus, useHighlight, useInput, useMeasure, useMemo, useState, useTheme, viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
 import { EMPTY_HISTORY, record, redo, undo, type History, type Snapshot } from '../history.js';
@@ -214,6 +216,44 @@ function paint(pieces: Piece[], from: number, to: number, style: Partial<Piece>)
   });
 }
 
+/**
+ * The visible cells of one row, as `text` nodes.
+ *
+ * Slicing here rather than letting the layout truncate is the whole fix: a row
+ * handed content wider than its pane is a row whose children all get shrunk,
+ * including the gutter. Widths are cells, not string indices - `sliceColumns`
+ * is what keeps a wide grapheme from sliding the rest of the line one cell
+ * against the gutter.
+ */
+function spansOf(pieces: Piece[], left: number, width: number): RenderOutput[] {
+  const out: RenderOutput[] = [];
+  let column = 0;
+  let drawn = 0;
+
+  for (let i = 0; i < pieces.length && drawn < width; i++) {
+    const piece = pieces[i] as Piece;
+    const end = column + stringWidth(piece.text);
+    if (end > left) {
+      const slice = sliceColumns(piece.text, Math.max(0, left - column), width - drawn);
+      if (slice !== '') {
+        out.push(h('text', {
+          key: i,
+          content: slice,
+          ...(piece.fg ? { fg: piece.fg } : {}),
+          ...(piece.bg ? { bg: piece.bg } : {}),
+        }));
+        drawn += stringWidth(slice);
+      }
+    }
+    column = end;
+  }
+
+  // The row still has to fill its width, or the caret line's background stops
+  // short of the right edge and the highlight looks ragged.
+  if (drawn < width) out.push(h('box', { flex: 1 }));
+  return out;
+}
+
 export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props) => {
   const theme = useTheme();
   const {
@@ -243,6 +283,8 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   /** Where the selection started, or null when there is no selection. */
   const [anchor, setAnchor] = useState<Cursor | null>(null);
   const [top, setTop] = useState(0);
+  /** Leftmost visible cell. The horizontal half of the same viewport. */
+  const [left, setLeft] = useState(0);
   /** The column a vertical move aims for, so up/down past a short line recovers. */
   const [goal, setGoal] = useState(0);
 
@@ -469,6 +511,43 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
       : first;
   if (visibleTop !== top) setTop(visibleTop);
 
+  /*
+   * The horizontal half of the same viewport.
+   *
+   * Without it a line longer than the pane is handed to the layout whole, and
+   * the layout does the only thing it can: shrink every child of the row to
+   * fit. That is why a long line came out as fragments with ellipses through
+   * it - and why the gutter came out as `3…`, because the line number is a
+   * child of that row too and got shrunk along with the code.
+   *
+   * So the row is sliced to the cells that are visible before it is handed
+   * over, exactly as `CodeViewer` does it, and the caret drags the window the
+   * way it already drags the vertical one.
+   */
+  const bars = scrollbar && lines.length > rows;
+  const textWidth = Math.max(
+    1,
+    (measured.width > 0 ? measured.width : 80) - gutterWidth - (bars ? 1 : 0),
+  );
+  const longest = useMemo(
+    () => lines.reduce((max, line) => Math.max(max, stringWidth(line)), 0),
+    [text],
+  );
+  const maxLeft = Math.max(0, longest - textWidth);
+  /*
+   * Where the caret is on screen, which is not where it is in the string.
+   *
+   * Every edit is an index into the line - that is what makes an edit correct -
+   * and every cell is a column on a grid. They are the same number until a
+   * line contains something two cells wide, and the window has to be measured
+   * in the second one or a CJK line scrolls by the wrong amount.
+   */
+  const caretColumn = stringWidth((lines[at.line] ?? '').slice(0, at.column));
+  const visibleLeft = caretColumn < left ? caretColumn
+    : caretColumn >= left + textWidth ? caretColumn - textWidth + 1
+      : Math.min(left, maxLeft);
+  if (visibleLeft !== left) setLeft(visibleLeft);
+
   const tokens: SyntaxToken[][] = useHighlight(text, { kind, language, uri: uri ?? undefined });
   const window = lines.slice(visibleTop, visibleTop + rows);
 
@@ -575,6 +654,9 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
       ? h('text', {
           content: String(lineNumber + 1).padStart(gutterWidth - 1) + ' ',
           fg: onCaretLine ? 'text' : 'subtle',
+          // Stated, so a row too wide for its pane cannot buy space back by
+          // squeezing the line number down to an ellipsis.
+          width: gutterWidth,
         })
       : null;
 
@@ -603,26 +685,17 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
       pieces = paint(pieces, at.column, at.column + 1, { bg: 'cursor', fg: 'inverted' });
     }
 
-    const content = pieces
-      .filter((piece) => piece.text.length > 0)
-      .map((piece, pi) => h('text', {
-        key: pi,
-        content: piece.text,
-        ...(piece.fg ? { fg: piece.fg } : {}),
-        ...(piece.bg ? { bg: piece.bg } : {}),
-      }));
-
-    return h('box',
-      { key: lineNumber, direction: 'row', ...(onCaretLine ? { bg: 'surfaceAlt' } : {}) },
+    return h('box', {
+      key: lineNumber,
+      direction: 'row',
+      // One row is one line. A row free to be two rows tall is a row that
+      // wraps, and a wrapped line is one the caret cannot be moved along.
+      height: 1,
+      ...(onCaretLine ? { bg: 'surfaceAlt' } : {}),
+    },
       gutter,
-      ...content,
-      onCaretLine ? h('spacer', { flex: 1 }) : null);
+      ...spansOf(pieces, visibleLeft, textWidth));
   });
-
-  // The bar goes beside the rows, not inside them, so it spans the viewport
-  // rather than the longest line - and only when there is something off screen
-  // to point at.
-  const bars = scrollbar && lines.length > rows;
 
   return h('box', {
     id: focus.id,

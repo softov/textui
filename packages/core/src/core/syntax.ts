@@ -13,7 +13,14 @@ import { toDisposable } from '../util/disposable.js';
  * later colours every viewer already on screen.
  */
 
-function nameOf(uri: string): string {
+/**
+ * The last segment of a URI, without a query or a fragment.
+ *
+ * Exported because three places wanted it and each had written its own: the
+ * highlighter matching a glob, the resource registry naming a resource, and a
+ * viewer saying which file it is showing.
+ */
+export function nameOf(uri: string): string {
   const clean = uri.split(/[?#]/)[0] ?? uri;
   return clean.split('/').pop() ?? clean;
 }

@@ -50,7 +50,7 @@ export { createSurfaces, createLayouts, createShells, SURFACE_NAMES } from './co
 export { createNavigation, Navigation } from './core/navigation.js';
 export { createResources, Resources } from './core/resources.js';
 export {
-  createSyntax, Syntax, plainTokens, tokensFromSpans, spanHighlighter,
+  createSyntax, Syntax, nameOf, plainTokens, tokensFromSpans, spanHighlighter,
 } from './core/syntax.js';
 export { createManifests, Manifests } from './core/manifest.js';
 

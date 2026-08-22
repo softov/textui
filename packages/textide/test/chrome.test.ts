@@ -889,6 +889,23 @@ describe('the keyboard shortcuts', () => {
     await t.unmount();
   });
 
+  /**
+   * A key bound to a command that is gated off right now.
+   *
+   * `go.previousTab` is `when: '$/ui/editor/uri'`, so with nothing open it
+   * resolves to nothing - and pressing `alt+left` reported "no command
+   * registered as go.previousTab", which is both alarming and untrue. A
+   * command that exists but is not currently offered is not a missing one.
+   */
+  it('says nothing when a gated key is pressed with nothing open', async () => {
+    const t = await open(SIZES[0]!);
+    t.press('alt+left');
+    t.press('alt+right');
+    await quiet(t);
+    expect(t.errors()).toEqual([]);
+    await t.unmount();
+  });
+
   it('lists a key whose command was never put in a list', async () => {
     const t = await open(SIZES[0]!);
     const sheet = shortcutSheet(t.app);
@@ -938,7 +955,10 @@ describe('the keyboard shortcuts', () => {
    */
   it('offers the key that does not depend on a keyboard layout', async () => {
     const t = await open(SIZES[0]!);
-    expect(t.hasText('f1 keys'), 'the footer names f1').toBe(true);
+    // In the status bar. It used to be matched in the key-hints row under the
+    // pane, which is now the pane's own line - `f1` belongs to the window, so
+    // it stayed with the window's row.
+    expect(t.hasText('f1 for keys'), 'the footer names f1').toBe(true);
     expect(shortcutSheet(t.app)).toMatch(/f1.*Keyboard Shortcuts/);
 
     t.press('f1');

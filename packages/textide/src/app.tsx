@@ -1,6 +1,6 @@
 import {
-  Column, KeyHints, Row, Tabs, defineComponent, panelRendererPath, useCapabilities,
-  useEffect, useRuntime, useStoreSubtree, useStoreValue,
+  Column, Row, Tabs, defineComponent, panelRendererPath, panelStatusPath,
+  useCapabilities, useEffect, useRuntime, useStoreSubtree, useStoreValue,
 } from '@textui/core';
 import type { PanelRenderer, RenderOutput, Resource } from '@textui/core';
 import { DOCUMENTS_ROOT, ResourceExplorer, ResourceView, isDocumentDirty } from '@textui/documents';
@@ -64,21 +64,56 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
     };
 
     return (
-      <ResourceExplorer
-        root={workspace?.rootUri ?? ''}
-        onSelect={select}
-        onOpen={open}
-        // Which marks mean folder is textide's vocabulary, not the explorer's:
-        // the tier a terminal can draw is known here and nowhere else.
-        folderIcons={{ folder: Icon.folder, folderOpen: Icon.folderOpen }}
-        // Somewhere to start. An application that boots with nothing focused
-        // sends the first arrow key to whatever happens to be first in the tab
-        // order, which here is the menu bar.
-        autoFocus
-        flex={1}
-      />
+      <Column flex={1}>
+        <ResourceExplorer
+          root={workspace?.rootUri ?? ''}
+          onSelect={select}
+          onOpen={open}
+          // Which marks mean folder is textide's vocabulary, not the explorer's:
+          // the tier a terminal can draw is known here and nowhere else.
+          folderIcons={{ folder: Icon.folder, folderOpen: Icon.folderOpen }}
+          // Somewhere to start. An application that boots with nothing focused
+          // sends the first arrow key to whatever happens to be first in the tab
+          // order, which here is the menu bar.
+          autoFocus
+          flex={1}
+        />
+        <SelectedFile />
+      </Column>
     );
   });
+
+/**
+ * What the tree above has selected.
+ *
+ * This was in the window's status bar, which put a fact about the *explorer's*
+ * highlight next to facts about the whole session - so moving through a tree
+ * changed a row at the far bottom of the screen, and nothing connected the two.
+ * Under the tree it is beside the thing it is about, and it disappears with the
+ * sidebar, which is correct: there is no selection when there is no tree.
+ *
+ * Nothing selected renders nothing, rather than an empty row holding a line
+ * open for a caption that has not arrived.
+ */
+const SelectedFile: (props: Record<string, never>) => RenderOutput =
+  defineComponent<Record<string, never>>('SelectedFile', () => {
+    const kind = useStoreValue<string>(`${ACTIVE_PATH}/kind`);
+    const size = useStoreValue<number>(`${ACTIVE_PATH}/size`);
+    if (kind === undefined && size === undefined) return null;
+    return (
+      <Row gap={1}>
+        {kind !== undefined ? <text content={kind} fg="muted" /> : null}
+        {size !== undefined ? <text content={formatSize(size)} fg="subtle" /> : null}
+      </Row>
+    );
+  });
+
+/** Bytes, in the unit a person would have said. */
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface PaneProps {
   uri: string | null;
@@ -156,7 +191,6 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('Editor', () => {
     const runtime = useRuntime();
     const uri = useStoreValue<string | null>(EDITOR_URI, null);
-    const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
     const groups = useStoreValue<Group[]>(GROUPS_PATH, []) ?? [];
     const focused = useStoreValue<number>(GROUP_PATH, 0) ?? 0;
     const layout = useStoreValue<EditorLayout>(LAYOUT_PATH, 'tabs') ?? 'tabs';
@@ -230,31 +264,64 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
             : <Row flex={1} gap={1} align="stretch">{live.map(groupNode)}</Row>}
 
         {/*
-          * The hints are what you can do *here*, so editing gets the editing
-          * keys. A row that listed both sets would be a row nobody reads.
+          * This row belongs to whatever is in the pane.
           *
-          * Five each, and the fifth is the way to the rest. A footer with
-          * thirty keys on it is a footer the terminal truncates into ellipses,
-          * which is a row that has stopped saying anything at all - the full
-          * sheet is one keypress away and it can be read.
+          * It used to be a fixed list of keys, and the keys were already
+          * elsewhere: `f1` is on the status bar, `ctrl+p` is in the titlebar,
+          * and a row repeating them cost a line of the file to say what two
+          * other rows were already saying. What it says now is whatever the
+          * mounted renderer published - a file name from a viewer, `Ln 12,
+          * Col 4` from an editor, which hunk from a diff, and nothing at all
+          * from a view that has nothing to add, which then costs no row.
+          *
+          * Kept below rather than deleted: a line under the pane is the
+          * natural place for one view to tell another something - in a split,
+          * "the line you are on over there is this" - and that is a channel
+          * worth having a place already carved out for. Bringing it back
+          * wants `mode` again, off `$/ui/editor/mode`.
           */}
-        <KeyHints
-          hints={mode === 'edit'
-            ? [
-                { keys: 'ctrl+s', label: 'save' },
-                { keys: 'ctrl+z', label: 'undo' },
-                { keys: 'ctrl+c/x/v', label: 'clip' },
-                { keys: 'ctrl+e', label: 'view' },
-                { keys: 'f1', label: 'keys' },
-              ]
-            : [
-                { keys: 'enter', label: 'open' },
-                { keys: 'alt+arrows', label: 'files' },
-                { keys: 'ctrl+p', label: 'commands' },
-                { keys: 'ctrl+e', label: 'edit' },
-                { keys: 'f1', label: 'keys' },
-              ]}
-        />
+        <PaneStatus group={at} />
+        {/*
+          * <KeyHints
+          *   hints={mode === 'edit'
+          *     ? [
+          *         { keys: 'ctrl+s', label: 'save' },
+          *         { keys: 'ctrl+z', label: 'undo' },
+          *         { keys: 'ctrl+c/x/v', label: 'clip' },
+          *         { keys: 'ctrl+e', label: 'view' },
+          *         { keys: 'f1', label: 'keys' },
+          *       ]
+          *     : [
+          *         { keys: 'enter', label: 'open' },
+          *         { keys: 'alt+arrows', label: 'files' },
+          *         { keys: 'ctrl+p', label: 'commands' },
+          *         { keys: 'ctrl+e', label: 'edit' },
+          *         { keys: 'f1', label: 'keys' },
+          *       ]}
+          * />
+          */}
       </Column>
+    );
+  });
+
+/**
+ * One line, from whatever is mounted in this group's pane.
+ *
+ * Reads the panel's own status path rather than a bar-shaped store of its own:
+ * `usePanelStatus` is what a renderer already calls, so a viewer nobody has
+ * written yet lands here by calling the hook every other one calls.
+ *
+ * Renders nothing - not an empty row - when there is nothing to say. A blank
+ * line held open for a caption that never arrives is a line of the file
+ * spent on nothing.
+ */
+const PaneStatus: (props: { group: number }) => RenderOutput =
+  defineComponent<{ group: number }>('PaneStatus', ({ group }) => {
+    const status = useStoreValue<string | null>(panelStatusPath(paneScope(group)), null);
+    if (!status) return null;
+    return (
+      <Row>
+        <text fg="muted" content={status} />
+      </Row>
     );
   });

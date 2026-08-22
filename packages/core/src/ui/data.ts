@@ -12,9 +12,10 @@ import {
   chorded, useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useRef,
   useScrollExtent, useState, useTheme,
 } from '../runtime/hooks.js';
-import { usePanelState } from './panel.js';
+import { usePanelState, usePanelStatus } from './panel.js';
 import { expandTabs, fitTo, repeatToWidth, sliceColumns, stringWidth } from '../util/text.js';
 import { layoutMarkdown } from '../util/markdown.js';
+import { nameOf } from '../core/syntax.js';
 import { sizedByLayout, viewportRows } from './viewport.js';
 import { EmptyState } from './display.js';
 
@@ -823,6 +824,17 @@ export const CodeViewer = defineComponent<CodeViewerProps>('CodeViewer', (props)
       width: longest,
     });
   }, [caret, leftColumn, offset, rows, lines.length, longest]);
+
+  /*
+   * What this pane says about itself: which file it is showing.
+   *
+   * A viewer is not an editor and should not pretend to be one - `Ln 12,
+   * Col 4` is what the *editor* says, because a caret is a thing you put
+   * somewhere and a reader has not put one anywhere. The name is what a
+   * reader wants confirmed, particularly in a split where two panes are
+   * showing two files and only one of them is focused.
+   */
+  usePanelStatus(uri !== null && uri !== undefined ? nameOf(uri) : null);
 
   const body: RenderOutput[] = [];
   for (let i = 0; i < rows; i++) {

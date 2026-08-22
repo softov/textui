@@ -1,6 +1,7 @@
 import {
   HORIZONTAL_STEP, ScrollThumb, chorded, defineComponent, h, sliceColumns, stringWidth,
-  useFocus, useInput, useMeasure, usePanelState, useRuntime, useStoreValue, viewportRows,
+  useFocus, useInput, useMeasure, usePanelState, usePanelStatus, useRuntime, useStoreValue,
+  viewportRows,
 } from '@textui/core';
 import type {
   BindingPath, BoxProps, ComponentDefinition, RenderOutput, StyleColor,
@@ -235,6 +236,18 @@ export const GitDiff = defineComponent<GitDiffProps>('GitDiff', (props) => {
   );
   const offset = Math.max(first, Math.min(caret - rows + 1, maxTop));
   const leftColumn = Math.max(0, Math.min(view.left, maxLeft));
+
+  /*
+   * What this pane says about itself: which hunk the caret is in.
+   *
+   * The thing only a diff knows, and the thing `s` and `u` act on - so a
+   * person about to stage something can see what they are about to stage
+   * without counting `@@` lines up the screen.
+   */
+  const hunkCount = lines.filter((line) => classify(line) === 'hunk').length;
+  usePanelStatus(hunkCount === 0 ? null : `Hunk ${
+    (layout === 'split' ? hunkOfPair(pairs, caret) : hunkOfLine(lines, caret)) + 1
+  } of ${hunkCount}`);
 
   const moveTo = (next: number): void => {
     const line = Math.max(0, Math.min(next, Math.max(0, height - 1)));

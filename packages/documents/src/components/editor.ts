@@ -855,11 +855,18 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   // which renderer is mounted. `onSelection` stays for a caller holding this
   // component directly; the panel is how everything else hears about it.
   /*
-   * What the status bar gets: how many matches, or how much is selected.
+   * What this pane says about itself: where the caret is, unless something
+   * more urgent is true.
    *
    * The search wins while there is one - "3 of 17" is what you are looking at
-   * when you are searching, and the selection count is the same information
-   * you can already see highlighted.
+   * when you are searching - and a selection wins over the caret, because the
+   * caret is one end of it and the count is the part you cannot see. With
+   * neither, an editor says `Ln 12, Col 4`, which is the one thing an editor
+   * always knows and a reader always wants.
+   *
+   * Both count from one. The buffer counts from zero, and every editor ever
+   * written shows the other, so the conversion happens here rather than
+   * leaking a zero-based number onto the screen.
    */
   const atMatch = matches.length > 0 ? matchAt(matches, at) : -1;
   usePanelStatus(
@@ -869,7 +876,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
         ? `no matches for "${find.query.text}"`
         : chars > 0
           ? `${chars} selected${spanned > 1 ? ` in ${spanned} lines` : ''}`
-          : null,
+          : `Ln ${at.line + 1}, Col ${at.column + 1}`,
   );
 
   // --------------------------------------------------------------- render

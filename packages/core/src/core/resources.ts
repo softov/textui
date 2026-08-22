@@ -8,6 +8,7 @@ import type { ComponentRegistry } from '../types/component-registry.js';
 import type { WhenEngine } from '../types/when.js';
 import type { Disposable } from '../types/disposable.js';
 import { toDisposable } from '../util/disposable.js';
+import { nameOf } from './syntax.js';
 
 function schemeOf(uri: ResourceURI): string {
   const i = uri.indexOf(':');
@@ -85,7 +86,7 @@ export class Resources implements ResourceRegistry {
 
   /** Extension, then mime type, then an explicit `detect`. Best match wins. */
   detectKind(uri: ResourceURI, meta: ResourceMetadata = { name: uri }): string {
-    const name = meta.name || uri.split('/').pop() || uri;
+    const name = meta.name || nameOf(uri) || uri;
     const candidates: { id: string; score: number }[] = [];
 
     for (const kind of this.kindDefs.values()) {

@@ -1,51 +1,68 @@
-import { PANEL_PATH, StatusBar, panelStatusPath, useStoreValue, defineComponent } from '@textui/core';
+import { StatusBar, defineComponent, useInterval, useState, useStoreValue } from '@textui/core';
 import type { RenderOutput, StatusSegment } from '@textui/core';
 import type { Workspace } from '../workspace.js';
 import { WORKSPACE_PATH } from '../workspace.js';
-import { ACTIVE_PATH } from '../filesystem.js';
 
 /**
  * The statusbar.
  *
- * What is true right now, not what you can do - the keys live in the hints
- * row. Segments are data so an extension can contribute one without this file
- * learning what git is.
+ * Where you are, and nothing that belongs to something narrower. It used to
+ * carry four different scopes at once - the workspace, the file the *explorer*
+ * had selected, whatever the focused panel wanted to say, and a key hint - so
+ * reading it meant first working out which of them each part was about.
+ *
+ * Each of those now has a place that owns it. The panel line is under the pane
+ * it describes, published by the renderer through `usePanelStatus`. The
+ * selected file's kind and size are in the explorer's own footer, beside the
+ * tree that selected it. What is left here is what is true of the whole
+ * window: which folder, which branch, and the time.
+ *
+ * `f1` stays. It is the way to every key that is not written on the screen,
+ * and a discoverable route to the shortcut sheet is worth one segment - the
+ * rest of the row is empty space anyway.
+ *
+ * Segments are data so an extension can contribute one without this file
+ * learning what git is: the branch is git's, arriving through
+ * `$/ui/status/segments`, and it sits beside the folder because "which folder,
+ * which branch" is one thought.
  */
 export const StatusLine: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('StatusLine', () => {
   const workspace = useStoreValue<Workspace>(WORKSPACE_PATH);
-  const kind = useStoreValue<string>(`${ACTIVE_PATH}/kind`);
-  const size = useStoreValue<number>(`${ACTIVE_PATH}/size`);
   const extra = useStoreValue<StatusSegment[]>('$/ui/status/segments', []);
-  /*
-   * Whatever the panel the keyboard is in has to say.
-   *
-   * The bar used to read a selection count the editor was wired to publish,
-   * which meant the one renderer that had been thought of got a status line
-   * and no other could. A panel publishes for whatever is inside it, so a
-   * diff saying which hunk, or a search saying how many are left, arrives
-   * here without this file learning about either.
-   */
-  const panel = useStoreValue<string | null>(PANEL_PATH, null);
-  const status = useStoreValue<string | null>(panelStatusPath(panel ?? 'none'), null);
 
   const leading: StatusSegment[] = [
     { id: 'root', label: workspace?.root ?? '' },
-    ...(kind ? [{ id: 'kind', label: kind }] : []),
+    ...(extra ?? []),
   ];
 
   const trailing: StatusSegment[] = [
-    ...(panel !== null && status ? [{ id: 'panel', label: status }] : []),
-    ...(extra ?? []),
-    ...(size !== undefined ? [{ id: 'size', label: formatSize(size) }] : []),
     { id: 'help', label: 'f1 for keys' },
+    { id: 'clock', label: useClock() },
   ];
 
   return <StatusBar leading={leading} trailing={trailing} />;
 });
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+/**
+ * The time, to the minute.
+ *
+ * Ticked every fifteen seconds rather than every second: the display has no
+ * seconds in it, so a per-second timer would redraw the whole bar sixty times
+ * for fifty-nine frames that look identical. Fifteen is close enough that the
+ * minute is never visibly stale and cheap enough to leave running.
+ *
+ * Local time and 24-hour, from the runtime's own formatter, so a session in
+ * another locale gets that locale's separator rather than a hardcoded colon.
+ */
+function useClock(): string {
+  const [now, setNow] = useState(() => stamp());
+  useInterval(() => { setNow(stamp()); }, 15_000);
+  return now;
+}
+
+function stamp(): string {
+  return new Date().toLocaleTimeString(undefined, {
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
 }

@@ -30,6 +30,37 @@ Every glyph has three tiers - the theme's in [`glyphs.ts`](../core/src/themes/gl
 
 **`--log-file` and `--log-unix` send a running commentary somewhere else.** What has focus, what the chrome did, every command that ran. `examples/logtail.mjs` listens on a socket.
 
+## Reloading while it runs
+
+```bash
+pnpm dev:watch      # rebuild on save, and swap it into the running editor
+```
+
+A save rebuilds and the editor re-registers itself; f5 does the same on
+demand. **Nothing in the store is touched**, which is the whole point: the
+files you have open, the buffer you have not saved, where you had scrolled to
+and which pane had focus all live there, and navigating back to them is most
+of what quit-and-run actually costs.
+
+What that takes is ownership. `registerTextide` returns one bag, the entry
+point keeps it, and a reload disposes exactly that bag before calling the new
+module's `registerTextide` - dispose too little and there are two `file.save`
+commands and two viewers claiming `file.markdown`; dispose too much and a host
+application loses its own registrations. Every layer is closed on the way
+through, because an open palette is a node built by the module that is about
+to stop existing.
+
+A build that fails never reaches the swap. The running editor keeps working
+and the status bar says `reload failed` - a toast would land on the frame you
+are looking at, which is the frame the reload exists to preserve.
+
+Only textide's own sources reload. The runtime is bundled to its own file that
+both the host and the reloaded module import by URL, so they hold the *same*
+`@textui/core` - a second copy would build components whose hooks read a
+`currentInstance` the first copy's renderer never sets, and every one of them
+would throw on its first render. The price is that a change under
+`packages/core` still needs the process restarted.
+
 ## The workspace
 
 A directory is a workspace. `.textide.json` in its root configures it, and a
@@ -58,16 +89,12 @@ directory until it is configured is an editor nobody opens.
 | Editing | Selection, cut, copy, paste, indent, undo - `ctrl+c` is copy only while something is selected, so quit is never lost |
 | Tabs | Every open file, `ctrl+pageup`/`ctrl+pagedown` between them, `ctrl+w` to close |
 | Split | A second pane beside the first, on another file or the same one |
+| Reload | `pnpm dev:watch`, then f5 or a save - the screen is rebuilt, the store is not |
 | Files | New file, new folder, rename, delete-with-confirmation, as commands |
 | Config | `.textide.json`, in the store like everything else |
 
 ## What is not, yet
 
-- **Hot reload.** `pnpm dev` bundles from the workspace sources, so a change to
-  the runtime is live on the next run with no build in between - but a running
-  editor does not pick it up. The shape it would take is written down in
-  [decisions](../../docs/decisions.md): a full remount that keeps the store,
-  not a clever partial one.
 - **Git.** Diff, stage, commit and branches arrive as a loadable extension
   rather than as part of this package.
 

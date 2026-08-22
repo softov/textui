@@ -155,9 +155,14 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
 
   // One component per surface. The shell decides where each region sits, so
   // adding a panel later is a mount rather than a change to a layout here.
-  app.open({ surface: 'header', key: 'titlebar', target: { component: 'TitleBar' } });
-  app.open({ surface: 'sidebar', key: 'explorer', target: { component: 'Explorer' } });
-  app.open({ surface: 'main', key: 'editor', target: { component: 'Editor' } });
-  app.open({ surface: 'status', key: 'status', target: { component: 'StatusLine' } });
+  //
+  // The mounts go in the bag with everything else. A registration that leaves
+  // its mounts behind is a registration that cannot be undone: disposing it
+  // unregisters the components and leaves four surfaces pointing at names
+  // nothing answers to, which is what a hot reload would do twice a minute.
+  bag.add(app.open({ surface: 'header', key: 'titlebar', target: { component: 'TitleBar' } }));
+  bag.add(app.open({ surface: 'sidebar', key: 'explorer', target: { component: 'Explorer' } }));
+  bag.add(app.open({ surface: 'main', key: 'editor', target: { component: 'Editor' } }));
+  bag.add(app.open({ surface: 'status', key: 'status', target: { component: 'StatusLine' } }));
   return bag;
 }

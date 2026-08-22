@@ -1,8 +1,9 @@
-import type { CapabilityOverrides, ColorDepth, UnicodeLevel } from '@textui/core';
+import type { CapabilityOverrides, ColorDepth, Disposable, TextUIApp, UnicodeLevel } from '@textui/core';
 import { createApp, WRITER_KEY, renderToString } from '@textui/core';
 import { createNodeTerminal, createWriter } from '@textui/terminal';
 import { loadWorkspace } from './workspace.js';
-import { registerTextide } from './register.js';
+import { registerTextide, type RegisterOptions } from './register.js';
+import { createReloader } from './reload.js';
 import { attachLog, fileSink, unixSink } from './log.js';
 import { Editor, Explorer } from './app.js';
 import { TitleBar } from './chrome/titlebar.js';
@@ -175,6 +176,12 @@ async function main(): Promise<void> {
   }
 
   const terminal = createNodeTerminal(capabilities ? { capabilities } : {});
+  const registration = { workspace, ...(options.shots ? { shots: options.shots } : {}) };
+  // The bag textide's registration returns. A hot reload disposes exactly this
+  // and nothing else, which is the whole of what "ownership" means here - so
+  // the entry point has to keep it rather than dropping it on the floor.
+  let bag: Disposable | null = null;
+
   const app = createApp({
     terminal,
     // No `root`: everything textide shows is a surface mount. Passing one puts
@@ -184,7 +191,7 @@ async function main(): Promise<void> {
     shell: 'workbench',
     session: { managed: true, altScreen: true, mouse: true, title: `textide - ${workspace.name}` },
     onBoot: (booted) => {
-      registerTextide(booted, { workspace, ...(options.shots ? { shots: options.shots } : {}) });
+      bag = registerTextide(booted, registration);
 
       booted.commands.register({
         id: 'app.quit',
@@ -208,6 +215,47 @@ async function main(): Promise<void> {
 
   app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
   await app.start();
+
+  if (process.env.TEXTIDE_RELOAD && bag) await attachReload(app, bag, registration);
+}
+
+/**
+ * Hot reload, when the dev runner asked for it.
+ *
+ * The runner rebuilds and sends SIGUSR2; this re-imports the screen module at
+ * a URL nothing has imported before, because ESM has no way to invalidate one.
+ * `screen.mjs` sits beside this file and imports the same runtime files this
+ * process is already holding - see `scripts/dev.mjs` for why that matters.
+ *
+ * Nothing here touches the store, so every open buffer, every unsaved edit and
+ * the file you were looking at all come through the swap untouched.
+ */
+async function attachReload(
+  app: TextUIApp,
+  initial: Disposable,
+  registration: RegisterOptions,
+): Promise<void> {
+  const reloader = createReloader(app, {
+    initial,
+    load: async (generation: number) => {
+      const href = `${new URL('./screen.mjs', import.meta.url).href}?v=${generation}`;
+      const next = (await import(href)) as { registerTextide: typeof registerTextide };
+      return (target: TextUIApp) => next.registerTextide(target, registration);
+    },
+  });
+
+  const run = (): void => { void reloader.reload().then(() => app.flush()); };
+
+  app.commands.register({
+    id: 'app.reload',
+    title: 'Reload',
+    category: 'View',
+    slots: ['palette'],
+    description: 'Re-register the editor from the sources on disk',
+    run,
+  });
+  app.keybindings.register({ keys: 'f5', commandId: 'app.reload' });
+  process.on('SIGUSR2', run);
 }
 
 await main();

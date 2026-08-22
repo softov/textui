@@ -19,6 +19,13 @@ export { TitleBar } from './chrome/titlebar.js';
 export { StatusLine } from './chrome/statusbar.js';
 export { MenuBar, MENUS } from './chrome/menubar.js';
 export { textideCommands, paletteOrder, layoutCommands, EDITOR_URI, CATEGORIES, TOGGLE_COMMAND } from './commands.js';
+export { createReloader, STATUS_SEGMENTS } from './reload.js';
+export type { Reloader, ReloaderOptions, ReloadOutcome, Registrar } from './reload.js';
+export {
+  EDITOR_MODE, EDITOR_SELECTION, SPLIT_PATH, TABS_PATH, activeTab, closeTab,
+  openTab, openTabs, reconcileTabs, splitTab, stepTab, tabFromPath, tabLabel,
+  tabPath, toggleSplit,
+} from './tabs.js';
 export { attachLog, fileSink, unixSink } from './log.js';
 export type { LogSink, LogOptions } from './log.js';
 export {

@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "dev:watch": "node scripts/dev.mjs --watch",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"

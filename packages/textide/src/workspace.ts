@@ -70,8 +70,17 @@ export async function loadWorkspace(dir: string): Promise<Workspace> {
   };
 }
 
-/** Put the workspace where every component reads it from. */
+/**
+ * Put the workspace where every component reads it from.
+ *
+ * The config is set every time, because it is what the file says. The UI state
+ * it *seeds* is only written when nothing has filled it in - the same rule
+ * `useStore` follows - so registering again, which is what a hot reload does,
+ * does not fold up a sidebar somebody opened.
+ */
 export function seedWorkspace(app: TextUIApp, workspace: Workspace): void {
   app.store.set(WORKSPACE_PATH, workspace);
-  app.store.set('$/ui/sidebar/collapsed', workspace.sidebarCollapsed === true);
+  if (app.store.get('$/ui/sidebar/collapsed') === undefined) {
+    app.store.set('$/ui/sidebar/collapsed', workspace.sidebarCollapsed === true);
+  }
 }

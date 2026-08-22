@@ -3,8 +3,9 @@ import type {
   ComponentDefinition, RenderOutput, ResolvedTheme, StyleColor, SyntaxToken,
 } from '@textui/core';
 import {
-  h, defineComponent, ScrollThumb, sliceColumns, stringWidth, useClipboard, useEffect,
-  useFocus, useHighlight, useInput, useMeasure, useMemo, useState, useTheme, viewportRows,
+  h, chorded, defineComponent, ScrollThumb, sliceColumns, stringWidth, useClipboard,
+  useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useState, useTheme,
+  viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
 import { EMPTY_HISTORY, record, redo, undo, type History, type Snapshot } from '../history.js';
@@ -556,27 +557,36 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   useInput((event) => {
     const key = event.name;
     const extend = event.shift === true;
-    if (key === 'up') { move({ line: at.line - 1, column: goal }, true, extend); return true; }
-    if (key === 'down') { move({ line: at.line + 1, column: goal }, true, extend); return true; }
-    if (key === 'left') {
-      if (at.column === 0 && at.line > 0) {
-        move({ line: at.line - 1, column: (lines[at.line - 1] ?? '').length }, false, extend);
-      } else move({ line: at.line, column: at.column - 1 }, false, extend);
-      return true;
+    /*
+     * Moving the caret is what an *unchorded* arrow does.
+     *
+     * `alt+left` is an application saying "previous file" over the top of a
+     * caret that would otherwise eat it, and `ctrl+pagedown` is a page of
+     * files rather than a page of this one. One pair of keys means both, and
+     * neither has to be a second-choice chord, because the caret only takes
+     * the plain one. Shift is the exception: it is not a chord aimed past this
+     * control, it is how a selection is made.
+     */
+    if (!chorded(event)) {
+      if (key === 'up') { move({ line: at.line - 1, column: goal }, true, extend); return true; }
+      if (key === 'down') { move({ line: at.line + 1, column: goal }, true, extend); return true; }
+      if (key === 'left') {
+        if (at.column === 0 && at.line > 0) {
+          move({ line: at.line - 1, column: (lines[at.line - 1] ?? '').length }, false, extend);
+        } else move({ line: at.line, column: at.column - 1 }, false, extend);
+        return true;
+      }
+      if (key === 'right') {
+        if (at.column >= (lines[at.line] ?? '').length && at.line < lines.length - 1) {
+          move({ line: at.line + 1, column: 0 }, false, extend);
+        } else move({ line: at.line, column: at.column + 1 }, false, extend);
+        return true;
+      }
+      if (key === 'home') { move({ line: at.line, column: 0 }, false, extend); return true; }
+      if (key === 'end') { move({ line: at.line, column: (lines[at.line] ?? '').length }, false, extend); return true; }
+      if (key === 'pageup') { move({ line: at.line - rows, column: goal }, true, extend); return true; }
+      if (key === 'pagedown') { move({ line: at.line + rows, column: goal }, true, extend); return true; }
     }
-    if (key === 'right') {
-      if (at.column >= (lines[at.line] ?? '').length && at.line < lines.length - 1) {
-        move({ line: at.line + 1, column: 0 }, false, extend);
-      } else move({ line: at.line, column: at.column + 1 }, false, extend);
-      return true;
-    }
-    if (key === 'home') { move({ line: at.line, column: 0 }, false, extend); return true; }
-    if (key === 'end') { move({ line: at.line, column: (lines[at.line] ?? '').length }, false, extend); return true; }
-    // A page of this file, not a page of files: with ctrl held these belong to
-    // whatever the application bound them to, which is how one pair of keys
-    // means both without either of them being a second-choice chord.
-    if (key === 'pageup' && !event.ctrl) { move({ line: at.line - rows, column: goal }, true, extend); return true; }
-    if (key === 'pagedown' && !event.ctrl) { move({ line: at.line + rows, column: goal }, true, extend); return true; }
 
     // Select all, and copy, work on a file nobody may write.
     if (event.ctrl && (key === 'a' || key === 'A')) {
@@ -630,8 +640,16 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
       shiftLines(event.shift === true);
       return true;
     }
-    // Anything that produced one printable character is that character.
-    if (event.char && !event.ctrl && !event.meta && event.char.length === 1) {
+    /*
+     * Anything that produced one printable character is that character - as
+     * long as nothing was held down with it.
+     *
+     * A terminal reports `alt+1` as an escape and a `1`, so a branch that only
+     * checked ctrl and meta typed the digit and swallowed the chord: `alt+1`
+     * put a `1` in the file instead of opening the first tab, and `alt+?` put
+     * a `?` in it instead of opening the shortcut sheet.
+     */
+    if (event.char && !chorded(event) && event.char.length === 1) {
       insert(event.char);
       return true;
     }

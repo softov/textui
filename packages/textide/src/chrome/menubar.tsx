@@ -1,4 +1,6 @@
-import { Row, defineComponent, useCommand, useFocus, useInput, useRuntime, useState } from '@textui/core';
+import {
+  Row, chorded, defineComponent, useCommand, useFocus, useInput, useRuntime, useState,
+} from '@textui/core';
 import type { KeyEvent, MenuItem, RenderOutput, TextUIApp } from '@textui/core';
 
 /**
@@ -109,6 +111,9 @@ const MenuLabel = defineComponent<MenuLabelProps>('MenuLabel', ({ menu, open, on
       onOpen(menu);
       return true;
     }
+    // Walking the bar is what a plain arrow does. `alt+left` belongs to
+    // whatever the application bound it to, even while the bar has focus.
+    if (chorded(event)) return false;
     if (event.name === 'left') { onStep(menu.id, -1); return true; }
     if (event.name === 'right') { onStep(menu.id, 1); return true; }
     return false;
@@ -201,6 +206,7 @@ export const MenuBar: (props: Record<string, never>) => RenderOutput =
           skipTab: true,
           global: true,
           onKey: { handler: (event: KeyEvent) => {
+            if (chorded(event)) return false;
             if (event.name === 'left') { walkOpen(spec.id, -1); return true; }
             if (event.name === 'right') { walkOpen(spec.id, 1); return true; }
             return false;

@@ -130,11 +130,23 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+z', 'edit.undo'],
     ['ctrl+y', 'edit.redo'],
     ['ctrl+e', 'file.edit'],
-    // Walking the strip. The editor takes plain pageup and pagedown to move
-    // the caret, and leaves them alone with ctrl held, which is what lets one
-    // pair of keys mean "a page" inside a file and "a file" across them.
+    /*
+     * Walking the strip, without going to it.
+     *
+     * These are chords on purpose. A control only takes a key that is not
+     * chorded - the caret takes a plain arrow and leaves `alt+left` alone -
+     * so one pair of keys means "a character" inside a file and "a file"
+     * across them, and switching file never costs the keyboard: whatever had
+     * focus still has it afterwards.
+     */
+    ['alt+left', 'go.previousTab'],
+    ['alt+right', 'go.nextTab'],
     ['ctrl+pageup', 'go.previousTab'],
     ['ctrl+pagedown', 'go.nextTab'],
+    // The shortcut list, which is where every key that is not on the footer
+    // has to be findable. `alt+shift+?` is filed as `alt+?`: a terminal
+    // reports shift through the character it produced, never beside it.
+    ['alt+shift+?', 'help.keys'],
     // F10 enters the bar; alt+letter opens one menu outright. Both exist
     // because the first is discoverable and the second is fast.
     ['f10', 'menu.focus'],
@@ -143,6 +155,14 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['alt+h', 'menu.help'],
   ] as const) {
     bag.add(app.keybindings.register({ keys, commandId }));
+  }
+
+  // One key per position. The command is one command and the digit is its
+  // argument, so nine keys cost one row in the shortcut list rather than nine.
+  for (let index = 1; index <= 9; index++) {
+    bag.add(app.keybindings.register({
+      keys: `alt+${index}`, commandId: 'go.tab', args: { index },
+    }));
   }
 
   bag.add(app.components.registerMany([

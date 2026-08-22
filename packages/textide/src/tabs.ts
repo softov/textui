@@ -111,6 +111,21 @@ export function closeTab(store: ReactiveStore, uri: string): void {
   store.set(EDITOR_URI, next);
 }
 
+/**
+ * Select the nth tab, counting from one.
+ *
+ * Nothing happens when there is no nth, rather than clamping to the last: a
+ * key that always does *something* teaches you nothing about how many files
+ * you have open, and `alt+7` quietly meaning `alt+4` is worse than `alt+7`
+ * meaning nothing.
+ */
+export function selectTab(store: ReactiveStore, index: number): boolean {
+  const uri = openTabs(store)[index - 1];
+  if (uri === undefined) return false;
+  store.set(EDITOR_URI, uri);
+  return true;
+}
+
 /** Move `delta` tabs along the strip, wrapping. */
 export function stepTab(store: ReactiveStore, delta: number): void {
   const tabs = openTabs(store);

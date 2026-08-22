@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
+import { getDocument } from '@textui/documents';
 import { loadWorkspace, registerTextide } from '../src/index.js';
 import { EDITOR_URI, SPLIT_PATH, TABS_PATH } from '../src/tabs.js';
 
@@ -163,6 +164,12 @@ describe('the split', () => {
       t.app.execute('view.split');
       await quiet();
       expect(t.app.store.get(SPLIT_PATH)).toBe(uri('alpha.txt'));
+
+      // The command says what it did, and the toast that says it floats over
+      // the panes this is about. Reading the frame underneath means putting it
+      // away first rather than asserting on whichever half it happens to miss.
+      t.app.layers.closeLayer('notification');
+      await quiet();
       expect(t.hasText('beta one')).toBe(true);
       expect(t.hasText('alpha one')).toBe(true);
       await t.unmount();
@@ -227,6 +234,81 @@ describe('the split', () => {
     t.app.execute('file.edit');
     await quiet();
     expect(t.app.focus.focused()).toBe(t.app.focus.order('pane.main')[0]);
+    await t.unmount();
+  });
+});
+
+/**
+ * Reaching a file without going to the strip.
+ *
+ * Tab leaves the strip and an arrow inside it changes the tab, which is what a
+ * tab strip is - but both of those cost you the keyboard you were using. These
+ * are chords instead, so they work from wherever focus happens to be and leave
+ * it exactly where it was.
+ */
+describe('the keys that switch file', () => {
+  async function editing() {
+    const { t, quiet, uri } = await open(SIZES[0]!);
+    for (const name of ['alpha.txt', 'beta.txt', 'gamma.txt']) {
+      t.app.store.set(EDITOR_URI, uri(name));
+      await quiet();
+    }
+    t.app.execute('file.edit');
+    await quiet();
+    expect(t.store.get('$/focus/scope'), 'the caret is in the pane').toBe('pane.main');
+    return { t, quiet, uri };
+  }
+
+  it('walks the strip with alt and an arrow, without moving focus', async () => {
+    const { t, quiet, uri } = await editing();
+    t.press('alt+left');
+    await quiet();
+    expect(t.app.store.get(EDITOR_URI)).toBe(uri('beta.txt'));
+    expect(t.store.get('$/focus/scope'), 'and the caret stayed put').toBe('pane.main');
+
+    t.press('alt+right');
+    await quiet();
+    expect(t.app.store.get(EDITOR_URI)).toBe(uri('gamma.txt'));
+    await t.unmount();
+  });
+
+  it('goes straight to one with alt and its number', async () => {
+    const { t, quiet, uri } = await editing();
+    t.press('alt+1');
+    await quiet();
+    expect(t.app.store.get(EDITOR_URI)).toBe(uri('alpha.txt'));
+
+    t.press('alt+3');
+    await quiet();
+    expect(t.app.store.get(EDITOR_URI)).toBe(uri('gamma.txt'));
+    await t.unmount();
+  });
+
+  /**
+   * A key that always does something teaches you nothing about how many files
+   * you have open, and `alt+7` quietly meaning `alt+3` is worse than `alt+7`
+   * meaning nothing.
+   */
+  it('does nothing at all when there is no such file', async () => {
+    const { t, quiet, uri } = await editing();
+    t.press('alt+9');
+    await quiet();
+    expect(t.app.store.get(EDITOR_URI)).toBe(uri('gamma.txt'));
+    await t.unmount();
+  });
+
+  /**
+   * A terminal reports `alt+1` as an escape and a `1`, so an editor that only
+   * checked ctrl and meta typed the digit and swallowed the chord.
+   */
+  it('does not type the digit into the file it just opened', async () => {
+    const { t, quiet, uri } = await editing();
+    t.pressAll('alt+1', 'alt+2', 'alt+3', 'alt+shift+?');
+    await quiet();
+    for (const name of ['alpha.txt', 'beta.txt', 'gamma.txt']) {
+      expect(getDocument(t.app.store, uri(name))?.content ?? '', name)
+        .not.toMatch(/[0-9?]/);
+    }
     await t.unmount();
   });
 });

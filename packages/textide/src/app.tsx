@@ -184,25 +184,27 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
         {/*
           * The hints are what you can do *here*, so editing gets the editing
           * keys. A row that listed both sets would be a row nobody reads.
+          *
+          * Five each, and the fifth is the way to the rest. A footer with
+          * thirty keys on it is a footer the terminal truncates into ellipses,
+          * which is a row that has stopped saying anything at all - the full
+          * sheet is one keypress away and it can be read.
           */}
         <KeyHints
           hints={mode === 'edit'
             ? [
-                { keys: 'shift+arrows', label: 'select' },
-                { keys: 'ctrl+c/x/v', label: 'copy/cut/paste' },
-                { keys: 'tab', label: 'indent' },
                 { keys: 'ctrl+s', label: 'save' },
                 { keys: 'ctrl+z', label: 'undo' },
+                { keys: 'ctrl+c/x/v', label: 'clip' },
                 { keys: 'ctrl+e', label: 'view' },
+                { keys: 'alt+?', label: 'keys' },
               ]
             : [
-                { keys: 'up/down', label: 'move' },
                 { keys: 'enter', label: 'open' },
-                { keys: 'ctrl+pgup/pgdn', label: 'tabs' },
-                { keys: 'ctrl+w', label: 'close' },
+                { keys: 'alt+arrows', label: 'files' },
                 { keys: 'ctrl+p', label: 'commands' },
                 { keys: 'ctrl+e', label: 'edit' },
-                { keys: 'q', label: 'quit' },
+                { keys: 'alt+?', label: 'keys' },
               ]}
         />
       </Column>

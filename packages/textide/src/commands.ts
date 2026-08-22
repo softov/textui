@@ -1,7 +1,7 @@
 import type {
   SurfaceName, CommandDefinition, CommandContext, TextUIApp, BindingPath, ThemeGlyphs,
 } from '@textui/core';
-import { notify } from '@textui/core';
+import { normalizeStroke, notify } from '@textui/core';
 import {
   canRedoDocument, canUndoDocument, getDocument, isDocumentDirty, redoDocument,
   revertDocument, saveDocument, undoDocument,
@@ -9,7 +9,8 @@ import {
 import { ACTIVE_PATH } from './filesystem.js';
 import { iconsFor } from './icons.js';
 import {
-  EDITOR_URI, closeTab, openTabs, stepTab, tabFromPath, tabLabel, tabPath, toggleSplit,
+  EDITOR_URI, closeTab, openTabs, selectTab, stepTab, tabFromPath, tabLabel, tabPath,
+  toggleSplit,
 } from './tabs.js';
 
 /**
@@ -233,6 +234,22 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       run: (_args: Record<string, unknown>, ctx: CommandContext) => { stepTab(ctx.store, -1); },
     },
     {
+      // One command, told which tab, rather than nine commands named after
+      // positions. The nine keys carry the number, the same way one surface
+      // switch carries which surface.
+      id: 'go.tab',
+      icon: Icon.go,
+      title: 'Go To File By Number',
+      category: 'Go',
+      // Never in the palette: nine rows that differ only by a digit are nine
+      // rows nobody reads. The shortcut list is where they belong.
+      slots: [],
+      args: [{ name: 'index', type: 'number' as const }],
+      run: (args: Record<string, unknown>, ctx: CommandContext) => {
+        selectTab(ctx.store, Number(args.index ?? 0));
+      },
+    },
+    {
       // One list of what is open, rather than a strip you can only walk one
       // step at a time. With twenty files open the strip has stopped being a
       // way to find anything.
@@ -440,13 +457,11 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       title: 'Keyboard Shortcuts',
       category: 'Help',
       slots: ['palette'],
+      // The footer has room for five keys and there are thirty, so this is
+      // where the other twenty-five are. Built from the *keybindings* rather
+      // than from the palette: a key that is bound to a command nobody put in
+      // a list is exactly the key nobody can otherwise find.
       run: (_args: Record<string, unknown>, ctx: CommandContext) => {
-        const lines = ctx.app.commands
-          .list({ slot: 'palette' })
-          .map((c) => [ctx.app.keybindings.forCommand(c.id)[0], c.title] as const)
-          .filter(([keys]) => keys !== undefined)
-          .map(([keys, title]) => `${String(keys).padEnd(10)} ${title}`);
-
         ctx.app.layers.open({
           id: 'help.keys',
           layer: 'modal',
@@ -456,8 +471,13 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
           node: {
             component: 'Dialog',
             title: 'Keyboard Shortcuts',
-            width: 46,
-            children: { component: 'CodeViewer', content: lines.join('\n'), lineNumbers: false },
+            width: 56,
+            children: {
+              component: 'CodeViewer',
+              content: shortcutSheet(ctx.app),
+              lineNumbers: false,
+              height: 16,
+            },
           },
         });
       },
@@ -473,6 +493,63 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       },
     },
   ];
+}
+
+
+/**
+ * Every bound key, as a page.
+ *
+ * Grouped by the category of the command each key runs, because "what can I do
+ * to the file in front of me" and "how do I move around" are two questions and
+ * a flat alphabetical list answers neither.
+ *
+ * A command bound to more than two keys is collapsed to its ends - `alt+1` to
+ * `alt+9` is one row saying one thing, not nine rows saying it nine times. The
+ * command is one command, and the digit is its argument; the sheet says so the
+ * same way the registration does.
+ */
+export function shortcutSheet(app: TextUIApp): string {
+  const groups = new Map<string, Map<string, string[]>>();
+
+  for (const binding of app.keybindings.list()) {
+    const command = app.commands.get(binding.commandId);
+    const category = command?.category ?? 'Other';
+    const title = command?.title ?? binding.commandId;
+    const byTitle = groups.get(category) ?? new Map<string, string[]>();
+    // Normalised, so the sheet says the stroke that actually arrives.
+    // `alt+shift+?` is registered as it is meant and filed as `alt+?`, because
+    // a terminal reports shift through the character it produced rather than
+    // beside it - and the sheet has to agree with the footer.
+    byTitle.set(title, [...(byTitle.get(title) ?? []), normalizeStroke(binding.keys)]);
+    groups.set(category, byTitle);
+  }
+
+  const order = [...CATEGORIES, 'Other'];
+  const rank = (name: string): number => {
+    const i = order.indexOf(name as typeof CATEGORIES[number]);
+    return i === -1 ? order.length : i;
+  };
+
+  const shown = (keys: string[]): string => (keys.length > 2
+    ? `${keys[0] as string} .. ${keys[keys.length - 1] as string}`
+    : keys.join(', '));
+
+  // The column is as wide as its widest row, measured rather than guessed: a
+  // fixed width is a column that lines up until the day something longer than
+  // it is bound, and then lines up nowhere.
+  const column = Math.max(...[...groups.values()]
+    .flatMap((byTitle) => [...byTitle.values()].map((keys) => shown(keys).length)));
+
+  const out: string[] = [];
+  for (const category of [...groups.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))) {
+    if (out.length > 0) out.push('');
+    out.push(category);
+    const byTitle = groups.get(category) as Map<string, string[]>;
+    for (const title of [...byTitle.keys()].sort((a, b) => a.localeCompare(b))) {
+      out.push(`  ${shown(byTitle.get(title) as string[]).padEnd(column)}  ${title}`);
+    }
+  }
+  return out.join('\n');
 }
 
 /**

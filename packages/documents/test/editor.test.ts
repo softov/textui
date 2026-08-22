@@ -109,6 +109,20 @@ describe('the caret has a column', () => {
     await t.unmount();
   });
 
+  /**
+   * A terminal reports `alt+1` as an escape and a `1`, so a printable branch
+   * that only checked ctrl and meta typed the digit *and* swallowed the chord:
+   * `alt+1` put a `1` in the file instead of reaching whatever the application
+   * bound it to.
+   */
+  it('leaves an alt chord for the application', async () => {
+    const { t, read } = await editing('hello\n');
+    t.pressAll('alt+1', 'alt+9', 'alt+shift+?', 'alt+left', 'alt+right');
+    await settle(t);
+    expect(read(), 'nothing was typed').toBe('hello\n');
+    await t.unmount();
+  });
+
   it('leaves tab alone, so focus can get out', async () => {
     // A second focusable, because tab wrapping to the only control there is
     // would pass whether or not the editor swallowed the key.

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
 import { loadWorkspace, registerTextide, paletteOrder, CATEGORIES } from '../src/index.js';
+import { shortcutSheet } from '../src/commands.js';
 
 /**
  * The menus, the palette and the chrome toggles.
@@ -841,5 +842,80 @@ describe('what is actually in the tab order', () => {
 
     await t.unmount();
     await rm(scratch, { recursive: true, force: true });
+  });
+});
+
+/**
+ * The shortcut sheet.
+ *
+ * The footer has room for five keys and there are thirty, so the other
+ * twenty-five have to be findable somewhere. Built from the keybindings rather
+ * than from the palette, because a key bound to a command nobody put in a list
+ * is exactly the key nobody can otherwise find.
+ */
+describe('the keyboard shortcuts', () => {
+  const quiet = async (t: { settle(): Promise<void>; advance(n: number): void; flush(): void }): Promise<void> => {
+    for (let i = 0; i < 10; i++) { await t.settle(); t.advance(50); t.flush(); }
+  };
+
+  it('opens on alt+shift+? and closes on escape', async () => {
+    const t = await open(SIZES[0]!);
+    t.press('alt+shift+?');
+    await quiet(t);
+    expect(t.hasText('Keyboard Shortcuts')).toBe(true);
+    expect(t.hasText('Command Palette'), 'and lists what the keys run').toBe(true);
+
+    t.press('escape');
+    await quiet(t);
+    expect(t.app.layers.entries()).toEqual([]);
+    await t.unmount();
+  });
+
+  it('lists a key whose command was never put in a list', async () => {
+    const t = await open(SIZES[0]!);
+    const sheet = shortcutSheet(t.app);
+    // `go.tab` and `view.toggle` are both `slots: []` - nine rows differing by
+    // a digit, and one switch that carries which surface. Neither is in the
+    // palette and both are bound.
+    expect(sheet).toContain('Go To File By Number');
+    expect(sheet).toContain('Toggle Surface');
+    await t.unmount();
+  });
+
+  it('collapses a run of keys into its ends', async () => {
+    const t = await open(SIZES[0]!);
+    const sheet = shortcutSheet(t.app);
+    // Nine keys, one command, one row. Nine rows saying the same thing nine
+    // times is nine rows nobody reads.
+    expect(sheet).toContain('alt+1 .. alt+9');
+    expect(sheet).not.toContain('alt+5');
+    // Two is still two, because both are worth knowing.
+    expect(sheet).toContain('ctrl+p, ctrl+k');
+    await t.unmount();
+  });
+
+  /**
+   * A terminal reports shift through the character it produced, never beside
+   * it, so `alt+shift+?` is filed and pressed as `alt+?`. The sheet has to say
+   * the stroke that arrives, and to agree with the footer that names it.
+   */
+  it('prints the stroke that actually arrives', async () => {
+    const t = await open(SIZES[0]!);
+    const sheet = shortcutSheet(t.app);
+    expect(sheet).toContain('alt+?');
+    expect(sheet).not.toContain('alt+shift+?');
+    expect(t.hasText('alt+? keys'), 'which is what the footer offers').toBe(true);
+    await t.unmount();
+  });
+
+  it('groups by what the keys are for', async () => {
+    const t = await open(SIZES[0]!);
+    const sheet = shortcutSheet(t.app);
+    const headings = sheet.split('\n').filter((line) => line !== '' && !line.startsWith(' '));
+    // The categories the palette is ordered by, in the order it orders them.
+    expect(headings).toEqual(headings.filter((h) => h.trim() === h));
+    expect(headings.indexOf('File')).toBeLessThan(headings.indexOf('View'));
+    expect(headings).toContain('Go');
+    await t.unmount();
   });
 });

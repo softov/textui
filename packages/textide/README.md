@@ -30,6 +30,30 @@ Every glyph has three tiers - the theme's in [`glyphs.ts`](../core/src/themes/gl
 
 **`--log-file` and `--log-unix` send a running commentary somewhere else.** What has focus, what the chrome did, every command that ran. `examples/logtail.mjs` listens on a socket.
 
+## Keys that are chords on purpose
+
+Switching file is `alt+←`, `alt+→` and `alt+1`…`alt+9` rather than something
+you reach by tabbing to the strip. Both of the alternatives cost you the
+keyboard: tab leaves the strip for the menu bar, and an arrow *inside* the
+strip changes the tab but leaves focus in the strip rather than in what you
+were doing.
+
+A chord costs nothing, because a control only takes a key that is not chorded.
+The caret takes a plain arrow and leaves `alt+←` alone, so one pair of keys
+means "a character" inside a file and "a file" across them, and whatever had
+focus still has it afterwards. `chorded()` in the runtime is that rule written
+once, and every navigating control asks it.
+
+`alt+9` with three files open does nothing, deliberately. A key that always
+does *something* teaches you nothing about how many files you have open, and
+`alt+9` quietly meaning `alt+3` is worse than `alt+9` meaning nothing.
+
+The footer has room for five keys and there are thirty, so **`alt+?` opens the
+sheet**. It is built from the keybindings rather than from the palette,
+because a key bound to a command nobody put in a list is exactly the key
+nobody can otherwise find - and a command bound to nine keys is one row saying
+`alt+1 .. alt+9`, not nine rows saying it nine times.
+
 ## Reloading while it runs
 
 ```bash
@@ -117,7 +141,8 @@ commands, a component and a mount, and unloading it leaves nothing behind.
 | Explorer | The filesystem through the resource registry - lazy, sorted, filtered |
 | Viewer | Whatever the registry says opens the selected kind |
 | Editing | Selection, cut, copy, paste, indent, undo - `ctrl+c` is copy only while something is selected, so quit is never lost |
-| Tabs | Every open file, `ctrl+pageup`/`ctrl+pagedown` between them, `ctrl+w` to close |
+| Tabs | Every open file. `alt+←`/`alt+→` between them, `alt+1`…`alt+9` straight to one, `ctrl+w` to close |
+| Keys | `alt+?` opens the sheet - the footer holds five, and there are thirty |
 | Split | A second pane beside the first, on another file or the same one |
 | Reload | `pnpm dev:watch`, then f5 or a save - the screen is rebuilt, the store is not |
 | Extensions | Whatever `.textide.json` lists, loaded at boot |

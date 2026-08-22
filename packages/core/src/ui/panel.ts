@@ -113,6 +113,29 @@ export function panelView(store: ReactiveStore, id: string, uri: string): PanelV
   return store.get<PanelView>(panelViewPath(id, uri)) ?? {};
 }
 
+/**
+ * Which renderer a *kind* opens with, once somebody has said.
+ *
+ * The per-resource memory answers "this file", and a person who opens one
+ * markdown as source is usually telling you something about markdown rather
+ * than about that file. So a choice is remembered twice: against the resource,
+ * where it wins, and against its kind, where it becomes the answer for the
+ * next file of that kind nobody has an opinion about yet.
+ */
+export const RENDERERS_ROOT = '$/ui/renderers';
+
+export function kindRendererPath(kind: string): BindingPath {
+  return `${RENDERERS_ROOT}/${escapeSegment(kind)}` as BindingPath;
+}
+
+export function kindRenderer(store: ReactiveStore, kind: string): string | null {
+  return store.get<string>(kindRendererPath(kind)) ?? null;
+}
+
+export function setKindRenderer(store: ReactiveStore, kind: string, renderer: string): void {
+  store.set(kindRendererPath(kind), renderer);
+}
+
 /** Remember which renderer this panel uses for this resource. */
 export function setPanelRenderer(
   store: ReactiveStore,
@@ -322,6 +345,10 @@ export const ResourcePanel = defineComponent<ResourcePanelProps>('ResourcePanel'
   // Subscribing here, not only in the renderer: picking "open with" writes the
   // choice into this record, and the panel is what has to redraw.
   const view = useStoreValue<PanelView>(uri ? panelViewPath(id, uri) : LOOSE);
+  const resourceKind = task.status === 'success' ? (task.data?.kind ?? null) : null;
+  // Subscribed, not just read: choosing how markdown opens in one panel is an
+  // answer every other panel showing markdown should pick up.
+  const forKind = useStoreValue<string>(kindRendererPath(resourceKind ?? '\u0000'));
 
   /*
    * What the caller named, then what the caller asked for, then what this
@@ -340,6 +367,7 @@ export const ResourcePanel = defineComponent<ResourcePanelProps>('ResourcePanel'
     (renderer !== undefined ? renderers.find((r) => r.id === renderer) : undefined) ??
     asked ??
     renderers.find((r) => r.id === view?.renderer) ??
+    renderers.find((r) => r.id === forKind) ??
     defaultRenderer(renderers);
 
   // Published rather than returned, because what is on screen is a fact a
@@ -421,6 +449,7 @@ export const PANEL_COMPONENTS: ComponentDefinition[] = [
 interface Choice {
   def: ResourceRendererDefinition;
   label: string;
+  kind: string;
 }
 
 /**
@@ -440,6 +469,7 @@ async function choicesFor(app: TextUIApp, uri: string | null): Promise<Choice[]>
 
   return renderers.map((def) => ({
     def,
+    kind: resource.kind,
     label: (counts.get(def.title) ?? 0) > 1 ? `${def.title} (${def.component})` : def.title,
   }));
 }
@@ -448,10 +478,14 @@ function apply(
   app: TextUIApp,
   id: string | null,
   uri: string | null,
-  def: ResourceRendererDefinition | undefined,
+  choice: Choice | undefined,
 ): void {
-  if (id === null || uri === null || !def) return;
-  setPanelRenderer(app.store, id, uri, def.id);
+  if (id === null || uri === null || !choice) return;
+  setPanelRenderer(app.store, id, uri, choice.def.id);
+  // And against the kind, because a person who opens one markdown as source is
+  // usually saying something about markdown. The file's own answer still wins
+  // wherever there is one.
+  setKindRenderer(app.store, choice.kind, choice.def.id);
   // Asking for a different view of something is asking to look at it.
   claimPanel(app.store, id);
 }
@@ -503,7 +537,7 @@ export function panelCommands(app: TextUIApp): CommandDefinition[] {
         const uri = targetUri(args, id);
         const label = String(args.renderer ?? '');
         const choices = await choicesFor(app, uri);
-        apply(app, id, uri, choices.find((c) => c.label === label || c.def.id === label)?.def);
+        apply(app, id, uri, choices.find((c) => c.label === label || c.def.id === label));
       },
     },
     {
@@ -522,7 +556,7 @@ export function panelCommands(app: TextUIApp): CommandDefinition[] {
         const at = panelView(app.store, id, uri).renderer
           ?? defaultRenderer(choices.map((c) => c.def))?.id;
         const index = choices.findIndex((c) => c.def.id === at);
-        apply(app, id, uri, choices[(index + 1) % choices.length]?.def);
+        apply(app, id, uri, choices[(index + 1) % choices.length]);
       },
     },
     {
@@ -546,7 +580,7 @@ export function panelCommands(app: TextUIApp): CommandDefinition[] {
         const next = showing?.saves === true
           ? defaultRenderer(defs.filter((d) => d.saves !== true))
           : defs.find((d) => d.saves === true);
-        apply(app, id, uri, next ?? undefined);
+        apply(app, id, uri, choices.find((c) => c.def.id === next?.id));
       },
     },
   ];

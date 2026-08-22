@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { render, renderApp } from '../src/index.js';
 import type { ComponentDefinition, Resource, ResourceProvider, TextUIApp } from '@textui/core';
 import {
-  PANEL_PATH, ResourcePanel, defaultRenderer, defineComponent, h, panelPath, panelStatusPath,
-  panelViewPath, useFocus, useInput, useStoreValue, usePanelState, usePanelStatus,
+  PANEL_PATH, ResourcePanel, defaultRenderer, defineComponent, h, kindRendererPath, panelPath,
+  panelStatusPath, panelViewPath, useFocus, useInput, useStoreValue, usePanelState,
+  usePanelStatus,
 } from '@textui/core';
 
 /**
@@ -230,7 +231,7 @@ describe('a panel remembers where it was looking', () => {
 });
 
 describe('choosing how to open something', () => {
-  it('sticks, and is remembered against the resource', async () => {
+  it('sticks to the file, and teaches the kind', async () => {
     const { t, quiet } = await panel();
     expect(t.hasText('line 1')).toBe(true);
 
@@ -239,15 +240,37 @@ describe('choosing how to open something', () => {
     expect(t.hasText('EDITING mem:/long.txt')).toBe(true);
     expect(t.store.get<{ renderer?: string }>(panelViewPath('left', 'mem:/long.txt'))?.renderer)
       .toBe('edit');
+    // Twice: against the file, and against what the file is. Somebody who
+    // opens one text file as source is usually saying something about text
+    // files rather than about that one.
+    expect(t.store.get(kindRendererPath('file.text'))).toBe('edit');
 
     // Away and back: the choice belongs to this panel and this file, so it
     // survives the panel being pointed somewhere else.
     t.store.set('$/ui/test/left', 'mem:/other.txt');
     await quiet();
-    expect(t.hasText('other one')).toBe(true);
+    expect(t.hasText('EDITING mem:/other.txt'), 'and the next one of its kind').toBe(true);
     t.store.set('$/ui/test/left', 'mem:/long.txt');
     await quiet();
     expect(t.hasText('EDITING mem:/long.txt')).toBe(true);
+    await t.unmount();
+  });
+
+  it('lets a file disagree with its kind', async () => {
+    const { t, quiet } = await panel();
+    t.store.set(kindRendererPath('file.text'), 'edit');
+    await quiet();
+    expect(t.hasText('EDITING mem:/long.txt'), 'the kind decides by default').toBe(true);
+
+    await t.app.execute('panel.openWith', { renderer: 'Plain' });
+    await quiet();
+    expect(t.hasText('line 1')).toBe(true);
+
+    // The file's own answer outlives the kind's, which is the point of keeping
+    // both: "markdown opens rendered, except this one".
+    t.store.set(kindRendererPath('file.text'), 'edit');
+    await quiet();
+    expect(t.hasText('line 1'), 'this one was told otherwise').toBe(true);
     await t.unmount();
   });
 

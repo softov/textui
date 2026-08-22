@@ -47,16 +47,28 @@ export interface ListProps extends BoxProps {
   /** Draw a marker column for the selected row. */
   marker?: boolean;
   focusable?: boolean;
+  autoFocus?: boolean;
+  /**
+   * A stable focus id, so a command - or the screen that owns this - can put
+   * the reader here by name. Without one the id comes from the instance, which
+   * nothing outside the render can know.
+   */
+  focusId?: string;
 }
 
 export const List = defineComponent<ListProps>('List', (props) => {
   const theme = useTheme();
   const {
     items, selectedId, onSelect, onActivate, visibleRows,
-    emptyMessage = 'Nothing here', marker = true, focusable = true, ...rest
+    emptyMessage = 'Nothing here', marker = true, focusable = true,
+    autoFocus, focusId, ...rest
   } = props;
 
-  const focus = useFocus({ disabled: !focusable });
+  const focus = useFocus({
+    ...(focusId ? { id: focusId } : {}),
+    disabled: !focusable,
+    ...(autoFocus ? { autoFocus } : {}),
+  });
   const measured = useMeasure();
   const [internalId, setInternalId] = useState<string | null>(
     items.find((i) => !i.disabled)?.id ?? null,

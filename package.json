@@ -8,12 +8,14 @@
     "dev": "pnpm --filter @textui/playground dev",
     "example": "node examples/run.mjs",
     "textide": "pnpm --filter @textui/textide dev",
-    "build": "tsc -b packages/core packages/terminal packages/documents packages/testing packages/cli packages/textide",
+    "build": "tsc -b packages/core packages/terminal packages/documents packages/testing packages/cli packages/textide packages/textide-git",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo playground/.dev examples/*/.dev packages/textide/.dev"
+    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo playground/.dev examples/*/.dev packages/textide/.dev",
+    "docs:props": "node scripts/docs/extract-props.mjs && node scripts/docs/gen-components.mjs",
+    "docs:check": "node scripts/docs/extract-props.mjs && node scripts/docs/gen-components.mjs --check && node scripts/docs/check-links.mjs"
   },
   "packageManager": "pnpm@10.28.0",
   "engines": {

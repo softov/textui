@@ -37,6 +37,15 @@ export interface WorkspaceConfig {
    * `activate(app, context)` and returns a `Disposable`.
    */
   extensions?: string[];
+  /**
+   * Extensions textide loads by itself when the workspace warrants it - git in
+   * a repository, so far.
+   *
+   * On unless it is turned off. An editor opened in a repository that says
+   * nothing about git is an editor that has decided not to mention the branch
+   * you are on, and that is a stranger default than loading it.
+   */
+  builtinExtensions?: boolean;
 }
 
 export interface Workspace extends WorkspaceConfig {

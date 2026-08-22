@@ -19,6 +19,7 @@
   "dependencies": {
     "@textui/core": "workspace:*",
     "@textui/documents": "workspace:*",
+    "@textui/textide-git": "workspace:*",
     "@textui/terminal": "workspace:*"
   },
   "devDependencies": {

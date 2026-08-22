@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
-import { isAbsolute, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { Disposable, TextUIApp } from '@textui/core';
 import { createBag, notify } from '@textui/core';
@@ -65,6 +66,25 @@ export function resolveSpecifier(specifier: string, root: string): string {
 }
 
 /**
+ * What textide loads without being asked, and when.
+ *
+ * Git is the whole list. Opening textide in a repository and being told
+ * nothing about it is the surprising behaviour, not the other way round - and
+ * an extension that is not installed simply does not load, which is why this
+ * can be a default without becoming a dependency.
+ */
+const BUILTIN: { specifier: string; wanted(root: string): boolean }[] = [
+  {
+    specifier: '@textui/textide-git',
+    // The directory, not `git rev-parse`: this runs before the first frame and
+    // a process spawn per boot to answer a question a directory entry already
+    // answers is a spawn nobody asked for. A worktree's `.git` is a file
+    // rather than a directory, so this asks about existence and nothing more.
+    wanted: (root) => existsSync(join(root, '.git')),
+  },
+];
+
+/**
  * Load every extension the workspace asks for.
  *
  * Returns one bag, so a host that wants to unload them all - or a reload that
@@ -76,7 +96,15 @@ export async function loadExtensions(
   options: LoadOptions = {},
 ): Promise<Disposable> {
   const bag = createBag();
-  const specifiers = workspace.extensions ?? [];
+  const asked = workspace.extensions ?? [];
+  // A built-in that is also listed is listed once: the config wins the
+  // ordering, and loading a module twice would register everything twice.
+  const automatic = workspace.builtinExtensions === false
+    ? []
+    : BUILTIN
+      .filter((b) => b.wanted(workspace.root) && !asked.includes(b.specifier))
+      .map((b) => b.specifier);
+  const specifiers = [...automatic, ...asked];
   if (specifiers.length === 0) return bag;
 
   const report = options.onError ?? ((specifier: string, error: unknown): void => {
@@ -96,7 +124,10 @@ export async function loadExtensions(
       }
       bag.add(await module.activate(app, context));
     } catch (error) {
-      report(specifier, error);
+      // Silently, for one nobody asked for: an editor that opens with an error
+      // toast because an optional extension is not installed has made it
+      // mandatory in every way that matters to the person reading the toast.
+      if (!automatic.includes(specifier)) report(specifier, error);
     }
   }
   return bag;

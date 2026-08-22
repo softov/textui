@@ -610,9 +610,29 @@ export function shortcutSheet(app: TextUIApp): string {
       && Number((m as RegExpExecArray)[2]) === Number((parts[0] as RegExpExecArray)[2]) + i);
   };
 
+  /*
+   * And a list of aliases stops when the column is full.
+   *
+   * One command with four ways to reach it makes the key column as wide as
+   * that one row, and every label in the sheet loses the columns it took -
+   * "Command Palette" became "Command Pa". The keys are in the order they were
+   * registered, which is the order of how reliably they arrive, so what falls
+   * off the end is the one worth having least.
+   */
+  const BUDGET = 24;
+  const fits = (keys: string[]): string[] => {
+    const out: string[] = [];
+    for (const k of keys) {
+      const next = [...out, k].join(', ');
+      if (out.length > 0 && next.length > BUDGET) break;
+      out.push(k);
+    }
+    return out;
+  };
+
   const shown = (keys: string[]): string => (runs(keys)
     ? `${keys[0] as string} .. ${keys[keys.length - 1] as string}`
-    : keys.join(', '));
+    : fits(keys).join(', '));
 
   // The column is as wide as its widest row, measured rather than guessed: a
   // fixed width is a column that lines up until the day something longer than

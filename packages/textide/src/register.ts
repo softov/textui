@@ -144,6 +144,16 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+pageup', 'go.previousTab'],
     ['ctrl+pagedown', 'go.nextTab'],
     /*
+     * And the pair everybody tries first - where the terminal allows it.
+     *
+     * A plain terminal sends the same byte for `tab` and `ctrl+tab`, so this
+     * binding is unreachable unless the session negotiated a keyboard protocol
+     * that disambiguates them. It costs nothing where it does not arrive, and
+     * the two pairs above are the ones that always work.
+     */
+    ['ctrl+tab', 'go.nextTab'],
+    ['ctrl+shift+tab', 'go.previousTab'],
+    /*
      * The shortcut list, which is where every key that is not on the footer
      * has to be findable - so it cannot itself be hard to press.
      *

@@ -6,3 +6,7 @@ coverage/
 .textui/
 .dev/
 brief/
+
+# Saved state the examples write, into whatever directory they were run from.
+/arcade.json
+/todo.json

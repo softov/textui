@@ -36,8 +36,7 @@ Everything else follows from that: one reactive store addressed by paths, typed 
 
 ## Documentation
 
-Published at **<https://softov.github.io/textui/>**, and readable in
-[`docs/`](docs/index.md) as plain markdown.
+Published at **<https://softov.github.io/textui/>**, and readable in [`docs/`](docs/index.md) as plain markdown.
 
 Start here:
 
@@ -83,10 +82,7 @@ scripts/docs-preview.py --host 0.0.0.0   # ...and reachable from the network
 node scripts/check-docs.mjs     # the nav tree, links and titles
 ```
 
-`docs-preview.py` exists because the site is built with `baseurl: /textui`, so
-every link in it is absolute at `/textui/...`. A plain `python -m http.server`
-over `docs/_site` 404s on all of it; this one mounts the site under the prefix
-the pages actually ask for.
+`docs-preview.py` exists because the site is built with `baseurl: /textui`, so every link in it is absolute at `/textui/...`. A plain `python -m http.server` over `docs/_site` 404s on all of it; this one mounts the site under the prefix the pages actually ask for.
 
 Node ≥ 22, pnpm 10.
 

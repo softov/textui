@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, renderApp } from '../src/index.js';
-import { h, Column, Field, Form, Progress, ScrollView, Select, TextInput, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
+import { h, Button, Column, Row, Field, Form, Progress, ScrollView, Select, TextArea, TextInput, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
 
 const ROWS = [
   { id: 'api', name: 'api-gateway', status: 'up', cpu: '12.4', mem: '310' },
@@ -727,5 +727,316 @@ describe('Progress labelWidth', () => {
       .map((l) => l.search(/[█░]/));
     expect(bars[0]).not.toBe(bars[1]);
     await t.unmount();
+  });
+});
+
+/**
+ * The three a chat application needed and the catalog did not have.
+ *
+ * Each is here for the behaviour that makes it not a composition of what was
+ * already shipped: a field that keeps the keys it is typing, a viewport over
+ * entries whose height it had to measure, and markdown that survives being
+ * wrapped.
+ */
+
+describe('TextArea', () => {
+  it('takes a printable character before any keybinding does', async () => {
+    // The reason an application with a composer can have single-letter
+    // commands at all: while this has focus, `q` is a letter.
+    const ran: string[] = [];
+    const t = await renderApp({
+      width: 40,
+      height: 8,
+      onBoot: (app) => {
+        app.commands.register({ id: 'demo.quit', title: 'Quit', run: () => ran.push('quit') });
+        app.keybindings.register({ keys: 'q', commandId: 'demo.quit' });
+      },
+      root: h(function Host() {
+        const [value, setValue] = useState('');
+        return h(TextArea, { value, onChange: setValue, focusId: 'field', autoFocus: true, placeholder: 'type' });
+      }, {}),
+    });
+    await t.settle();
+
+    t.focus('field');
+    t.type('quiet');
+    await t.settle();
+
+    expect(ran).toEqual([]);
+    expect(t.hasText('quiet')).toBe(true);
+    await t.unmount();
+  });
+
+  it('grows to the lines typed, then stops and scrolls', async () => {
+    const t = await render(
+      { component: 'TextArea', value: 'one\ntwo\nthree\nfour\nfive', onChange: { handler: () => {} }, maxRows: 3 },
+      { width: 30, height: 10 },
+    );
+    // Three rows, not five: a field that grows without limit eventually leaves
+    // no room for what it is a reply to.
+    expect(t.getByRole('textbox').rect?.height).toBe(3);
+    await t.unmount();
+  });
+
+  it('gives enter to the caller and keeps alt+enter for itself', async () => {
+    const sent: string[] = [];
+    const t = await renderApp({
+      width: 40,
+      height: 8,
+      root: h(function Host() {
+        const [value, setValue] = useState('');
+        return h(TextArea, {
+          value,
+          onChange: setValue,
+          onSubmit: (text: string) => sent.push(text),
+          focusId: 'field',
+          autoFocus: true,
+        });
+      }, {}),
+    });
+    await t.settle();
+    t.focus('field');
+
+    t.type('one');
+    t.press('alt+enter');
+    t.type('two');
+    await t.settle();
+    expect(sent).toEqual([]);
+
+    t.press('enter');
+    await t.settle();
+    expect(sent).toEqual(['one\ntwo']);
+    await t.unmount();
+  });
+});
+
+describe('Feed', () => {
+  const entries = (n: number): unknown[] =>
+    Array.from({ length: n }, (_, i) => h('text', { key: i, content: `entry ${i}` }));
+
+  it('follows the tail, and stops when the reader scrolls up', async () => {
+    const t = await render(
+      { component: 'Feed', focusId: 'feed', children: entries(40), height: 6 },
+      { width: 30, height: 8 },
+    );
+    for (let i = 0; i < 4; i++) await t.settle();
+    // Opens at the end, which is where a feed is read from.
+    expect(t.hasText('entry 39')).toBe(true);
+
+    t.focus('feed');
+    t.press('pageup');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.hasText('entry 39')).toBe(false);
+
+    t.press('end');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.hasText('entry 39')).toBe(true);
+    await t.unmount();
+  });
+
+  it('moves a cursor between entries when the caller owns one', async () => {
+    const selected: number[] = [];
+    const t = await render(
+      {
+        component: 'Feed',
+        focusId: 'feed',
+        selectedIndex: 0,
+        onSelect: { handler: (index: number) => selected.push(index) },
+        children: entries(5),
+        height: 6,
+      },
+      { width: 30, height: 8 },
+    );
+    await t.settle();
+    t.focus('feed');
+    t.press('down');
+    t.press('down');
+    expect(selected).toEqual([1, 1]);
+    await t.unmount();
+  });
+
+  it('draws no scrollbar when everything fits', async () => {
+    // A track down the side of a feed that fits states something untrue.
+    const short = await render(
+      { component: 'Feed', children: entries(2), height: 6 },
+      { width: 30, height: 8 },
+    );
+    for (let i = 0; i < 4; i++) await short.settle();
+    const narrow = short.lines().some((line) => line.trimEnd().length >= 29);
+    expect(narrow).toBe(false);
+    await short.unmount();
+  });
+});
+
+describe('MarkdownView', () => {
+  it('keeps emphasis and code through the wrap', async () => {
+    const t = await render(
+      { component: 'MarkdownView', content: 'the **composer** owns `enter` here' },
+      { width: 24, height: 8 },
+    );
+    await t.settle();
+    // The markers are gone and the words are not: a viewer that stripped both
+    // would pass a text assertion and lose the meaning.
+    expect(t.hasText('composer')).toBe(true);
+    expect(t.text()).not.toContain('**');
+    await t.unmount();
+  });
+
+  it('collapses past maxLines and says how much is hidden', async () => {
+    const t = await render(
+      { component: 'MarkdownView', content: 'one\ntwo\nthree\nfour\nfive', maxLines: 2 },
+      { width: 24, height: 8 },
+    );
+    await t.settle();
+    expect(t.hasText('more lines')).toBe(true);
+    await t.unmount();
+  });
+});
+
+describe('the tab order', () => {
+  it('keeps a control in place when it stops being disabled', async () => {
+    // A Submit that is disabled until a field is filled in used to re-register
+    // the moment it became usable, and a registration made again goes on the
+    // end - so tab from the field reached Cancel first, which is the one
+    // control the reader was not going towards.
+    const t = await renderApp({
+      width: 40,
+      height: 10,
+      root: h(function Host() {
+        const [value, setValue] = useState('');
+        return h(Column, { gap: 1 },
+          h(TextInput, { value, onChange: setValue, label: 'name', focusId: 'field', autoFocus: true }),
+          h(Button, { label: 'Save', disabled: value === '', onPress: () => {} }),
+          h(Button, { label: 'Cancel', onPress: () => {} }));
+      }, {}),
+    });
+    await t.settle();
+
+    t.focus('field');
+    t.type('anything');
+    await t.settle();
+
+    t.tab();
+    await t.settle();
+    expect(t.focused()?.label).toBe('Save');
+    await t.unmount();
+  });
+
+  it('moves focus off a control that becomes disabled', async () => {
+    const t = await renderApp({
+      width: 40,
+      height: 10,
+      root: h(function Host() {
+        const [value, setValue] = useState('x');
+        return h(Column, { gap: 1 },
+          h(TextInput, { value, onChange: setValue, label: 'name', focusId: 'field' }),
+          h(Button, { label: 'Save', disabled: value === '', onPress: () => {} }));
+      }, {}),
+    });
+    await t.settle();
+
+    const save = t.getByRole('button', { name: 'Save' }).id;
+    t.focus(save);
+    await t.settle();
+    expect(t.app.focus.focused()).toBe(save);
+
+    // Emptying the field disables Save. Focus cannot stay there: the keys it
+    // would have handled are now nobody's.
+    t.focus('field');
+    t.press('backspace');
+    for (let i = 0; i < 3; i++) await t.settle();
+    expect(t.app.focus.focused()).not.toBe(save);
+    await t.unmount();
+  });
+});
+
+/**
+ * Three weights of button.
+ *
+ * A solid button used to fill its ring cells at every size, so it was a solid
+ * rectangle standing beside an outline button that was a thin frame - same
+ * height, twice the weight, and a row of them looked bigger than the row
+ * above. `md` draws the ring in half-blocks instead: same height, same
+ * measure, and it no longer out-weighs its neighbour. `lg` is the old look,
+ * asked for on purpose.
+ */
+describe('Button size', () => {
+  const solid = (size?: 'sm' | 'md' | 'lg') =>
+    h(Button, { label: 'Go', tone: 'primary', variant: 'solid', ...(size ? { size } : {}) });
+
+  /**
+   * How tall the button is, by where it put ink.
+   *
+   * Not by counting non-blank lines: `lg` fills its edge rows with the tone
+   * and draws spaces on them, so a text-only measure reports a three-row
+   * button as one row and the difference between the sizes disappears.
+   */
+  async function height(node: unknown, theme?: string) {
+    const t = await render(node as never, { width: 20, height: 6, ...(theme ? { theme } : {}) });
+    await t.settle();
+    // The canvas is painted too, so "has a background" is every cell. What
+    // marks the button is a background that differs from the backdrop.
+    const backdrop = JSON.stringify(t.app.buffer().get(19, 5)?.bg);
+    const painted = new Set<number>();
+    for (let y = 0; y < 6; y++) {
+      for (let x = 0; x < 20; x++) {
+        const cell = t.app.buffer().get(x, y);
+        if (!cell) continue;
+        if (cell.char.trim() !== '' || JSON.stringify(cell.bg) !== backdrop) painted.add(y);
+      }
+    }
+    await t.unmount();
+    return painted.size;
+  }
+
+  it('is one row small and three rows otherwise', async () => {
+    expect(await height(solid('sm'))).toBe(1);
+    expect(await height(solid())).toBe(3);
+    expect(await height(solid('lg'))).toBe(3);
+  });
+
+  it('draws the medium edge as glyphs and the large edge as fill', async () => {
+    const edge = async (size: 'md' | 'lg') => {
+      const t = await render(solid(size), { width: 20, height: 6 });
+      await t.settle();
+      const top = t.lines()[0] as string;
+      await t.unmount();
+      return top;
+    };
+    // Half-blocks: the ring is visible ink, and half a cell high.
+    expect((await edge('md')).trim()).not.toBe('');
+    // Filled through: the edge row is the tone, with nothing drawn on it.
+    expect((await edge('lg')).trim()).toBe('');
+  });
+
+  it('fills at every size, focused or not', async () => {
+    for (const size of ['sm', 'md', 'lg'] as const) {
+      const t = await render(solid(size), { width: 20, height: 6 });
+      await t.settle();
+      const y = t.lines().findIndex((l) => l.includes('Go'));
+      const cell = t.app.buffer().get((t.lines()[y] as string).indexOf('Go'), y);
+      expect(cell?.bg, `${size} should be filled`).toBeDefined();
+      await t.unmount();
+    }
+  });
+
+  it('stands the same height as the outline button beside it', async () => {
+    const t = await render(
+      h(Row, { gap: 1 }, solid(), h(Button, { label: 'Or' })),
+      { width: 24, height: 6 },
+    );
+    await t.settle();
+    // Both occupy the same three rows: a dialog's OK does not sit a line
+    // above its Cancel.
+    const filled = t.lines().findIndex((l) => l.includes('Go'));
+    const outlined = t.lines().findIndex((l) => l.includes('Or'));
+    expect(filled).toBe(outlined);
+    await t.unmount();
+  });
+
+  it('collapses to one row on a theme that draws no border', async () => {
+    // `paper` draws no frame, so there is no ring to reserve and every size
+    // is the one-row button - which is the right answer, not a special case.
+    expect(await height(solid(), 'paper')).toBe(1);
   });
 });

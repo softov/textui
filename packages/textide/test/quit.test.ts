@@ -44,11 +44,37 @@ async function open() {
 }
 
 describe('quitting', () => {
-  it('goes, when there is nothing to lose', async () => {
+  /**
+   * `ctrl+c` means interrupt in every other terminal program, so it gets
+   * pressed by muscle memory at a shell prompt that turned out to be an
+   * editor. Losing a session that way costs more than one keypress saves.
+   */
+  it('asks even when there is nothing to lose', async () => {
     const { t, quiet, exit } = await open();
-    await t.app.execute('app.quit');
+    void t.app.execute('app.quit');
+    await quiet();
+    expect(exit, 'not before the question is answered').not.toHaveBeenCalled();
+    expect(t.hasText('Quit textide?')).toBe(true);
+    await t.unmount();
+  });
+
+  it('goes when the answer is yes', async () => {
+    const { t, quiet, exit } = await open();
+    void t.app.execute('app.quit');
+    await quiet();
+    t.press('enter');
     await quiet();
     expect(exit).toHaveBeenCalled();
+    await t.unmount();
+  });
+
+  it('stays on escape, with nothing unsaved either', async () => {
+    const { t, quiet, exit } = await open();
+    void t.app.execute('app.quit');
+    await quiet();
+    t.press('escape');
+    await quiet();
+    expect(exit).not.toHaveBeenCalled();
     await t.unmount();
   });
 

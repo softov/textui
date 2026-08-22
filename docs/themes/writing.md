@@ -4,6 +4,10 @@ parent: Themes
 nav_order: 4
 ---
 
+<!-- docs:setup
+declare const app: import('@textui/core').TextUIApp;
+-->
+
 # Writing a theme
 
 A theme extends another and restates only what changes, so a house style is a

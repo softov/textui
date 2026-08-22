@@ -55,6 +55,22 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/chat:
+    dependencies:
+      '@microsoft/agent-host-protocol':
+        specifier: ^0.8.0
+        version: 0.8.0
+      '@textui/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@textui/terminal':
+        specifier: workspace:*
+        version: link:../../packages/terminal
+    devDependencies:
+      '@textui/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   examples/surfaces:
     dependencies:
       '@textui/core':
@@ -131,6 +147,9 @@ importers:
       '@textui/terminal':
         specifier: workspace:*
         version: link:../terminal
+      '@textui/textide-git':
+        specifier: workspace:*
+        version: link:../textide-git
     devDependencies:
       '@textui/testing':
         specifier: workspace:*
@@ -138,6 +157,22 @@ importers:
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
+
+  packages/textide-git:
+    dependencies:
+      '@textui/core':
+        specifier: workspace:*
+        version: link:../core
+      '@textui/documents':
+        specifier: workspace:*
+        version: link:../documents
+    devDependencies:
+      '@textui/terminal':
+        specifier: workspace:*
+        version: link:../terminal
+      '@textui/testing':
+        specifier: workspace:*
+        version: link:../testing
 
   playground:
     dependencies:
@@ -157,6 +192,28 @@ importers:
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
+
+  scripts/docs/snippets:
+    dependencies:
+      '@textui/cli':
+        specifier: workspace:*
+        version: link:../../../packages/cli
+      '@textui/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@textui/documents':
+        specifier: workspace:*
+        version: link:../../../packages/documents
+      '@textui/terminal':
+        specifier: workspace:*
+        version: link:../../../packages/terminal
+      '@textui/textide':
+        specifier: workspace:*
+        version: link:../../../packages/textide
+    devDependencies:
+      '@textui/testing':
+        specifier: workspace:*
+        version: link:../../../packages/testing
 
 packages:
 
@@ -532,6 +589,9 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
+
+  '@microsoft/agent-host-protocol@0.8.0':
+    resolution: {integrity: sha512-Tg1EsWXENx55RB3igfaSTclxvck2RcBS+LPRSGxi86yLhoeJgldtjSH5aDZZTll0tSw7fzbkSOte3/B9ExRFVg==}
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     resolution: {integrity: sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==}
@@ -1518,6 +1578,8 @@ snapshots:
   '@humanwhocodes/retry@0.4.3': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
+
+  '@microsoft/agent-host-protocol@0.8.0': {}
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true

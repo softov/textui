@@ -4,6 +4,12 @@ parent: Store
 nav_order: 5
 ---
 
+<!-- docs:setup
+import { useCollection, useStore, useStoreSubtree, useStoreValue } from '@textui/core';
+type Alert = { id: string; message: string };
+type Service = { id: string; name: string; status: string };
+-->
+
 # In components
 
 Four hooks, each subscribing to exactly the path it names - so a hundred-row

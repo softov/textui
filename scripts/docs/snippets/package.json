@@ -1,0 +1,21 @@
+{
+  "name": "@textui/docs-snippets",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Every tsx example in docs/, extracted and typechecked so the prose cannot drift from the API",
+  "scripts": {
+    "extract": "node ../extract-snippets.mjs",
+    "typecheck": "pnpm run extract && tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/terminal": "workspace:*",
+    "@textui/documents": "workspace:*",
+    "@textui/cli": "workspace:*",
+    "@textui/textide": "workspace:*"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*"
+  }
+}

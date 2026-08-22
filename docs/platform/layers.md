@@ -10,6 +10,7 @@ Five planes: `base`, `floating`, `modal`, `notification`, `debug`. Dialogs,
 dropdowns, context menus, tooltips, palettes and toasts are entries on one, so
 focus trapping, dismissal, positioning and paint order are decided once.
 
+<!-- docs:nocheck -->
 ```ts
 app.layers.open({
   id: 'confirm',

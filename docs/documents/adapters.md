@@ -4,6 +4,10 @@ parent: Documents
 nav_order: 3
 ---
 
+<!-- docs:setup
+declare const app: import('@textui/core').TextUIApp;
+-->
+
 # Resource adapters
 
 Everything one resource type needs, registered as one value. The registries
@@ -14,7 +18,7 @@ of undo for the application, not a new mechanism.
 > nothing else.
 
 ```ts
-import { jsonAdapter } from '@textui/core';
+import { jsonAdapter } from '@textui/documents';
 
 const registration = app.registerAdapter(jsonAdapter());
 // ...
@@ -28,6 +32,7 @@ registered in that order, so a viewer always has its kind to match against.
 
 The JSON adapter shipped in `@textui/core/adapters` is the worked example:
 
+<!-- docs:nocheck -->
 ```ts
 {
   id: 'json',

@@ -4,6 +4,10 @@ parent: Documents
 nav_order: 2
 ---
 
+<!-- docs:setup
+declare const app: import('@textui/core').TextUIApp;
+-->
+
 # Viewers, editors and actions
 
 What the registry offers for a kind, and the order it picks among them.
@@ -27,9 +31,15 @@ app.resources.registerEditor({
 app.resources.registerAction({
   id: 'file.delete', title: 'Delete', kinds: ['file'],
   slots: ['context'],
-  run: (args, ctx) => ctx.app.resources.delete?.(String(args.uri)),
+  run: (args, ctx) => void ctx.app.execute('file.delete', { uri: String(args.uri) }),
 });
 ```
+
+An action's `run` reaches the world through `ctx.app`. Note what the registry
+itself forwards: `stat`, `list`, `read` and `write`, and nothing else. A
+provider may also implement `delete`, `rename` and `watch`, but there is no
+registry passthrough for those, so an action needing one has to go through a
+command the host registered - which is what the delete above does.
 
 Selection order: an explicit `viewerId`, then an editor when edit was asked for,
 then the best-priority viewer for the kind or an ancestor, then a fallback
@@ -38,6 +48,7 @@ viewer, then any component that declared `opens` for the kind.
 A component can declare that it opens a kind, which is how the shipped viewers
 work without an application registering anything:
 
+<!-- docs:nocheck -->
 ```ts
 {
   component: 'MarkdownViewer',

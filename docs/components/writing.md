@@ -4,6 +4,10 @@ parent: Components
 nav_order: 6
 ---
 
+<!-- docs:setup
+declare const app: import('@textui/core').TextUIApp;
+-->
+
 # Writing a component
 
 A component is a function that returns nodes. Give it a name so the registry and
@@ -29,6 +33,11 @@ export const ServerStatus = defineComponent<ServerStatusProps>('ServerStatus', (
 ```
 
 Then register it, so a graph can name it:
+
+<!-- docs:local
+import type { RenderOutput } from '@textui/core';
+declare function ServerStatus(): RenderOutput;
+-->
 
 ```ts
 app.components.register({

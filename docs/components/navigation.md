@@ -4,6 +4,11 @@ parent: Components
 nav_order: 4
 ---
 
+<!-- docs:setup
+import { confirm } from '@textui/core';
+declare const app: import('@textui/core').TextUIApp;
+-->
+
 # Navigation and overlays
 
 The chrome around a screen, and the things that appear on top of it.

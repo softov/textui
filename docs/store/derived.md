@@ -4,6 +4,15 @@ parent: Store
 nav_order: 3
 ---
 
+<!-- docs:setup
+import type { ReactiveStore } from '@textui/core';
+declare const store: ReactiveStore;
+type LogLine = { id: string; message: string; level: 'debug' | 'info' | 'warn' | 'error' };
+declare const id: string;
+declare const line: LogLine;
+type Service = { id: string; name: string; status: string };
+-->
+
 # Computed and collections
 
 Two things that layer on top of a plain path: a value derived from other paths,

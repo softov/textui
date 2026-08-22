@@ -4,6 +4,11 @@ parent: Components
 nav_order: 3
 ---
 
+<!-- docs:setup
+import { fieldValidators, useForm, validators } from '@textui/core';
+declare const save: (values: Record<string, unknown>) => void;
+-->
+
 # Controls and forms
 
 What takes input, and the machinery around a screenful of it.
@@ -59,16 +64,22 @@ Validation runs over a whole values object rather than per field, because the
 rules people actually need are cross-field:
 
 ```tsx
-const form = useForm({
+type Credentials = { password: string; confirm: string };
+
+const form = useForm<Credentials>({
   initialValues: { password: '', confirm: '' },
   validate: (values) => {
-    const errors = fieldValidators({ password: [validators.minLength(8)] })(values);
+    const errors = fieldValidators<Credentials>({ password: [validators.minLength(8)] })(values);
     if (values.confirm !== values.password) errors.confirm = 'Passwords do not match';
     return errors;
   },
   onSubmit: (values) => save(values),
 });
 ```
+
+`fieldValidators` infers its type from the rules it is given, not from the
+values it is later called with, so the form's value type has to be named for a
+cross-field rule to typecheck against it.
 
 Errors show only after a field is touched, or after a submit attempt. The
 initial values are validated immediately, so `form.valid` is usable for enabling

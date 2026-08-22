@@ -8,6 +8,7 @@ nav_order: 1
 
 One per URI scheme.
 
+<!-- docs:nocheck -->
 ```ts
 app.resources.registerProvider({
   scheme: 'service',

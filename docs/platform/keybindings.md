@@ -4,6 +4,10 @@ parent: Platform
 nav_order: 2
 ---
 
+<!-- docs:setup
+declare const app: import('@textui/core').TextUIApp;
+-->
+
 # Keybindings
 
 A keybinding names a command; it never carries the behaviour itself.

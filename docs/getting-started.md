@@ -3,6 +3,10 @@ title: Getting started
 nav_order: 2
 ---
 
+<!-- docs:setup
+type Service = { name: string; status: string; cpu: string };
+-->
+
 # Getting started
 
 ```bash
@@ -22,7 +26,7 @@ const terminal = createNodeTerminal();
 const app = createApp({
   terminal,
   root: { component: 'text', content: 'hello' },
-  onBoot: registerBuiltins,
+  onBoot: (app) => void registerBuiltins(app),
 });
 
 app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
@@ -74,6 +78,15 @@ function Services() {
 
 A `root` node fills the terminal. To get chrome - a header, a sidebar, tabs, a status bar - mount into surfaces and let a shell arrange them:
 
+<!-- docs:local
+import { createApp, KeyHints, registerBuiltins } from '@textui/core';
+import type { RenderOutput } from '@textui/core';
+import { createNodeTerminal } from '@textui/terminal';
+declare const terminal: ReturnType<typeof createNodeTerminal>;
+declare function Navigation(): RenderOutput;
+declare function Services(): RenderOutput;
+-->
+
 ```tsx
 const app = createApp({
   terminal,
@@ -93,8 +106,13 @@ Switch `shell` to `'console'` or `'paper'` and the same mounts render as a dense
 
 ## Commands, not handlers
 
+<!-- docs:local
+import { registerBuiltins } from '@textui/core';
+import type { TextUIApp } from '@textui/core';
+-->
+
 ```tsx
-onBoot: (app) => {
+onBoot: (app: TextUIApp) => {
   registerBuiltins(app);
 
   app.commands.register({
@@ -115,6 +133,12 @@ The command is now reachable from the chord, from the palette, and from `app.exe
 
 The same component model renders to a string, which is what makes it useful for reports, `--help` output and tests:
 
+<!-- docs:local
+import type { RenderOutput } from '@textui/core';
+declare function Services(): RenderOutput;
+declare const services: Service[];
+-->
+
 ```ts
 import { renderToString } from '@textui/core';
 
@@ -126,7 +150,7 @@ console.log(renderToString(<Services />, {
 
 ## Where to go next
 
-- [Store](store/index.md) - paths, scopes, providers
-- [Components](components/index.md) - the catalog
-- [Themes](themes/index.md) - tokens and capability downgrade
-- [Testing](testing/index.md) - the harness
+- [Store](store/) - paths, scopes, providers
+- [Components](components/) - the catalog
+- [Themes](themes/) - tokens and capability downgrade
+- [Testing](testing.md) - the harness

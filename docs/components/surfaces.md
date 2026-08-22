@@ -16,7 +16,7 @@ component names, and the links say where the model behind them lives.
 the shells (`PlainShell`, `ConsoleShell`, `PaperShell`, `WorkbenchShell`).
 
 What a surface is, and what a shell decides, is in
-[Platform](../platform/index.md).
+[Platform](../platform/).
 
 ## Resources
 
@@ -31,5 +31,5 @@ catalog, and are registered only when an application asks for it with
 the reader has chosen among the viewers `viewersFor(kind)` offers -
 `ResourceOpenWith` renders exactly that list.
 
-See [Documents](../documents/index.md) and
+See [Documents](../documents/) and
 [Syntax highlighting](../themes/syntax.md).

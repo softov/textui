@@ -4,6 +4,17 @@ parent: Themes
 nav_order: 5
 ---
 
+<!-- docs:setup
+import { CodeViewer, useHighlight } from '@textui/core';
+import { jsonHighlighter } from '@textui/documents';
+import type { Resource, SyntaxSpan } from '@textui/core';
+declare const app: import('@textui/core').TextUIApp;
+declare const resource: Resource;
+declare const text: string;
+declare const uri: string;
+declare const kind: string;
+-->
+
 # Syntax highlighting
 
 A highlighter names **scopes**, never colours. The theme owns the palette, so one JSON highlighter looks right on a dark console, a paper report and a sixteen-colour terminal without knowing that any of them exist - and a colourless terminal resolves every scope to the default foreground.
@@ -27,6 +38,7 @@ tag       attribute   regexp   escape    invalid
 
 Every scope has a default drawn from the semantic palette (`string` → `success`, `key` → `accent`, `comment` → `subtle`, `invalid` → `danger`, …), so a theme that says nothing about syntax still highlights. A theme states only what it wants to differ:
 
+<!-- docs:nocheck -->
 ```ts
 {
   id: 'midnight',
@@ -47,7 +59,7 @@ export const iniHighlighter = spanHighlighter({
   kinds: ['file.data.ini'],
   extensions: ['*.ini', '*.conf'],
   scan(text) {
-    const spans = [];
+    const spans: SyntaxSpan[] = [];
     for (const match of text.matchAll(/^\s*([#;].*)$/gm)) {
       spans.push({ start: match.index, end: match.index + match[0].length, scope: 'comment' });
     }

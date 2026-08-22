@@ -4,6 +4,13 @@ parent: Terminal
 nav_order: 2
 ---
 
+<!-- docs:setup
+import { createApp } from '@textui/core';
+import { createNodeTerminal } from '@textui/terminal';
+declare const terminal: ReturnType<typeof createNodeTerminal>;
+declare const app: import('@textui/core').TextUIApp;
+-->
+
 # Managed and embedded sessions
 
 `acquire` records exactly what it turned on, and `release` undoes exactly that

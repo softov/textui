@@ -4,6 +4,14 @@ parent: Store
 nav_order: 4
 ---
 
+<!-- docs:setup
+import { readFileSync, writeFileSync } from 'node:fs';
+import type { ReactiveStore } from '@textui/core';
+declare const store: ReactiveStore;
+declare const path: string;
+declare const fetchServices: () => Promise<unknown>;
+-->
+
 # Providers and persistence
 
 Where a namespace gets its values from, and which of them survive a restart.

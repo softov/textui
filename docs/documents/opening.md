@@ -4,6 +4,11 @@ parent: Documents
 nav_order: 5
 ---
 
+<!-- docs:setup
+declare const app: import('@textui/core').TextUIApp;
+declare const uri: string;
+-->
+
 # Opening one
 
 ```ts

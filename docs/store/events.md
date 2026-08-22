@@ -4,6 +4,12 @@ parent: Store
 nav_order: 6
 ---
 
+<!-- docs:setup
+import type { EventBus } from '@textui/core';
+declare const events: EventBus;
+declare const handler: (payload: unknown) => void;
+-->
+
 # Events
 
 Transient, addressed the same way as store paths, and deliberately a different

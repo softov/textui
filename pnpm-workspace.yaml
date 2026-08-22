@@ -3,6 +3,7 @@ packages:
   - components
   - playground
   - examples/*
+  - scripts/docs/snippets
 
 onlyBuiltDependencies:
   - esbuild

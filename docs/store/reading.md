@@ -4,6 +4,14 @@ parent: Store
 nav_order: 2
 ---
 
+<!-- docs:setup
+import type { ReactiveStore } from '@textui/core';
+declare const store: ReactiveStore;
+declare const fn: (value: unknown) => unknown;
+type Service = { id: string; name: string; status: string };
+declare const services: Service[];
+-->
+
 # Reading and writing
 
 The store's own API, for code outside a component. Inside one, use the hooks in

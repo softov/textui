@@ -4,12 +4,31 @@ parent: Platform
 nav_order: 6
 ---
 
+<!-- docs:setup
+import { useRequiredService } from '@textui/core';
+import type {
+  ComponentDefinition, DataProviderDefinition, ResourceKind,
+  ResourceViewerDefinition, ThemeDefinition,
+} from '@textui/core';
+declare const app: import('@textui/core').TextUIApp;
+declare const url: string;
+declare const midnight: ThemeDefinition;
+declare class ApiClient { constructor(base: string); }
+declare const restartCommand: import('@textui/core').CommandDefinition;
+declare const scaleCommand: import('@textui/core').CommandDefinition;
+declare const serviceKind: ResourceKind;
+declare const servicesProvider: DataProviderDefinition;
+declare const serviceViewer: ResourceViewerDefinition;
+declare const ServiceTableDefinition: ComponentDefinition;
+-->
+
 # Extension points
 
 Separate typed registries rather than one generic plugin bag: every category has its own contract, so a bad contribution fails where it is written instead of at some later lookup.
 
 ## The registries
 
+<!-- docs:nocheck -->
 ```ts
 app.components.register({ component, renderer, category, role, opens });
 app.commands.register({ id, title, when, args, slots, run });

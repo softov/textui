@@ -4,6 +4,14 @@ parent: Platform
 nav_order: 1
 ---
 
+<!-- docs:setup
+import { notify, useCommand } from '@textui/core';
+import type { SemanticVariant } from '@textui/core';
+declare const app: import('@textui/core').TextUIApp;
+declare const restart: (id: string) => Promise<void>;
+declare const setSearching: (value: boolean) => void;
+-->
+
 # Commands
 
 A command is the only way an action should be spelled. A button that calls an
@@ -64,7 +72,7 @@ app.commands.register({
     description: 'How loud the toast should be.',
     choices: ['info', 'success', 'warning', 'danger'],
   }],
-  run: (args) => notify(app, { tone: String(args.tone), message: '…' }),
+  run: (args) => notify(app, { tone: args.tone as SemanticVariant, message: 'done' }),
 });
 ```
 
@@ -73,6 +81,7 @@ going back a level rather than closing - and picking one runs the command with
 that argument. `choices` may be a function, and may be async, so a list can come
 from a registry:
 
+<!-- docs:nocheck -->
 ```ts
 choices: () => app.themes.list().map((t) => t.id),
 ```

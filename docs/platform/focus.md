@@ -4,24 +4,32 @@ parent: Platform
 nav_order: 3
 ---
 
+<!-- docs:setup
+import { useFocus, useFocusScope, useInput } from '@textui/core';
+declare const activate: () => void;
+-->
+
 # Focus
 
 A terminal has no hover and no pointer to fall back on, so what has focus is the
 whole of what the reader can act on.
 
 ```tsx
-const focus = useFocus({ autoFocus: true });
+export function Restart() {
+  const focus = useFocus({ autoFocus: true });
 
-useInput((event) => {
-  if (event.name === 'enter') { activate(); return true; }
-  return false;
-}, { focusId: focus.id });
+  useInput((event) => {
+    if (event.name === 'enter') { activate(); return true; }
+    return false;
+  }, { focusId: focus.id });
 
-return <box id={focus.id} role="button" bold={focus.focused}>…</box>;
+  return <box id={focus.id} role="button" bold={focus.focused}>Restart</box>;
+}
 ```
 
 Or without a hook, on any node:
 
+<!-- docs:nocheck -->
 ```tsx
 <box focusable id="cell-a1" onKey={(e) => { … }} />
 ```

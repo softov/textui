@@ -1,0 +1,3 @@
+# Extracted from the markdown by scripts/docs/extract-snippets.mjs.
+# The prose is the source of truth; these are a build artefact of checking it.
+src/

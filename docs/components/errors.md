@@ -4,6 +4,12 @@ parent: Components
 nav_order: 7
 ---
 
+<!-- docs:setup
+import type { RenderError, RenderOutput } from '@textui/core';
+declare const app: import('@textui/core').TextUIApp;
+declare function ServerStatus(): RenderOutput;
+-->
+
 # When one throws
 
 There is no boundary component to wrap things in, because a throw does not
@@ -36,6 +42,7 @@ A node fallback is handed the failure as the `errorMessage` and `error` props,
 so a registered component can render it. Props the fallback declares itself
 win, which is how you show something deliberately vague instead:
 
+<!-- docs:nocheck -->
 ```ts
 fallback: { component: 'ErrorPanel' }                       // gets errorMessage
 fallback: { component: 'text', content: 'unavailable' }     // says nothing
@@ -49,7 +56,7 @@ const node = {
   component: 'ServerStatus',
   $meta: {
     fn: ServerStatus,
-    fallback: (failure) => ({
+    fallback: (failure: RenderError) => ({
       component: 'text',
       content: `${failure.component} failed: ${failure.message}`,
       fg: 'danger',

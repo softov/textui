@@ -104,6 +104,18 @@ export interface ResourceRegistry {
   /** True when `kind` is `ancestor` or specialises it. */
   kindMatches(kind: string, ancestor: string): boolean;
 
+  // Asymmetric with ResourceProvider, and deliberately so until someone
+  // decides otherwise: a provider may implement `delete`, `rename` and
+  // `watch`, but the registry forwards only these four. Anything wanting the
+  // other three has to reach the provider some other way, and there is no
+  // public path to one.
+  //
+  // UNRESOLVED before commit: either add the three passthroughs, or leave it.
+  // docs/documents/viewers.md used to show `resources.delete?.(uri)`, which
+  // typechecked as `undefined` and silently did nothing - the Delete action
+  // appeared in the context menu and no file was ever deleted. The optional
+  // call is what hid it. If the passthroughs are added, that example can go
+  // back to the direct form.
   stat(uri: ResourceURI): Promise<Resource | null>;
   list(uri: ResourceURI): Promise<Resource[]>;
   read(uri: ResourceURI): Promise<string | Uint8Array>;

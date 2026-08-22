@@ -4,12 +4,18 @@ parent: Terminal
 nav_order: 1
 ---
 
+<!-- docs:setup
+import { createNodeTerminal } from '@textui/terminal';
+declare const app: import('@textui/core').TextUIApp;
+-->
+
 # Capabilities
 
 What a terminal can do is detected once at boot, published to
 `$/modus/capabilities`, and consulted by the theme and the writer rather than by
 components.
 
+<!-- docs:nocheck -->
 ```ts
 {
   colorDepth: 24,          // 0 | 4 | 8 | 24

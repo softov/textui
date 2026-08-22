@@ -4,6 +4,11 @@ parent: CLI
 nav_order: 3
 ---
 
+<!-- docs:setup
+declare const restart: (service: string) => Promise<void>;
+declare const startTui: () => Promise<void>;
+-->
+
 # Building your own CLI
 
 `@textui/cli/app` is the argument parser, help renderer and prompts, separated so
@@ -24,7 +29,7 @@ const cli = new Cli({
       options: [{ name: 'force', short: 'f', type: 'boolean' }],
       async run(args) {
         if (!args.options.force && !(await promptConfirm('Restart?'))) return 1;
-        await restart(args.positionals[0]);
+        await restart(String(args.positionals[0]));
       },
     },
     {

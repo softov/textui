@@ -32,6 +32,7 @@ actually gets, so it has to look deliberate rather than broken.
 
 `none` `single` `round` `double` `bold` `dashed` `thick` `half` `ascii`
 
+<!-- docs:nocheck -->
 ```tsx
 <box border="round" />
 <box border={{ style: 'single', color: 'accent' }} />

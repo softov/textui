@@ -4,6 +4,12 @@ parent: Platform
 nav_order: 5
 ---
 
+<!-- docs:setup
+import type { RenderOutput } from '@textui/core';
+declare const app: import('@textui/core').TextUIApp;
+declare function Services(): RenderOutput;
+-->
+
 # Navigation
 
 Screens and a stack, not a router.
@@ -33,6 +39,7 @@ published at `$/layout/screen/params`, which is the only way to read them eight
 levels down without every box in between forwarding something it does not care
 about.
 
+<!-- docs:nocheck -->
 ```tsx
 const TaskDetail = defineComponent<{ taskId?: string }>('TaskDetail', ({ taskId }) => …);
 

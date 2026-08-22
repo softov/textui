@@ -1,0 +1,4 @@
+# Regenerated from the TypeScript sources by extract-props.mjs on every
+# `pnpm docs:props` / `docs:check`. 20k lines of derived JSON, and stale the
+# moment an interface changes - there is nothing to review in a diff of it.
+props.json

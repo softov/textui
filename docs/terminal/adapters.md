@@ -4,6 +4,11 @@ parent: Terminal
 nav_order: 3
 ---
 
+<!-- docs:setup
+declare const xterm: { onData(fn: (data: string) => void): void; write(data: string): void };
+declare const bytesFromXterm: string;
+-->
+
 # Terminal adapters
 
 Two ship with `@textui/terminal`, and the interface is small enough that a third

@@ -14,7 +14,8 @@ border borderStrong borderSubtle
 text muted subtle inverted
 accent primary secondary
 success warning danger info
-onAccent onPrimary onSuccess onWarning onDanger onInfo
+onDefault onPrimary onSecondary onAccent
+onSuccess onWarning onDanger onInfo onMuted
 hover active selected focus disabled
 scrim cursor shadow
 ```
@@ -24,12 +25,18 @@ Literal colours still work - `fg="#ff8800"`, `fg="red"`, `fg={{ rgb: [255, 136, 
 
 ## Tones come in pairs
 
-`onAccent`, `onPrimary`, `onSuccess`, `onWarning`, `onDanger` and `onInfo` are
-what to write *on* a tone once it is the background. There is one per tone
-rather than a single `inverted` for all of them, because the contrast that works
-on green is not the one that works on red - and getting it wrong makes a label
-unreadable exactly when it matters, which is when the control is selected.
-`TONE` and `ON_TONE` in the catalog state the pairing once.
+Every tone has an `on*` token saying what to write *on* it once it is the
+background - one for each of the nine in `SemanticVariant`, including
+`onDefault`, `onSecondary` and `onMuted`.
+
+There is one per tone rather than a single `inverted` for all of them, because
+the contrast that works on green is not the one that works on red - and getting
+it wrong makes a label unreadable exactly when it matters, which is when the
+control is selected. `TONE` and `ON_TONE` in `packages/core/src/ui/tone.ts`
+state the pairing once, and are the list to check this page against.
+
+`inverted` still exists and is still used, for the places that invert against
+the page rather than against a tone.
 
 ## The shell owns the page
 

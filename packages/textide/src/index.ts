@@ -19,7 +19,7 @@ export { TitleBar } from './chrome/titlebar.js';
 export { StatusLine } from './chrome/statusbar.js';
 export { MenuBar, MENUS } from './chrome/menubar.js';
 export { textideCommands, paletteOrder, layoutCommands, EDITOR_URI, CATEGORIES, TOGGLE_COMMAND } from './commands.js';
-export { loadExtensions, resolveSpecifier, EXTENSIONS_PATH } from './extensions.js';
+export { loadExtensions, resolveSpecifier, EXTENSIONS_PATH, ASKED_PATH } from './extensions.js';
 export type {
   ExtensionContext, ExtensionModule, ExtensionState,
   Extensions, LoadedExtension, LoadOptions, Contributed,

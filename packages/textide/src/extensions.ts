@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { Disposable, Manifest, ManifestSource, TextUIApp } from '@textui/core';
-import { createBag, notify } from '@textui/core';
+import { confirm, createBag, notify, prompt } from '@textui/core';
 import type { Workspace } from './workspace.js';
 
 /**
@@ -104,8 +104,22 @@ export const EXTENSIONS_PATH = '$/ui/extensions';
 export interface Extensions extends Disposable {
   list(): LoadedExtension[];
   get(id: string): LoadedExtension | undefined;
+  /** What `.textide.json` asks for, which is not what is loaded. */
+  asked(): string[];
+  /**
+   * Load one now and remember it. Returns its source id, or null if it did
+   * not load - in which case nothing was remembered, because a specifier that
+   * threw would fail the same way at the next boot with nobody watching.
+   */
+  install(specifier: string): Promise<string | null>;
+  /** Off for this session. The row stays, saying so. */
   disable(id: string): void;
+  /** Off, and out of the config file. Not the same decision as disabling. */
+  remove(id: string): void;
 }
+
+/** What the workspace asked for, as store state, so a save can watch it. */
+export const ASKED_PATH = '$/app/extensions';
 
 /**
  * The identity of a module that brought no manifest.
@@ -186,10 +200,14 @@ function snapshot(app: TextUIApp): { commands: Set<string>; kinds: Set<string>; 
 }
 
 /**
- * Load every extension the workspace asks for.
+ * Load every extension the workspace asks for, and keep the door open.
  *
  * Each gets its own bag, which is what makes one of them disableable: the
- * single shared bag that came before could only be emptied all at once.
+ * single shared bag that came before could only be emptied all at once. And
+ * loading is one function rather than a loop body, so bringing one in from the
+ * Extensions panel is the same code path as bringing one in at boot - a
+ * second, nearly-identical path is how the two would come to disagree about
+ * what "loaded" means.
  */
 export async function loadExtensions(
   app: TextUIApp,
@@ -203,44 +221,21 @@ export async function loadExtensions(
   const publish = (): void => {
     app.store.set(EXTENSIONS_PATH as never, [...records.values()]);
   };
-  const nothing: Extensions = {
-    list: () => [...records.values()],
-    get: (id) => records.get(id),
-    disable: (id) => {
-      const record = records.get(id);
-      if (!record || record.state !== 'loaded') return;
-      bags.get(id)?.dispose();
-      bags.delete(id);
-      records.set(id, { ...record, state: 'disabled' });
-      publish();
-    },
-    dispose: () => { bag.dispose(); },
-  };
-
-  const asked = workspace.extensions ?? [];
-  // A built-in that is also listed is listed once: the config wins the
-  // ordering, and loading a module twice would register everything twice.
-  const automatic = workspace.builtinExtensions === false
-    ? []
-    : BUILTIN
-      .filter((b) => b.wanted(workspace.root) && !asked.includes(b.specifier))
-      .map((b) => b.specifier);
-  const specifiers = [...automatic, ...asked];
-  if (specifiers.length === 0) return nothing;
 
   const report = options.onError ?? ((specifier: string, error: unknown): void => {
     notify(app, { tone: 'danger', message: `${specifier}: ${String(error)}` });
   });
-  const load = options.load
+  const importer = options.load
     ?? ((specifier: string): Promise<ExtensionModule> =>
       import(resolveSpecifier(specifier, workspace.root)) as Promise<ExtensionModule>);
 
   const context: ExtensionContext = { root: workspace.root, workspace };
 
-  for (const specifier of specifiers) {
+  /** One extension, from specifier to record. Returns its id, or null. */
+  async function loadOne(specifier: string): Promise<string | null> {
     const before = snapshot(app);
     try {
-      const module = await load(specifier);
+      const module = await importer(specifier);
       if (module.manifest === undefined && typeof module.activate !== 'function') {
         throw new Error('no manifest and no activate(app, context) export');
       }
@@ -267,6 +262,7 @@ export async function loadExtensions(
       });
       bags.set(source.id, own);
       bag.add(own);
+      return source.id;
     } catch (error) {
       // Including the ones nobody asked for. An automatic extension is only
       // attempted when the workspace warrants it - git, in a repository - so
@@ -281,16 +277,104 @@ export async function loadExtensions(
         contributed: { commands: [], kinds: [], views: [] },
       });
       report(specifier, error);
+      return null;
     }
   }
+
+  const asked = workspace.extensions ?? [];
+  // A built-in that is also listed is listed once: the config wins the
+  // ordering, and loading a module twice would register everything twice.
+  const automatic = workspace.builtinExtensions === false
+    ? []
+    : BUILTIN
+      .filter((b) => b.wanted(workspace.root) && !asked.includes(b.specifier))
+      .map((b) => b.specifier);
+
+  for (const specifier of [...automatic, ...asked]) await loadOne(specifier);
+
+  /*
+   * What the workspace asked for, as store state.
+   *
+   * The built-ins are not in it: `.textide.json` says what a *project* wants,
+   * and git arriving because there is a `.git` directory is not something the
+   * project asked for. Writing it in would turn a default into a decision
+   * nobody made, and turning the default off would then leave it loading.
+   */
+  const setAsked = (list: string[]): void => {
+    app.store.set(ASKED_PATH as never, list);
+  };
+  setAsked(asked);
+
+  const handle: Extensions = {
+    list: () => [...records.values()],
+    get: (id) => records.get(id),
+    asked: () => (app.store.get<string[]>(ASKED_PATH as never) ?? []),
+    async install(specifier) {
+      // By specifier, because that is what the caller typed. The records are
+      // keyed by source id, which is the manifest's - and the whole point of
+      // not loading twice is to catch it before the module is imported and
+      // gets to say what its id is.
+      const already = [...records.values()]
+        .find((e) => e.specifier === specifier && e.state === 'loaded');
+      if (already) return already.source.id;
+      const id = await loadOne(specifier);
+      publish();
+      if (id === null) return null;
+      // Remembered only once it loaded. Writing a specifier that threw into
+      // the config file means the next boot fails the same way, silently, and
+      // the person who typed it is no longer looking.
+      const list = handle.asked();
+      if (!list.includes(specifier)) setAsked([...list, specifier]);
+      return id;
+    },
+    disable(id) {
+      const record = records.get(id);
+      if (!record || record.state !== 'loaded') return;
+      bags.get(id)?.dispose();
+      bags.delete(id);
+      records.set(id, { ...record, state: 'disabled' });
+      publish();
+    },
+    remove(id) {
+      const record = records.get(id);
+      if (!record) return;
+      bags.get(id)?.dispose();
+      bags.delete(id);
+      records.delete(id);
+      setAsked(handle.asked().filter((s) => s !== record.specifier));
+      publish();
+    },
+    dispose: () => { bag.dispose(); },
+  };
 
   publish();
   bag.add({ dispose: () => { app.store.set(EXTENSIONS_PATH as never, []); } });
 
-  // Registered here because this is the only thing holding the bags. A command
-  // rather than a method the panel calls, so the panel and the palette run one
-  // implementation - and so a keybinding could reach it without this file
+  // Registered here because this is the only thing holding the bags. Commands
+  // rather than methods the panel calls, so the panel and the palette run one
+  // implementation - and so a keybinding could reach them without this file
   // hearing about it.
+  bag.add(app.commands.register({
+    id: 'extensions.install',
+    title: 'Add Extension',
+    category: 'Extensions',
+    slots: ['palette'],
+    args: [{ name: 'specifier', type: 'string' }],
+    run: async (args, ctx) => {
+      const given = typeof args.specifier === 'string' ? args.specifier : null;
+      const specifier = given ?? await prompt(ctx.app.layers, {
+        title: 'Add Extension',
+        message: 'A package name, or a path inside this workspace',
+      });
+      if (specifier === null || specifier === '') return;
+
+      const id = await handle.install(specifier);
+      if (id === null) return;  // `loadOne` already said what went wrong.
+      const name = records.get(id)?.source.displayName ?? id;
+      notify(ctx.app, { tone: 'success', message: `${name} loaded, and remembered.` });
+    },
+  }));
+
   bag.add(app.commands.register({
     id: 'extensions.disable',
     title: 'Disable Extension',
@@ -303,7 +387,7 @@ export async function loadExtensions(
         .filter((e) => e.state === 'loaded')
         .map((e) => e.source.id),
     }],
-    run: (args) => {
+    run: (args, ctx) => {
       const id = String(args.id ?? '');
       const record = records.get(id);
       if (!record) return;
@@ -311,15 +395,43 @@ export async function loadExtensions(
         notify(app, { message: `${record.source.displayName ?? id} is already off.` });
         return;
       }
-      nothing.disable(id);
-      // Until the workspace remembers this, it lasts as long as the session -
-      // and a switch that quietly forgets is worse than one that says so.
-      notify(app, {
+      handle.disable(id);
+      // Off for this session only, on purpose: disabling is "not now" and
+      // removing is "not again". A switch that quietly meant the second one
+      // would lose a line of somebody's config file.
+      notify(ctx.app, {
         tone: 'warning',
         message: `${record.source.displayName ?? id} is off until textide restarts.`,
       });
     },
   }));
 
-  return nothing;
+  bag.add(app.commands.register({
+    id: 'extensions.remove',
+    title: 'Remove Extension',
+    category: 'Extensions',
+    slots: ['palette'],
+    args: [{
+      name: 'id', type: 'string', required: true,
+      choices: () => [...records.values()].map((e) => e.source.id),
+    }],
+    run: async (args, ctx) => {
+      const id = String(args.id ?? '');
+      const record = records.get(id);
+      if (!record) return;
+      const name = record.source.displayName ?? id;
+      // The one that edits a file the person owns, so it is the one that asks.
+      const ok = await confirm(ctx.app.layers, {
+        title: 'Remove',
+        message: `Take ${name} out of .textide.json?`,
+        confirmLabel: 'Remove',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      handle.remove(id);
+      notify(ctx.app, { tone: 'success', message: `${name} removed.` });
+    },
+  }));
+
+  return handle;
 }

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
 import { loadExtensions, loadWorkspace, registerTextide, resolveSpecifier } from '../src/index.js';
 import type { ExtensionModule, LoadedExtension } from '../src/index.js';
-import { EXTENSIONS_PATH } from '../src/index.js';
+import { ASKED_PATH, EXTENSIONS_PATH } from '../src/index.js';
 
 /**
  * Extensions.
@@ -103,12 +103,22 @@ describe('loading', () => {
     await t.unmount();
   });
 
-  it('does nothing at all when a workspace asks for nothing', async () => {
+  /**
+   * Nothing loaded, but the door is there. The loader's own three commands
+   * register whether or not anything came in - a workspace with no extensions
+   * is exactly the one where you want to be able to add the first.
+   */
+  it('loads nothing, and leaves only its own commands behind', async () => {
     const { t, workspace } = await open([]);
-    const before = t.app.commands.list().length;
-    const bag = await loadExtensions(t.app, workspace);
-    expect(t.app.commands.list().length).toBe(before);
-    bag.dispose();
+    const before = t.app.commands.list().map((c) => c.id);
+    const extensions = await loadExtensions(t.app, workspace);
+
+    expect(extensions.list()).toEqual([]);
+    const added = t.app.commands.list().map((c) => c.id).filter((id) => !before.includes(id));
+    expect(added.sort()).toEqual(['extensions.disable', 'extensions.install', 'extensions.remove']);
+
+    extensions.dispose();
+    expect(t.app.commands.list().map((c) => c.id).sort()).toEqual([...before].sort());
     await t.unmount();
   });
 });
@@ -350,6 +360,112 @@ describe('a panel an extension brings', () => {
     });
 
     expect(extensions.get('test.panels')?.contributed.views).toEqual(['sidebar/demo.list']);
+    extensions.dispose();
+    await t.unmount();
+  });
+});
+
+/**
+ * Bringing one in, and taking one out.
+ *
+ * The point of the loader keeping a record is that neither of these needs a
+ * restart or a text editor. `install` is the same code path as boot, so the two
+ * cannot come to disagree about what "loaded" means; what differs is only that
+ * one of them writes the specifier down.
+ */
+describe('adding an extension while it is running', () => {
+  const module = (id: string): ExtensionModule => ({
+    manifest: {
+      source: { id: `test.${id}`, displayName: id },
+      contributes: { commands: [{ id: `${id}.go`, title: 'Go', slots: [], run: () => {} }] },
+    },
+  });
+
+  it('loads it and writes it down', async () => {
+    const { t, workspace } = await open([]);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: (s) => Promise.resolve(module(s)),
+    });
+
+    expect(extensions.asked()).toEqual([]);
+    const id = await extensions.install('later');
+    expect(id).toBe('test.later');
+    expect(t.app.commands.get('later.go')).toBeDefined();
+    // Which is what `rememberSettings` watches, so it reaches .textide.json.
+    expect(t.app.store.get(ASKED_PATH as never)).toEqual(['later']);
+
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  it('writes nothing down for one that would not load', async () => {
+    const { t, workspace } = await open([]);
+    const extensions = await loadExtensions(t.app, workspace, {
+      onError: () => {},
+      load: () => Promise.reject(new Error('nope')),
+    });
+
+    expect(await extensions.install('broken')).toBeNull();
+    // A specifier that threw would fail the same way at the next boot, with
+    // nobody watching. It is on the list as a failure, not in the config.
+    expect(extensions.get('broken')?.state).toBe('failed');
+    expect(t.app.store.get(ASKED_PATH as never)).toEqual([]);
+
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  it('does not load one twice', async () => {
+    const { t, workspace } = await open([]);
+    let loads = 0;
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: (s) => { loads++; return Promise.resolve(module(s)); },
+    });
+
+    await extensions.install('once');
+    await extensions.install('once');
+    expect(loads).toBe(1);
+    expect(extensions.asked()).toEqual(['once']);
+
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  /**
+   * Disabling is "not now" and removing is "not again". A switch that quietly
+   * meant the second one would lose a line of somebody's config file.
+   */
+  it('keeps a disabled one on the list, and takes a removed one off it', async () => {
+    const { t, workspace } = await open(['a', 'b']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: (s) => Promise.resolve(module(s)),
+    });
+    expect(extensions.asked()).toEqual(['a', 'b']);
+
+    extensions.disable('test.a');
+    expect(extensions.asked(), 'disabling changes no file').toEqual(['a', 'b']);
+    expect(extensions.get('test.a')?.state).toBe('disabled');
+
+    extensions.remove('test.b');
+    expect(extensions.asked()).toEqual(['a']);
+    expect(extensions.get('test.b'), 'and it is off the list entirely').toBeUndefined();
+    expect(t.app.commands.get('b.go'), 'with its registrations').toBeUndefined();
+
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  /**
+   * `.textide.json` says what a *project* wants. Git arriving because there is
+   * a `.git` directory is not something the project asked for, and writing it
+   * in would turn a default into a decision nobody made.
+   */
+  it('does not write the built-ins into what the project asked for', async () => {
+    const { t, workspace } = await open([]);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: (s) => Promise.resolve(module(s)),
+    });
+    expect(extensions.asked()).toEqual([]);
     extensions.dispose();
     await t.unmount();
   });

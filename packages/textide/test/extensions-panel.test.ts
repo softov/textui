@@ -84,8 +84,9 @@ for (const size of SIZES) {
 
       expect(t.hasText('Extensions'), 'the heading names the panel').toBe(true);
       expect(t.hasText('Nothing loaded.')).toBe(true);
-      // An empty panel that does not say how to fill it is a dead end.
-      expect(t.hasText('.textide.json')).toBe(true);
+      // An empty panel that does not say how to fill it is a dead end, and a
+      // sentence about a config file is not a way to fill it.
+      expect(t.hasText('Add')).toBe(true);
       await t.unmount();
     });
 

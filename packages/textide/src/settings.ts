@@ -29,6 +29,10 @@ export const REMEMBERED: Remembered[] = [
   { path: '$/ui/editor/markLines' as BindingPath, key: 'markLines' },
   { path: '$/ui/editor/layout' as BindingPath, key: 'layout' },
   { path: '$/ui/sidebar/collapsed' as BindingPath, key: 'sidebarCollapsed' },
+  // Which extensions this project uses, which is a decision about the project
+  // rather than about right now. The field was read at boot and never written,
+  // so adding one meant editing the file by hand and restarting.
+  { path: '$/app/extensions' as BindingPath, key: 'extensions' },
 ];
 
 /** Put what the workspace remembered into the store, before the first frame. */

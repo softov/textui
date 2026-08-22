@@ -74,11 +74,15 @@ export const ExtensionsPanel: (props: Record<string, never>) => RenderOutput =
 
     if (extensions.length === 0) {
       return (
-        <Column flex={1}>
+        <Column flex={1} gap={1}>
           <text content="Nothing loaded." fg="muted" />
-          {/* Where they come from, because an empty panel that does not say
-              how to fill it is a dead end. */}
-          <text content="Add one to .textide.json" fg="subtle" wrap="word" />
+          {/* How to fill it, because an empty panel that does not say is a
+              dead end - and the button is the same command the palette runs. */}
+          <Button
+            label="Add"
+            variant="outline"
+            onPress={() => { void runtime.execute('extensions.install'); }}
+          />
         </Column>
       );
     }
@@ -150,11 +154,19 @@ export const ExtensionView: (props: { resource: Resource }) => RenderOutput =
             : (
               <Button
                 label="Disable"
-                tone="danger"
                 variant="outline"
                 onPress={() => { void runtime.execute('extensions.disable', { id: source.id }); }}
               />
             )}
+          {/* Removing edits a file the person owns, so it is the destructive
+              one and it is offered whatever state the extension is in - a
+              failed extension is exactly the one you want out of the list. */}
+          <Button
+            label="Remove"
+            tone="danger"
+            variant="outline"
+            onPress={() => { void runtime.execute('extensions.remove', { id: source.id }); }}
+          />
         </Row>
 
         {/* Everything else scrolls. A extension with forty commands is a

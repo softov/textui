@@ -22,6 +22,9 @@ import { parseHunks, patchFor } from './hunks.js';
 
 /** Where the editor publishes what it has open. Read, never written. */
 const EDITOR_URI = '$/ui/editor/uri';
+// Where the explorer publishes its highlight. A store path rather than an
+// import, because textide-git is loaded by textide and must not depend on it.
+const ACTIVE_RESOURCE = '$/active/resource';
 
 /** Re-read the status and publish it, along with the status bar segment. */
 export async function refresh(app: TextUIApp, git: Git): Promise<Status | null> {
@@ -43,23 +46,47 @@ export async function refresh(app: TextUIApp, git: Git): Promise<Status | null> 
 }
 
 /**
- * The open file, as a path relative to the working tree.
+ * A `file://` URI as a path relative to the working tree, or null if it is
+ * not inside it.
  *
- * `$/ui/editor/uri` is a `file://` URI and git speaks in repository-relative
- * paths, so this is the one place that translation lives.
+ * Everything textide publishes about "the current thing" is a URI and git
+ * speaks in repository-relative paths, so this is the one place that
+ * translation lives.
  */
-function pathOfOpen(ctx: CommandContext, root: string): string | null {
-  const uri = ctx.store.get<string>(EDITOR_URI as BindingPath);
-  if (typeof uri !== 'string') return null;
+function pathIn(root: string, uri: unknown): string | null {
+  if (typeof uri !== 'string' || uri === '') return null;
   const base = root.endsWith('/') ? root.slice(0, -1) : root;
   const prefix = `file://${base}/`;
   return uri.startsWith(prefix) ? uri.slice(prefix.length) : null;
 }
 
-/** The path a command acts on: the argument, then the panel's selection. */
-function target(args: Record<string, unknown>, ctx: CommandContext): string | null {
+/**
+ * The path a command acts on.
+ *
+ * Four places, in the order a person means them: what the caller passed, the
+ * file open in front of you, the row the explorer is standing on, and the
+ * Source Control selection last.
+ *
+ * It used to be the argument and the Source Control selection, full stop -
+ * so `git.diff`, `git.stage`, `git.unstage` and `git.log` all answered
+ * "Nothing selected." when invoked from the explorer or from an open file,
+ * which is where they are actually invoked from. `git.blame` was the only one
+ * that fell back to the open file, and it did it at its own call site.
+ */
+function targetOf(
+  args: Record<string, unknown>,
+  ctx: CommandContext,
+  root: string,
+): string | null {
   const explicit = args.path;
   if (typeof explicit === 'string' && explicit !== '') return explicit;
+
+  const open = pathIn(root, ctx.store.get<string>(EDITOR_URI as BindingPath));
+  if (open !== null) return open;
+
+  const active = pathIn(root, ctx.store.get<string>(`${ACTIVE_RESOURCE}/uri` as BindingPath));
+  if (active !== null) return active;
+
   const selected = ctx.store.get<string>(SELECTED_PATH);
   return typeof selected === 'string' && selected !== '' ? selected : null;
 }
@@ -72,6 +99,8 @@ export interface CommandOptions {
 
 export function gitCommands(app: TextUIApp, options: CommandOptions): CommandDefinition[] {
   const { git } = options;
+  const target = (args: Record<string, unknown>, ctx: CommandContext): string | null =>
+    targetOf(args, ctx, options.root);
   const status = (): Status | null => app.store.get<Status>(STATUS_PATH) ?? null;
 
   return [
@@ -293,7 +322,7 @@ export function gitCommands(app: TextUIApp, options: CommandOptions): CommandDef
       run: async (args: Record<string, unknown>, ctx: CommandContext) => {
         // The file you are looking at, when nothing says otherwise - blaming
         // the panel's selection is what a person means by "who wrote this".
-        const path = target(args, ctx) ?? pathOfOpen(ctx, options.root);
+        const path = target(args, ctx);
         if (path === null) {
           notify(ctx.app, { message: 'Nothing to blame.' });
           return;

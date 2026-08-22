@@ -130,9 +130,31 @@ export class InputDecoder {
       const char = String.fromCodePoint(cp);
       const raw = ESC + char;
       this.carry = this.carry.slice(raw.length);
+      /*
+       * A control byte after ESC is alt+that key - and only *also* ctrl when
+       * the byte has no name of its own.
+       *
+       * `alt+enter` arrives as ESC then 0x0d, and 0x0d is the enter key, not
+       * ctrl+m: reporting `ctrl` beside it filed the stroke as
+       * `ctrl+alt+enter`, which is not what anybody binds and not what the
+       * same key produces without the ESC. `stepPlain` has always had this
+       * rule - `ctrl: cp === 0x00` - and this path did not, so `alt+tab`,
+       * `alt+backspace` and `alt+enter` were all unreachable.
+       *
+       * 0x00 keeps it, because that one really is ctrl+space.
+       */
+      // 0x7f as well as 0x20 and below: that is the backspace most terminals
+      // send, and `stepPlain` has always counted it as a control. Leaving it
+      // out here made `alt+backspace` a key named "\x7f".
+      const control = cp < 0x20 || cp === 0x7f;
+      const named = control ? CTRL_NAMES[cp] : undefined;
       this.emit(
-        cp < 0x20
-          ? key(CTRL_NAMES[cp] ?? String.fromCharCode(cp + 96), { alt: true, ctrl: true, raw })
+        control
+          ? key(named ?? String.fromCharCode(cp + 96), {
+              alt: true,
+              ...(named === undefined || cp === 0x00 ? { ctrl: true } : {}),
+              raw,
+            })
           : key(char, { char, alt: true, raw, shift: char !== char.toLowerCase() }),
       );
       return raw.length;

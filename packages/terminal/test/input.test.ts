@@ -230,3 +230,38 @@ describe('kitty keyboard', () => {
     expect(keys(c.events).map((k) => k.name)).toEqual(['escape', 'tab', 'backspace']);
   });
 });
+
+/**
+ * A control byte after ESC.
+ *
+ * `alt+enter` is ESC then 0x0d, and 0x0d is the enter key - not ctrl+m. These
+ * were all being reported with `ctrl` beside them, which filed them as strokes
+ * nobody binds and made them unreachable: the application had `alt+enter` and
+ * the terminal was sending `ctrl+alt+enter`.
+ */
+describe('alt and a named key', () => {
+  it('decodes alt+enter without inventing a ctrl', () => {
+    const c = collect();
+    c.feed(`${ESC}\r`);
+    expect(keys(c.events)[0]).toMatchObject({ name: 'enter', alt: true, ctrl: false });
+  });
+
+  it('decodes alt+tab and alt+backspace the same way', () => {
+    const c = collect();
+    c.feed(`${ESC}\t${ESC}\x7f`);
+    expect(keys(c.events).map((k) => [k.name, k.alt, k.ctrl]))
+      .toEqual([['tab', true, false], ['backspace', true, false]]);
+  });
+
+  it('keeps ctrl where the byte really is a ctrl+letter', () => {
+    const c = collect();
+    c.feed(`${ESC}\x01`);
+    expect(keys(c.events)[0]).toMatchObject({ name: 'a', alt: true, ctrl: true });
+  });
+
+  it('and for ctrl+space, which is the one named byte that is a chord', () => {
+    const c = collect();
+    c.feed(`${ESC}\x00`);
+    expect(keys(c.events)[0]).toMatchObject({ name: 'space', alt: true, ctrl: true });
+  });
+});

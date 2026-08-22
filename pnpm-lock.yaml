@@ -55,6 +55,19 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/surfaces:
+    dependencies:
+      '@textui/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@textui/terminal':
+        specifier: workspace:*
+        version: link:../../packages/terminal
+    devDependencies:
+      '@textui/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   examples/todo:
     dependencies:
       '@textui/core':

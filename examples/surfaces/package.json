@@ -1,0 +1,19 @@
+{
+  "name": "@textui/example-surfaces",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chrome built from surfaces alone, with no shell registered",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/terminal": "workspace:*"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*"
+  }
+}

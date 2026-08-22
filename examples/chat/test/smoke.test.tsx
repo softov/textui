@@ -222,6 +222,43 @@ describe('the composer', () => {
 });
 
 describe('the catalogue', () => {
+  it('puts the keyboard on the list, not in the filter', async () => {
+    const { t } = await open();
+    // Every single-letter command depends on this. With focus in the filter,
+    // `d` is a letter typed into a text field and the key that disposes a
+    // session does nothing - which looks exactly like a key that is missing.
+    expect(t.app.focus.focused()).toBe('chat.sessions');
+    await t.unmount();
+  });
+
+  it('archives the selected session with a key', async () => {
+    const { t } = await open();
+    t.app.store.set('$/chat/ui/selected', 'ahp-session:/9c74');
+    await t.settle();
+
+    t.press('a');
+    for (let i = 0; i < 4; i++) await t.settle();
+    // Archived is hidden, so the row leaves the list it was in.
+    expect(t.hasText('Why does the composer')).toBe(false);
+    await t.unmount();
+  });
+
+  it('disposes a session after asking', async () => {
+    const { t } = await open();
+    t.app.store.set('$/chat/ui/selected', 'ahp-session:/9c74');
+    await t.settle();
+
+    t.press('d');
+    for (let i = 0; i < 4; i++) await t.settle();
+    // The host ends the session for every client watching it, so it asks.
+    expect(t.hasText('Dispose session')).toBe(true);
+
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.hasText('Why does the composer')).toBe(false);
+    await t.unmount();
+  });
+
   it('focuses the filter by name, which is what a key needs to exist', async () => {
     const { t } = await open();
     await t.app.execute('session.filter');
@@ -243,6 +280,46 @@ describe('the catalogue', () => {
     await t.app.execute('session.toggleArchived');
     for (let i = 0; i < 4; i++) await t.settle();
     expect(t.hasText('Old build script')).toBe(true);
+    await t.unmount();
+  });
+});
+
+describe('leaving', () => {
+  it('gives ctrl+c to the turn while one is running, and to quit when none is', async () => {
+    const quits: string[] = [];
+    const host = fakeHost();
+    const t = await renderApp({
+      width: 100,
+      height: 30,
+      shell: 'workbench',
+      theme: 'workbench',
+      onBoot: (app) => {
+        registerChat(app, { host });
+        app.commands.register({ id: 'app.quit', title: 'Quit', run: () => quits.push('quit') });
+        app.keybindings.register({ keys: 'ctrl+c', commandId: 'app.quit' });
+      },
+    });
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    // Nothing is running: the stop binding does not apply and the key falls
+    // through. A `when` on the command alone would swallow it here.
+    t.press('ctrl+c');
+    await t.settle();
+    expect(quits).toEqual(['quit']);
+
+    const controller = t.app.services.require(CONTROLLER);
+    controller.open(SEEDED);
+    t.app.screens.push('chat');
+    for (let i = 0; i < 4; i++) await t.settle();
+    controller.send('go');
+    for (let i = 0; i < 20; i++) host.pump();
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    t.press('ctrl+c');
+    for (let i = 0; i < 4; i++) await t.settle();
+    // Still one: this one stopped the turn instead.
+    expect(quits).toEqual(['quit']);
+    expect(t.store.get<Turn[]>(TURNS)?.some((turn) => turn.state === 'running')).toBe(false);
     await t.unmount();
   });
 });

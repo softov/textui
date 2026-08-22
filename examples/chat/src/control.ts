@@ -31,7 +31,18 @@ export interface Controller {
   deny(): void;
   answer(answers: Record<string, Answer>, accepted?: boolean): void;
   setArchived(uri: SessionUri, archived: boolean): void;
-  dispose(uri: SessionUri): Promise<void>;
+  /**
+   * End the session on the host.
+   *
+   * Not `dispose`. This object is also a `Disposable` - it owns the
+   * subscription, the commands and the keys - and `Object.assign` put that
+   * `dispose()` straight over the top of this one. Confirming "delete this
+   * session" therefore tore down the whole controller instead: every command
+   * and every keybinding went with it, and the application stopped answering
+   * the keyboard entirely. The protocol's own name for this is
+   * `disposeSession`, and using it means the two can never collide again.
+   */
+  disposeSession(uri: SessionUri): Promise<void>;
   create(options: { provider: string; workingDirectory?: string; first?: string }): Promise<SessionUri>;
   /** The harnesses this host advertises, and the models each offers. */
   agents(): Promise<Agent[]>;
@@ -159,7 +170,7 @@ export function createController(
       void controller.refresh();
     },
 
-    async dispose(uri) {
+    async disposeSession(uri) {
       await host.disposeSession(uri);
       if (app.store.get<SessionUri>(OPEN) === uri) controller.close();
       await controller.refresh();
@@ -195,6 +206,17 @@ export function createController(
 function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
   const selected = (): SessionUri | null => app.store.get<SessionUri>('$/chat/ui/selected') ?? null;
   const openUri = (): SessionUri | null => app.store.get<SessionUri>(OPEN) ?? null;
+
+  /**
+   * Which session a command acts on.
+   *
+   * The one being read, when a conversation is on screen; otherwise the one
+   * selected in the catalogue. A command that only ever read the catalogue's
+   * selection would archive the row you opened this from rather than the
+   * session you are looking at.
+   */
+  const target = (): SessionUri | null =>
+    (app.screens.current()?.id === 'chat' ? openUri() : null) ?? selected() ?? openUri();
   const running = (): boolean => turns(app.store).some((turn) => turn.state === 'running');
 
   return [
@@ -279,7 +301,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       category: 'Session',
       slots: ['palette'],
       run: () => {
-        const uri = selected() ?? openUri();
+        const uri = target();
         const session = visibleSessions(app.store).find((s) => s.resource === uri)
           ?? (uri ? { resource: uri, status: 0 } : null);
         if (!uri || !session) return;
@@ -292,7 +314,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       category: 'Session',
       slots: ['palette'],
       run: async () => {
-        const uri = selected() ?? openUri();
+        const uri = target();
         if (!uri) return;
         // The host frees the session and tells every other client. Ending
         // somebody else's conversation is not an undo, so it is asked for.
@@ -303,7 +325,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
           cancelLabel: 'Keep',
           tone: 'danger',
         });
-        if (yes) await controller.dispose(uri);
+        if (yes) await controller.disposeSession(uri);
       },
     },
     {
@@ -405,14 +427,21 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
  * nothing types them. Single letters are registered against the transcript's
  * focus scope, because while the composer has focus they are letters.
  */
-function keys(): { keys: string; commandId: string; scopeId?: string; args?: Record<string, unknown> }[] {
+function keys(): {
+  keys: string;
+  commandId: string;
+  scopeId?: string;
+  when?: string;
+  args?: Record<string, unknown>;
+}[] {
   return [
     // Global: nothing types these, so they are safe wherever focus is.
     { keys: 'ctrl+p', commandId: 'app.palette' },
-    // Stop what is running. When nothing is, this does not match and the key
-    // falls through to whatever the host bound it to - which is how `ctrl+c`
-    // ends up meaning "cancel this, or leave" the way it does everywhere else.
-    { keys: 'ctrl+c', commandId: 'chat.stop' },
+    // The clause is on the *binding*, not only on the command. A binding that
+    // matches has handled the key - whether or not the command it names then
+    // declines to run - so a `when` that lives only on the command swallows
+    // `ctrl+c` and it never reaches the one below that closes the application.
+    { keys: 'ctrl+c', commandId: 'chat.stop', when: `${OPEN} && ${STATUS} > 1` },
     { keys: 'ctrl+n', commandId: 'session.new' },
     { keys: 'ctrl+r', commandId: 'session.refresh' },
     { keys: 'escape', commandId: 'go.back' },

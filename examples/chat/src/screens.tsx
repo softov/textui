@@ -84,6 +84,13 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
           <SessionList
             sessions={sessions}
             selectedId={selected}
+            focusId="chat.sessions"
+            // The list, not the filter. Whatever registers first would
+            // otherwise hold the keyboard on arrival, and the filter is drawn
+            // above the list - which made every single-letter command a letter
+            // typed into a text field. `n`, `a` and `d` did nothing at all,
+            // which is not what a missing key looks like from the outside.
+            autoFocus
             flex={1}
             onSelect={(uri: string) => app.store.set(SELECTED, uri)}
             onOpen={(uri: string) => { controller.open(uri); app.screens.push('chat'); }}

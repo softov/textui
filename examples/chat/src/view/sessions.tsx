@@ -19,11 +19,13 @@ export interface SessionListProps extends BoxProps {
   onSelect?(uri: string): void;
   onOpen?(uri: string): void;
   emptyMessage?: string;
+  focusId?: string;
+  autoFocus?: boolean;
 }
 
 export const SessionList: (props: SessionListProps) => RenderOutput =
   defineComponent<SessionListProps>('SessionList', (props) => {
-    const { sessions, selectedId, onSelect, onOpen, emptyMessage, ...rest } = props;
+    const { sessions, selectedId, onSelect, onOpen, emptyMessage, focusId, autoFocus, ...rest } = props;
     const theme = useTheme();
 
     const items: ListItem[] = sessions.map((session) => {
@@ -51,6 +53,8 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
         emptyMessage={emptyMessage ?? 'No sessions on this host'}
         onSelect={(id: string) => onSelect?.(id)}
         onActivate={(id: string) => onOpen?.(id)}
+        {...(focusId ? { focusId } : {})}
+        {...(autoFocus ? { autoFocus: true } : {})}
         {...rest}
       />
     );

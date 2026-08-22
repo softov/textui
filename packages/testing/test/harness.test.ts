@@ -277,3 +277,57 @@ describe('snapshots', () => {
     await t.unmount();
   });
 });
+
+/**
+ * Boot may hand back a disposable.
+ *
+ * Everything that registers returns one already - `registerBuiltins` does -
+ * so requiring `void` meant the shortest correct call was a discard away:
+ * `onBoot: (app) => void registerBuiltins(app)`. Widening it costs nothing
+ * and teardown from boot is a reasonable thing to want.
+ */
+describe('what boot hands back', () => {
+  it('disposes a disposable returned from onBoot when the app stops', async () => {
+    let disposed = 0;
+    const t = await renderApp({
+      width: 20,
+      height: 3,
+      root: { component: 'text', content: 'hi' },
+      onBoot: () => ({ dispose: () => { disposed++; } }),
+    });
+
+    expect(disposed, 'not while the app is running').toBe(0);
+    await t.unmount();
+    expect(disposed).toBe(1);
+  });
+
+  it('still accepts a boot that returns nothing', async () => {
+    let booted = false;
+    const t = await renderApp({
+      width: 20,
+      height: 3,
+      root: { component: 'text', content: 'hi' },
+      onBoot: () => { booted = true; },
+    });
+    expect(booted).toBe(true);
+    await t.unmount();
+  });
+
+  it('takes the registration a real boot returns, and takes it back out', async () => {
+    const t = await renderApp({
+      width: 30,
+      height: 3,
+      root: { component: 'text', content: 'hi' },
+      // The shape this exists for: one word, no discard.
+      onBoot: (app) => app.commands.register({
+        id: 'test.fromBoot',
+        title: 'From Boot',
+        run: () => {},
+      }),
+    });
+
+    expect(t.app.commands.get('test.fromBoot')).toBeDefined();
+    await t.unmount();
+    expect(t.app.commands.get('test.fromBoot')).toBeUndefined();
+  });
+});

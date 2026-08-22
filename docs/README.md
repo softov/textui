@@ -21,7 +21,7 @@ import { createNodeTerminal } from '@textui/terminal';
 const app = createApp({
   terminal: createNodeTerminal(),
   root: <Dashboard />,
-  onBoot: (app) => void registerBuiltins(app),
+  onBoot: registerBuiltins,
 });
 
 await app.start();

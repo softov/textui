@@ -1,10 +1,10 @@
 import type {
-  CapabilityOverrides, ComponentDefinition, ComponentNode, InspectorNode,
+  CapabilityOverrides, ComponentDefinition, ComponentNode, Disposable, InspectorNode,
   KeyEvent, TextUIApp, ReactiveStore, SemanticRole, ThemeDefinition,
 } from '@textui/core';
 import { WRITER_KEY, createApp, strokeOf, splitStroke, type App } from '@textui/core';
 import { createVirtualTerminal, createWriter, type VirtualTerminalAdapter } from '@textui/terminal';
-import { registerBuiltins } from '@textui/core';
+import { createBag, registerBuiltins } from '@textui/core';
 
 /**
  * The testing harness.
@@ -28,8 +28,14 @@ export interface RenderOptions {
   initialState?: Record<string, unknown>;
   /** Register the shipped catalog. On by default. */
   builtins?: boolean;
-  /** Run boot registration before the first frame. */
-  onBoot?(app: TextUIApp): void | Promise<void>;
+  /**
+   * Run boot registration before the first frame.
+   *
+   * Mirrors the application's own `onBoot`, disposable and all - a harness
+   * whose boot contract is narrower than the real one is a harness that
+   * cannot test what the real one does.
+   */
+  onBoot?(app: TextUIApp): void | Disposable | Promise<void | Disposable>;
   /** Encode frames to ANSI as a real terminal session would. Off by default. */
   encode?: boolean;
   /** Collect errors instead of printing them. On by default. */
@@ -177,8 +183,12 @@ async function mount(options: RenderOptions & { root?: ComponentNode }): Promise
     diagnostics: true,
     session: { managed: false, altScreen: false, hideCursor: false },
     onBoot: async (booted) => {
-      if (options.builtins !== false) registerBuiltins(booted);
-      if (options.components) booted.components.registerMany(options.components);
+      // Everything registered here comes back out when the app stops, which
+      // matters for a harness more than for an application: a test file
+      // mounts and unmounts dozens of times in one process.
+      const bag = createBag();
+      if (options.builtins !== false) bag.add(registerBuiltins(booted));
+      if (options.components) bag.add(booted.components.registerMany(options.components));
       if (options.initialState) {
         booted.store.batch(() => {
           for (const [path, value] of Object.entries(options.initialState as object)) {
@@ -186,7 +196,9 @@ async function mount(options: RenderOptions & { root?: ComponentNode }): Promise
           }
         });
       }
-      await options.onBoot?.(booted);
+      const booted_ = await options.onBoot?.(booted);
+      if (booted_) bag.add(booted_);
+      return bag;
     },
   });
 

@@ -16,7 +16,7 @@ import { createNodeTerminal } from '@textui/terminal';
 const app = createApp({
   terminal: createNodeTerminal(),
   shell: 'paper',
-  onBoot: (app) => void registerBuiltins(app),
+  onBoot: registerBuiltins,
 });
 ```
 

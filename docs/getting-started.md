@@ -26,7 +26,7 @@ const terminal = createNodeTerminal();
 const app = createApp({
   terminal,
   root: { component: 'text', content: 'hello' },
-  onBoot: (app) => void registerBuiltins(app),
+  onBoot: registerBuiltins,
 });
 
 app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));

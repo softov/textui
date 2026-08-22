@@ -292,7 +292,11 @@ export class App implements TextUIApp {
   async start(): Promise<void> {
     if (this.running_) return;
 
-    await this.options.onBoot?.(this);
+    // A boot that hands back a disposable is asking for its registrations to
+    // come out again when the app stops, which is what `stop()` already does
+    // to everything else in the bag.
+    const booted = await this.options.onBoot?.(this);
+    if (booted) this.bag.add(booted);
     await this.store.hydrate();
 
     // `root` is a mount like any other, so the shell arranges it, the layouts

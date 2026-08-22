@@ -16,7 +16,7 @@ import { createNodeTerminal } from '@textui/terminal';
 const app = createApp({
   terminal: createNodeTerminal(),
   shell: 'workbench',
-  onBoot: (app) => void registerBuiltins(app),
+  onBoot: registerBuiltins,
 });
 ```
 

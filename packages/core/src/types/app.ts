@@ -123,23 +123,17 @@ export interface CreateAppOptions {
   root?: ComponentNode;
   capabilityOverrides?: CapabilityOverrides;
   locale?: string;
-  /** Register everything the app needs; runs before the first frame. */
   /**
-   * Run once at boot, before the first render.
+   * Register everything the app needs. Runs once at boot, before the first
+   * render.
    *
-   * UNRESOLVED, and worth settling before this next goes out: the obvious
-   * thing to pass is `registerBuiltins`, which returns a `Disposable` and so
-   * does not satisfy this signature. Every doc example therefore has to write
-   * `onBoot: (app) => void registerBuiltins(app)`, which reads like a
-   * workaround because it is one.
-   *
-   * Either widen this to `void | Disposable | Promise<void>` and dispose it
-   * with the app - teardown from boot is a reasonable thing to want - or leave
-   * it and accept that the shortest correct call is the awkward one. Widening
-   * would let docs/README.md and docs/getting-started.md go back to the
-   * one-word form they used before it was found not to compile.
+   * A `Disposable` may be returned and the app disposes it on `stop()`, which
+   * is what makes `onBoot: registerBuiltins` the whole call rather than
+   * `onBoot: (app) => void registerBuiltins(app)`. Everything that registers
+   * hands back a disposable already; requiring `void` meant the shortest
+   * correct form was a cast of one away.
    */
-  onBoot?(app: TextUIApp): void | Promise<void>;
+  onBoot?(app: TextUIApp): void | Disposable | Promise<void | Disposable>;
   /** Off disables every animation globally. */
   animations?: boolean;
   maxFps?: number;

@@ -685,7 +685,13 @@ export interface CodeViewerPosition {
   width: number;
 }
 
-const HORIZONTAL_STEP = 4;
+/**
+ * How far one press of `left` or `right` pans a viewer that cannot fit its
+ * widest line. Exported because every viewer that scrolls sideways has to
+ * agree - a diff that panned by one column beside a code view that panned by
+ * four would be two different keys wearing the same arrow.
+ */
+export const HORIZONTAL_STEP = 4;
 
 /**
  * A file viewer.

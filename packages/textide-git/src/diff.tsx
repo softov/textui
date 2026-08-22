@@ -1,6 +1,6 @@
 import {
-  ScrollThumb, chorded, defineComponent, h, sliceColumns, useFocus, useInput, useMeasure,
-  useRuntime, useState, useStoreValue, viewportRows,
+  HORIZONTAL_STEP, ScrollThumb, chorded, defineComponent, h, sliceColumns, stringWidth,
+  useFocus, useInput, useMeasure, usePanelState, useRuntime, useStoreValue, viewportRows,
 } from '@textui/core';
 import type {
   BindingPath, BoxProps, ComponentDefinition, RenderOutput, StyleColor,
@@ -174,7 +174,17 @@ export const GitDiff = defineComponent<GitDiffProps>('GitDiff', (props) => {
   const doc = useDocument(uri);
   const measured = useMeasure();
   const focus = useFocus({ autoFocus });
-  const [top, setTop] = useState(0);
+  /*
+   * Where this diff is looking belongs to the panel, the way it does for every
+   * other viewer.
+   *
+   * `top`, `left` and `line` are the shared vocabulary a renderer measuring in
+   * lines reads and writes, so switching layout or leaving the tab and coming
+   * back lands where you left. It was local state, which meant a diff forgot
+   * where it was every time it was unmounted - and switching unified to split
+   * unmounts it.
+   */
+  const [view, setView] = usePanelState({ top: 0, left: 0, line: 0 });
   // The stored mode, so switching layout switches every diff on screen rather
   // than the one that happens to have been told.
   const stored = useStoreValue<DiffMode>(DIFF_MODE, 'unified');
@@ -193,8 +203,45 @@ export const GitDiff = defineComponent<GitDiffProps>('GitDiff', (props) => {
   const height = layout === 'split' ? pairs.length : lines.length;
 
   const rows = viewportRows({ flex: 1, ...props }, measured, height);
+
+  /*
+   * The width a line has, and the widest one there is.
+   *
+   * Both layouts need this and neither had it. A unified row was handed to
+   * `text` with no width and no slice, so a diff of a long line drew past the
+   * pane and pushed everything beside it - the sidebar is a box with an
+   * explicit width and `shrink: 1`, so what it pushed was that.
+   */
+  const width = measured.width > 0 ? measured.width : 80;
+  const bar = scrollbar && height > rows ? 1 : 0;
+  // Two columns, each half of what is left after the gutter between them.
+  const half = Math.max(4, Math.floor((width - bar - 1) / 2));
+  const textWidth = Math.max(1, layout === 'split' ? half : width - bar);
+  const longest = lines.reduce((max, line) => Math.max(max, stringWidth(line)), 0);
+
   const maxTop = Math.max(0, height - rows);
-  const first = Math.max(0, Math.min(top, maxTop));
+  const maxLeft = Math.max(0, longest - textWidth);
+
+  /*
+   * The caret leads and the viewport follows, which is what "navigate like the
+   * editor" means. Without a caret the arrows moved the window and there was
+   * nothing on the screen saying which line you were on - so `s` had to guess
+   * that you meant the one at the top.
+   */
+  const caret = Math.max(0, Math.min(view.line, Math.max(0, height - 1)));
+  const first = Math.min(
+    Math.max(0, Math.min(view.top, maxTop)),
+    Math.max(0, Math.min(caret, maxTop)),
+  );
+  const offset = Math.max(first, Math.min(caret - rows + 1, maxTop));
+  const leftColumn = Math.max(0, Math.min(view.left, maxLeft));
+
+  const moveTo = (next: number): void => {
+    const line = Math.max(0, Math.min(next, Math.max(0, height - 1)));
+    if (line < offset) setView({ line, top: line });
+    else if (line >= offset + rows) setView({ line, top: line - rows + 1 });
+    else setView({ line });
+  };
 
   useInput((event) => {
     if (chorded(event)) return false;
@@ -203,16 +250,17 @@ export const GitDiff = defineComponent<GitDiffProps>('GitDiff', (props) => {
      * `s` stages what you are looking at, `u` takes it back.
      *
      * Plain letters, because a diff is a viewer and has no text to type into -
-     * and the hunk is the one the top of the view is sitting on, which is the
-     * one a person means when they scrolled to it.
+     * and the hunk is the one the *caret* is in, which is the one a person
+     * means when they arrowed down to it. It used to be whichever hunk the top
+     * row happened to be inside, because there was no caret to ask.
      */
     if (event.name === 's' || event.name === 'u') {
       if (path === null) return false;
       const { hunks } = parseHunks(text);
       if (hunks.length === 0) return false;
       const index = layout === 'split'
-        ? hunkOfPair(pairs, first)
-        : hunkOfLine(lines, first);
+        ? hunkOfPair(pairs, caret)
+        : hunkOfLine(lines, caret);
       void app?.execute('git.stageHunk', {
         path,
         hunk: index,
@@ -221,36 +269,37 @@ export const GitDiff = defineComponent<GitDiffProps>('GitDiff', (props) => {
       return true;
     }
 
-    const to = (delta: number): boolean => {
-      setTop(scrollDiff(first, delta, maxTop));
+    const pan = (delta: number): boolean => {
+      setView({ left: scrollDiff(leftColumn, delta, maxLeft) });
       return true;
     };
     switch (event.name) {
-      case 'up': return to(-1);
-      case 'down': return to(1);
-      case 'pageup': return to(-rows);
-      case 'pagedown': return to(rows);
-      case 'home': return to(-height);
-      case 'end': return to(height);
+      case 'up': moveTo(caret - 1); return true;
+      case 'down': moveTo(caret + 1); return true;
+      case 'pageup': moveTo(caret - rows); return true;
+      case 'pagedown': moveTo(caret + rows); return true;
+      case 'home': moveTo(0); return true;
+      case 'end': moveTo(height - 1); return true;
+      // Sideways, by the same step every other viewer pans by.
+      case 'left': return pan(-HORIZONTAL_STEP);
+      case 'right': return pan(HORIZONTAL_STEP);
       default: return false;
     }
   }, { focusId: focus.id });
 
   /*
-   * Two columns, each half of what is left after the gutter between them.
-   *
    * Sliced rather than truncated: a line that does not fit has to stop at the
    * column edge and not push its neighbour sideways, and a wide grapheme on
    * the boundary has to be dropped whole. `sliceColumns` counts cells, which
-   * is the only unit a terminal column is measured in.
+   * is the only unit a terminal column is measured in - and it is what makes
+   * `left` and `right` show the rest of a line rather than nothing.
    */
-  const width = measured.width > 0 ? measured.width : 80;
-  const bar = scrollbar && height > rows ? 1 : 0;
-  const half = Math.max(4, Math.floor((width - bar - 1) / 2));
+  const window = (line: string): string =>
+    sliceColumns(line, leftColumn, textWidth) || ' ';
 
   const cell = (side: DiffCell | null, key: string): RenderOutput => h('text', {
     key,
-    content: side ? (sliceColumns(side.text, 0, half) || ' ') : ' ',
+    content: side ? window(side.text) : ' ',
     width: half,
     ...(side && TONE[side.kind] ? { fg: TONE[side.kind] } : {}),
     // The gap opposite an added or removed line is the shape of the change,
@@ -258,26 +307,39 @@ export const GitDiff = defineComponent<GitDiffProps>('GitDiff', (props) => {
     ...(side === null ? { bg: 'surfaceAlt' } : {}),
   });
 
+  // The row the caret is on, drawn so that "which line" is a thing you can
+  // see rather than infer - which is also what `s` and `u` now act on.
+  const onCaret = (index: number): Record<string, unknown> =>
+    (index === caret && focus.focused ? { bg: 'surfaceAlt' } : {});
+
   const body = layout === 'split'
-    ? pairs.slice(first, first + rows).map((pair, i) => (pair.full
+    ? pairs.slice(offset, offset + rows).map((pair, i) => (pair.full
       // A hunk header belongs to neither side, so it spans both.
       ? h('text', {
-          key: first + i,
-          content: pair.full.text.length > 0 ? pair.full.text : ' ',
+          key: offset + i,
+          content: window(pair.full.text),
+          width: textWidth,
           ...(TONE[pair.full.kind] ? { fg: TONE[pair.full.kind] } : {}),
           ...(pair.full.kind === 'hunk' ? { bold: true } : {}),
+          ...onCaret(offset + i),
         })
-      : h('box', { key: first + i, direction: 'row', height: 1 },
+      : h('box', {
+          key: offset + i, direction: 'row', height: 1, ...onCaret(offset + i),
+        },
           cell(pair.left, 'l'),
           h('text', { content: ' ', width: 1, fg: 'borderSubtle' }),
           cell(pair.right, 'r'))))
-    : lines.slice(first, first + rows).map((line, i) => {
+    : lines.slice(offset, offset + rows).map((line, i) => {
       const kind = classify(line);
       return h('text', {
-        key: first + i,
-        content: line.length > 0 ? line : ' ',
+        key: offset + i,
+        content: window(line),
+        // Given, not inferred. Without it a row is as wide as its content and
+        // a long line takes the pane with it.
+        width: textWidth,
         ...(TONE[kind] ? { fg: TONE[kind] } : {}),
         ...(kind === 'hunk' ? { bold: true } : {}),
+        ...onCaret(offset + i),
       });
     });
 
@@ -294,7 +356,7 @@ export const GitDiff = defineComponent<GitDiffProps>('GitDiff', (props) => {
         : null,
       ...body),
     scrollbar && height > rows
-      ? h(ScrollThumb, { total: height, rows, offset: first, focused: focus.focused })
+      ? h(ScrollThumb, { total: height, rows, offset, focused: focus.focused })
       : null,
   );
 });

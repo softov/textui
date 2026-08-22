@@ -74,15 +74,15 @@ describe.each(SIZES.map((s) => [`${s.width}x${s.height}`, s] as const))('the chr
 
   it('hides and restores the status bar', async () => {
     const t = await open(size);
-    expect(t.hasText('? for keys')).toBe(true);
+    expect(t.hasText('f1 for keys')).toBe(true);
 
     await t.app.execute('view.toggle', { surface: 'status' });
     await t.settle();
-    expect(t.hasText('? for keys')).toBe(false);
+    expect(t.hasText('f1 for keys')).toBe(false);
 
     await t.app.execute('view.toggle', { surface: 'status' });
     await t.settle();
-    expect(t.hasText('? for keys')).toBe(true);
+    expect(t.hasText('f1 for keys')).toBe(true);
     await t.unmount();
   });
 
@@ -904,7 +904,35 @@ describe('the keyboard shortcuts', () => {
     const sheet = shortcutSheet(t.app);
     expect(sheet).toContain('alt+?');
     expect(sheet).not.toContain('alt+shift+?');
-    expect(t.hasText('alt+? keys'), 'which is what the footer offers').toBe(true);
+    await t.unmount();
+  });
+
+  /**
+   * `alt+?` needs shift to make the `?`, and terminals disagree about what to
+   * send while it is held. `f1` is the one that always arrives, so `f1` is the
+   * one the footer names - a documented key that does not work is worse than
+   * no key at all.
+   */
+  it('offers the key that does not depend on a keyboard layout', async () => {
+    const t = await open(SIZES[0]!);
+    expect(t.hasText('f1 keys'), 'the footer names f1').toBe(true);
+    expect(shortcutSheet(t.app)).toMatch(/f1.*Keyboard Shortcuts/);
+
+    t.press('f1');
+    await quiet(t);
+    expect(t.hasText('Keyboard Shortcuts')).toBe(true);
+    await t.unmount();
+  });
+
+  /**
+   * Three ways to press one command are three keys, not a range. `f1 .. alt+/`
+   * would name two of them and invent an order between keys that have none.
+   */
+  it('does not collapse aliases into a range', async () => {
+    const t = await open(SIZES[0]!);
+    const sheet = shortcutSheet(t.app);
+    expect(sheet).not.toContain('f1 .. ');
+    expect(sheet).toContain('f1, alt+?, alt+/');
     await t.unmount();
   });
 

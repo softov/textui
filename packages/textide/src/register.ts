@@ -143,10 +143,20 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['alt+right', 'go.nextTab'],
     ['ctrl+pageup', 'go.previousTab'],
     ['ctrl+pagedown', 'go.nextTab'],
-    // The shortcut list, which is where every key that is not on the footer
-    // has to be findable. `alt+shift+?` is filed as `alt+?`: a terminal
-    // reports shift through the character it produced, never beside it.
+    /*
+     * The shortcut list, which is where every key that is not on the footer
+     * has to be findable - so it cannot itself be hard to press.
+     *
+     * `f1` is the one that always arrives. `alt+?` needs shift to make the `?`
+     * and terminals disagree about what to send when it is held: some send
+     * `ESC ?`, some send `ESC /` with a shift bit, and one of those two is a
+     * stroke nothing is filed under. Both are bound, and `f1` is the one the
+     * footer offers, because a documented key that does not work is worse than
+     * no key at all.
+     */
+    ['f1', 'help.keys'],
     ['alt+shift+?', 'help.keys'],
+    ['alt+/', 'help.keys'],
     // F10 enters the bar; alt+letter opens one menu outright. Both exist
     // because the first is discoverable and the second is fast.
     ['f10', 'menu.focus'],

@@ -132,7 +132,7 @@ describe.each(SIZES.map((s) => [label(s), s] as const))('the screen at %s', (_na
     await t.settle();
 
     expect(t.hasText(dir)).toBe(true);
-    expect(t.hasText('? for keys')).toBe(true);
+    expect(t.hasText('f1 for keys')).toBe(true);
     await t.unmount();
   });
 
@@ -172,7 +172,7 @@ describe('a terminal too small for the shell', () => {
     for (let i = 0; i < 8; i++) await t.settle();
 
     expect(t.hasText('README.md')).toBe(false);
-    expect(t.hasText('? for keys')).toBe(true);
+    expect(t.hasText('f1 for keys')).toBe(true);
     await t.unmount();
   });
 });
@@ -283,7 +283,10 @@ describe('stepping back in textide', () => {
 
     t.app.store.set('$/ui/editor/uri', uri);
     await t.app.execute('file.edit');
-    for (let i = 0; i < 8; i++) await t.settle();
+    // The buffer is read when the pane mounts, and the pane mounts when the
+    // URI is set - so this waits for the read rather than for a fixed number
+    // of frames.
+    for (let i = 0; i < 12; i++) { await t.settle(); t.advance(50); t.flush(); }
 
     const read = (): string => getDocument(t.app.store, uri)?.content ?? '';
 

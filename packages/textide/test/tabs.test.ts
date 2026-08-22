@@ -312,3 +312,57 @@ describe('the keys that switch file', () => {
     await t.unmount();
   });
 });
+
+/**
+ * Moving the highlight is not opening anything.
+ *
+ * It was: `onSelect` opened whatever the highlight landed on, so rolling down
+ * past a folder of fifteen files opened fifteen tabs and read fifteen files
+ * off the disk. Moving through a tree is how you look *for* something.
+ */
+describe('the explorer', () => {
+  it('opens nothing on the way past', async () => {
+    const { t, quiet } = await open(SIZES[0]!);
+    expect(t.app.focus.focused(), 'the tree has the keyboard').not.toBe(null);
+
+    for (let i = 0; i < 6; i++) { t.press('down'); await quiet(); }
+    expect(t.app.store.get(TABS_PATH) ?? [], 'nothing opened').toEqual([]);
+    expect(t.app.store.get(EDITOR_URI) ?? null).toBe(null);
+    await t.unmount();
+  });
+
+  it('opens the one you pressed enter on', async () => {
+    // The tree starts on its first row, so this is the file already under the
+    // highlight - which is the point: it took a keypress to open it.
+    const { t, quiet, uri } = await open(SIZES[0]!);
+    t.press('enter');
+    await quiet();
+    expect(t.app.store.get(TABS_PATH)).toEqual([uri('alpha.txt')]);
+
+    t.press('down');
+    t.press('enter');
+    await quiet();
+    expect(t.app.store.get(TABS_PATH)).toEqual([uri('alpha.txt'), uri('beta.txt')]);
+    await t.unmount();
+  });
+
+  /**
+   * The titlebar says which file is *open*. It used to read the tree's
+   * highlight, which was the same thing only while moving opened files - and
+   * its unsaved marker read a flag written `false` beside that highlight and
+   * never written again, so it never once appeared.
+   */
+  it('names the open file in the titlebar, and marks it unsaved', async () => {
+    const { t, quiet, uri } = await open(SIZES[0]!);
+    t.app.store.set(EDITOR_URI, uri('alpha.txt'));
+    await quiet();
+    expect(t.lines()[1] ?? '', 'the titlebar').toContain('alpha.txt');
+
+    t.app.execute('file.edit');
+    await quiet();
+    t.type('!');
+    await quiet();
+    expect(t.lines()[1] ?? '', 'and says it is unsaved').toContain('unsaved');
+    await t.unmount();
+  });
+});

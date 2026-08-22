@@ -31,20 +31,33 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
     const runtime = useRuntime();
     const workspace = useStoreValue<Workspace>(WORKSPACE_PATH);
 
+    /*
+     * Moving the highlight is not opening anything.
+     *
+     * It was: `onSelect` opened whatever the highlight landed on, so rolling
+     * down past a folder of fifteen files opened fifteen tabs, read fifteen
+     * files off the disk and left a strip nobody asked for. Moving through a
+     * tree is how you *look* for something.
+     *
+     * What a move does publish is what is selected, because that is what the
+     * commands act on - `New File` puts a file in the folder you are standing
+     * on, whether or not anything is open.
+     */
     const select = (resource: Resource): void => {
       runtime.store.set(ACTIVE_PATH, {
         uri: resource.uri,
         name: resource.metadata.name,
         kind: resource.kind,
         size: resource.metadata.size,
-        dirty: false,
       });
+    };
+
+    const open = (resource: Resource): void => {
+      select(resource);
       // A directory has nothing to show, and asking a viewer to open one is
-      // how a pane fills with an error nobody caused.
-      if (resource.capabilities.includes('list')) {
-        runtime.store.set(EDITOR_URI, null);
-        return;
-      }
+      // how a pane fills with an error nobody caused. Enter on one expands it,
+      // which the tree has already done by the time this runs.
+      if (resource.capabilities.includes('list')) return;
       openTab(runtime.store, resource.uri);
     };
 
@@ -52,7 +65,7 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
       <ResourceExplorer
         root={workspace?.rootUri ?? ''}
         onSelect={select}
-        onOpen={select}
+        onOpen={open}
         // Somewhere to start. An application that boots with nothing focused
         // sends the first arrow key to whatever happens to be first in the tab
         // order, which here is the menu bar.
@@ -197,14 +210,14 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
                 { keys: 'ctrl+z', label: 'undo' },
                 { keys: 'ctrl+c/x/v', label: 'clip' },
                 { keys: 'ctrl+e', label: 'view' },
-                { keys: 'alt+?', label: 'keys' },
+                { keys: 'f1', label: 'keys' },
               ]
             : [
                 { keys: 'enter', label: 'open' },
                 { keys: 'alt+arrows', label: 'files' },
                 { keys: 'ctrl+p', label: 'commands' },
                 { keys: 'ctrl+e', label: 'edit' },
-                { keys: 'alt+?', label: 'keys' },
+                { keys: 'f1', label: 'keys' },
               ]}
         />
       </Column>

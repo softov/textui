@@ -530,7 +530,26 @@ export function shortcutSheet(app: TextUIApp): string {
     return i === -1 ? order.length : i;
   };
 
-  const shown = (keys: string[]): string => (keys.length > 2
+  /*
+   * A run collapses to its ends; a list of aliases does not.
+   *
+   * `alt+1` to `alt+9` is one thing said once. `f1`, `alt+?` and `alt+/` are
+   * three different ways to press the same command, and printing them as
+   * "f1 .. alt+/" would name two of them and invent a range between keys that
+   * have no order. So a run has to actually be one: the same prefix, and
+   * numbers that count.
+   */
+  const runs = (keys: string[]): boolean => {
+    if (keys.length < 3) return false;
+    const parts = keys.map((k) => /^(.*?)(\d+)$/.exec(k));
+    if (parts.some((m) => m === null)) return false;
+    const prefix = (parts[0] as RegExpExecArray)[1];
+    return parts.every((m, i) =>
+      (m as RegExpExecArray)[1] === prefix
+      && Number((m as RegExpExecArray)[2]) === Number((parts[0] as RegExpExecArray)[2]) + i);
+  };
+
+  const shown = (keys: string[]): string => (runs(keys)
     ? `${keys[0] as string} .. ${keys[keys.length - 1] as string}`
     : keys.join(', '));
 

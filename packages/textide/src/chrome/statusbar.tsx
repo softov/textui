@@ -34,7 +34,7 @@ export const StatusLine: (props: Record<string, never>) => RenderOutput =
     ...(selecting ? [{ id: 'selection', label: describe(selection) }] : []),
     ...(extra ?? []),
     ...(size !== undefined ? [{ id: 'size', label: formatSize(size) }] : []),
-    { id: 'help', label: 'alt+? for keys' },
+    { id: 'help', label: 'f1 for keys' },
   ];
 
   return <StatusBar leading={leading} trailing={trailing} />;

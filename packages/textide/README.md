@@ -38,6 +38,11 @@ keyboard: tab leaves the strip for the menu bar, and an arrow *inside* the
 strip changes the tab but leaves focus in the strip rather than in what you
 were doing.
 
+Moving the highlight in the explorer opens nothing: **enter opens**. It used
+to open whatever the highlight landed on, so rolling past a folder of fifteen
+files opened fifteen tabs and read fifteen files off the disk. Moving through
+a tree is how you look *for* something.
+
 A chord costs nothing, because a control only takes a key that is not chorded.
 The caret takes a plain arrow and leaves `alt+←` alone, so one pair of keys
 means "a character" inside a file and "a file" across them, and whatever had
@@ -48,8 +53,9 @@ once, and every navigating control asks it.
 does *something* teaches you nothing about how many files you have open, and
 `alt+9` quietly meaning `alt+3` is worse than `alt+9` meaning nothing.
 
-The footer has room for five keys and there are thirty, so **`alt+?` opens the
-sheet**. It is built from the keybindings rather than from the palette,
+The footer has room for five keys and there are thirty, so **`f1` opens the
+sheet** (`alt+?` and `alt+/` do too, when the terminal agrees about which of
+those a held shift produces - `f1` is the one that always arrives). It is built from the keybindings rather than from the palette,
 because a key bound to a command nobody put in a list is exactly the key
 nobody can otherwise find - and a command bound to nine keys is one row saying
 `alt+1 .. alt+9`, not nine rows saying it nine times.
@@ -142,7 +148,7 @@ commands, a component and a mount, and unloading it leaves nothing behind.
 | Viewer | Whatever the registry says opens the selected kind |
 | Editing | Selection, cut, copy, paste, indent, undo - `ctrl+c` is copy only while something is selected, so quit is never lost |
 | Tabs | Every open file. `alt+←`/`alt+→` between them, `alt+1`…`alt+9` straight to one, `ctrl+w` to close |
-| Keys | `alt+?` opens the sheet - the footer holds five, and there are thirty |
+| Keys | `f1` opens the sheet - the footer holds five, and there are thirty |
 | Split | A second pane beside the first, on another file or the same one |
 | Reload | `pnpm dev:watch`, then f5 or a save - the screen is rebuilt, the store is not |
 | Extensions | Whatever `.textide.json` lists, loaded at boot |

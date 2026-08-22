@@ -1,8 +1,9 @@
-import { Row, useStoreValue, useTheme, defineComponent } from '@textui/core';
+import { Row, useRuntime, useStoreSubtree, useStoreValue, useTheme, defineComponent } from '@textui/core';
 import type { RenderOutput } from '@textui/core';
+import { DOCUMENTS_ROOT, isDocumentDirty } from '@textui/documents';
 import type { Workspace } from '../workspace.js';
 import { WORKSPACE_PATH } from '../workspace.js';
-import { ACTIVE_PATH } from '../filesystem.js';
+import { EDITOR_URI, tabLabel } from '../tabs.js';
 import { MenuBar } from './menubar.js';
 
 /**
@@ -16,9 +17,21 @@ import { MenuBar } from './menubar.js';
 export const TitleBar: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('TitleBar', () => {
     const theme = useTheme();
+    const runtime = useRuntime();
     const workspace = useStoreValue<Workspace>(WORKSPACE_PATH);
-    const name = useStoreValue<string>(`${ACTIVE_PATH}/name`);
-    const dirty = useStoreValue<boolean>(`${ACTIVE_PATH}/dirty`, false);
+    /*
+     * The file that is *open*, not the one the highlight is standing on.
+     *
+     * Those were the same thing while moving through the tree opened files;
+     * now that it does not, a titlebar reading the tree would name a file that
+     * is not on screen. The unsaved marker has to come from the buffer for the
+     * same reason - it used to read a flag beside the tree selection that was
+     * written `false` and never written again, so it never once appeared.
+     */
+    const uri = useStoreValue<string | null>(EDITOR_URI, null) ?? null;
+    useStoreSubtree(DOCUMENTS_ROOT);
+    const name = uri ? tabLabel(uri) : undefined;
+    const dirty = uri !== null && isDocumentDirty(runtime.store, uri);
 
     return (
       <Row gap={1} padding={{ left: 1, right: 1 }} bg="surfaceAlt" fg="text">

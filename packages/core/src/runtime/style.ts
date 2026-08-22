@@ -19,10 +19,11 @@ import { packColor, type PackedColor } from '../render/color.js';
  */
 
 export const STYLE_KEYS = new Set<string>([
-  'display', 'direction', 'gap', 'padding', 'margin',
+  'display', 'direction', 'gap', 'columnGap', 'rowGap', 'flexWrap', 'padding', 'margin',
   'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight',
   'flex', 'shrink', 'basis', 'align', 'alignSelf', 'justify',
-  'position', 'top', 'right', 'bottom', 'left', 'zIndex', 'overflow',
+  'position', 'top', 'right', 'bottom', 'left', 'zIndex',
+  'overflow', 'overflowX', 'overflowY',
   'fg', 'bg', 'bold', 'dim', 'italic', 'underline', 'inverse', 'strike', 'blink',
   'border', 'wrap', 'textAlign', 'fill', 'scrim', 'scrimStrength',
 ]);
@@ -144,6 +145,9 @@ export interface ResolvedBorder {
   style: BorderStyle;
   chars: BorderChars;
   color: StyleColor | undefined;
+  /** Per-edge overrides. Undefined here means "use `color`". */
+  colors: { top?: StyleColor; right?: StyleColor; bottom?: StyleColor; left?: StyleColor };
+  dim: boolean;
   sides: { top: boolean; right: boolean; bottom: boolean; left: boolean };
   edges: Edges;
 }
@@ -156,6 +160,8 @@ const NO_BORDER: ResolvedBorder = {
     teeTop: ' ', teeBottom: ' ', teeLeft: ' ', teeRight: ' ',
   },
   color: undefined,
+  colors: {},
+  dim: false,
   sides: { top: false, right: false, bottom: false, left: false },
   edges: { top: 0, right: 0, bottom: 0, left: 0 },
 };
@@ -186,6 +192,8 @@ export function resolveBorder(spec: BorderSpec | undefined, theme: ResolvedTheme
     style,
     chars,
     color: typeof spec === 'string' ? undefined : spec.color,
+    colors: typeof spec === 'string' ? {} : spec.colors ?? {},
+    dim: typeof spec !== 'string' && spec.dim === true,
     sides,
     edges: {
       top: sides.top ? 1 : 0,

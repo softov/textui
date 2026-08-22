@@ -19,9 +19,10 @@ const FALLBACK_COLORS: Record<ColorToken, Color> = {
   border: 'default', borderStrong: 'default', borderSubtle: 'default',
   text: 'default', muted: 'default', subtle: 'default', inverted: 'default',
   accent: 'default', primary: 'default', secondary: 'default',
-  success: 'green', warning: 'yellow', danger: 'red', info: 'cyan',
-  onAccent: 'default', onPrimary: 'default', onSuccess: 'default',
-  onWarning: 'default', onDanger: 'default', onInfo: 'default',
+  success: 'default', warning: 'default', danger: 'default', info: 'default',
+  onDefault: 'default', onMuted: 'default',
+  onAccent: 'default', onPrimary: 'default', onSecondary: 'default',
+  onSuccess: 'default', onWarning: 'default', onDanger: 'default', onInfo: 'default',
   hover: 'default', active: 'default', selected: 'default', focus: 'default',
   disabled: 'default', scrim: 'default', cursor: 'default', shadow: 'default',
 };

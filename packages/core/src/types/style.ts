@@ -12,7 +12,9 @@ export type ColorToken =
   | 'text' | 'muted' | 'subtle' | 'inverted'
   | 'accent' | 'primary' | 'secondary'
   | 'success' | 'warning' | 'danger' | 'info'
-  | 'onAccent' | 'onPrimary' | 'onSuccess' | 'onWarning' | 'onDanger' | 'onInfo'
+  | 'onDefault' | 'onMuted'
+  | 'onAccent' | 'onPrimary' | 'onSecondary'
+  | 'onSuccess' | 'onWarning' | 'onDanger' | 'onInfo'
   | 'hover' | 'active' | 'selected' | 'focus' | 'disabled'
   | 'scrim' | 'cursor' | 'shadow';
 
@@ -50,20 +52,57 @@ export type BorderSides = {
   left?: boolean;
 };
 
+/** A colour per edge. Unnamed edges fall back to the border's `color`. */
+export type BorderColors = {
+  top?: StyleColor;
+  right?: StyleColor;
+  bottom?: StyleColor;
+  left?: StyleColor;
+};
+
 export type BorderSpec =
   | BorderStyle
   | {
       style?: BorderStyle;
       color?: StyleColor;
+      /**
+       * Per-edge colour, over `color`. A corner belongs to the edge that runs
+       * through it - the top rule owns both top corners - because a cell holds
+       * one colour and a terminal has no mitre to split it along.
+       */
+      colors?: BorderColors;
       sides?: BorderSides;
       chars?: Partial<BorderChars>;
+      /**
+       * Draw the frame dim. The frame only: a dim attribute on the box itself
+       * would take the content with it, and a quiet border around ordinary
+       * text is the whole reason to ask.
+       */
+      dim?: boolean;
     };
 
 export type Align = 'start' | 'center' | 'end' | 'stretch' | 'baseline';
 export type Justify = 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly';
 export type Overflow = 'visible' | 'hidden' | 'scroll' | 'ellipsis';
 export type Position = 'relative' | 'absolute';
-export type TextWrap = 'none' | 'word' | 'char';
+export type FlexWrap = 'nowrap' | 'wrap';
+/**
+ * How a run of text meets the edge of its box.
+ *
+ * `none`, `word` and `char` describe *wrapping*: the text keeps every
+ * character and takes as many rows as it needs. The `truncate-*` forms are the
+ * opposite bargain - one row, and whatever does not fit is replaced by an
+ * ellipsis at the named end. `truncate` is `truncate-end`, which is the one
+ * everybody means.
+ *
+ * A truncating text is one row tall by definition, so an embedded newline
+ * would have nowhere to go; those become spaces rather than being dropped,
+ * because a joined sentence still reads and a silently halved one does not.
+ */
+export type TextWrap =
+  | 'none' | 'word' | 'char'
+  | 'truncate' | 'truncate-start' | 'truncate-middle' | 'truncate-end';
+
 
 export interface Style {
   /**
@@ -78,7 +117,21 @@ export interface Style {
   // --- box ---
   display?: 'flex' | 'none';
   direction?: 'row' | 'column';
+  /** Space between children on both axes. `columnGap`/`rowGap` override it. */
   gap?: number;
+  /**
+   * Space between columns - horizontal, whichever way the container runs. It
+   * is the gap *between* children on a row, and the gap between wrapped lines
+   * on a column.
+   */
+  columnGap?: number;
+  /** Space between rows - vertical. The mirror of `columnGap`. */
+  rowGap?: number;
+  /**
+   * Whether children that do not fit start a new line. `nowrap` is the
+   * default and the cheaper path: one line, children shrink or get clipped.
+   */
+  flexWrap?: FlexWrap;
   padding?: EdgeSpec;
   margin?: EdgeSpec;
   width?: Dimension;
@@ -103,7 +156,12 @@ export interface Style {
   left?: number;
   /** Painting and hit-testing order within a layer. */
   zIndex?: number;
+  /** What happens to content past the edge, on both axes. */
   overflow?: Overflow;
+  /** Overrides `overflow` sideways. A row that scrolls but does not grow. */
+  overflowX?: Overflow;
+  /** Overrides `overflow` downwards. The usual scroll container. */
+  overflowY?: Overflow;
 
   // --- paint ---
   fg?: StyleColor;
@@ -142,6 +200,6 @@ export type SemanticVariant =
   | 'success' | 'warning' | 'danger' | 'info' | 'muted';
 
 /** Presentational variants a component may support. */
-export type SurfaceVariant = 'solid' | 'outline' | 'ghost' | 'soft' | 'link';
+export type SurfaceVariant = 'solid' | 'outline' | 'ghost' | 'link';
 
 export type Density = 'compact' | 'normal' | 'airy';

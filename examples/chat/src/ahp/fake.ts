@@ -60,8 +60,8 @@ const CONFIG: SessionConfig['properties'] = [
     description: 'Where the agent works. Fixed once the session exists.',
     sessionMutable: false,
     values: [
-      { value: 'workspace', label: 'The workspace itself' },
-      { value: 'worktree', label: 'A git worktree' },
+      { value: 'workspace', label: 'Workspace', description: 'Change the directory in place' },
+      { value: 'worktree', label: 'Worktree', description: 'Change a git worktree of it' },
     ],
   },
 ];
@@ -604,16 +604,24 @@ export function fakeHost(): FakeHost {
         displayName: 'Claude Code',
         description: 'Anthropic, in the editor',
         models: [
-          { id: 'claude-opus-5', displayName: 'Opus 5', thinkingLevels: ['low', 'medium', 'high', 'xhigh'] },
-          { id: 'claude-sonnet-5', displayName: 'Sonnet 5', thinkingLevels: ['low', 'medium', 'high'] },
+          { id: 'claude-opus-5', displayName: 'Opus 5' },
+          { id: 'claude-sonnet-5', displayName: 'Sonnet 5' },
         ],
       },
-      { provider: 'copilotcli', displayName: 'Copilot CLI', models: [{ id: 'gpt-5', displayName: 'GPT-5' }] },
+      // No models, on purpose. This is what a real host answers for a harness
+      // nobody has given it a token for: the harness is there, and it will
+      // enumerate nothing to run on until somebody signs in. A fixture where
+      // every harness has models is a client that has never been asked to say
+      // "none", and it says it by showing an empty panel forever.
+      { provider: 'copilotcli', displayName: 'Copilot CLI', models: [] },
     ],
 
-    resolveConfig: async (): Promise<SessionConfig> => ({
+    // Iterative, as a real host's is: what has been answered comes back
+    // answered. A fixture that returns its defaults every time quietly undoes
+    // every choice the moment anything asks the question again.
+    resolveConfig: async ({ values }): Promise<SessionConfig> => ({
       properties: CONFIG,
-      values: { permissionMode: 'default', isolation: 'workspace' },
+      values: { permissionMode: 'default', isolation: 'workspace', ...values },
     }),
 
     createSession: async ({ provider, workingDirectory }) => {

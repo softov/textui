@@ -4,10 +4,10 @@ import {
   useRequiredService, useState, useStore, useStoreSubtree, useStoreValue, useTheme,
 } from '@textui/core';
 import type { BindingPath, RenderOutput, SemanticVariant } from '@textui/core';
-import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE } from './control.js';
+import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE, settingCommand } from './control.js';
 import {
-  ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, HISTORY, HOST, INPUT, MODEL, OPEN, PERMISSIONS,
-  PROVIDER, QUEUE, SELECTED, SESSIONS, TURNS, WORKSPACE,
+  ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, HISTORY, HOST, INPUT, MODEL, OPEN,
+  PROVIDER, QUEUE, SELECTED, SESSIONS, SETTINGS, TURNS, WORKSPACE,
   openSession, visibleSessions, workspaceName,
 } from './state.js';
 import type { HostState } from './state.js';
@@ -68,8 +68,16 @@ function describe(session: SessionSummary, detail: SessionDetail | null): Detail
     { id: 'flags', label: 'Flags', value: [status.read ? 'read' : 'unread', status.archived ? 'archived' : ''].filter(Boolean).join(', ') },
     { id: 'provider', label: 'Harness', value: session.provider },
     { id: 'model', label: 'Model', value: detail?.model ?? '', absent: 'nothing said yet' },
-    { id: 'permissions', label: 'Permissions', value: setting('permissionMode') },
-    { id: 'isolation', label: 'Isolation', value: setting('isolation') },
+    // The host's own questions, in the host's own order. Naming them here is
+    // how the pane came to show a blank "Permissions" against a host whose key
+    // for it is `autoApprove`.
+    ...(detail?.config.properties ?? [])
+      .filter((property) => property.values.length > 0)
+      .map((property) => ({
+        id: `config.${property.key}`,
+        label: property.title,
+        value: setting(property.key),
+      })),
     { id: 'workspace', label: 'Workspace', value: session.workingDirectories.map((dir) => dir.replace(/^file:\/\//, '')).join(', '), absent: 'the host\'s own directory' },
     // The identifiers, in full and copyable. A URI you can read half of is
     // worse than one you cannot see at all: it looks like the whole thing.
@@ -204,10 +212,12 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
 /**
  * The composer's control row, for whichever session it is above.
  *
- * The same four values either way, and what differs is only which of them can
- * still be answered: a session that exists is running in a harness and a
- * directory already, so those are shown rather than asked, while the model and
- * the permission mode are decisions about the *next* message and stay open.
+ * Two of these are the client's own questions - which harness, which model -
+ * because the protocol asks them itself. Everything after them is the host's:
+ * one chip per property its schema offers, in its order, with its titles. The
+ * row used to name `permissionMode`, which is what the *fixture* calls its
+ * key, so against a real host - whose keys are `isolation`, `autoApprove` and
+ * `mode` - it showed one chip that could answer nothing.
  *
  * Labels, never ids. `acceptEdits` is what the host stores and "Accept edits"
  * is what it calls it, and the schema is the authority on both - so a chip
@@ -219,7 +229,7 @@ function useComposerOptions(): ComposerOption[] {
   const open = useStoreValue<string | null>(OPEN, null) ?? null;
   const provider = useStoreValue<string>(PROVIDER, 'claude') ?? 'claude';
   const model = useStoreValue<string>(MODEL, '') ?? '';
-  const permissions = useStoreValue<string>(PERMISSIONS, 'default') ?? 'default';
+  const settings = useStoreValue<Record<string, string>>(SETTINGS, {}) ?? {};
   const workspace = useStoreValue<string>(WORKSPACE, '') ?? '';
 
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -227,14 +237,18 @@ function useComposerOptions(): ComposerOption[] {
   useEffect(() => {
     void controller.agents().then(setAgents).catch((error: unknown) => controller.report(error));
   }, []);
+  // Asking is also what registers a command per property, so the chips below
+  // have something to open and the palette has the same questions in it.
   useEffect(() => {
-    void controller.resolveConfig({ provider }).then(setConfig)
+    void controller.settings().then(setConfig)
       .catch((error: unknown) => controller.report(error));
-  }, [provider]);
+  }, [provider, open]);
 
   const agent = agents.find((found) => found.provider === provider);
-  const permission = config?.properties.find((property) => property.key === 'permissionMode')
-    ?.values.find((value) => value.value === permissions);
+  // A harness with no models is the ordinary answer for one nobody has signed
+  // into, so the chip says so rather than opening on an empty list. Until the
+  // catalogue has arrived there is no harness to say it about.
+  const models = agent ? agent.models : null;
 
   return [
     {
@@ -248,15 +262,23 @@ function useComposerOptions(): ComposerOption[] {
     {
       id: 'model',
       icon: theme.glyphs.bulletHollow,
-      label: agent?.models.find((found) => found.id === model)?.displayName ?? (model || 'default'),
-      commandId: 'compose.model',
+      label: models?.find((found) => found.id === model)?.displayName
+        ?? (model || (models !== null && models.length === 0 ? 'no models' : 'default')),
+      ...(models !== null && models.length === 0 ? {} : { commandId: 'compose.model' }),
     },
-    {
-      id: 'permissions',
-      icon: theme.glyphs.checkboxOn,
-      label: permission?.label ?? permissions,
-      commandId: 'compose.permissions',
-    },
+    ...(config?.properties ?? [])
+      .filter((property) => property.values.length > 0)
+      .map((property): ComposerOption => {
+        const value = settings[property.key];
+        return {
+          id: property.key,
+          label: property.values.find((found) => found.value === value)?.label
+            ?? value ?? property.title,
+          // Shown but not asked where the host says it cannot be changed on a
+          // running session: offering it produces a refusal, not an edit.
+          ...(open && !property.sessionMutable ? {} : { commandId: settingCommand(property.key) }),
+        };
+      }),
     {
       id: 'workspace',
       icon: theme.glyphs.breadcrumb,

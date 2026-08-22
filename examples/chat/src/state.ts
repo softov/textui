@@ -45,8 +45,17 @@ export const RUNNING = '$/chat/conv/running' as BindingPath;
  */
 export const PROVIDER = '$/chat/compose/provider' as BindingPath;
 export const MODEL = '$/chat/compose/model' as BindingPath;
-export const PERMISSIONS = '$/chat/compose/permissions' as BindingPath;
 export const WORKSPACE = '$/chat/compose/workspace' as BindingPath;
+/**
+ * Everything else the host asks about, keyed by the host's own keys.
+ *
+ * Not one path per setting: the settings are whatever the harness advertises,
+ * and this client had a `permissions` path because the *fixture* called its
+ * key `permissionMode`. A real host's keys are `isolation`, `autoApprove` and
+ * `mode`, so the row of chips read every one of them as absent - a control
+ * naming a key is a control that works against one host.
+ */
+export const SETTINGS = '$/chat/compose/settings' as BindingPath;
 
 /** What the host last refused, in the host's own words. Cleared by success. */
 export const HOST_ERROR = '$/chat/host/error' as BindingPath;

@@ -46,11 +46,18 @@ export const ComposerBar: (props: ComposerBarProps) => RenderOutput =
 
     return (
       <Row gap={1} {...rest}>
-        {options.map((option) => (option.commandId
+        {options.map((option, at) => (option.commandId
           ? (
             <Chip
               key={option.id}
               focusId={chipId(option.id)}
+              // Stated, not inherited. Tab order is registration order, and
+              // which chips exist is the *host's* answer - it arrives one
+              // round trip after the row is first drawn, so the ones that were
+              // there from the start would otherwise come first however far to
+              // the right they sit. Tab would run harness, workspace, and then
+              // back to the middle.
+              order={at}
               label={option.label}
               {...(option.icon ? { icon: option.icon } : {})}
               onOpen={() => onOpen(option, chipId(option.id))}
@@ -70,6 +77,7 @@ export const ComposerBar: (props: ComposerBarProps) => RenderOutput =
         {queued > 0 ? <text content={`${queued} queued`} fg="warning" /> : null}
         <Chip
           focusId={SEND_ID}
+          order={options.length}
           label={running ? 'queue' : 'send'}
           trailing={theme.glyphs.chevronRight}
           tone="accent"
@@ -82,6 +90,8 @@ export const ComposerBar: (props: ComposerBarProps) => RenderOutput =
 
 interface ChipProps {
   focusId: string;
+  /** Where tab reaches it. The row's own order, not the order it mounted in. */
+  order: number;
   label: string;
   icon?: string;
   /** After the label. A chevron for something that opens, an arrow for send. */
@@ -100,9 +110,9 @@ interface ChipProps {
  * matters - it is focusable, tab reaches it, and enter opens it.
  */
 const Chip = defineComponent<ChipProps>('ComposerChip', (props) => {
-  const { focusId, label, icon, trailing, tone, disabled, onOpen } = props;
+  const { focusId, order, label, icon, trailing, tone, disabled, onOpen } = props;
   const theme = useTheme();
-  const focus = useFocus({ id: focusId, disabled: disabled === true });
+  const focus = useFocus({ id: focusId, order, disabled: disabled === true });
 
   useInput((event) => {
     if (disabled) return false;

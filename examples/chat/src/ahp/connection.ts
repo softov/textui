@@ -36,9 +36,26 @@ export interface HostConnection {
    * workspace is what makes a host offer a worktree - so it takes what has
    * been chosen so far rather than only the provider.
    */
-  resolveConfig(options: { provider: string; workingDirectory?: string }): Promise<SessionConfig>;
+  resolveConfig(options: {
+    provider: string;
+    workingDirectory?: string;
+    /** What has been chosen so far. The host echoes it back with defaults applied. */
+    values?: Record<string, string>;
+  }): Promise<SessionConfig>;
 
-  createSession(options: { provider: string; workingDirectory?: string }): Promise<SessionUri>;
+  /**
+   * Create one.
+   *
+   * `config` is what the composer's control row was set to. It belongs here
+   * rather than in a `setConfig` after the fact: most of what the schema
+   * offers is not `sessionMutable`, so a session created without it is a
+   * session that can never be given it.
+   */
+  createSession(options: {
+    provider: string;
+    workingDirectory?: string;
+    config?: Record<string, string>;
+  }): Promise<SessionUri>;
   disposeSession(uri: SessionUri): Promise<void>;
   setArchived(uri: SessionUri, archived: boolean): void;
   /**

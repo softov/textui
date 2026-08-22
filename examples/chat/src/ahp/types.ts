@@ -198,12 +198,26 @@ export interface Changeset {
   files: FileEdit[];
 }
 
-/** What `ahp-root://` advertises: the harnesses, and the models each offers. */
+/**
+ * What `ahp-root://` advertises: the harnesses, and the models each offers.
+ *
+ * `models` is routinely empty, and that is a real answer rather than a
+ * failure: a harness enumerates its models once the host has a token for the
+ * resources it declares in `protectedResources`, so a host nobody has signed
+ * into advertises the harness and nothing to run on it. A client that treats
+ * an empty list as "still loading" shows a blank panel forever.
+ *
+ * A model's own options - thinking level, context size - are a `configSchema`
+ * on the model, in the same shape as `SessionConfig`. Nothing here reads it
+ * yet, and inventing a field for it would be describing a protocol that does
+ * not exist.
+ */
 export interface Agent {
   provider: string;
   displayName: string;
   description?: string;
-  models: { id: string; displayName: string; thinkingLevels?: string[] }[];
+  /** `displayName` is the protocol's `name`. The id is what rides on a turn. */
+  models: { id: string; displayName: string }[];
 }
 
 /**

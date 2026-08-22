@@ -4,8 +4,8 @@ import type { HostConnection } from './ahp/connection.js';
 import type { Agent, Answer, SessionConfig, SessionDetail, SessionUri, Turn } from './ahp/types.js';
 import { SessionFlag } from './ahp/types.js';
 import {
-  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, HOST_ERROR, INPUT, MODEL, OPEN, PERMISSIONS, PROVIDER,
-  QUEUE, RUNNING, SCREEN, SELECTED, TURNS, WORKSPACE,
+  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, HOST_ERROR, INPUT, MODEL, OPEN, PROVIDER,
+  QUEUE, RUNNING, SCREEN, SELECTED, SETTINGS, TURNS, WORKSPACE,
   applyEvent, pendingInput, queue, sessions, turns, writeSessions, writeStatus,
 } from './state.js';
 
@@ -55,14 +55,26 @@ export interface Controller {
   /** The session channel's own state: its chat, its lifecycle, its settings. */
   detail(uri: SessionUri): Promise<SessionDetail>;
   config(uri: SessionUri): Promise<SessionConfig>;
-  /** The schema for a session that does not exist yet. */
-  resolveConfig(options: { provider: string; workingDirectory?: string }): Promise<SessionConfig>;
+  /**
+   * What the host will answer questions about, here and now.
+   *
+   * One call, because "here and now" has two answers and the caller should not
+   * have to know which: an open session describes itself, and a session that
+   * does not exist yet is what `resolveSessionConfig` is for. Asking also
+   * *registers* a command per property the schema offers, so the control row
+   * and the palette are showing the host's own questions rather than the ones
+   * this client was written knowing about.
+   */
+  settings(): Promise<SessionConfig>;
   setConfig(uri: SessionUri, key: string, value: string): void;
   /** Drive the scripted host. A real connection has a socket instead. */
   pump(): boolean;
 }
 
 export const CONTROLLER: ServiceKey<Controller> = serviceKey<Controller>('chat.controller');
+
+/** The command that asks about one config key. Registered when a host offers it. */
+export const settingCommand = (key: string): string => `compose.set.${key}`;
 
 /**
  * The two focus scopes, and why single-letter keys need them.
@@ -98,7 +110,7 @@ export function createController(
   // What the first message will be sent as, before there is a session to ask.
   app.store.set(PROVIDER, 'claude');
   app.store.set(MODEL, '');
-  app.store.set(PERMISSIONS, 'default');
+  app.store.set(SETTINGS, {});
 
   /**
    * What to do when the host says no.
@@ -108,6 +120,74 @@ export function createController(
    * rejection ends the process, from a terminal sitting in its alternate
    * screen. A refusal is information: it goes where the screens can read it.
    */
+  /**
+   * One command per question the host says it will answer.
+   *
+   * Registered rather than written, because the questions are the harness's
+   * and not this client's: `permissionMode` is what the fixture calls its key
+   * and a real host's are `isolation`, `autoApprove` and `mode`. A command
+   * naming a key works against one host, so nothing here names one - the
+   * schema arrives, and the palette and the control row have it.
+   *
+   * Late binding is the whole point: a harness that grows a new setting grows
+   * a new chip and a new palette entry, and this file does not change.
+   */
+  const offered = new Map<string, Disposable>();
+
+  const offer = (config: SessionConfig, uri: SessionUri | null): void => {
+    const keep = new Set<string>();
+    for (const property of config.properties) {
+      // Nothing to choose from is nothing to ask: a host's `permissions` key
+      // is an object the agent maintains, not a question with answers.
+      if (property.values.length === 0) continue;
+      // A session that exists can only be changed where the host says so, and
+      // offering the rest produces a refusal instead of an edit.
+      if (uri && !property.sessionMutable) continue;
+      const id = settingCommand(property.key);
+      keep.add(id);
+      offered.get(id)?.dispose();
+      offered.set(id, app.commands.register({
+        id,
+        title: property.title,
+        category: 'Compose',
+        slots: ['palette'],
+        args: [{
+          name: 'value',
+          type: 'string' as const,
+          required: true,
+          description: property.description ?? `Choose ${property.title.toLowerCase()}`,
+          // Labels, because labels are what a person picked from. The host's
+          // values are ids, and some of them are whole sentences.
+          choices: () => property.values.map((value) => value.label),
+        }],
+        run: (args: Record<string, unknown>) => {
+          const chosen = property.values.find((value) => value.label === String(args.value));
+          if (!chosen) return;
+          const current = app.store.get<Record<string, string>>(SETTINGS) ?? {};
+          app.store.set(SETTINGS, { ...current, [property.key]: chosen.value });
+          const open = app.store.get<SessionUri>(OPEN);
+          // One key at a time: the action merges, so sending the object
+          // writes back whatever this client happened to be holding.
+          if (open) host.setConfig(open, property.key, chosen.value);
+        },
+      }));
+    }
+    // A harness the composer just switched to does not answer the last one's
+    // questions, and a chip pointing at a command nobody unregistered is a
+    // panel offering another harness's values.
+    for (const [id, disposable] of offered) {
+      if (keep.has(id)) continue;
+      disposable.dispose();
+      offered.delete(id);
+    }
+  };
+  bag.add({
+    dispose: () => {
+      for (const disposable of offered.values()) disposable.dispose();
+      offered.clear();
+    },
+  });
+
   const failed = (error: unknown): void => {
     const rpc = error as { code?: number; message?: string } | null;
     const message = rpc?.message ?? String(error);
@@ -152,9 +232,10 @@ export function createController(
       }
       void host.detail(uri).then((detail) => {
         if (app.store.get<SessionUri>(OPEN) !== uri) return;
-        app.store.set(PERMISSIONS, detail.config.values.permissionMode ?? 'default');
+        app.store.set(SETTINGS, detail.config.values);
         if (detail.model) app.store.set(MODEL, detail.model);
-      });
+        offer(detail.config, uri);
+      }).catch(failed);
     },
 
     close() {
@@ -243,7 +324,15 @@ export function createController(
       // Not caught here: the caller is a screen that navigates on success, and
       // navigating into a session the host refused to create is worse than the
       // failure. It catches, and reports through `report`.
-      const uri = await host.createSession({ provider, ...(workingDirectory ? { workingDirectory } : {}) });
+      // What the control row was set to rides on the creation. Most of what a
+      // schema offers is not `sessionMutable`, so a session created without it
+      // is one that can never be told.
+      const config = app.store.get<Record<string, string>>(SETTINGS) ?? {};
+      const uri = await host.createSession({
+        provider,
+        ...(workingDirectory ? { workingDirectory } : {}),
+        ...(Object.keys(config).length > 0 ? { config } : {}),
+      });
       await controller.refresh();
       controller.open(uri);
       // The provider is lazy: a session sits in `creating` and emits nothing
@@ -255,8 +344,25 @@ export function createController(
 
     agents: () => host.agents(),
     detail: (uri) => host.detail(uri),
-    resolveConfig: (options) => host.resolveConfig(options),
     config: (uri) => host.config(uri),
+
+    async settings() {
+      const uri = app.store.get<SessionUri>(OPEN) ?? null;
+      const config = uri
+        ? await host.config(uri)
+        : await host.resolveConfig({
+          provider: app.store.get<string>(PROVIDER) ?? 'claude',
+          ...(app.store.get<string>(WORKSPACE) ? { workingDirectory: app.store.get<string>(WORKSPACE) as string } : {}),
+          values: app.store.get<Record<string, string>>(SETTINGS) ?? {},
+        });
+      // The host had the last word: `resolveSessionConfig` echoes what it was
+      // given with its own defaults filled in, so this is what is in force
+      // rather than what was asked for.
+      app.store.set(SETTINGS, config.values);
+      offer(config, uri);
+      return config;
+    },
+
     setConfig: (uri, key, value) => host.setConfig(uri, key, value),
 
     pump: () => host.pump?.() ?? false,
@@ -291,7 +397,6 @@ const previous: { theme: string | null; shell: string | null } = { theme: null, 
  */
 interface Catalogue {
   agents: Agent[];
-  config: SessionConfig | null;
 }
 
 function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
@@ -331,7 +436,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
    * one of these - so the labels a person is choosing from and the list a
    * choice is resolved against are always the same fetch.
    */
-  const known: Catalogue = { agents: [], config: null };
+  const known: Catalogue = { agents: [] };
 
   const provider = (): string => app.store.get<string>(PROVIDER) ?? 'claude';
   const agent = (): Agent | undefined => known.agents.find((found) => found.provider === provider());
@@ -346,19 +451,6 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
   const listModels = async (): Promise<string[]> => {
     if (known.agents.length === 0) await listAgents();
     return (agent()?.models ?? []).map((model) => model.displayName);
-  };
-
-  const listPermissions = async (): Promise<string[]> => {
-    const uri = openUri();
-    // An open session answers about itself; a session that does not exist yet
-    // is what `resolveSessionConfig` is for.
-    try {
-      known.config = uri
-        ? await controller.config(uri)
-        : await controller.resolveConfig({ provider: provider() });
-    } catch (error) { controller.report(error); }
-    return (known.config?.properties.find((p) => p.key === 'permissionMode')?.values ?? [])
-      .map((value) => value.label);
   };
 
   return [
@@ -530,30 +622,6 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
         // The id, not the label. AHP hangs the model on the message, so this
         // is what rides on the next `chat/turnStarted`.
         if (chosen) app.store.set(MODEL, chosen.id);
-      },
-    },
-    {
-      id: 'compose.permissions',
-      title: 'Permissions',
-      category: 'Compose',
-      slots: ['palette'],
-      args: [{
-        name: 'id',
-        type: 'string' as const,
-        required: true,
-        description: 'How much it may do before it asks',
-        choices: listPermissions,
-      }],
-      run: (args: Record<string, unknown>) => {
-        const values = known.config?.properties.find((p) => p.key === 'permissionMode')?.values ?? [];
-        const chosen = values.find((value) => value.label === String(args.id));
-        if (!chosen) return;
-        app.store.set(PERMISSIONS, chosen.value);
-        // On a session that exists this is a change to it, and one key at a
-        // time: the action merges, so sending the object writes back whatever
-        // this client happened to be holding.
-        const uri = openUri();
-        if (uri) controller.setConfig(uri, 'permissionMode', chosen.value);
       },
     },
     {

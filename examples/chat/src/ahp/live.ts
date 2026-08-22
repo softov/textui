@@ -565,34 +565,47 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
         provider: str(agent.provider) ?? str(agent.id) ?? 'unknown',
         displayName: str(agent.displayName) ?? str(agent.provider) ?? 'Agent',
         ...(str(agent.description) ? { description: str(agent.description) as string } : {}),
+        // `name`, which is what `SessionModelInfo` calls the readable one -
+        // reading `displayName` here (the *agent's* field) meant every model
+        // fell through to its id, and a host's ids are things like
+        // `claude-sonnet-4-5-20250929`.
         models: list(agent.models).map((raw) => {
           const model = bag(raw);
           return {
             id: str(model.id) ?? '',
-            displayName: str(model.displayName) ?? str(model.id) ?? '',
-            ...(list(model.thinkingLevels).length > 0
-              ? { thinkingLevels: list(model.thinkingLevels).map(String) }
-              : {}),
+            displayName: str(model.name) ?? str(model.displayName) ?? str(model.id) ?? '',
           };
         }),
       };
     }),
 
-    resolveConfig: async ({ provider, workingDirectory }) => config(await client.request('resolveSessionConfig', {
+    // `workingDirectory`, singular. `createSession` takes a list and this
+    // takes one, so the plural spelling was a parameter the host had no name
+    // for: it answered about no directory at all, and a schema that offers a
+    // worktree only when the directory is a git checkout never offered one.
+    resolveConfig: async ({ provider, workingDirectory, values }) => config(await client.request('resolveSessionConfig', {
       channel: ROOT,
       provider,
-      ...(workingDirectory ? { workingDirectories: [`file://${workingDirectory}`] } : {}),
+      ...(workingDirectory ? { workingDirectory: `file://${workingDirectory}` } : {}),
+      // Iterative: what has been answered is what decides which questions are
+      // left, so the host is told rather than asked the same first question.
+      ...(values && Object.keys(values).length > 0 ? { config: values } : {}),
     })),
 
-    createSession: async ({ provider, workingDirectory }) => {
+    createSession: async ({ provider, workingDirectory, config: values }) => {
       // The client chooses the URI, which is what makes the session
       // addressable before the host has answered.
       const resource = `ahp-session:/${randomUUID()}`;
+      // The channel *is* the new session's URI. `createSession` reads as a
+      // root command and is not one: sending it to `ahp-root://` with the URI
+      // beside it named a parameter the host has nothing called, so the
+      // session was created - somewhere - and never at the URI we then went
+      // on to subscribe to.
       await client.request('createSession', {
-        channel: ROOT,
-        resource,
+        channel: resource,
         provider,
         ...(workingDirectory ? { workingDirectories: [`file://${workingDirectory}`] } : {}),
+        ...(values && Object.keys(values).length > 0 ? { config: values } : {}),
       });
       return resource;
     },

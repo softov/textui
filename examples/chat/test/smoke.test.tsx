@@ -10,7 +10,7 @@ import { SessionFlag } from '../src/ahp/types.js';
 import { CLIPBOARD_PATH, layoutMarkdown, wrapRuns } from '@textui/core';
 import { toBlocks } from '../src/blocks.js';
 import {
-  HOST_ERROR, INPUT, OPEN, PERMISSIONS, PROVIDER, QUEUE, SELECTED, TURNS, WORKSPACE,
+  HOST_ERROR, INPUT, OPEN, PROVIDER, QUEUE, SELECTED, SETTINGS, TURNS, WORKSPACE,
 } from '../src/state.js';
 import type { Turn } from '../src/ahp/types.js';
 
@@ -627,6 +627,84 @@ describe('the composer is the front door', () => {
     await t.unmount();
   });
 
+  /**
+   * What the host asks about, rather than what this client was written
+   * knowing about.
+   *
+   * The row used to have a chip named `permissionMode`, which is what the
+   * *fixture* calls its key. A real host's are `isolation`, `autoApprove` and
+   * `mode`, so against one the chip could answer nothing and the detail pane
+   * showed a blank "Permissions" beside it. Nothing here names a key: the
+   * schema arrives, and a command and a chip exist for each thing in it.
+   */
+  it('offers a chip for every question the host says it will answer', async () => {
+    const { t } = await open();
+    // The fake's two, by its own titles rather than by any name in this file.
+    expect(t.hasText('Ask each time')).toBe(true);
+    expect(t.hasText('Workspace')).toBe(true);
+    // And the command that asks about one is registered under the host's key.
+    expect(t.app.commands.get('compose.set.isolation')).toBeTruthy();
+
+    await t.app.execute('compose.set.isolation', { value: 'Worktree' });
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.store.get<Record<string, string>>(SETTINGS)?.isolation).toBe('worktree');
+    expect(t.hasText('Worktree')).toBe(true);
+
+    // And asking again does not undo it. `resolveSessionConfig` is iterative:
+    // it is told what has been answered and echoes it back with the host's
+    // defaults filled in around it, so a client that re-asks on every change
+    // of harness keeps the answers rather than resetting them.
+    t.store.set(PROVIDER, 'copilotcli');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.store.get<Record<string, string>>(SETTINGS)?.isolation).toBe('worktree');
+    await t.unmount();
+  });
+
+  it('reaches the chips in the order they are drawn in', async () => {
+    const { t } = await open();
+    t.focus('chat.composer');
+    await t.settle();
+    const walked: (string | null)[] = [];
+    for (let i = 0; i < 5; i++) { t.press('tab'); await t.settle(); walked.push(t.app.focus.focused()); }
+    // Which chips exist is the host's answer, and it arrives a round trip
+    // after the row is first drawn - so tab order is stated rather than left
+    // to the order things happened to mount in.
+    expect(walked).toEqual([
+      'chat.option.harness',
+      'chat.option.model',
+      'chat.option.permissionMode',
+      'chat.option.isolation',
+      'chat.option.workspace',
+    ]);
+    await t.unmount();
+  });
+
+  /**
+   * A harness with nothing to run on.
+   *
+   * This is the ordinary answer for a harness nobody has signed into: the host
+   * advertises it and enumerates no models until it has a token for the
+   * resources the harness declares. A client that reads an empty list as "not
+   * loaded yet" offers a chip that opens on an empty panel, forever.
+   */
+  it('says a harness has no models rather than offering none', async () => {
+    const { t } = await open();
+    t.store.set(PROVIDER, 'copilotcli');
+    for (let i = 0; i < 8; i++) await t.settle();
+    expect(t.hasText('no models')).toBe(true);
+
+    // And it is not a stop on the way: tab goes past it to the next question
+    // that has an answer.
+    t.focus('chat.composer');
+    await t.settle();
+    t.press('tab');
+    await t.settle();
+    t.press('tab');
+    await t.settle();
+    expect(t.app.focus.focused()).toBe('chat.option.permissionMode');
+    await t.unmount();
+  });
+
   it('walks out of the field to the left', async () => {
     const { t } = await open();
     t.focus('chat.composer');
@@ -648,7 +726,7 @@ describe('the composer is the front door', () => {
 
     // The row is about the next message, so on an open session it has to
     // describe that session rather than whatever was chosen before it.
-    expect(m.t.store.get<string>(PERMISSIONS)).toBe('acceptEdits');
+    expect(m.t.store.get<Record<string, string>>(SETTINGS)?.permissionMode).toBe('acceptEdits');
     expect(m.t.hasText('Accept edits')).toBe(true);
     expect(m.t.hasText('Sonnet 5')).toBe(true);
     // And the harness is not offered: it is the process this is running in.

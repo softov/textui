@@ -275,7 +275,7 @@ describe('the command palette', () => {
   });
 
   describe('sub-items', () => {
-    function withChoices(choices: string[] | (() => string[])) {
+    function withChoices(choices: string[] | (() => string[] | Promise<string[]>)) {
       const ran: Record<string, unknown>[] = [];
       return {
         ran,
@@ -334,6 +334,48 @@ describe('the command palette', () => {
       t.press('enter');
       await t.settle();
       expect(ran).toEqual([{ tone: 'from' }]);
+      await t.unmount();
+    });
+
+    /**
+     * A list with nothing in it is an answer, and a common one: an agent host
+     * advertises a harness and no models until somebody has signed into it. It
+     * used to draw as an empty box with "enter choose" underneath - which is
+     * the same picture as a request still in flight, and enter did nothing on
+     * either of them.
+     */
+    it('says so when there is nothing to choose', async () => {
+      const { ran, mount } = withChoices(() => []);
+      const t = await mount();
+      await t.settle();
+
+      t.press('enter');
+      await t.settle();
+      expect(t.hasText('Nothing to choose')).toBe(true);
+      // And it is not a row: pressing enter on it does not run the command
+      // with an argument nobody picked.
+      t.press('enter');
+      await t.settle();
+      expect(ran).toEqual([]);
+      await t.unmount();
+    });
+
+    it('says it is still asking while the answer is on its way', async () => {
+      let answer: (list: string[]) => void = () => undefined;
+      const { mount } = withChoices(() => new Promise<string[]>((resolve) => { answer = resolve; }));
+      const t = await mount();
+      await t.settle();
+
+      t.press('enter');
+      await t.settle();
+      expect(t.hasText('Asking')).toBe(true);
+      expect(t.hasText('Nothing to choose')).toBe(false);
+
+      answer(['info', 'danger']);
+      await t.settle();
+      await t.settle();
+      expect(t.hasText('danger')).toBe(true);
+      expect(t.hasText('Asking')).toBe(false);
       await t.unmount();
     });
 

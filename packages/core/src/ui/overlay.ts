@@ -194,6 +194,16 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     collected: Record<string, unknown>;
   } | null>(null);
   const [choices, setChoices] = useState<string[]>([]);
+  /**
+   * Whether the answer to "what may I choose" is still on its way.
+   *
+   * An empty list is a real answer - a host advertises a harness and no models
+   * until somebody has signed into it - and it is not the same answer as "the
+   * request is in flight". Both draw an empty menu, so without this the panel
+   * that will never have anything in it and the one that is about to look
+   * identical, and neither of them says so.
+   */
+  const [asking, setAsking] = useState(false);
   /** Bumped after a row that stays, so a `commands` function is read again. */
   const [, setRefresh] = useState(0);
   // The search field asks for focus itself. See `Dialog`.
@@ -208,11 +218,22 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const index = Math.max(0, Math.min(highlight, rows.length - 1));
 
   const items: MenuItem[] = pending
-    ? rows.map((choice) => ({
+    ? (rows.length > 0
+      ? rows.map((choice) => ({
         id: choice,
         label: choice,
         description: pending.arg.default === choice ? 'default' : undefined,
       }))
+      // One row, saying which kind of nothing this is. A disabled item rather
+      // than no items: the panel keeps its height, so the answer arriving does
+      // not move everything under it.
+      : [{
+        id: '',
+        label: asking
+          ? `Asking${theme.glyphs.ellipsis}`
+          : (query === '' ? 'Nothing to choose' : 'No match'),
+        disabled: true,
+      }])
     : matches.map((command, i) => ({
         id: command.id,
         label: command.title,
@@ -286,8 +307,19 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     setPending({ command, arg, collected });
     setQuery('');
     setHighlight(0);
-    if (Array.isArray(resolved)) setChoices(resolved);
-    else void resolved.then((list) => setChoices(list));
+    if (Array.isArray(resolved)) {
+      setAsking(false);
+      setChoices(resolved);
+      return;
+    }
+    setChoices([]);
+    setAsking(true);
+    // Answered either way: a `choices` function that rejects leaves the panel
+    // saying "nothing to choose", which is true of what it can offer.
+    void resolved
+      .then((list) => setChoices(list))
+      .catch(() => setChoices([]))
+      .finally(() => setAsking(false));
   };
 
   /**
@@ -457,7 +489,9 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
         content: pending
           ? (pending.arg.choices === undefined
             ? hint(theme, ['type it', 'enter confirm', 'esc back'])
-            : hint(theme, [move, 'enter choose', 'esc back']))
+            // Nothing to choose is nothing to press enter on, and offering it
+            // is how a panel reads as broken rather than as empty.
+            : hint(theme, rows.length > 0 ? [move, 'enter choose', 'esc back'] : ['esc back']))
           : hint(theme, [move, 'enter run', `${theme.glyphs.chevronRight} sub-items`, 'esc close']),
         fg: 'subtle',
         truncate: 'end',

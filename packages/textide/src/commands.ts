@@ -1,7 +1,7 @@
 import type {
   SurfaceName, CommandDefinition, CommandContext, TextUIApp, BindingPath, ThemeGlyphs,
 } from '@textui/core';
-import { normalizeStroke, notify } from '@textui/core';
+import { FIND_QUERY, normalizeStroke, notify, prompt, setQuery, stepFind } from '@textui/core';
 import {
   canRedoDocument, canUndoDocument, getDocument, isDocumentDirty, redoDocument,
   revertDocument, saveDocument, undoDocument,
@@ -521,6 +521,62 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
           panel: paneScope(focusedIndex(ctx.store)),
           ...(uri ? { uri } : {}),
         });
+      },
+    },
+    {
+      /*
+       * Find, in the file in front of you.
+       *
+       * The query goes in the store and whoever is showing the text picks it
+       * up - the editor paints every match and moves its own caret, the status
+       * bar counts them. Nothing here knows what a caret is.
+       */
+      id: 'find.inFile',
+      icon: Icon.search,
+      title: 'Find',
+      category: 'Edit',
+      slots: ['palette'],
+      run: async (args: Record<string, unknown>, ctx: CommandContext) => {
+        const given = typeof args.text === 'string' ? args.text : null;
+        const text = given ?? await prompt(ctx.app.layers, {
+          title: 'Find',
+          message: 'What to look for',
+          initialValue: ctx.store.get<string>(FIND_QUERY) ?? '',
+        });
+        if (text === null) return;
+        setQuery(ctx.store, text);
+        // Straight to the first one: a search that finds something and leaves
+        // you where you were has not answered the question you asked.
+        if (text !== '') stepFind(ctx.store, 1);
+      },
+    },
+    {
+      id: 'find.next',
+      icon: Icon.next,
+      title: 'Find Next',
+      category: 'Edit',
+      slots: ['palette'],
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        stepFind(ctx.store, 1);
+      },
+    },
+    {
+      id: 'find.previous',
+      icon: Icon.previous,
+      title: 'Find Previous',
+      category: 'Edit',
+      slots: ['palette'],
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        stepFind(ctx.store, -1);
+      },
+    },
+    {
+      id: 'find.clear',
+      title: 'Clear Search',
+      category: 'Edit',
+      slots: ['palette'],
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        setQuery(ctx.store, '');
       },
     },
     {

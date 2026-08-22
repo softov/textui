@@ -224,3 +224,64 @@ describe('highlighting what changed', () => {
     await t.unmount();
   });
 });
+
+/**
+ * Find, in the file in front of you.
+ *
+ * The query is in the store and whoever is showing the text picks it up: the
+ * editor paints every match and moves its own caret, the status bar counts
+ * them. The command knows nothing about carets.
+ */
+describe('finding in a file', () => {
+  it('goes to the first match, then steps through them', async () => {
+    const { t, quiet, uri } = await open();
+    t.app.store.set(EDITOR_URI, uri('long.txt'));
+    await quiet();
+    await t.app.execute('file.edit');
+    await quiet();
+
+    await t.app.execute('find.inFile', { text: 'line 40 ' });
+    await quiet();
+    const line = (): number | undefined => t.store.get<{ state?: { line?: number } }>(
+      panelViewPath('pane.main', uri('long.txt')),
+    )?.state?.line;
+    // Straight there: a search that finds something and leaves you where you
+    // were has not answered the question.
+    expect(line()).toBe(39);
+
+    await t.app.execute('find.inFile', { text: 'of the document' });
+    await quiet();
+    const first = line();
+    await t.app.execute('find.next');
+    await quiet();
+    expect(line(), 'and next moves on').toBeGreaterThan(first as number);
+
+    await t.app.execute('find.previous');
+    await quiet();
+    expect(line()).toBe(first);
+    await t.unmount();
+  }, 20_000);
+
+  it('counts what it found, in the status bar', async () => {
+    const { t, quiet, uri } = await open();
+    t.app.store.set(EDITOR_URI, uri('long.txt'));
+    await quiet();
+    await t.app.execute('file.edit');
+    await quiet();
+
+    await t.app.execute('find.inFile', { text: 'line 1 of' });
+    await quiet();
+    expect(t.hasText('1 of 1 for "line 1 of"')).toBe(true);
+
+    await t.app.execute('find.inFile', { text: 'nothing here at all' });
+    await quiet();
+    // Saying so, rather than a bar that looks the same whether it found
+    // something or not.
+    expect(t.hasText('no matches')).toBe(true);
+
+    await t.app.execute('find.clear');
+    await quiet();
+    expect(t.hasText('no matches')).toBe(false);
+    await t.unmount();
+  }, 20_000);
+});

@@ -138,6 +138,17 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+s', 'file.save'],
     ['ctrl+w', 'file.close'],
     /*
+     * Find, and step through what it found.
+     *
+     * `f3` is the key every editor has had for thirty years and no terminal
+     * argues about; `ctrl+f` is the one people reach for first. Escape out of
+     * the editor first if you want the arrows back - the search does not take
+     * them.
+     */
+    ['ctrl+f', 'find.inFile'],
+    ['f3', 'find.next'],
+    ['shift+f3', 'find.previous'],
+    /*
      * What can be done to this file. Two keys because neither is universal:
      * the Menu key on a PC keyboard sends nothing a terminal agrees on,
      * `shift+f10` is what stands in for it, and `alt+enter` is the chord

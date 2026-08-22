@@ -28,6 +28,7 @@ export * from './surface.js';
 export * from './shells.js';
 export * from './panel.js';
 export * from './decorations.js';
+export * from './find.js';
 export * from './viewport.js';
 export * from './tone.js';
 

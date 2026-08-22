@@ -3,10 +3,10 @@ import type {
   Color, ComponentDefinition, LineMark, RenderOutput, ResolvedTheme, StyleColor, SyntaxToken,
 } from '@textui/core';
 import {
-  h, chorded, defineComponent, mix, packColor, ScrollThumb, sliceColumns, stringWidth,
-  unpackColor, useCapabilities, useClipboard, useEffect, useFocus, useHighlight, useInput,
-  useLineMarks, useMeasure, useMemo, usePanelState, usePanelStatus, useState, useStoreValue,
-  useTheme, viewportRows,
+  findMatches, h, chorded, defineComponent, matchAt, mix, packColor, ScrollThumb,
+  sliceColumns, stepMatch, stringWidth, unpackColor, useCapabilities, useClipboard, useEffect,
+  useFind, useFocus, useHighlight, useInput, useLineMarks, useMeasure, useMemo, usePanelState,
+  usePanelStatus, useRef, useState, useStoreValue, useTheme, viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
 import { EMPTY_HISTORY, record, redo, undo, type History, type Snapshot } from '../history.js';
@@ -561,6 +561,20 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
    * something has actually said something, so a file nobody has an opinion
    * about is exactly as wide as it was.
    */
+  /*
+   * What is being searched for, and the ask to move.
+   *
+   * The query is the store's, so the prompt that set it, the status bar
+   * counting matches and this all read one answer - and the *step* is a
+   * counter rather than a command, so the thing that moves is the thing that
+   * knows where its own caret is.
+   */
+  const find = useFind();
+  const matches = useMemo(
+    () => (find.query.text === '' ? [] : findMatches(text, find.query)),
+    [text, find.query.text, find.query.matchCase],
+  );
+
   const marks = useLineMarks(uri);
   const marked = Object.keys(marks).length > 0;
   const markWidth = marked ? 1 : 0;
@@ -770,6 +784,28 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     return false;
   }, { focusId: focus.id });
 
+  /*
+   * Moving to a match, when somebody asked.
+   *
+   * Keyed on the counter, so pressing next twice moves twice - a boolean would
+   * fire once and then look identical to itself. From *after* the caret, so
+   * sitting on a match and pressing next still moves.
+   */
+  const stepped = useRef<number>(0);
+  useEffect(() => {
+    const ask = find.step;
+    if (!ask || ask.n === stepped.current) return;
+    stepped.current = ask.n;
+    if (matches.length === 0) return;
+
+    const index = stepMatch(matches, at, ask.direction);
+    const found = matches[index];
+    if (!found) return;
+    setAnchor({ line: found.line, column: found.start });
+    setCursor({ line: found.line, column: found.end });
+    setGoal(found.end);
+  }, [find.step?.n ?? 0, matches.length]);
+
   // Reported from an effect, not from the render that computed it: a callback
   // fired mid-render is a parent setting state while its child is drawing.
   const chars = selection && selected ? textIn(lines, selection).length : 0;
@@ -779,9 +815,23 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   // The same fact, published where a status bar can read it without knowing
   // which renderer is mounted. `onSelection` stays for a caller holding this
   // component directly; the panel is how everything else hears about it.
-  usePanelStatus(chars > 0
-    ? `${chars} selected${spanned > 1 ? ` in ${spanned} lines` : ''}`
-    : null);
+  /*
+   * What the status bar gets: how many matches, or how much is selected.
+   *
+   * The search wins while there is one - "3 of 17" is what you are looking at
+   * when you are searching, and the selection count is the same information
+   * you can already see highlighted.
+   */
+  const atMatch = matches.length > 0 ? matchAt(matches, at) : -1;
+  usePanelStatus(
+    matches.length > 0
+      ? `${atMatch >= 0 ? `${atMatch + 1} of ` : ''}${matches.length} for "${find.query.text}"`
+      : find.query.text !== ''
+        ? `no matches for "${find.query.text}"`
+        : chars > 0
+          ? `${chars} selected${spanned > 1 ? ` in ${spanned} lines` : ''}`
+          : null,
+  );
 
   // --------------------------------------------------------------- render
 
@@ -823,6 +873,19 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
      * throw the syntax colours away or write them on a colour picked to be
      * written on in one specific ink. `active` is the tint that keeps them.
      */
+    /*
+     * Every match on this line, under the selection rather than over it.
+     *
+     * Painted first so that the one the caret is on - which is selected, since
+     * stepping to a match selects it - still reads as the current one.
+     */
+    if (matches.length > 0) {
+      for (const m of matches) {
+        if (m.line !== lineNumber) continue;
+        pieces = paint(pieces, m.start, m.end, { bg: 'hover' });
+      }
+    }
+
     if (selection && selected
       && lineNumber >= selection.start.line && lineNumber <= selection.end.line) {
       const from = lineNumber === selection.start.line ? selection.start.column : 0;

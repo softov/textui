@@ -317,11 +317,15 @@ describe('the command palette', () => {
 
     // Leaving it and coming back is one press each way, because the pane
     // contributes no stop of its own. Escape is the way out of an editor -
-    // tab is a tab in there - and shift+tab is the way back, because what it
-    // steps through is unchanged.
+    // tab is a tab in there - and it steps *back*, so tab is the way in.
     t.press('escape'); t.flush();
     expect(t.store.get('$/focus/scope'), 'one press leaves').not.toBe('pane.main');
-    t.shiftTab(); t.flush();
+    // Backwards, to the tree. An editor is the last stop on this screen, so
+    // moving *on* wraps to the first - which is the menu bar, one keypress
+    // from a menu whose last entry is Quit.
+    expect(t.app.focus.focused(), 'and not into the menu bar')
+      .not.toMatch(/^menubar\./);
+    t.tab(); t.flush();
     expect(t.store.get('$/focus/scope'), 'and one press returns').toBe('pane.main');
 
     await t.unmount();

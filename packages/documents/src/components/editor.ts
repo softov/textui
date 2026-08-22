@@ -629,8 +629,14 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
      * the next control everywhere else cannot be the one that moves out of
      * this one. Escape is free here: there is no selection to drop, and a
      * dialog above this has its own layer and its own escape.
+     *
+     * *Backwards*, because an editor is usually the last stop on a screen and
+     * moving on from the last stop wraps to the first - which in an
+     * application with a menu bar is the menu bar. Leaving an editor and
+     * landing on `File`, one keypress from a menu whose last entry is `Quit`,
+     * is a way out that walks you into the exit. Back is where you came from.
      */
-    if (key === 'escape') { focus.move('next'); return true; }
+    if (key === 'escape') { focus.move('previous'); return true; }
 
     if (readonly) return false;
     // Undo before anything that edits, and before the application's own

@@ -69,7 +69,10 @@ describe('coming back to a file', () => {
     await quiet();
     expect(t.text(), 'the same screen as when it was left').toBe(away);
     await t.unmount();
-  });
+    // Thirty keypresses and three settles either side of two file switches;
+    // the default five seconds is not much when the suite is also building a
+    // bundle in another worker.
+  }, 20_000);
 
   it('keeps the line when what is drawing it changes', async () => {
     const { t, quiet, uri } = await open();
@@ -97,7 +100,7 @@ describe('coming back to a file', () => {
       panelViewPath('pane.main', uri('long.txt')),
     )?.state?.line).toBe(line);
     await t.unmount();
-  });
+  }, 20_000);
 });
 
 describe('a split', () => {

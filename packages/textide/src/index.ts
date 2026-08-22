@@ -32,6 +32,12 @@ export {
 } from './tabs.js';
 export type { EditorLayout, Group } from './tabs.js';
 export { REMEMBERED, seedSettings, rememberSettings } from './settings.js';
+export {
+  searchWorkspace, summarise, byFile,
+  SEARCH_QUERY, SEARCH_RESULTS, SEARCH_STATE, SEARCH_SELECTED,
+} from './search.js';
+export type { Hit, SearchState, SearchOptions } from './search.js';
+export { SearchResults } from './chrome/results.js';
 export type { Remembered, SaveOptions } from './settings.js';
 export { quitCommand } from './quit.js';
 export type { QuitOptions } from './quit.js';

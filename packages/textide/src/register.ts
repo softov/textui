@@ -8,6 +8,7 @@ import { Editor, Explorer } from './app.js';
 import { TitleBar } from './chrome/titlebar.js';
 import { StatusLine } from './chrome/statusbar.js';
 import { MenuBar } from './chrome/menubar.js';
+import { SearchResults } from './chrome/results.js';
 import { textideCommands, paletteOrder, TOGGLE_COMMAND } from './commands.js';
 import { iconsFor } from './icons.js';
 import { takeScreenshot } from './screenshot.js';
@@ -146,6 +147,7 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
      * them.
      */
     ['ctrl+f', 'find.inFile'],
+    ['ctrl+shift+f', 'find.inWorkspace'],
     ['f3', 'find.next'],
     ['shift+f3', 'find.previous'],
     /*
@@ -230,6 +232,12 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
   }
 
   bag.add(app.components.registerMany([
+    {
+      component: 'SearchResults',
+      category: 'chrome',
+      renderer: { kind: 'function', render: SearchResults },
+      description: 'What the last workspace search found.',
+    },
     { component: 'MenuBar', category: 'chrome', renderer: { kind: 'function', render: MenuBar }, description: 'File, View and Help, all commands.' },
     { component: 'TitleBar', category: 'chrome', renderer: { kind: 'function', render: TitleBar }, description: 'Workspace, open file and unsaved marker.' },
     { component: 'StatusLine', category: 'chrome', renderer: { kind: 'function', render: StatusLine }, description: 'Where you are and what is true right now.' },
@@ -248,5 +256,12 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
   bag.add(app.open({ surface: 'sidebar', key: 'explorer', target: { component: 'Explorer' } }));
   bag.add(app.open({ surface: 'main', key: 'editor', target: { component: 'Editor' } }));
   bag.add(app.open({ surface: 'status', key: 'status', target: { component: 'StatusLine' } }));
+  // The bottom panel, which stays hidden until a search puts something in it.
+  bag.add(app.open({
+    surface: 'panel',
+    key: 'results',
+    target: { component: 'SearchResults' },
+    display: { title: 'Search' },
+  }));
   return bag;
 }

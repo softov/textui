@@ -7,6 +7,10 @@ import {
   revertDocument, saveDocument, undoDocument,
 } from '@textui/documents';
 import { MARK_LINES } from '@textui/documents';
+import {
+  SEARCH_QUERY, SEARCH_RESULTS, SEARCH_SELECTED, SEARCH_STATE, searchWorkspace,
+} from './search.js';
+import { WORKSPACE_PATH } from './workspace.js';
 import { ACTIVE_PATH } from './filesystem.js';
 import { iconsFor } from './icons.js';
 import {
@@ -548,6 +552,46 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
         // Straight to the first one: a search that finds something and leaves
         // you where you were has not answered the question you asked.
         if (text !== '') stepFind(ctx.store, 1);
+      },
+    },
+    {
+      /*
+       * And across the workspace.
+       *
+       * The walk goes through the resource registry rather than the
+       * filesystem, so it searches whatever is mounted - and the results go in
+       * the store, so the panel that draws them and the panel that opens one
+       * are reading the same list.
+       */
+      id: 'find.inWorkspace',
+      icon: Icon.search,
+      title: 'Find in Workspace',
+      category: 'Edit',
+      slots: ['palette'],
+      run: async (args: Record<string, unknown>, ctx: CommandContext) => {
+        const workspace = ctx.store.get<{ root: string; rootUri: string }>(WORKSPACE_PATH);
+        if (!workspace) return;
+
+        const given = typeof args.text === 'string' ? args.text : null;
+        const text = given ?? await prompt(ctx.app.layers, {
+          title: 'Find in Workspace',
+          message: 'What to look for',
+          initialValue: ctx.store.get<string>(SEARCH_QUERY) ?? '',
+        });
+        if (text === null || text === '') return;
+
+        ctx.store.set(SEARCH_QUERY, text);
+        // Said before it is done, because a search of a real workspace takes
+        // long enough that a panel with nothing in it looks broken.
+        ctx.store.set(SEARCH_STATE, { query: text, scanned: 0, done: false });
+        ctx.store.set(SEARCH_RESULTS, []);
+
+        const { hits, state } = await searchWorkspace(
+          ctx.app, workspace.rootUri, { text },
+        );
+        ctx.store.set(SEARCH_RESULTS, hits);
+        ctx.store.set(SEARCH_STATE, state);
+        ctx.store.set(SEARCH_SELECTED, hits.length > 0 ? 'hit:0' : null);
       },
     },
     {

@@ -640,6 +640,19 @@ export function useFocusScope(options: { id?: string; trap?: boolean; restore?: 
  * something else is focused is nearly always a bug, so `global` has to be
  * asked for.
  */
+/**
+ * A key that is not this control's to take.
+ *
+ * A list handles `pagedown`, and `ctrl+pagedown` is an application saying
+ * "next file" over the top of it - one is navigation inside the control, the
+ * other is a chord aimed past it. A control that switches on `event.name`
+ * alone takes both, and the application's binding then works everywhere except
+ * in the pane a person is actually looking at.
+ */
+export function chorded(event: KeyEvent): boolean {
+  return event.ctrl || event.alt || event.meta;
+}
+
 export function useInput(
   handler: (event: KeyEvent) => boolean | void,
   options: { focusId?: string; global?: boolean; enabled?: boolean } = {},

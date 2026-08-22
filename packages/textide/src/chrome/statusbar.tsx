@@ -3,7 +3,7 @@ import type { RenderOutput, StatusSegment } from '@textui/core';
 import type { Workspace } from '../workspace.js';
 import { WORKSPACE_PATH } from '../workspace.js';
 import { ACTIVE_PATH } from '../filesystem.js';
-import { EDITOR_SELECTION } from '../commands.js';
+import { EDITOR_SELECTION } from '../tabs.js';
 
 /**
  * The statusbar.

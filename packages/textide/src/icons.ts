@@ -69,6 +69,7 @@ export const FULL_ICONS = {
   // the *concept* of layout, which is the thing a menu entry names.
   layout: '▦',
   arrangement: '▨',
+  split: '◫',
   theme: '◐',
   sidebar: '◧',
   statusBar: '▁',
@@ -77,6 +78,9 @@ export const FULL_ICONS = {
   // --- finding and asking ------------------------------------------------
   palette: '⌕',
   search: '⌕',
+  go: '⇥',
+  next: '›',
+  previous: '‹',
   keys: '⌨',
   about: 'ℹ',
   camera: '⎙',
@@ -116,6 +120,10 @@ export const BMP_ICONS: IconSet = {
   edit: '±',
   newFolder: '□',
   rename: '±',
+  split: '║',
+  go: '→',
+  next: '>',
+  previous: '<',
   delete: '×',
   keys: '=',
   about: 'i',
@@ -155,6 +163,7 @@ export const ASCII_ICONS: IconSet = {
 
   layout: '#',
   arrangement: '%',
+  split: '|',
   theme: 'o',
   sidebar: '[',
   statusBar: '_',
@@ -162,6 +171,9 @@ export const ASCII_ICONS: IconSet = {
 
   palette: '/',
   search: '/',
+  go: '@',
+  next: '>',
+  previous: '<',
   keys: 'k',
   about: 'i',
   camera: 'c',

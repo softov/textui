@@ -2,7 +2,7 @@ import type { ComponentDefinition } from '../types/component-registry.js';
 import type { BoxProps } from '../jsx/intrinsics.js';
 import type { BorderSpec, Dimension, StyleColor } from '../types/style.js';
 import { h, defineComponent } from '../jsx/factory.js';
-import { useFocus, useInput, useMeasure, useScrollExtent, useState, useTheme } from '../runtime/hooks.js';
+import { chorded, useFocus, useInput, useMeasure, useScrollExtent, useState, useTheme } from '../runtime/hooks.js';
 
 /**
  * Layout and containers.
@@ -233,6 +233,7 @@ export const ScrollView = defineComponent<ScrollViewProps>('ScrollView', (props)
 
   useInput(
     (event) => {
+      if (chorded(event)) return false;
       if (event.name === 'up') { scrollTo(top - 1); return true; }
       if (event.name === 'down') { scrollTo(top + 1); return true; }
       if (event.name === 'pageup') { scrollTo(top - 10); return true; }

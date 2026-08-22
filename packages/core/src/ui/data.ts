@@ -8,7 +8,7 @@ import type { ResolvedTheme } from '../types/theme.js';
 import { h, defineComponent } from '../jsx/factory.js';
 import { TONE } from './tone.js';
 import {
-  useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useRef,
+  chorded, useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useRef,
   useScrollExtent, useState, useTheme,
 } from '../runtime/hooks.js';
 import { expandTabs, fitTo, repeatToWidth, sliceColumns, stringWidth } from '../util/text.js';
@@ -84,7 +84,7 @@ export const List = defineComponent<ListProps>('List', (props) => {
 
   useInput(
     (event) => {
-      if (items.length === 0) return false;
+      if (items.length === 0 || chorded(event)) return false;
       switch (event.name) {
         case 'up': selectAt(index - 1, -1); return true;
         case 'down': selectAt(index + 1, 1); return true;
@@ -218,7 +218,7 @@ const TableImpl = defineComponent<TableProps<Record<string, unknown>>>('Table', 
 
   useInput(
     (event) => {
-      if (rows.length === 0) return false;
+      if (rows.length === 0 || chorded(event)) return false;
       switch (event.name) {
         case 'up': select(index - 1); return true;
         case 'down': select(index + 1); return true;
@@ -411,7 +411,7 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
   useInput(
     (event) => {
       const row = rows[index];
-      if (!row) return false;
+      if (!row || chorded(event)) return false;
       switch (event.name) {
         case 'up': select(index - 1); return true;
         case 'down': select(index + 1); return true;
@@ -568,6 +568,7 @@ export const LogViewer = defineComponent<LogViewerProps>('LogViewer', (props) =>
 
   useInput(
     (event) => {
+      if (chorded(event)) return false;
       switch (event.name) {
         case 'up': scroll(-1); return true;
         case 'down': scroll(1); return true;
@@ -725,7 +726,7 @@ export const CodeViewer = defineComponent<CodeViewerProps>('CodeViewer', (props)
 
   useInput(
     (event) => {
-      if (disabled) return false;
+      if (disabled || chorded(event)) return false;
       switch (event.name) {
         case 'up': moveTo(caret - 1); return true;
         case 'down': moveTo(caret + 1); return true;
@@ -1193,6 +1194,7 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
   useInput(
     (event) => {
       const page = Math.max(1, measured.height - 2);
+      if (chorded(event)) return false;
       switch (event.name) {
         case 'up': case 'k':
           if (selects) move(-1); else scrollTo(top - 1);

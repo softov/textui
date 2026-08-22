@@ -56,6 +56,8 @@ directory until it is configured is an editor nobody opens.
 | Explorer | The filesystem through the resource registry - lazy, sorted, filtered |
 | Viewer | Whatever the registry says opens the selected kind |
 | Editing | Selection, cut, copy, paste, indent, undo - `ctrl+c` is copy only while something is selected, so quit is never lost |
+| Tabs | Every open file, `ctrl+pageup`/`ctrl+pagedown` between them, `ctrl+w` to close |
+| Split | A second pane beside the first, on another file or the same one |
 | Files | New file, new folder, rename, delete-with-confirmation, as commands |
 | Config | `.textide.json`, in the store like everything else |
 
@@ -66,9 +68,6 @@ directory until it is configured is an editor nobody opens.
   editor does not pick it up. The shape it would take is written down in
   [decisions](../../docs/decisions.md): a full remount that keeps the store,
   not a clever partial one.
-- **Tabs and splits.** One explorer, one view. [`app.tsx`](src/app.tsx) is the
-  only place that knows that, which is the point of keeping the tree and the
-  viewer as separate components.
 - **Git.** Diff, stage, commit and branches arrive as a loadable extension
   rather than as part of this package.
 

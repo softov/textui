@@ -493,8 +493,11 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     }
     if (key === 'home') { move({ line: at.line, column: 0 }, false, extend); return true; }
     if (key === 'end') { move({ line: at.line, column: (lines[at.line] ?? '').length }, false, extend); return true; }
-    if (key === 'pageup') { move({ line: at.line - rows, column: goal }, true, extend); return true; }
-    if (key === 'pagedown') { move({ line: at.line + rows, column: goal }, true, extend); return true; }
+    // A page of this file, not a page of files: with ctrl held these belong to
+    // whatever the application bound them to, which is how one pair of keys
+    // means both without either of them being a second-choice chord.
+    if (key === 'pageup' && !event.ctrl) { move({ line: at.line - rows, column: goal }, true, extend); return true; }
+    if (key === 'pagedown' && !event.ctrl) { move({ line: at.line + rows, column: goal }, true, extend); return true; }
 
     // Select all, and copy, work on a file nobody may write.
     if (event.ctrl && (key === 'a' || key === 'A')) {

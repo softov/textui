@@ -8,6 +8,9 @@ import {
 } from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
 import { iconsFor } from './icons.js';
+import {
+  EDITOR_URI, closeTab, openTabs, stepTab, tabFromPath, tabLabel, tabPath, toggleSplit,
+} from './tabs.js';
 
 /**
  * textide's own commands.
@@ -21,10 +24,11 @@ import { iconsFor } from './icons.js';
  * front of you, so they come first.
  */
 
-export const EDITOR_URI = '$/ui/editor/uri' as BindingPath;
+// The editor's own paths live with the tab model, because that is what keeps
+// them in agreement. Re-exported so nothing that already imported them here
+// has to learn where they moved.
+export { EDITOR_URI, EDITOR_SELECTION } from './tabs.js';
 export const CHROME_PATH = '$/ui/chrome' as BindingPath;
-/** How much the editor has selected, for the status bar. */
-export const EDITOR_SELECTION = '$/ui/editor/selection' as BindingPath;
 
 /** Categories, in the order the palette should offer them. */
 export const CATEGORIES = ['File', 'Edit', 'View', 'Go', 'Help'] as const;
@@ -197,12 +201,54 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       slots: ['palette'],
       run: (_args: Record<string, unknown>, ctx: CommandContext) => {
         const uri = openUri(ctx);
-        if (uri && getDocument(ctx.store, uri) && isDocumentDirty(ctx.store, uri)) {
+        if (!uri) return;
+        if (getDocument(ctx.store, uri) && isDocumentDirty(ctx.store, uri)) {
           notify(ctx.app, { tone: 'warning', message: 'Unsaved changes - revert or save first.' });
           return;
         }
-        ctx.store.set(EDITOR_URI, null);
-        ctx.store.set(ACTIVE_PATH, {});
+        closeTab(ctx.store, uri);
+        // Closing the last tab is the only way back to an empty pane, so the
+        // titlebar has to stop naming a file nobody has open.
+        if (ctx.store.get(EDITOR_URI) === null) ctx.store.set(ACTIVE_PATH, {});
+      },
+    },
+
+    // --- Go: which of the open files ---------------------------------------
+    {
+      id: 'go.nextTab',
+      icon: Icon.next,
+      title: 'Next File',
+      category: 'Go',
+      slots: ['palette'],
+      when: '$/ui/editor/uri',
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => { stepTab(ctx.store, 1); },
+    },
+    {
+      id: 'go.previousTab',
+      icon: Icon.previous,
+      title: 'Previous File',
+      category: 'Go',
+      slots: ['palette'],
+      when: '$/ui/editor/uri',
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => { stepTab(ctx.store, -1); },
+    },
+    {
+      // One list of what is open, rather than a strip you can only walk one
+      // step at a time. With twenty files open the strip has stopped being a
+      // way to find anything.
+      id: 'go.file',
+      icon: Icon.go,
+      title: 'Open Files',
+      category: 'Go',
+      slots: ['palette'],
+      when: '$/ui/editor/uri',
+      args: [{
+        name: 'path', type: 'string' as const, required: true,
+        choices: () => openTabs(app.store).map((uri) => tabPath(app.store, uri)),
+      }],
+      run: (args: Record<string, unknown>, ctx: CommandContext) => {
+        const uri = tabFromPath(ctx.store, String(args.path ?? ''));
+        if (uri) ctx.store.set(EDITOR_URI, uri);
       },
     },
 
@@ -299,6 +345,23 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
         // The registry is the authority on which names exist, so a name that
         // came out of it is a layout by construction.
         if (name) ctx.app.surfaces.setState('main', { layout: name });
+      },
+    },
+    {
+      id: 'view.split',
+      icon: Icon.split,
+      title: 'Split Editor',
+      category: 'View',
+      slots: ['palette'],
+      when: '$/ui/editor/uri',
+      // A split is a second URI beside the first one, so there is nothing to
+      // create and nothing to tear down - which is why closing it cannot lose
+      // an edit, and why two panes on one file share a buffer and a history.
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const beside = toggleSplit(ctx.store);
+        notify(ctx.app, {
+          message: beside ? `Split with ${tabLabel(beside)}.` : 'One pane.',
+        });
       },
     },
     {

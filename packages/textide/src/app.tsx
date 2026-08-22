@@ -1,13 +1,15 @@
 import {
-  Column, KeyHints, Row, defineComponent, useCapabilities, useFocusScope, useRuntime,
-  useStoreValue,
+  Column, KeyHints, Row, Tabs, defineComponent, useCapabilities, useEffect, useFocusScope,
+  useRuntime, useStoreSubtree, useStoreValue,
 } from '@textui/core';
 import type { RenderOutput, Resource } from '@textui/core';
-import { ResourceExplorer, ResourceView } from '@textui/documents';
+import { DOCUMENTS_ROOT, ResourceExplorer, ResourceView, isDocumentDirty } from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
-import { EDITOR_SELECTION } from './commands.js';
 import { WORKSPACE_PATH, type Workspace } from './workspace.js';
 import { iconsFor } from './icons.js';
+import {
+  EDITOR_SELECTION, EDITOR_URI, SPLIT_PATH, TABS_PATH, openTab, reconcileTabs, tabLabel,
+} from './tabs.js';
 
 /**
  * The screen, as surfaces.
@@ -19,7 +21,8 @@ import { iconsFor } from './icons.js';
  * another inside `main`.
  *
  * Splitting the explorer from the viewer is what makes that possible, and it
- * is the same split that the tabs round will exploit.
+ * is what the tab strip below exploits: a pane is a viewer and a URI, so a
+ * second pane is a second URI and nothing else.
  */
 
 /** The tree, for the `sidebar` surface. */
@@ -38,10 +41,11 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
       });
       // A directory has nothing to show, and asking a viewer to open one is
       // how a pane fills with an error nobody caused.
-      runtime.store.set(
-        '$/ui/editor/uri',
-        resource.capabilities.includes('list') ? null : resource.uri,
-      );
+      if (resource.capabilities.includes('list')) {
+        runtime.store.set(EDITOR_URI, null);
+        return;
+      }
+      openTab(runtime.store, resource.uri);
     };
 
     return (
@@ -58,59 +62,112 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
     );
   });
 
-/** The viewer and the key hints, for the `main` surface. */
+interface PaneProps {
+  uri: string | null;
+  /** The focus scope this pane registers, so "am I in here" has an answer. */
+  scopeId: string;
+  /** Only one pane takes focus when edit mode is entered. */
+  primary?: boolean;
+}
+
+/**
+ * One pane: a rule, and whatever the registry says opens this URI.
+ *
+ * The pane is a focus *scope*, not a focusable.
+ *
+ * It was a tab stop, which meant reaching the editor took two presses: one
+ * onto the pane and another onto the thing inside it. A pane is not a control.
+ * Making it a scope means whatever it contains registers inside it, and "am I
+ * in here" is a question about the published focus rather than about this
+ * component holding focus itself.
+ */
+const Pane = defineComponent<PaneProps>('EditorPane', ({ uri, scopeId, primary }) => {
+  const runtime = useRuntime();
+  const Icon = iconsFor(useCapabilities().unicode);
+  const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
+  const scope = useFocusScope({ id: scopeId });
+  const focusedScope = useStoreValue<string | null>('$/focus/scope', null);
+  const active = focusedScope === scope;
+
+  return (
+    <Row flex={1} align="stretch" id={scopeId}>
+      <box width={1} fill={Icon.activeRule} fg={active ? 'focus' : 'borderSubtle'} />
+      {/*
+        * Entering edit mode means going to the editor. The editor claims focus
+        * as it mounts rather than something outside chasing it once it has -
+        * the mounting render is the first moment it exists. Only the primary
+        * pane does it, because two panes both claiming focus is a race whose
+        * winner depends on the order they happen to render in.
+        */}
+      <ResourceView
+        uri={uri ?? null}
+        mode={mode}
+        // How much is selected is a fact about the screen, so it goes in the
+        // store and the status bar reads it there. The editor keeps the
+        // selection itself - where the caret is is nobody else's business -
+        // and reports the one number somebody outside it wants.
+        viewerProps={mode === 'edit'
+          ? {
+              ...(primary ? { autoFocus: true } : {}),
+              onSelection: {
+                handler: (selection: { chars: number; lines: number }) => {
+                  if (primary) runtime.store.set(EDITOR_SELECTION, selection);
+                },
+              },
+            }
+          : undefined}
+        flex={1}
+      />
+    </Row>
+  );
+});
+
+/** The tab strip, the pane or panes, and the key hints - the `main` surface. */
 export const Editor: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('Editor', () => {
     const runtime = useRuntime();
-    const uri = useStoreValue<string | null>('$/ui/editor/uri', null);
+    const uri = useStoreValue<string | null>(EDITOR_URI, null);
     const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
-
-    /**
-     * The pane is a focus *scope*, not a focusable.
-     *
-     * It was a tab stop, which meant reaching the editor took two presses: one
-     * onto the pane and another onto the thing inside it. A pane is not a
-     * control. Making it a scope means whatever it contains registers inside
-     * it, and "am I in here" is a question about the published focus rather
-     * than about this component holding focus itself.
-     */
+    const tabs = useStoreValue<string[]>(TABS_PATH, []) ?? [];
+    const split = useStoreValue<string | null>(SPLIT_PATH, null);
     const Icon = iconsFor(useCapabilities().unicode);
-    const scope = useFocusScope({ id: 'pane.main' });
-    const focusedScope = useStoreValue<string | null>('$/focus/scope', null);
-    const active = focusedScope === scope;
+    // The unsaved marker is the buffer's, so this has to hear about the buffer
+    // changing - a strip that reads dirtiness without subscribing to it shows
+    // the answer from whenever it last happened to redraw.
+    useStoreSubtree(DOCUMENTS_ROOT);
+
+    // Anything may set the active URI - a command, a test, an extension that
+    // has never heard of a strip - so the strip agrees with it rather than
+    // being the only way to open a file.
+    useEffect(() => { reconcileTabs(runtime.store); }, [uri]);
 
     return (
-      <Row flex={1} align="stretch" id="pane.main">
-        <box
-          width={1}
-          fill={Icon.activeRule}
-          fg={active ? 'focus' : 'borderSubtle'}
-        />
-        <Column flex={1}>
-        {/*
-          * Entering edit mode means going to the editor. The editor claims
-          * focus as it mounts rather than something outside chasing it once it
-          * has - the mounting render is the first moment it exists.
-          */}
-        <ResourceView
-          uri={uri ?? null}
-          mode={mode}
-          // How much is selected is a fact about the screen, so it goes in the
-          // store and the status bar reads it there. The editor keeps the
-          // selection itself - where the caret is is nobody else's business -
-          // and reports the one number somebody outside it wants.
-          viewerProps={mode === 'edit'
-            ? {
-                autoFocus: true,
-                onSelection: {
-                  handler: (selection: { chars: number; lines: number }) => {
-                    runtime.store.set(EDITOR_SELECTION, selection);
-                  },
-                },
-              }
-            : undefined}
-          flex={1}
-        />
+      <Column flex={1}>
+        {tabs.length > 1
+          ? (
+            <Tabs
+              items={tabs.map((tab) => ({
+                id: tab,
+                label: tabLabel(tab),
+                // A glyph, not only a colour: a screenshot and a 16-colour
+                // session both lose the colour and neither loses the dot.
+                ...(isDocumentDirty(runtime.store, tab) ? { badge: Icon.dirty } : {}),
+              }))}
+              activeId={uri ?? undefined}
+              onChange={(next: string) => { runtime.store.set(EDITOR_URI, next); }}
+            />
+            )
+          : null}
+
+        {split
+          ? (
+            <Row flex={1} gap={1}>
+              <Pane uri={uri ?? null} scopeId="pane.main" primary />
+              <Pane uri={split} scopeId="pane.split" />
+            </Row>
+            )
+          : <Pane uri={uri ?? null} scopeId="pane.main" primary />}
+
         {/*
           * The hints are what you can do *here*, so editing gets the editing
           * keys. A row that listed both sets would be a row nobody reads.
@@ -127,15 +184,14 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
               ]
             : [
                 { keys: 'up/down', label: 'move' },
-                { keys: 'right', label: 'expand' },
                 { keys: 'enter', label: 'open' },
-                { keys: 'ctrl+b', label: 'sidebar' },
+                { keys: 'ctrl+pgup/pgdn', label: 'tabs' },
+                { keys: 'ctrl+w', label: 'close' },
                 { keys: 'ctrl+p', label: 'commands' },
                 { keys: 'ctrl+e', label: 'edit' },
                 { keys: 'q', label: 'quit' },
               ]}
         />
-        </Column>
-      </Row>
+      </Column>
     );
   });

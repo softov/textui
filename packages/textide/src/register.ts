@@ -130,6 +130,11 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+z', 'edit.undo'],
     ['ctrl+y', 'edit.redo'],
     ['ctrl+e', 'file.edit'],
+    // Walking the strip. The editor takes plain pageup and pagedown to move
+    // the caret, and leaves them alone with ctrl held, which is what lets one
+    // pair of keys mean "a page" inside a file and "a file" across them.
+    ['ctrl+pageup', 'go.previousTab'],
+    ['ctrl+pagedown', 'go.nextTab'],
     // F10 enters the bar; alt+letter opens one menu outright. Both exist
     // because the first is discoverable and the second is fast.
     ['f10', 'menu.focus'],
@@ -145,7 +150,7 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     { component: 'TitleBar', category: 'chrome', renderer: { kind: 'function', render: TitleBar }, description: 'Workspace, open file and unsaved marker.' },
     { component: 'StatusLine', category: 'chrome', renderer: { kind: 'function', render: StatusLine }, description: 'Where you are and what is true right now.' },
     { component: 'Explorer', category: 'chrome', renderer: { kind: 'function', render: Explorer }, description: 'The workspace tree.' },
-    { component: 'Editor', category: 'chrome', renderer: { kind: 'function', render: Editor }, description: 'The open document, and the key hints.' },
+    { component: 'Editor', category: 'chrome', renderer: { kind: 'function', render: Editor }, description: 'The open files, the pane or panes, and the key hints.' },
   ]));
 
   // One component per surface. The shell decides where each region sits, so

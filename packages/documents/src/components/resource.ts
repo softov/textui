@@ -3,7 +3,7 @@ import type { BoxProps } from '@textui/core';
 import type { Resource, ResourceViewerDefinition } from '@textui/core';
 import { h, defineComponent } from '@textui/core';
 import {
-  useFocus, useInput, useMeasure, useMemo, useRuntime, useState, useTheme,
+  chorded, useFocus, useInput, useMeasure, useMemo, useRuntime, useState, useTheme,
   useTask, useEffect,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
@@ -118,6 +118,7 @@ export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownView
 
   useInput(
     (event) => {
+      if (chorded(event)) return false;
       switch (event.name) {
         case 'up': setTop(Math.max(0, first - 1)); return true;
         case 'down': setTop(Math.min(maxTop, first + 1)); return true;

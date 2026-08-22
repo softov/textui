@@ -6,11 +6,15 @@ import type { Cell, Color } from '../types/cells.js';
 import { ATTR_DIM } from '../types/cells.js';
 import type { CellStyle, PaintSurface, RenderContext } from '../types/render.js';
 import type { LayoutBox } from '../render/layout.js';
+import { overflowOn } from '../render/layout.js';
 import type { Instance } from './instance.js';
 import type { Buffer } from '../render/buffer.js';
 import { COLOR_DEFAULT, mix, packColor, type PackedColor } from '../render/color.js';
 import { rectIntersect } from '../types/geometry.js';
-import { graphemes, graphemeWidth, sanitize, stringWidth, truncate, wrapText } from '../util/text.js';
+import {
+  graphemes, graphemeWidth, sanitize, stringWidth, truncate,
+  truncateSideOf, wrapModeOf, wrapText,
+} from '../util/text.js';
 import {
   attrsFromStyle, NO_INTERACTION, packStyleColor, resolveBorder,
   resolveStyle, type InteractionState, type ResolvedBorder,
@@ -275,12 +279,32 @@ function textContent(instance: Instance): string {
   return '';
 }
 
+/**
+ * Flatten to one row, for the truncating wrap modes.
+ *
+ * A newline in a text that has one row to live in has nowhere to go. Joining
+ * with a space keeps the sentence readable and keeps the cut where the reader
+ * can see it; dropping everything after the first newline would silently lose
+ * text that the ellipsis then claims was merely too long.
+ */
+function oneLine(text: string): string {
+  return text.includes('\n') ? text.split('\n').join(' ') : text;
+}
+
 function textMeasure(instance: Instance, style: Style): (w: number, h: number) => { width: number; height: number } {
   return (maxWidth: number) => {
     const text = sanitize(textContent(instance));
     if (text === '') return { width: 0, height: text.includes('\n') ? 1 : 1 };
 
     const wrap = style.wrap ?? 'none';
+
+    // A truncating text is one row, always. It still asks for the width it
+    // would like - a box sizing itself around it gets the whole string when
+    // there is room, and only cuts when there is not.
+    if (truncateSideOf(wrap) !== undefined) {
+      return { width: stringWidth(oneLine(text)), height: 1 };
+    }
+
     if (wrap === 'none') {
       const lines = text.split('\n');
       return {
@@ -289,7 +313,7 @@ function textMeasure(instance: Instance, style: Style): (w: number, h: number) =
       };
     }
     const limit = Number.isFinite(maxWidth) && maxWidth > 0 ? maxWidth : stringWidth(text);
-    const lines = wrapText(text, limit, wrap);
+    const lines = wrapText(text, limit, wrapModeOf(wrap));
     return {
       width: Math.min(limit, Math.max(0, ...lines.map(stringWidth))),
       height: Math.max(1, lines.length),
@@ -367,11 +391,18 @@ export function paintTree(
       break;
   }
 
-  // 5. children, clipped to this box's content when overflow is contained
-  const childClip =
-    visual.style.overflow === 'visible'
-      ? clip
-      : rectIntersect(clip, box.content);
+  // 5. children, clipped to this box's content when overflow is contained -
+  // per axis, so a row that scrolls sideways can still spill downwards.
+  const clipX = overflowOn(visual.style, 'x') !== 'visible';
+  const clipY = overflowOn(visual.style, 'y') !== 'visible';
+  const childClip = clipX || clipY
+    ? rectIntersect(clip, {
+        x: clipX ? box.content.x : clip.x,
+        y: clipY ? box.content.y : clip.y,
+        width: clipX ? box.content.width : clip.width,
+        height: clipY ? box.content.height : clip.height,
+      })
+    : clip;
 
   for (const child of instance.children) {
     paintTree(buffer, child, env, childClip);
@@ -425,35 +456,52 @@ function paintBorder(
   instance: Instance,
   env: PaintEnv,
 ): void {
-  const { chars, sides } = visual.border;
+  const { chars, sides, colors } = visual.border;
   const fg = visual.border.color !== undefined
     ? colorOf(packStyleColor(visual.border.color, env.theme))
     : colorOf(visual.fg === COLOR_DEFAULT ? packStyleColor('border', env.theme) : visual.fg);
   const bg = colorOf(visual.bg);
-  const style: CellStyle = { fg, bg, attrs: visual.attrs };
+  // `dim` on the border spec dims the frame and nothing else. Setting it on
+  // the box would take the title, the content and every child with it.
+  const attrs = visual.attrs | (visual.border.dim ? ATTR_DIM : 0);
+  const style: CellStyle = { fg, bg, attrs };
+
+  /** One edge's style: its own colour if it named one, the frame's otherwise. */
+  const edge = (side: 'top' | 'right' | 'bottom' | 'left'): CellStyle => {
+    const own = colors[side];
+    return own === undefined ? style : { fg: colorOf(packStyleColor(own, env.theme)), bg, attrs };
+  };
+  const top = edge('top');
+  const bottomStyle = edge('bottom');
 
   const { x, y, width: w, height: h } = rect;
   const right = x + w - 1;
   const bottom = y + h - 1;
 
   if (sides.top) {
-    for (let i = x; i <= right; i++) surface.put(i, y, chars.top, style);
+    for (let i = x; i <= right; i++) surface.put(i, y, chars.top, top);
   }
   if (sides.bottom && h > 1) {
-    for (let i = x; i <= right; i++) surface.put(i, bottom, chars.bottom, style);
+    for (let i = x; i <= right; i++) surface.put(i, bottom, chars.bottom, bottomStyle);
   }
   if (sides.left) {
-    for (let i = y; i <= bottom; i++) surface.put(x, i, chars.left, style);
+    const left = edge('left');
+    for (let i = y; i <= bottom; i++) surface.put(x, i, chars.left, left);
   }
   if (sides.right && w > 1) {
-    for (let i = y; i <= bottom; i++) surface.put(right, i, chars.right, style);
+    const rightStyle = edge('right');
+    for (let i = y; i <= bottom; i++) surface.put(right, i, chars.right, rightStyle);
   }
 
-  if (sides.top && sides.left) surface.put(x, y, chars.topLeft, style);
-  if (sides.top && sides.right && w > 1) surface.put(right, y, chars.topRight, style);
-  if (sides.bottom && sides.left && h > 1) surface.put(x, bottom, chars.bottomLeft, style);
+  // A corner is one cell and two edges meet in it, so one of them has to win.
+  // The horizontal rule takes it: a box reads as a top and a bottom line with
+  // sides between them, and breaking a long rule's colour at its own ends is
+  // the more visible mistake.
+  if (sides.top && sides.left) surface.put(x, y, chars.topLeft, top);
+  if (sides.top && sides.right && w > 1) surface.put(right, y, chars.topRight, top);
+  if (sides.bottom && sides.left && h > 1) surface.put(x, bottom, chars.bottomLeft, bottomStyle);
   if (sides.bottom && sides.right && w > 1 && h > 1) {
-    surface.put(right, bottom, chars.bottomRight, style);
+    surface.put(right, bottom, chars.bottomRight, bottomStyle);
   }
 
   const inner = w - 2;
@@ -474,7 +522,7 @@ function paintBorder(
     paintBorderLabel(
       surface, x, bottom, inner, ` ${footer} `,
       (instance.props.footerAlign as 'left' | 'center' | 'right') ?? 'left',
-      { ...style, fg: colorOf(packStyleColor('muted', env.theme)) },
+      { ...style, fg: colorOf(packStyleColor('muted', env.theme)), attrs: visual.attrs },
       env.theme.glyphs.ellipsis,
     );
   }
@@ -521,13 +569,22 @@ function paintText(
 
   const wrap = visual.style.wrap ?? 'none';
   const align = visual.style.textAlign ?? 'left';
-  const truncateSide = instance.props.truncate as 'end' | 'start' | 'middle' | false | undefined;
   // The ellipsis is a glyph like any other: on an ascii terminal it is '...'.
   const ellipsis = typeof instance.props.ellipsis === 'string'
     ? instance.props.ellipsis
     : env.theme.glyphs.ellipsis;
 
-  const raw = wrap === 'none' ? content.split('\n') : wrapText(content, area.width, wrap);
+  // Where the cut goes, if there is one. `wrap` names it for the whole text;
+  // the older `truncate` prop still wins where both are set, so a caller that
+  // wants word wrap *and* an ellipsis on the last row can still ask for it -
+  // that is a combination `wrap` alone cannot express.
+  const wrapSide = truncateSideOf(wrap);
+  const explicit = instance.props.truncate as 'end' | 'start' | 'middle' | false | undefined;
+  const truncateSide = explicit ?? wrapSide;
+
+  const raw = wrapSide !== undefined
+    ? [oneLine(content)]
+    : wrap === 'none' ? content.split('\n') : wrapText(content, area.width, wrapModeOf(wrap));
 
   for (let i = 0; i < raw.length && i < area.height; i++) {
     let line = raw[i] as string;

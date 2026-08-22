@@ -1,3 +1,5 @@
+import type { TextWrap } from '../types/style.js';
+
 /**
  * Terminal text measurement.
  *
@@ -200,8 +202,12 @@ export function truncate(
   const ew = stringWidth(ellipsis);
   if (width <= ew) return sliceByWidth(ellipsis, width);
 
+  // A space either side of the ellipsis is a typographic mistake, not a cell
+  // of content, so the cut is tidied before the mark goes on. It also means a
+  // truncated string can come back narrower than `width`, which is correct:
+  // `width` is a limit, and nothing here is padding.
   const keep = width - ew;
-  if (side === 'end') return sliceByWidth(text, keep) + ellipsis;
+  if (side === 'end') return sliceByWidth(text, keep).trimEnd() + ellipsis;
 
   const gs = graphemes(text);
   if (side === 'start') {
@@ -211,7 +217,7 @@ export function truncate(
       i--;
       w += graphemeWidth(gs[i] as string);
     }
-    return ellipsis + gs.slice(i).join('');
+    return ellipsis + gs.slice(i).join('').trimStart();
   }
 
   const left = Math.ceil(keep / 2);
@@ -222,7 +228,7 @@ export function truncate(
     j--;
     w += graphemeWidth(gs[j] as string);
   }
-  return sliceByWidth(text, left) + ellipsis + gs.slice(j).join('');
+  return sliceByWidth(text, left).trimEnd() + ellipsis + gs.slice(j).join('').trimStart();
 }
 
 /** Pad to exactly `width` cells. Over-long input is returned unchanged. */
@@ -252,6 +258,28 @@ export function fitTo(
 }
 
 export type WrapMode = 'none' | 'word' | 'char';
+
+/**
+ * The end a `TextWrap` cuts at, or `undefined` when it wraps instead.
+ *
+ * The wrapping modes and the truncating ones live in one union because they
+ * answer one question - what happens at the edge - and a component that had to
+ * take both a `wrap` and a `truncate` prop could be handed the two answers at
+ * once. These two helpers are how the union is taken apart again.
+ */
+export function truncateSideOf(wrap: TextWrap | undefined): TruncateSide | undefined {
+  switch (wrap) {
+    case 'truncate': case 'truncate-end': return 'end';
+    case 'truncate-start': return 'start';
+    case 'truncate-middle': return 'middle';
+    default: return undefined;
+  }
+}
+
+/** The mode `wrapText` should run in. A truncating text does not wrap at all. */
+export function wrapModeOf(wrap: TextWrap | undefined): WrapMode {
+  return wrap === 'word' || wrap === 'char' ? wrap : 'none';
+}
 
 /** Break into lines of at most `width` cells. Honours existing newlines. */
 export function wrapText(text: string, width: number, mode: WrapMode = 'word'): string[] {

@@ -17,6 +17,7 @@ import type { SyntaxQuery, SyntaxRegistry, SyntaxToken } from '../types/syntax.j
 import type { RenderOutput } from '../types/render.js';
 import type { Instance } from './instance.js';
 import type { LayoutBox } from '../render/layout.js';
+import { overflowOn } from '../render/layout.js';
 import type { Runtime } from './runtime.js';
 import { markDirty, readContext } from './instance.js';
 import { resolvePath } from '../util/paths.js';
@@ -427,7 +428,7 @@ function firstHostBox(instance: Instance): LayoutBox | undefined {
  */
 function firstScrollingBox(box: LayoutBox | undefined): LayoutBox | undefined {
   if (!box) return undefined;
-  if (box.style.overflow === 'scroll' && box.scrollSize) return box;
+  if (overflowOn(box.style, 'y') === 'scroll' && box.scrollSize) return box;
   for (const child of box.children) {
     const found = firstScrollingBox(child);
     if (found) return found;

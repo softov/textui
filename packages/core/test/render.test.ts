@@ -36,6 +36,71 @@ describe('text', () => {
     );
     expect(out).toBe('   ab');
   });
+
+  /**
+   * The examples from Ink's own documentation, at the width it uses. They are
+   * here verbatim because "the same thing Ink does" is the promise `wrap`
+   * makes, and a paraphrase of a promise is not a test of it.
+   *
+   * One deliberate difference: Ink's `truncate-middle` example gives `He…ld`
+   * in a box seven cells wide, keeping two graphemes a side where six will
+   * fit. We keep three and three. Leaving two cells of a fixed-width box
+   * empty is not a behaviour worth copying.
+   */
+  describe('wrap, the way Ink means it', () => {
+    const inBox = (wrap: string | undefined): string =>
+      renderToString(
+        {
+          component: 'box',
+          width: 7,
+          children: { component: 'text', content: 'Hello World', ...(wrap ? { wrap } : {}) },
+        },
+        { width: 20 },
+      );
+
+    it('word-wraps into two rows', () => {
+      expect(inBox('word')).toBe('Hello\nWorld');
+    });
+
+    it('hard-wraps by filling each row', () => {
+      expect(inBox('char')).toBe('Hello W\norld');
+    });
+
+    it('truncates at the end', () => {
+      expect(inBox('truncate')).toBe('Hello…');
+      expect(inBox('truncate-end')).toBe('Hello…');
+    });
+
+    it('truncates at the start', () => {
+      expect(inBox('truncate-start')).toBe('…World');
+    });
+
+    it('truncates in the middle', () => {
+      expect(inBox('truncate-middle')).toBe('Hel…rld');
+    });
+  });
+
+  it('keeps a truncating text to one row, whatever room it is given', () => {
+    const out = renderToString(
+      {
+        component: 'box',
+        width: 12,
+        children: { component: 'text', content: 'one\ntwo\nthree', wrap: 'truncate' },
+      },
+      { width: 20 },
+    );
+    // Three source lines, one row: the newlines become spaces rather than
+    // taking two thirds of the text with them.
+    expect(out).toBe('one two thr…');
+  });
+
+  it('measures a truncating text at its full width when there is room', () => {
+    const out = renderToString(
+      { component: 'text', content: 'Hello World', wrap: 'truncate' },
+      { width: 20 },
+    );
+    expect(out).toBe('Hello World');
+  });
 });
 
 describe('box', () => {

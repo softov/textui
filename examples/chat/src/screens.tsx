@@ -1,12 +1,12 @@
 import {
   Badge, Column, EmptyState, Panel, RadioGroup, Row, SearchBox,
   defineComponent, useApp, useEffect, useFocusScope,
-  useRequiredService, useState, useStore, useStoreSubtree, useStoreValue, useTheme,
+  useRequiredService, useSize, useState, useStore, useStoreSubtree, useStoreValue, useTheme,
 } from '@textui/core';
 import type { BindingPath, RenderOutput, SemanticVariant } from '@textui/core';
 import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE, settingCommand } from './control.js';
 import {
-  ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, HISTORY, HOST, INPUT, MODEL, OPEN,
+  ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, FOCUS, HISTORY, HOST, INPUT, MODEL, OPEN,
   PROVIDER, QUEUE, SELECTED, SESSIONS, SETTINGS, TURNS, WORKSPACE,
   openSession, visibleSessions, workspaceName,
 } from './state.js';
@@ -128,6 +128,23 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
       app.store.set(SELECTED, sessions[0]?.resource ?? null);
     }, [ids]);
 
+    /**
+     * The pane with the keyboard is the wide one.
+     *
+     * A fixed split has to be wrong somewhere: forty cells for the detail pane
+     * left a session list too narrow to read a title in, and widening the list
+     * would truncate the URIs the detail pane exists to let you copy. Neither
+     * of those is a problem while you are looking at the *other* one, so the
+     * space follows the reader - and walking out of the details with tab or
+     * escape gives the list its width back on the way past.
+     */
+    const focused = useStoreValue<string | null>(FOCUS, null);
+    const reading = focused === 'chat.details';
+    const aside = Math.max(34, Math.min(56, Math.round(useSize().width * 0.4)));
+    // What the pane without the keyboard keeps: two fifths, and never less
+    // than a session title fits in. Capped as the terminal grows, because the
+    // pane being read has a use for the rest and this one does not.
+
     const current = sessions.find((session) => session.resource === selected);
     const status = current ? decodeStatus(current.status) : null;
     const waiting = sessions.filter((session) => decodeStatus(session.status).activity === 'input').length;
@@ -154,7 +171,7 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
       <Row flex={1} gap={1}>
         <Panel
           title="Sessions"
-          flex={1}
+          {...(reading ? { width: aside } : { flex: 1 })}
           meta={waiting > 0 ? `${theme.glyphs.warning} ${waiting} waiting on you` : `${sessions.length} shown`}
         >
           <SearchBox
@@ -183,7 +200,11 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
           {!archived ? <text content="x  show archived" fg="subtle" /> : null}
         </Panel>
 
-        <Panel title="Session" width={40} meta={current ? 'enter copies' : ''}>
+        <Panel
+          title="Session"
+          {...(reading ? { flex: 1 } : { width: aside })}
+          meta={current ? 'enter copies' : ''}
+        >
           {current && status ? (
             <Column gap={1} flex={1}>
               <Row gap={1}>

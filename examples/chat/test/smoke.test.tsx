@@ -3,6 +3,7 @@ import { renderApp } from '@textui/testing';
 import type { Harness } from '@textui/testing';
 import { registerChat } from '../src/app.js';
 import { CREATURES, MOODS, drawCreature } from '../src/view/creature.js';
+import { visibleSessions } from '../src/state.js';
 import { CONTROLLER } from '../src/control.js';
 import { fakeHost } from '../src/ahp/fake.js';
 import type { FakeHost } from '../src/ahp/fake.js';
@@ -108,8 +109,11 @@ describe.each(SIZES.map((s) => [`${s.width}x${s.height}`, s] as const))('at %s',
     const { t } = await catalogue(size);
     expect(t.app.screens.current()?.id).toBe('sessions');
     // The session waiting on a person is the first row, whatever it was
-    // called or when it last moved.
-    expect(t.hasText('Kqueue events on Linux')).toBe(true);
+    // called or when it last moved. Asserted on the order rather than on a
+    // whole title being legible: which pane has the room depends on which one
+    // has the keyboard, and a title is what truncates first.
+    expect(visibleSessions(t.app.store)[0]?.resource).toBe(SEEDED);
+    expect(t.hasText('Kqueue events')).toBe(true);
     await t.unmount();
   });
 
@@ -492,6 +496,34 @@ describe('what a session actually is', () => {
     // The host's own wording for its own setting, not the id it stores.
     expect(t.hasText('Accept edits')).toBe(true);
     expect(t.hasText('claude-sonnet-5')).toBe(true);
+    await t.unmount();
+  });
+
+  /**
+   * The pane you are reading is the wide one.
+   *
+   * A fixed split has to be wrong somewhere. Forty cells for the detail pane
+   * left the session list too narrow to read a title in, and giving the list
+   * the space instead truncates the URIs the detail pane exists to let you
+   * copy. Neither matters while you are looking at the other one.
+   */
+  it('gives the width to whichever pane has the keyboard', async () => {
+    const { t } = await catalogue();
+    t.app.store.set(SELECTED, SEEDED);
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    // The list has the keyboard on arrival, so the workspace does not fit.
+    expect(t.hasText('/brb_main/src/brb_framework')).toBe(false);
+
+    t.focus('chat.details');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.hasText('/brb_main/src/brb_framework')).toBe(true);
+
+    // And walking back out gives the list its width back on the way past.
+    t.focus('chat.sessions');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.hasText('/brb_main/src/brb_framework')).toBe(false);
+    expect(t.hasText('Kqueue events on Li')).toBe(true);
     await t.unmount();
   });
 

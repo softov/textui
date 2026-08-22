@@ -7,6 +7,7 @@ import { GitChanges, STATUS_PATH, STATUS_SEGMENTS } from './changes.js';
 import { gitCommands, refresh } from './commands.js';
 import { GIT_SOURCE, decorationsOf } from './decorate.js';
 import { GUTTER_SOURCE, gutterFor } from './gutter.js';
+import { DIFF_MODE, type DiffMode } from './diff.js';
 import type { Status } from './git.js';
 
 /**
@@ -26,7 +27,8 @@ import type { Status } from './git.js';
 
 export { createGit, parseStatus, readStatus, readDiff, readBranches, isRepository, GitError, EMPTY_STATUS } from './git.js';
 export type { Git, GitOptions, Change, Status } from './git.js';
-export { GitDiff, classify, scrollDiff, DIFF_COMPONENTS } from './diff.js';
+export { GitDiff, classify, pairsOf, trimTrailing, scrollDiff, DIFF_MODE, DIFF_COMPONENTS } from './diff.js';
+export type { DiffMode, DiffCell, DiffPair } from './diff.js';
 export { GitChanges, codeOf, toneOf, summarize, GIT_ROOT, STATUS_PATH, SELECTED_PATH } from './changes.js';
 export { gitCommands, refresh } from './commands.js';
 export { GIT_SOURCE, decorationsOf } from './decorate.js';
@@ -46,11 +48,17 @@ export interface GitExtensionOptions {
   git?: Git;
   /** Open the panel as soon as it loads. On by default. */
   reveal?: boolean;
+  /** How diffs open. Unified unless the workspace remembered otherwise. */
+  mode?: DiffMode;
 }
 
 export function registerGit(app: TextUIApp, options: GitExtensionOptions): Disposable {
   const git = options.git ?? createGit({ root: options.root });
   const bag = createBag();
+
+  // Seeded, not forced: a host that remembered a layout says so here, and
+  // anything that changes it afterwards - a command, a test - wins.
+  if (options.mode !== undefined) app.store.set(DIFF_MODE, options.mode);
 
   bag.add(app.components.registerMany([
     ...DIFF_COMPONENTS,
@@ -160,11 +168,18 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
  * `activate` rather than a default export, so a module that is also a library
  * - which this one is - does not have to choose between the two.
  */
-export function activate(app: TextUIApp, context: { root: string }): Disposable {
+export function activate(
+  app: TextUIApp,
+  context: { root: string; workspace?: { diff?: DiffMode } },
+): Disposable {
   // Quietly. textide loads this by itself in a repository, and a panel that
   // opens because of what a directory contains is an editor rearranging its
   // own screen without being asked. `ctrl+g` brings it out.
-  return registerGit(app, { root: context.root, reveal: false });
+  return registerGit(app, {
+    root: context.root,
+    reveal: false,
+    ...(context.workspace?.diff !== undefined ? { mode: context.workspace.diff } : {}),
+  });
 }
 
 export { safeStatus as readSafeStatus };

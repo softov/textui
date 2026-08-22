@@ -5,6 +5,7 @@ import { readBranches, type Git, type Status } from './git.js';
 import { safeStatus } from './provider.js';
 import { diffUri } from './provider.js';
 import { SELECTED_PATH, STATUS_PATH, STATUS_SEGMENTS, summarize } from './changes.js';
+import { DIFF_MODE } from './diff.js';
 
 /**
  * What git can be asked to do.
@@ -80,6 +81,28 @@ export function gitCommands(app: TextUIApp, options: CommandOptions): CommandDef
       run: async (_args: Record<string, unknown>, ctx: CommandContext) => {
         ctx.store.set('$/ui/aside/visible', true);
         await refresh(app, git);
+      },
+    },
+    {
+      /*
+       * How a diff is laid out, which is a preference and not an argument to
+       * one command: it is stored, so every diff on screen changes together
+       * and the next one opens the way the last one was left.
+       */
+      id: 'git.diffMode',
+      title: 'Diff Layout',
+      category: 'Git',
+      slots: ['palette'],
+      args: [{
+        name: 'mode',
+        type: 'string' as const,
+        required: true,
+        description: 'How to lay a diff out',
+        choices: () => ['unified', 'split'],
+      }],
+      run: (args: Record<string, unknown>, ctx: CommandContext) => {
+        const mode = args.mode === 'split' ? 'split' : 'unified';
+        ctx.store.set(DIFF_MODE, mode);
       },
     },
     {

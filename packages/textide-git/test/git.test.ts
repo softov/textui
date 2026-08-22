@@ -9,7 +9,8 @@ import { decorationsPath, lineMarksFor, registerBuiltins } from '@textui/core';
 import { registerDocuments } from '@textui/documents';
 import {
   classify, codeOf, createGit, decorationsOf, diffPath, diffUri, parseStatus, readDiff,
-  readStatus, registerGit, summarize, marksOf, GIT_SOURCE, STATUS_PATH, SELECTED_PATH,
+  readStatus, registerGit, summarize, marksOf, pairsOf,
+  DIFF_MODE, GIT_SOURCE, STATUS_PATH, SELECTED_PATH,
 } from '../src/index.js';
 import type { Change, Status } from '../src/index.js';
 
@@ -431,6 +432,77 @@ describe('marks in the gutter', () => {
     await quiet();
     expect(lineMarksFor(t.app.store, uri)).toEqual({});
     await git('checkout', '--', 'tracked.txt');
+    await t.unmount();
+  });
+});
+
+/**
+ * A diff, both ways.
+ *
+ * Unified is what git prints and reads well in a narrow pane. Split is what
+ * you want when lines *changed* rather than arrived, because the two versions
+ * of a line end up on the same row.
+ */
+describe('two ways to read a diff', () => {
+  async function mounted() {
+    const t = await renderApp({
+      width: 100, height: 20, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => { registerBuiltins(app); registerDocuments(app); },
+    });
+    const quiet = async (): Promise<void> => {
+      for (let i = 0; i < 10; i++) { await t.settle(); t.advance(50); t.flush(); }
+    };
+    await quiet();
+    return { t, quiet };
+  }
+
+  const lines = (s: string): string[] => s.split('\n');
+
+  it('pairs a removal with the addition that replaced it', () => {
+    const pairs = pairsOf(lines('@@ -1,2 +1,2 @@\n-old one\n-old two\n+new one\n+new two\n'));
+    expect(pairs[0]?.full?.kind).toBe('hunk');
+    expect(pairs[1]).toEqual({
+      left: { text: '-old one', kind: 'remove' },
+      right: { text: '+new one', kind: 'add' },
+    });
+    expect(pairs[2]?.right).toEqual({ text: '+new two', kind: 'add' });
+  });
+
+  it('leaves a gap opposite a line that only went, or only arrived', () => {
+    const gone = pairsOf(lines('-only\n'));
+    expect(gone[0]).toEqual({ left: { text: '-only', kind: 'remove' }, right: null });
+
+    const came = pairsOf(lines('+only\n'));
+    expect(came[0]).toEqual({ left: null, right: { text: '+only', kind: 'add' } });
+  });
+
+  it('puts context on both sides, because it is on both sides', () => {
+    const pairs = pairsOf([' same']);
+    expect(pairs[0]?.left).toEqual({ text: ' same', kind: 'context' });
+    expect(pairs[0]?.right).toEqual({ text: ' same', kind: 'context' });
+  });
+
+  it('pairs the runs even when the removal came after the addition it replaces', () => {
+    // git prints removals first within a hunk, but a diff assembled elsewhere
+    // may not - and a run that starts with additions still has to pair up.
+    const pairs = pairsOf(lines('+new\n-old\n'));
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0]).toEqual({
+      left: { text: '-old', kind: 'remove' },
+      right: { text: '+new', kind: 'add' },
+    });
+  });
+
+  it('switches every diff on screen at once', async () => {
+    const { t, quiet } = await mounted();
+    const bag = registerGit(t.app, { root: dir });
+    await quiet();
+
+    await t.app.execute('git.diffMode', { mode: 'split' });
+    await quiet();
+    expect(t.app.store.get(DIFF_MODE)).toBe('split');
+
+    bag.dispose();
     await t.unmount();
   });
 });

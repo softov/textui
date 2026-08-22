@@ -1,7 +1,8 @@
 ---
 title: Surfaces, shells and resources
 parent: Components
-nav_order: 5
+nav_order: 8
+has_children: true
 ---
 
 # Surfaces, shells and resources

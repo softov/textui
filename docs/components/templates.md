@@ -1,7 +1,7 @@
 ---
 title: Templates
 parent: Components
-nav_order: 8
+nav_order: 11
 ---
 
 # Templates

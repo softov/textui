@@ -1,7 +1,8 @@
 ---
 title: Display and data
 parent: Components
-nav_order: 2
+nav_order: 5
+has_children: true
 ---
 
 # Display and data

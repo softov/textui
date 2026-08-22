@@ -15,7 +15,7 @@
     "lint:fix": "eslint . --fix",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo playground/.dev examples/*/.dev packages/textide/.dev",
     "docs:props": "node scripts/docs/extract-props.mjs && node scripts/docs/gen-components.mjs",
-    "docs:check": "node scripts/docs/extract-props.mjs && node scripts/docs/gen-components.mjs --check && node scripts/docs/check-links.mjs",
+    "docs:check": "node scripts/docs/extract-props.mjs && node scripts/docs/gen-components.mjs --check && node scripts/docs/check-links.mjs && node scripts/check-docs.mjs",
     "docs:site": "scripts/docs-site.sh",
     "docs:serve": "scripts/docs-site.sh serve"
   },

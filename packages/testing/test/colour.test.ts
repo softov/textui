@@ -440,3 +440,66 @@ describe('the accent family', () => {
     });
   }
 });
+
+/**
+ * A focused button, where the cell's single background is the whole problem.
+ *
+ * Fill the box the ordinary way and the tone lands on the border glyphs too,
+ * rounded corners included, and the button reads as a coloured block. Fill
+ * only the inside and the border cell keeps the backdrop, so a one-cell gap
+ * runs between the frame and the fill. `SLAB_BORDER` is the way out: the ring
+ * is drawn in block elements whose foreground is the tone, so it *is* the fill
+ * at its own edge.
+ */
+describe('a focused button', () => {
+  const buttons = () => h('box', { padding: 1, direction: 'row', gap: 2 },
+    h('Button', { label: 'Dialog', autoFocus: true }),
+    h('Button', { label: 'Palette' }));
+
+  /** Where a button's frame and its middle row sit. */
+  function frame(t: Harness, name: string) {
+    const rect = t.getByRole('button', { name }).rect;
+    if (!rect) throw new Error(`${name} has no rect`);
+    return { ...rect, mid: rect.y + 1 };
+  }
+
+  it('meets its own fill with no gap between', async () => {
+    const t = await render(buttons(), { width: 40, height: 6 });
+    await t.settle();
+
+    const b = frame(t, 'Dialog');
+    const buffer = t.app.buffer();
+
+    // Every glyph in the ring colours the half of its cell that faces inward.
+    expect(buffer.get(b.x, b.mid)?.char).toBe('▐');
+    expect(buffer.get(b.x + b.width - 1, b.mid)?.char).toBe('▌');
+    expect(buffer.get(b.x, b.y)?.char).toBe('▗');
+    expect(buffer.get(b.x, b.y + b.height - 1)?.char).toBe('▝');
+
+    // The ring's foreground is the tone the cell beside it is filled with.
+    // Were these to differ, that is the gap, back again.
+    expect(hex(buffer.get(b.x, b.mid)?.fg)).toBe(hex(buffer.get(b.x + 1, b.mid)?.bg));
+
+    // The ring is foreground only, so the rows it sits on keep the backdrop
+    // and the button does not read as a solid three-row block.
+    expect(hex(buffer.get(b.x, b.y)?.bg)).toBe(hex(backdrop(t)));
+    await t.unmount();
+  });
+
+  it('takes a line border again when it loses focus', async () => {
+    const t = await render(buttons(), { width: 40, height: 6 });
+    await t.settle();
+
+    const before = JSON.stringify([frame(t, 'Dialog'), frame(t, 'Palette')]);
+    t.tab();
+    await t.settle();
+
+    // The frame changes glyph, never size: a toolbar must not reflow under a
+    // tab, or every button after the focused one moves as focus passes it.
+    expect(JSON.stringify([frame(t, 'Dialog'), frame(t, 'Palette')])).toBe(before);
+
+    const d = frame(t, 'Dialog');
+    expect(['┌', '╭', '+']).toContain(t.app.buffer().get(d.x, d.y)?.char);
+    await t.unmount();
+  });
+});

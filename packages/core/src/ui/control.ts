@@ -1,7 +1,7 @@
 import type { ComponentDefinition } from '../types/component-registry.js';
 import type { BoxProps } from '../jsx/intrinsics.js';
 import type { KeyEvent } from '../types/input.js';
-import type { SemanticVariant, StyleColor, SurfaceVariant } from '../types/style.js';
+import type { BorderStyle, SemanticVariant, StyleColor, SurfaceVariant } from '../types/style.js';
 import { h, defineComponent } from '../jsx/factory.js';
 import { useFocus, useInput, useMeasure, useState, useTheme } from '../runtime/hooks.js';
 import { graphemes, sliceColumns, stringWidth } from '../util/text.js';
@@ -21,7 +21,6 @@ const BLANK_BORDER = {
   bottomRight: ' ', bottom: ' ', bottomLeft: ' ', left: ' ',
   cross: ' ', teeTop: ' ', teeBottom: ' ', teeLeft: ' ', teeRight: ' ',
 };
-
 
 export interface ButtonProps extends BoxProps {
   label: string;
@@ -76,39 +75,77 @@ export const Button = defineComponent<ButtonProps>('Button', (props) => {
     ...(focus.focused ? {} : { chars: BLANK_BORDER }),
   };
 
+  // The tone fills the inside of the frame, not the frame itself. A cell
+  // carries one background, so a background on the button's own box lands on
+  // the border glyphs too - rounded corners included - and the button reads as
+  // a coloured block rather than a filled button. Hanging the fill on an inner
+  // box leaves the ring on whatever is behind it. The wrapper is there whether
+  // or not the button is filled, so focusing one does not reshape its tree.
+  const inset = variant !== 'solid' && variant !== 'ghost' && variant !== 'link';
+
+  // Filled, the frame becomes the fill's own edge.
+  //
+  // A cell holds one background, so filling the box the ordinary way colours
+  // its border glyphs too and the button reads as a block; filling only the
+  // inside leaves the border cell on the backdrop, and a gap runs between the
+  // frame and the fill. `half` is drawn from block elements whose coloured
+  // half faces inward, so the ring meets the inside with nothing between. It
+  // measures the same as the line border it replaces - one cell a side - so
+  // focus changes how a button looks without changing its size.
+  //
+  // A theme that asked for no border, or for ascii, is left alone: both are
+  // deliberate looks, and `half` degrades to ascii anyway on a terminal that
+  // cannot draw block elements.
+  const filledBorder: BorderStyle =
+    theme.border === 'none' || theme.border === 'ascii' ? theme.border : 'half';
+
   const style =
     variant === 'solid'
       ? { bg: color, fg: onColor, border: solidBorder }
       : variant === 'ghost' || variant === 'link'
         ? (filled ? { bg: color, fg: onColor } : { fg: color })
-        : {
-            border: { style: theme.border, color },
-            ...(filled ? { bg: color, fg: onColor } : { fg: color }),
-          };
+        : { border: { style: filled ? filledBorder : theme.border, color }, fg: color };
 
   const padding = variant === 'ghost' || variant === 'link' ? 0 : ([0, 1] as [number, number]);
+
+  const content = [
+    icon ? h('text', { content: icon }) : null,
+    h('text', { content: label }),
+    // On a filled button the hint has to sit on the tone too; `muted` against
+    // a solid colour is the one combination that is never readable.
+    hint ? h('text', { content: hint, fg: filled ? onColor : 'muted', dim: !filled }) : null,
+  ];
 
   return h('box', {
     id: focus.id,
     role: 'button',
     label,
     direction: 'row',
-    gap: 1,
+    // The inner box owns the run of the label - gap, padding and centring -
+    // whenever there is one, so the two paths measure the same.
+    gap: inset ? 0 : 1,
     // Centred, so a button stretched by the row it sits in keeps its label on
     // the same line as its neighbours' labels.
     align: 'center',
-    padding,
-    bold: focus.focused,
+    padding: inset ? 0 : padding,
+    bold: inset ? undefined : focus.focused,
     underline: focus.focused && (variant === 'ghost' || variant === 'link'),
     onClick: () => { if (!disabled) onPress?.(); },
     ...style,
     ...rest,
   },
-    icon ? h('text', { content: icon }) : null,
-    h('text', { content: label }),
-    // On a filled button the hint has to sit on the tone too; `muted` against
-    // a solid colour is the one combination that is never readable.
-    hint ? h('text', { content: hint, fg: filled ? onColor : 'muted', dim: !filled }) : null,
+    inset
+      ? h('box', {
+          // Grow, so the fill reaches the frame on a button the row stretched.
+          flex: 1,
+          direction: 'row',
+          gap: 1,
+          align: 'center',
+          padding,
+          bold: focus.focused,
+          ...(filled ? { bg: color, fg: onColor } : {}),
+        }, ...content)
+      : content,
   );
 });
 

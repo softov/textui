@@ -267,6 +267,36 @@ describe('the command palette', () => {
     await t.unmount();
   });
 
+  /**
+   * The key the footer has been advertising as `> sub-items`.
+   *
+   * It was a case in the palette's own handler, and that handler is global -
+   * so it ran only if the focused field declined the key first, and a
+   * single-line `TextInput` never declined `right`. The key did nothing while
+   * the hint row said it did something, which is the worst of the two.
+   */
+  it.each([
+    { width: 96, height: 24 },
+    { width: 130, height: 40 },
+  ])('drills into a command with right at $width x $height', async (size) => {
+    const t = await open(size);
+    const quiet = async (): Promise<void> => {
+      for (let i = 0; i < 6; i++) { await t.settle(); t.advance(50); t.flush(); }
+    };
+    t.press('ctrl+p');
+    await quiet();
+    t.type('Theme');
+    await quiet();
+
+    t.press('right');
+    await quiet();
+    expect(t.hasText('workbench'), 'the themes, not the command list').toBe(true);
+
+    t.press('escape');
+    await quiet();
+    await t.unmount();
+  });
+
   it('sends a command that needs an answer to the palette', async () => {
     const t = await open(SIZES[0]!);
     t.press('alt+v');

@@ -420,6 +420,18 @@ export interface TextInputProps extends BoxProps {
    * and the key that would do it cannot be written.
    */
   focusId?: string;
+  /**
+   * The caret tried to leave the field.
+   *
+   * A single-line input answers `left` and `right` itself right up to the
+   * ends, so a caller that wants those keys past the ends cannot have them
+   * from a key handler - the field takes the key and reports nothing. This is
+   * how it reports: the palette drills into a command's choices on `right`,
+   * and the path picker goes up a folder on `left`. `TextArea` has had this
+   * from the start; the two controls disagreeing is what left both of those
+   * keys silently doing nothing.
+   */
+  onEdge?(edge: 'start' | 'end'): void;
 }
 
 /**
@@ -432,7 +444,7 @@ export interface TextInputProps extends BoxProps {
 export const TextInput = defineComponent<TextInputProps>('TextInput', (props) => {
   const theme = useTheme();
   const {
-    value, onChange, onSubmit, placeholder, label, hideLabel, mask, maxLength,
+    value, onChange, onSubmit, onEdge, placeholder, label, hideLabel, mask, maxLength,
     autoFocus, search, disabled, focusId, ...rest
   } = props;
   const inlineLabel = label && !search && !hideLabel ? label : undefined;
@@ -485,8 +497,17 @@ export const TextInput = defineComponent<TextInputProps>('TextInput', (props) =>
       if (disabled) return false;
 
       switch (event.name) {
-        case 'left': move(position - 1); return true;
-        case 'right': move(position + 1); return true;
+        // Off either end is the caller's key, the same way it is in a
+        // `TextArea`. Reported rather than passed on, because the field is
+        // focused and a handler beside it would never see the event.
+        case 'left':
+          if (position === 0) { onEdge?.('start'); return true; }
+          move(position - 1);
+          return true;
+        case 'right':
+          if (position === chars.length) { onEdge?.('end'); return true; }
+          move(position + 1);
+          return true;
         case 'home': move(0); return true;
         case 'end': move(chars.length); return true;
         case 'backspace':

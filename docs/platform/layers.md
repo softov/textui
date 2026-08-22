@@ -39,3 +39,43 @@ it gets the dim attribute instead.
 A component that opens a layer should not also consume the key that closes it.
 `Dialog` consumes escape only when it was given an `onClose`; otherwise it lets
 the layer manager dismiss it.
+
+## Asking a question
+
+Three helpers open a layer and return a promise, so the common cases do not
+need the block above:
+
+<!-- docs:nocheck -->
+```ts
+const ok    = await confirm(app.layers, { message: 'Discard changes?', tone: 'danger' });
+const name  = await prompt(app.layers, { title: 'Rename', initialValue: 'a.ts' });
+const file  = await pick(app, { start: workspace.rootUri, wants: 'file' });
+```
+
+`pick` walks the **resource registry**, never the filesystem, so it works on
+whatever is mounted rather than on `file:` alone - the first thing anyone wants
+to pick off a remote is a file. `wants: 'directory'` adds a "Use this folder"
+row, because when the answer is the place you are standing there is no child to
+press enter on. Typing filters the list; `left` at the start of the filter goes
+up a level; enter on a folder goes into it.
+
+## A focused field and the keys past its ends
+
+A focused node sees a key before anything else, and a `TextInput` answers
+`left` and `right` itself. So a handler beside the field - even a global one -
+never sees those keys, and a feature built on one silently does nothing.
+
+`onEdge` is how the field hands them back:
+
+<!-- docs:nocheck -->
+```ts
+h(TextInput, {
+  value: query,
+  onChange: setQuery,
+  // Only fires when the caret is already at that end of the value.
+  onEdge: (edge) => { if (edge === 'start') goUp(); },
+});
+```
+
+The command palette drills into a command's choices this way, and the path
+picker goes up a folder. `TextArea` has the same prop, for the same reason.

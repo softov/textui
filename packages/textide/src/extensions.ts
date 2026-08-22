@@ -1,9 +1,9 @@
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { Disposable, Manifest, ManifestSource, TextUIApp } from '@textui/core';
-import { confirm, createBag, notify, prompt } from '@textui/core';
+import { confirm, createBag, notify, pick, prompt } from '@textui/core';
 import type { Workspace } from './workspace.js';
 
 /**
@@ -165,6 +165,21 @@ export function resolveSpecifier(specifier: string, root: string): string {
     // loader and let Node say so, rather than inventing a path that is wrong.
     return specifier;
   }
+}
+
+/**
+ * The inverse: a URI the picker handed back, as something a config can hold.
+ *
+ * `.textide.json` travels with the project, so an absolute path in it is a
+ * file that resolves on one machine. A path under the workspace becomes
+ * `./relative`, which `resolveSpecifier` reads back the same way; anything
+ * outside stays absolute, because there is no honest relative form for it and
+ * a `../../..` chain out of the project is worse than saying where the file is.
+ */
+export function relativeSpecifier(uri: string, rootUri: string): string {
+  const root = rootUri.endsWith('/') ? rootUri : `${rootUri}/`;
+  if (uri.startsWith(root)) return `./${decodeURIComponent(uri.slice(root.length))}`;
+  return fileURLToPath(uri);
 }
 
 /**
@@ -370,6 +385,43 @@ export async function loadExtensions(
 
       const id = await handle.install(specifier);
       if (id === null) return;  // `loadOne` already said what went wrong.
+      const name = records.get(id)?.source.displayName ?? id;
+      notify(ctx.app, { tone: 'success', message: `${name} loaded, and remembered.` });
+    },
+  }));
+
+  /*
+   * The other way to answer the same question.
+   *
+   * A specifier is either a package name or a path into the workspace, and
+   * only one of those is a thing you can type from memory. Typing a path blind
+   * is the worst way to give one - the point of picking is that you did not
+   * already know the answer - so the path case gets a picker and the package
+   * case keeps the field.
+   *
+   * Two rows rather than one command that asks which: each is one keystroke
+   * from the palette, and neither makes you answer a question about how you
+   * are going to answer the question.
+   */
+  bag.add(app.commands.register({
+    id: 'extensions.installFile',
+    title: 'Add Extension from File',
+    category: 'Extensions',
+    slots: ['palette'],
+    run: async (_args, ctx) => {
+      const chosen = await pick(ctx.app, {
+        start: workspace.rootUri,
+        wants: 'file',
+        title: 'add extension',
+      });
+      if (chosen === null) return;
+
+      // Stored as a path relative to the workspace, not as the `file://` URI
+      // the picker deals in: `.textide.json` travels with the project, and an
+      // absolute path in it is a file that resolves on one machine.
+      const specifier = relativeSpecifier(chosen, workspace.rootUri);
+      const id = await handle.install(specifier);
+      if (id === null) return;
       const name = records.get(id)?.source.displayName ?? id;
       notify(ctx.app, { tone: 'success', message: `${name} loaded, and remembered.` });
     },

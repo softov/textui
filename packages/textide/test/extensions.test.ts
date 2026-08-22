@@ -3,7 +3,9 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
-import { loadExtensions, loadWorkspace, registerTextide, resolveSpecifier } from '../src/index.js';
+import {
+  loadExtensions, loadWorkspace, registerTextide, relativeSpecifier, resolveSpecifier,
+} from '../src/index.js';
 import type { ExtensionModule, LoadedExtension } from '../src/index.js';
 import { ASKED_PATH, EXTENSIONS_PATH } from '../src/index.js';
 
@@ -115,7 +117,8 @@ describe('loading', () => {
 
     expect(extensions.list()).toEqual([]);
     const added = t.app.commands.list().map((c) => c.id).filter((id) => !before.includes(id));
-    expect(added.sort()).toEqual(['extensions.disable', 'extensions.install', 'extensions.remove']);
+    expect(added.sort()).toEqual(['extensions.disable', 'extensions.install', 'extensions.installFile',
+      'extensions.remove']);
 
     extensions.dispose();
     expect(t.app.commands.list().map((c) => c.id).sort()).toEqual([...before].sort());
@@ -468,5 +471,50 @@ describe('adding an extension while it is running', () => {
     expect(extensions.asked()).toEqual([]);
     extensions.dispose();
     await t.unmount();
+  });
+});
+
+/**
+ * What the picker hands back, as something a config file can hold.
+ *
+ * `.textide.json` travels with the project. An absolute path written into it
+ * is a file that resolves on one machine and nowhere else, so the round trip
+ * that matters is picker URI -> config entry -> `import()` specifier.
+ */
+describe('relativeSpecifier', () => {
+  const root = 'file:///work/project';
+
+  it.each([
+    ['file:///work/project/tools/ext.js', './tools/ext.js'],
+    ['file:///work/project/ext.js', './ext.js'],
+    ['file:///work/project/a/b/c.mjs', './a/b/c.mjs'],
+  ])('%s under the workspace becomes %s', (uri, expected) => {
+    expect(relativeSpecifier(uri, root)).toBe(expected);
+  });
+
+  it('reads back to the file it came from', () => {
+    const uri = 'file:///work/project/tools/ext.js';
+    expect(resolveSpecifier(relativeSpecifier(uri, root), '/work/project')).toBe(uri);
+  });
+
+  it('decodes what the URI escaped', () => {
+    // A space is `%20` in a URI and a space on disk. Writing the escape into
+    // the config would ask `import()` for a file whose name has a percent in
+    // it, which is a different file and usually no file at all.
+    expect(relativeSpecifier('file:///work/project/my%20tools/ext.js', root))
+      .toBe('./my tools/ext.js');
+  });
+
+  it('leaves a file outside the workspace absolute', () => {
+    // There is no honest relative form, and a `../../..` chain out of the
+    // project is worse than saying plainly where the file is.
+    expect(relativeSpecifier('file:///elsewhere/ext.js', root)).toBe('/elsewhere/ext.js');
+  });
+
+  it('does not mistake a sibling directory for a child', () => {
+    // `/work/project-two` starts with `/work/project`, and a prefix test
+    // without the separator would call it `./-two/ext.js`.
+    expect(relativeSpecifier('file:///work/project-two/ext.js', root))
+      .toBe('/work/project-two/ext.js');
   });
 });

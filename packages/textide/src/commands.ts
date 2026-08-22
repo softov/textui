@@ -185,6 +185,69 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       },
     },
     {
+      /*
+       * What can be done to the thing in front of you.
+       *
+       * The registry already knows: `fs.rename` and `fs.delete` arrive with
+       * the filesystem, `git.stage` and `git.diff` with git, and an extension
+       * that registers an action for a kind appears here without this file
+       * hearing about it. What was missing was a way to ask.
+       *
+       * Which thing: the file the keyboard is in, if it is in a pane, and the
+       * row the tree is standing on otherwise - because "context" from a file
+       * list means the row, and from an editor means what you are editing.
+       */
+      id: 'file.actions',
+      icon: Icon.layout,
+      title: 'Actions',
+      category: 'File',
+      slots: ['palette'],
+      run: async (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const inPane = (ctx.store.get<string>('$/focus/scope' as BindingPath) ?? '')
+          .startsWith('pane.');
+        const uri = inPane
+          ? ctx.store.get<string>(EDITOR_URI) ?? ctx.store.get<string>(`${ACTIVE_PATH}/uri`)
+          : ctx.store.get<string>(`${ACTIVE_PATH}/uri`) ?? ctx.store.get<string>(EDITOR_URI);
+        if (!uri) return;
+
+        const resource = await ctx.app.resources.stat(uri);
+        if (!resource) return;
+
+        const actions = ctx.app.resources.actionsFor(resource.kind, 'context');
+        if (actions.length === 0) {
+          notify(ctx.app, { message: 'Nothing to do with this one.' });
+          return;
+        }
+
+        const handle = ctx.app.layers.open({
+          id: 'resource.actions',
+          layer: 'floating',
+          position: { kind: 'center' },
+          trapFocus: true,
+          dismissOnEscape: true,
+          dismissOnOutsideClick: true,
+          // A panel, not a bare menu: a floating layer paints over what is
+          // beneath it only where something fills the cells, and a transparent
+          // one reads as the tree with words on top of it.
+          node: {
+            component: 'box',
+            bg: 'overlay',
+            fg: 'text',
+            border: ctx.app.theme.border,
+            width: 36,
+            ...(ctx.app.theme.border === 'none' ? { padding: { left: 1, right: 1 } } : {}),
+            children: {
+              component: 'ResourceActions',
+              resource,
+              slot: 'context',
+              autoFocus: true,
+              onRun: { handler: () => { handle.dispose(); } },
+            },
+          },
+        });
+      },
+    },
+    {
       id: 'file.revert',
       icon: Icon.revert,
       title: 'Revert',

@@ -1,11 +1,11 @@
 import type { BoxProps } from '@textui/core';
 import type {
-  ComponentDefinition, RenderOutput, ResolvedTheme, StyleColor, SyntaxToken,
+  ComponentDefinition, LineMark, RenderOutput, ResolvedTheme, StyleColor, SyntaxToken,
 } from '@textui/core';
 import {
   h, chorded, defineComponent, ScrollThumb, sliceColumns, stringWidth, useClipboard,
-  useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, usePanelState,
-  usePanelStatus, useState, useTheme,
+  useEffect, useFocus, useHighlight, useInput, useLineMarks, useMeasure, useMemo,
+  usePanelState, usePanelStatus, useState, useTheme,
   viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
@@ -164,6 +164,20 @@ function reindent(lines: string[], from: number, to: number, unit: string, out: 
 
 /** One coloured run inside a row. The unit both syntax and selection paint. */
 interface Piece { text: string; fg?: StyleColor; bg?: StyleColor }
+
+/** What a marked line looks like. ASCII, so every terminal draws one cell. */
+const MARK_GLYPH: Record<LineMark, string> = {
+  added: '+',
+  changed: '~',
+  // The line is gone, so the mark sits on the one below the gap it left.
+  removed: '_',
+};
+
+const MARK_TONE: Record<LineMark, StyleColor> = {
+  added: 'success',
+  changed: 'warning',
+  removed: 'danger',
+};
 
 /**
  * A row as coloured runs.
@@ -512,6 +526,18 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
 
   // --------------------------------------------------------------- layout
 
+  /*
+   * What anything has to say about these lines: git, so far.
+   *
+   * The editor draws a column of marks and has never heard of git - the same
+   * bargain the explorer makes with the tree. The column only exists when
+   * something has actually said something, so a file nobody has an opinion
+   * about is exactly as wide as it was.
+   */
+  const marks = useLineMarks(uri);
+  const marked = Object.keys(marks).length > 0;
+  const markWidth = marked ? 1 : 0;
+
   const gutterWidth = lineNumbers ? String(lines.length).length + 1 : 0;
   // This component always renders into a `flex: 1` box, so it is layout-sized
   // whether or not the caller said so - and a caller usually cannot: the node
@@ -545,7 +571,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   const bars = scrollbar && lines.length > rows;
   const textWidth = Math.max(
     1,
-    (measured.width > 0 ? measured.width : 80) - gutterWidth - (bars ? 1 : 0),
+    (measured.width > 0 ? measured.width : 80) - gutterWidth - markWidth - (bars ? 1 : 0),
   );
   const longest = useMemo(
     () => lines.reduce((max, line) => Math.max(max, stringWidth(line)), 0),
@@ -659,7 +685,10 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     if (key === 'paste' && event.char) { insert(event.char); return true; }
     if (key === 'backspace') { backspace(); return true; }
     if (key === 'delete') { del(); return true; }
-    if (key === 'enter') { insert('\n'); return true; }
+    // Not a chord: `alt+enter` is an application asking for something over the
+    // top of the editor, and an editor that reads `enter` alone puts a newline
+    // in the file and swallows the ask.
+    if (key === 'enter' && !chorded(event)) { insert('\n'); return true; }
     /*
      * Tab is a tab.
      *
@@ -727,6 +756,18 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
         })
       : null;
 
+    // A glyph as well as a colour: a 16-colour session and a screenshot both
+    // lose the colour and neither loses the character. One cell, and the three
+    // are ASCII, because a mark that measures two would slide every line in
+    // the file sideways on a terminal that disagrees about its width.
+    const mark = marked
+      ? h('text', {
+          content: MARK_GLYPH[marks[lineNumber] as LineMark] ?? ' ',
+          fg: MARK_TONE[marks[lineNumber] as LineMark] ?? 'border',
+          width: 1,
+        })
+      : null;
+
     let pieces = piecesOf(line, tokens[lineNumber], theme.syntax);
 
     /*
@@ -760,6 +801,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
       height: 1,
       ...(onCaretLine ? { bg: 'surfaceAlt' } : {}),
     },
+      mark,
       gutter,
       ...spansOf(pieces, visibleLeft, textWidth));
   });

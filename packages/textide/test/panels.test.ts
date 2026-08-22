@@ -159,3 +159,46 @@ describe('how a file opens', () => {
     await t.unmount();
   });
 });
+
+/**
+ * What can be done to this one.
+ *
+ * The registry already knows - the filesystem contributes rename and delete,
+ * git contributes stage and diff, an extension contributes whatever it likes -
+ * so the only thing that was missing was a way to ask.
+ */
+describe('the actions on a file', () => {
+  it('opens on the row the tree is standing on', async () => {
+    const { t, quiet, uri } = await open();
+    t.app.store.set(EDITOR_URI, uri('long.txt'));
+    await quiet();
+
+    t.press('shift+f10');
+    await quiet();
+    expect(t.hasText('Rename')).toBe(true);
+    expect(t.hasText('Delete')).toBe(true);
+
+    t.press('escape');
+    await quiet();
+    expect(t.app.layers.entries('floating')).toHaveLength(0);
+    await t.unmount();
+  });
+
+  it('opens on the same chord from inside the editor', async () => {
+    const { t, quiet, uri } = await open();
+    t.app.store.set(EDITOR_URI, uri('long.txt'));
+    await quiet();
+    await t.app.execute('file.edit');
+    await quiet();
+
+    // `alt+enter` has to reach the application: an editor that reads `enter`
+    // alone puts a newline in the file and swallows the ask.
+    t.press('alt+enter');
+    await quiet();
+    expect(t.hasText('Rename')).toBe(true);
+    expect(t.store.get<{ state?: { line?: number } }>(
+      panelViewPath('pane.main', uri('long.txt')),
+    )?.state?.line ?? 0, 'and typed nothing').toBe(0);
+    await t.unmount();
+  });
+});

@@ -124,6 +124,14 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+k', 'app.palette'],
     ['ctrl+s', 'file.save'],
     ['ctrl+w', 'file.close'],
+    /*
+     * What can be done to this file. Two keys because neither is universal:
+     * the Menu key on a PC keyboard sends nothing a terminal agrees on,
+     * `shift+f10` is what stands in for it, and `alt+enter` is the chord
+     * everything else uses for "tell me about this one".
+     */
+    ['shift+f10', 'file.actions'],
+    ['alt+enter', 'file.actions'],
     ['ctrl+n', 'fs.newFile'],
     // The editor takes these while it has focus, because only it can put the
     // caret back. These are the same step from anywhere else.

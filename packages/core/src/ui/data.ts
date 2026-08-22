@@ -353,6 +353,16 @@ export interface TreeProps extends BoxProps {
   onToggle?(id: string, expanded: boolean): void;
   visibleRows?: number;
   indent?: number;
+  /**
+   * What the expand mark looks like, when a chevron is not what it means.
+   *
+   * A file tree's twisty is not only "there is more here" - it is also the one
+   * thing on the row that says this is a folder, because a folder has no size
+   * beside it and nothing else distinguishes it. A caller that knows its rows
+   * are folders can say so; everything else gets the theme's chevrons.
+   */
+  twistyOpen?: string;
+  twistyClosed?: string;
   /** Claim focus on mount, if nothing in this scope already has it. */
   autoFocus?: boolean;
 }
@@ -378,7 +388,7 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
   const theme = useTheme();
   const {
     nodes, selectedId, expandedIds, onSelect, onActivate, onToggle,
-    visibleRows, indent = 2, autoFocus, ...rest
+    visibleRows, indent = 2, twistyOpen, twistyClosed, autoFocus, ...rest
   } = props;
 
   const focus = useFocus({ autoFocus });
@@ -455,7 +465,8 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
     ...window.map((row) => {
       const active = row.node.id === currentId;
       const twisty = row.expandable
-        ? (row.expanded ? theme.glyphs.chevronDown : theme.glyphs.chevronRight)
+        ? (row.expanded ? (twistyOpen ?? theme.glyphs.chevronDown)
+          : (twistyClosed ?? theme.glyphs.chevronRight))
         : ' ';
 
       return h('box', {

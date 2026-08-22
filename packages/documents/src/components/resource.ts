@@ -228,6 +228,16 @@ export interface ResourceExplorerProps extends BoxProps {
   onSelect?(resource: Resource): void;
   selectedUri?: string;
   visibleRows?: number;
+  /**
+   * What a folder looks like, open and shut.
+   *
+   * The tree draws a chevron by default, which says whether a row is expanded
+   * and nothing about what kind of row it is. An application with its own icon
+   * vocabulary - textide has one - says which marks mean folder here, rather
+   * than this file growing an opinion about glyphs it cannot pick for every
+   * terminal.
+   */
+  folderIcons?: { folder: string; folderOpen: string };
   /** Claim focus on mount, so an application has somewhere to start. */
   autoFocus?: boolean;
 }
@@ -246,7 +256,9 @@ export interface ResourceExplorerProps extends BoxProps {
  */
 export const ResourceExplorer = defineComponent<ResourceExplorerProps>('ResourceExplorer', (props) => {
   const runtime = useRuntime();
-  const { root, onOpen, onSelect, selectedUri, visibleRows, autoFocus, ...rest } = props;
+  const {
+    root, onOpen, onSelect, selectedUri, visibleRows, folderIcons, autoFocus, ...rest
+  } = props;
   const app = runtime.app();
 
   const [children, setChildren] = useState<Record<string, Resource[]>>({});
@@ -302,6 +314,9 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
     selectedId: current ?? undefined,
     expandedIds: expanded,
     visibleRows,
+    ...(folderIcons
+      ? { twistyOpen: folderIcons.folderOpen, twistyClosed: folderIcons.folder }
+      : {}),
     onToggle: (id: string, isExpanded: boolean) => {
       setExpanded(isExpanded ? [...expanded, id] : expanded.filter((e) => e !== id));
       if (isExpanded) load(id);

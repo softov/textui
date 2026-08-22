@@ -30,6 +30,7 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('Explorer', () => {
     const runtime = useRuntime();
     const workspace = useStoreValue<Workspace>(WORKSPACE_PATH);
+    const Icon = iconsFor(useCapabilities().unicode);
 
     /*
      * Moving the highlight is not opening anything.
@@ -66,6 +67,9 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
         root={workspace?.rootUri ?? ''}
         onSelect={select}
         onOpen={open}
+        // Which marks mean folder is textide's vocabulary, not the explorer's:
+        // the tier a terminal can draw is known here and nowhere else.
+        folderIcons={{ folder: Icon.folder, folderOpen: Icon.folderOpen }}
         // Somewhere to start. An application that boots with nothing focused
         // sends the first arrow key to whatever happens to be first in the tab
         // order, which here is the menu bar.

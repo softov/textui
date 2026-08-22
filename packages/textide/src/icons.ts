@@ -40,8 +40,17 @@ export function mono(glyph: string): string {
 
 export const FULL_ICONS = {
   // --- files and the tree ------------------------------------------------
-  folder: '▸',
-  folderOpen: '▾',
+  //
+  // Not chevrons. In a file tree the expand mark is also the only thing on the
+  // row that says "folder" - a file has a size beside it and a folder has
+  // nothing - so an arrow spends the one cell that could carry both on the one
+  // meaning that is already obvious from the row moving.
+  //
+  // There is no folder glyph that is one cell wide and safe: the Unicode ones
+  // live outside the BMP and measure two. A box that has something in it and a
+  // box that has been opened is what fits.
+  folder: '⊞',
+  folderOpen: '⊟',
   file: '▤',
   markdown: '¶',
   code: '⌗',
@@ -58,7 +67,7 @@ export const FULL_ICONS = {
 
   // --- creating and destroying -------------------------------------------
   newFile: '+',
-  newFolder: '⊞',
+  newFolder: '⊕',
   rename: '✎',
   delete: '⌫',
 
@@ -113,6 +122,10 @@ export type IconSet = Record<IconName, string>;
  */
 export const BMP_ICONS: IconSet = {
   ...FULL_ICONS,
+  // The Linux console font is box drawing and blocks; the squared operators
+  // are not in it. A filled box and a hollow one say the same thing.
+  folder: '▪',
+  folderOpen: '▫',
   code: '#',
   data: '≡',
   save: '≡',
@@ -141,8 +154,8 @@ export const BMP_ICONS: IconSet = {
  * why `file` is a dash and not an ambitious `#`.
  */
 export const ASCII_ICONS: IconSet = {
-  folder: '>',
-  folderOpen: 'v',
+  folder: '+',
+  folderOpen: '-',
   file: '-',
   markdown: 'M',
   code: '#',

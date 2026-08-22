@@ -85,7 +85,20 @@ const Pane = defineComponent<PaneProps>('EditorPane', ({ uri, scopeId, primary }
   const runtime = useRuntime();
   const Icon = iconsFor(useCapabilities().unicode);
   const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
-  const scope = useFocusScope({ id: scopeId });
+  /*
+   * The scope takes the keyboard back when whatever had it goes away.
+   *
+   * Leaving edit mode unmounts the editor, and unregistering the focused
+   * control leaves focus null - so the viewer that replaced it drew fine and
+   * read no keys, and the markdown you had been scrolling a moment ago stopped
+   * scrolling. `autoFocus` on the scope fires as its first control arrives and
+   * only when *nothing at all* holds focus, which is the difference between
+   * this and stealing focus off the tree when a file is opened.
+   *
+   * Only the primary pane asks. Two panes both claiming an unclaimed keyboard
+   * is a race whose winner is whichever rendered first.
+   */
+  const scope = useFocusScope({ id: scopeId, autoFocus: primary === true });
   const focusedScope = useStoreValue<string | null>('$/focus/scope', null);
   const active = focusedScope === scope;
 

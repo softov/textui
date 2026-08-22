@@ -773,4 +773,73 @@ describe('what is actually in the tab order', () => {
     await t.unmount();
     await rm(scratch, { recursive: true, force: true });
   });
+
+  /**
+   * And keeps it there on the way back.
+   *
+   * Leaving edit mode unmounts the editor, and unregistering the focused
+   * control leaves focus null - so the viewer that replaced it drew perfectly
+   * and read no keys at all. A document you were scrolling a moment ago
+   * stopping dead reads as a broken viewer rather than as an unfocused one.
+   */
+  it('leaves focus in the pane when edit mode is left', async () => {
+    const scratch = await mkdtemp(join(tmpdir(), 'textide-leave-'));
+    await writeFile(
+      join(scratch, 'a.md'),
+      Array.from({ length: 60 }, (_, i) => `line ${i} of the document`).join('\n'),
+    );
+    const workspace = await loadWorkspace(scratch);
+    const t = await renderApp({
+      width: 100, height: 20, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    await quiet(t);
+    t.app.store.set('$/ui/editor/uri', `file://${join(scratch, 'a.md')}`);
+    await quiet(t);
+
+    t.app.execute('file.edit');
+    await quiet(t);
+    expect(t.store.get('$/focus/scope')).toBe('pane.main');
+
+    t.app.execute('file.edit');
+    await quiet(t);
+    expect(t.store.get('$/ui/editor/mode'), 'back to viewing').toBe('view');
+    expect(t.store.get('$/focus/scope'), 'and still in the pane').toBe('pane.main');
+
+    // Which is the whole point: the keys go somewhere.
+    const before = t.text();
+    for (let i = 0; i < 10; i++) t.press('down');
+    await quiet(t);
+    expect(t.text(), 'the document scrolls again').not.toBe(before);
+
+    await t.unmount();
+    await rm(scratch, { recursive: true, force: true });
+  });
+
+  /**
+   * The scope claims the keyboard only when nothing at all holds it, which is
+   * what separates taking focus back from taking it off the tree.
+   */
+  it('does not take focus off the tree when a file is opened', async () => {
+    const scratch = await mkdtemp(join(tmpdir(), 'textide-tree-'));
+    await writeFile(join(scratch, 'a.txt'), 'alpha\n');
+    await writeFile(join(scratch, 'b.md'), '# Title\n');
+    const workspace = await loadWorkspace(scratch);
+    const t = await renderApp({
+      width: 100, height: 20, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => registerTextide(app, { workspace }),
+    });
+    await quiet(t);
+
+    // Two files of different kinds, so the pane swaps one viewer component for
+    // another rather than only changing the URI it was given.
+    for (const name of ['a.txt', 'b.md']) {
+      t.app.store.set('$/ui/editor/uri', `file://${join(scratch, name)}`);
+      await quiet(t);
+      expect(t.store.get('$/focus/scope'), `still the tree after ${name}`).toBe('__global__');
+    }
+
+    await t.unmount();
+    await rm(scratch, { recursive: true, force: true });
+  });
 });

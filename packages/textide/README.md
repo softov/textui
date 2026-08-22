@@ -55,13 +55,12 @@ directory until it is configured is an editor nobody opens.
 | Chrome | Workbench shell, titlebar (workspace, file, unsaved marker), status bar |
 | Explorer | The filesystem through the resource registry - lazy, sorted, filtered |
 | Viewer | Whatever the registry says opens the selected kind |
+| Editing | Selection, cut, copy, paste, indent, undo - `ctrl+c` is copy only while something is selected, so quit is never lost |
 | Files | New file, new folder, rename, delete-with-confirmation, as commands |
 | Config | `.textide.json`, in the store like everything else |
 
 ## What is not, yet
 
-- **Selection and the clipboard.** `CodeEditor` has a cursor, edits, saves and
-  undo. It has no selection, so there is nothing to cut, copy or indent yet.
 - **Hot reload.** `pnpm dev` bundles from the workspace sources, so a change to
   the runtime is live on the next run with no build in between - but a running
   editor does not pick it up. The shape it would take is written down in

@@ -17,6 +17,7 @@ export { createFocus, Focus, GLOBAL_SCOPE } from './core/focus.js';
 export { createLayers, Layers } from './core/layers.js';
 export { createAnimation, Animation } from './core/animation.js';
 export { createI18n, I18nRegistry } from './core/i18n.js';
+export { CLIPBOARD_PATH, readClipboard, writeClipboard } from './core/clipboard.js';
 export { serviceKey } from './types/services.js';
 
 // Render

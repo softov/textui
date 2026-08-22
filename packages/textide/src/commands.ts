@@ -23,6 +23,8 @@ import { iconsFor } from './icons.js';
 
 export const EDITOR_URI = '$/ui/editor/uri' as BindingPath;
 export const CHROME_PATH = '$/ui/chrome' as BindingPath;
+/** How much the editor has selected, for the status bar. */
+export const EDITOR_SELECTION = '$/ui/editor/selection' as BindingPath;
 
 /** Categories, in the order the palette should offer them. */
 export const CATEGORIES = ['File', 'Edit', 'View', 'Go', 'Help'] as const;

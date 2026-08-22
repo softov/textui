@@ -23,6 +23,7 @@ import { resolvePath } from '../util/paths.js';
 import { toStream } from '../util/stream.js';
 import { GLOBAL_SCOPE } from '../core/focus.js';
 import { plainTokens } from '../core/syntax.js';
+import { CLIPBOARD_PATH, readClipboard, writeClipboard } from '../core/clipboard.js';
 
 /**
  * Hooks.
@@ -846,6 +847,34 @@ export function useHighlight(text: string, query: SyntaxQuery = {}): SyntaxToken
     () => (syntax ? syntax.tokenize(text, { kind, uri, language }) : plainTokens(text)),
     [syntax, text, kind, uri, language],
   );
+}
+
+// -------------------------------------------------------------- clipboard
+
+export interface ClipboardHandle {
+  /** What is on the clipboard now. Reading it here means a menu row that
+   *  offers "Paste" redraws when there is something to paste. */
+  text: string;
+  read(): string;
+  write(text: string): void;
+}
+
+/**
+ * The clipboard, as a hook.
+ *
+ * `write` puts the text on the system clipboard as well, when the terminal
+ * can take it. Nothing reads the system clipboard back - see
+ * `core/clipboard.ts` for why - so a paste is whatever this application last
+ * copied, plus whatever the terminal delivers as a bracketed paste.
+ */
+export function useClipboard(): ClipboardHandle {
+  const runtime = useRuntime();
+  const text = useStoreValue<string>(CLIPBOARD_PATH, '') ?? '';
+  return {
+    text,
+    read: () => readClipboard(runtime.store),
+    write: (next: string) => writeClipboard(runtime.store, next, runtime.app()?.terminal),
+  };
 }
 
 // ---------------------------------------------------------------- streams

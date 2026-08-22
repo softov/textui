@@ -1,8 +1,8 @@
 import type { BoxProps } from '@textui/core';
-import type { ComponentDefinition, SyntaxToken } from '@textui/core';
+import type { ComponentDefinition, ResolvedTheme, StyleColor, SyntaxToken } from '@textui/core';
 import {
-  h, defineComponent, ScrollThumb, useFocus, useHighlight, useInput, useMeasure,
-  useState, useTheme, viewportRows,
+  h, defineComponent, ScrollThumb, useClipboard, useEffect, useFocus, useHighlight,
+  useInput, useMeasure, useState, useTheme, viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
 import { EMPTY_HISTORY, record, redo, undo, type History, type Snapshot } from '../history.js';
@@ -34,12 +34,15 @@ export interface CodeEditorProps extends BoxProps {
   value?: string;
   onChange?(value: string): void;
   lineNumbers?: boolean;
+  /** Spaces one indent step is worth. Also what a soft tab inserts. */
   tabWidth?: number;
   readonly?: boolean;
   /** Ask the syntax registry for a highlighter. */
   language?: string;
   kind?: string;
   onCursor?(cursor: { line: number; column: number }): void;
+  /** Reports how much is selected, for a status bar. Zero means none. */
+  onSelection?(selection: { chars: number; lines: number }): void;
   /** Draw a scrollbar when the file is taller than the view. On by default. */
   scrollbar?: boolean;
   /** Claim focus on mount, if nothing in this scope already has it. */
@@ -47,6 +50,9 @@ export interface CodeEditorProps extends BoxProps {
 }
 
 interface Cursor { line: number; column: number }
+
+/** An ordered pair of cursors. `start` never comes after `end`. */
+interface TextRange { start: Cursor; end: Cursor }
 
 /**
  * What kind of edit this was, for folding a run of them into one step back.
@@ -70,17 +76,156 @@ function splitAt(lines: string[], at: Cursor): { before: string; after: string }
   return { before: text.slice(0, at.column), after: text.slice(at.column) };
 }
 
+// ------------------------------------------------------------- selection
+
+/**
+ * Selection is an anchor and the caret, in that order, and everything else is
+ * derived.
+ *
+ * Keeping the anchor rather than a normalised range is what makes shifting
+ * back past where you started shrink the selection instead of flipping it:
+ * the end that moves is always the caret, and which end that is on screen is
+ * a question for the renderer and nobody else.
+ */
+function ahead(a: Cursor, b: Cursor): boolean {
+  return a.line < b.line || (a.line === b.line && a.column < b.column);
+}
+
+function span(anchor: Cursor, caret: Cursor): TextRange {
+  return ahead(anchor, caret) ? { start: anchor, end: caret } : { start: caret, end: anchor };
+}
+
+function isEmpty(range: TextRange): boolean {
+  return range.start.line === range.end.line && range.start.column === range.end.column;
+}
+
+function textIn(lines: string[], range: TextRange): string {
+  if (range.start.line === range.end.line) {
+    return (lines[range.start.line] ?? '').slice(range.start.column, range.end.column);
+  }
+  return [
+    (lines[range.start.line] ?? '').slice(range.start.column),
+    ...lines.slice(range.start.line + 1, range.end.line),
+    (lines[range.end.line] ?? '').slice(0, range.end.column),
+  ].join('\n');
+}
+
+/**
+ * Replace a range with text - which is cut, paste, and typing over a
+ * selection, all three.
+ *
+ * Returns where the caret belongs afterwards, because every caller needs it
+ * and computing it from the content again is how the two disagree.
+ */
+function replace(lines: string[], range: TextRange, inserted: string): { content: string; cursor: Cursor } {
+  const head = (lines[range.start.line] ?? '').slice(0, range.start.column);
+  const tail = (lines[range.end.line] ?? '').slice(range.end.column);
+  const parts = inserted.split('\n');
+  const last = parts[parts.length - 1] ?? '';
+  const body = parts.length === 1
+    ? [head + last + tail]
+    : [head + (parts[0] ?? ''), ...parts.slice(1, -1), last + tail];
+  return {
+    content: [...lines.slice(0, range.start.line), ...body, ...lines.slice(range.end.line + 1)].join('\n'),
+    cursor: parts.length === 1
+      ? { line: range.start.line, column: head.length + last.length }
+      : { line: range.start.line + parts.length - 1, column: last.length },
+  };
+}
+
+/**
+ * Indent or dedent whole lines.
+ *
+ * Whole lines, because an indent that started at the caret's column would put
+ * the space inside a word half the time. A blank line gains nothing on the way
+ * in - trailing whitespace nobody typed is the kind of change that shows up in
+ * a diff and has to be explained.
+ */
+function reindent(lines: string[], from: number, to: number, unit: string, out: boolean): string[] {
+  const next = [...lines];
+  for (let i = from; i <= to && i < next.length; i++) {
+    const line = next[i] ?? '';
+    if (!out) {
+      if (line.length > 0) next[i] = unit + line;
+      continue;
+    }
+    if (line.startsWith(unit)) next[i] = line.slice(unit.length);
+    else if (line.startsWith('\t')) next[i] = line.slice(1);
+    else next[i] = line.replace(/^ +/, (run) => run.slice(Math.min(run.length, unit.length)));
+  }
+  return next;
+}
+
+// ---------------------------------------------------------------- pieces
+
+/** One coloured run inside a row. The unit both syntax and selection paint. */
+interface Piece { text: string; fg?: StyleColor; bg?: StyleColor }
+
+/**
+ * A row as coloured runs.
+ *
+ * Falls back to one plain run when the highlighter's tokens do not add back up
+ * to the line, because every column below is an offset into this text: a
+ * highlighter that drops a character would move the caret rather than lose a
+ * colour.
+ */
+function piecesOf(
+  line: string,
+  tokens: SyntaxToken[] | undefined,
+  syntax: ResolvedTheme['syntax'],
+): Piece[] {
+  if (!tokens || tokens.length === 0) return line.length > 0 ? [{ text: line }] : [];
+  if (tokens.map((t) => t.text).join('') !== line) return line.length > 0 ? [{ text: line }] : [];
+  return tokens.map((t) => (t.scope === 'plain' ? { text: t.text } : { text: t.text, fg: syntax[t.scope] }));
+}
+
+function widthOf(pieces: Piece[]): number {
+  return pieces.reduce((n, p) => n + p.text.length, 0);
+}
+
+/** Pad a row out to a column, so a highlight can reach past the last glyph. */
+function padTo(pieces: Piece[], column: number): Piece[] {
+  const short = column - widthOf(pieces);
+  return short > 0 ? [...pieces, { text: ' '.repeat(short) }] : pieces;
+}
+
+/** Split every run that straddles a column, so a boundary lands between runs. */
+function cut(pieces: Piece[], column: number): Piece[] {
+  const out: Piece[] = [];
+  let x = 0;
+  for (const piece of pieces) {
+    const end = x + piece.text.length;
+    if (column > x && column < end) {
+      out.push({ ...piece, text: piece.text.slice(0, column - x) });
+      out.push({ ...piece, text: piece.text.slice(column - x) });
+    } else out.push(piece);
+    x = end;
+  }
+  return out;
+}
+
+/** Restyle the cells in `[from, to)`. Cut at both ends first. */
+function paint(pieces: Piece[], from: number, to: number, style: Partial<Piece>): Piece[] {
+  let x = 0;
+  return cut(cut(padTo(pieces, to), from), to).map((piece) => {
+    const start = x;
+    x += piece.text.length;
+    return start >= from && start < to ? { ...piece, ...style } : piece;
+  });
+}
+
 export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props) => {
   const theme = useTheme();
   const {
-    uri = null, value, onChange, lineNumbers = true, tabWidth: _tabWidth = 2,
-    readonly: readonlyProp, language, kind, onCursor, scrollbar = true,
+    uri = null, value, onChange, lineNumbers = true, tabWidth = 2,
+    readonly: readonlyProp, language, kind, onCursor, onSelection, scrollbar = true,
     autoFocus, ...rest
   } = props;
 
   const doc = useDocument(uri);
   const measured = useMeasure();
   const focus = useFocus({ autoFocus });
+  const clipboard = useClipboard();
 
   // With a document, the buffer is the document. Without one it is here, so a
   // standalone editor works without a caller wiring state back in - an editor
@@ -95,24 +240,37 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   const lines = text.split('\n');
 
   const [cursor, setCursor] = useState<Cursor>({ line: 0, column: 0 });
+  /** Where the selection started, or null when there is no selection. */
+  const [anchor, setAnchor] = useState<Cursor | null>(null);
   const [top, setTop] = useState(0);
   /** The column a vertical move aims for, so up/down past a short line recovers. */
   const [goal, setGoal] = useState(0);
 
   const at = clamp(lines, cursor);
+  const held = anchor ? clamp(lines, anchor) : null;
+  const selection = held ? span(held, at) : null;
+  const selected = selection !== null && !isEmpty(selection);
+  const indent = ' '.repeat(Math.max(1, tabWidth));
 
-  const write = (next: string, to: Cursor, kind?: EditKind): void => {
+  const write = (
+    next: string,
+    to: Cursor,
+    options: { kind?: EditKind; anchor?: Cursor | null } = {},
+  ): void => {
     if (readonly) return;
     if (uri) {
-      doc.set(next, { cursor: at, ...(kind ? { coalesce: kind } : {}) });
+      doc.set(next, { cursor: at, ...(options.kind ? { coalesce: options.kind } : {}) });
     } else {
-      setLocalHistory(record(localHistory, { content: local, cursor: at }, kind ?? null));
+      setLocalHistory(record(localHistory, { content: local, cursor: at }, options.kind ?? null));
       setLocal(next);
     }
     onChange?.(next);
     const nextLines = next.split('\n');
     setCursor(clamp(nextLines, to));
     setGoal(clamp(nextLines, to).column);
+    // An edit ends the selection unless the caller says otherwise: the text it
+    // covered is not there any more.
+    setAnchor(options.anchor === undefined ? null : options.anchor);
   };
 
   /** Put the buffer, and the caret, back where a step says they were. */
@@ -121,6 +279,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     const nextCursor = clamp(nextLines, to.cursor ?? at);
     setCursor(nextCursor);
     setGoal(nextCursor.column);
+    setAnchor(null);
     onChange?.(to.content);
   };
 
@@ -154,8 +313,18 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     return true;
   };
 
-  const move = (to: Cursor, keepGoal = false): void => {
+  /**
+   * Move the caret.
+   *
+   * `extend` is the whole of what a shift key does: the anchor is dropped
+   * where the caret was standing the first time, and every later move drags
+   * the other end. A move without it drops the selection, which is why plain
+   * left after a selection is a deselect and not a step back through it.
+   */
+  const move = (to: Cursor, keepGoal = false, extend = false): void => {
     const next = clamp(lines, to);
+    if (extend) setAnchor(held ?? at);
+    else setAnchor(null);
     // Moving ends the run. What comes next is a new step back, wherever the
     // caret has gone.
     if (uri) doc.closeEdit();
@@ -167,7 +336,16 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
 
   // ---------------------------------------------------------------- edits
 
+  /** Delete the selection, and say what the buffer and caret become. */
+  const cutSelection = (): { content: string; cursor: Cursor } | null =>
+    (selection && selected ? replace(lines, selection, '') : null);
+
   const insert = (chunk: string): void => {
+    if (selection && selected) {
+      const { content, cursor: to } = replace(lines, selection, chunk);
+      write(content, to, chunk.includes('\n') ? {} : { kind: 'type' });
+      return;
+    }
     const { before, after } = splitAt(lines, at);
     const parts = chunk.split('\n');
     const head = [...lines.slice(0, at.line), before + (parts[0] ?? '')];
@@ -176,7 +354,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     if (parts.length === 1) {
       write([...head.slice(0, -1), (head[head.length - 1] ?? '') + after, ...tail].join('\n'),
         { line: at.line, column: before.length + (parts[0]?.length ?? 0) },
-        'type');
+        { kind: 'type' });
       return;
     }
     const middle = parts.slice(1, -1);
@@ -188,11 +366,13 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   };
 
   const backspace = (): void => {
+    const cutting = cutSelection();
+    if (cutting) { write(cutting.content, cutting.cursor, { kind: 'delete' }); return; }
     const { before, after } = splitAt(lines, at);
     if (before.length > 0) {
       const next = [...lines];
       next[at.line] = before.slice(0, -1) + after;
-      write(next.join('\n'), { line: at.line, column: before.length - 1 }, 'delete');
+      write(next.join('\n'), { line: at.line, column: before.length - 1 }, { kind: 'delete' });
       return;
     }
     // At column zero, backspace joins this line onto the one above it.
@@ -204,11 +384,13 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   };
 
   const del = (): void => {
+    const cutting = cutSelection();
+    if (cutting) { write(cutting.content, cutting.cursor, { kind: 'delete' }); return; }
     const { before, after } = splitAt(lines, at);
     if (after.length > 0) {
       const next = [...lines];
       next[at.line] = before + after.slice(1);
-      write(next.join('\n'), at, 'delete');
+      write(next.join('\n'), at, { kind: 'delete' });
       return;
     }
     // At end of line, delete pulls the next line up.
@@ -216,6 +398,56 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     const next = [...lines];
     next.splice(at.line, 2, before + (lines[at.line + 1] ?? ''));
     write(next.join('\n'), at);
+  };
+
+  // ------------------------------------------------------------ clipboard
+
+  /** What copy and cut take: the selection, or the caret's whole line. */
+  const takeable = (): { text: string; range: TextRange } | null => {
+    if (selection && selected) return { text: textIn(lines, selection), range: selection };
+    const line = lines[at.line];
+    if (line === undefined) return null;
+    // Nothing selected means the whole line, newline and all, the way every
+    // editor does: cut with no selection is "delete this line, but keep it",
+    // and asking for it by selecting the line first is three keys for one.
+    const last = at.line >= lines.length - 1;
+    return {
+      text: last ? line : `${line}\n`,
+      range: last
+        ? { start: { line: at.line, column: 0 }, end: { line: at.line, column: line.length } }
+        : { start: { line: at.line, column: 0 }, end: { line: at.line + 1, column: 0 } },
+    };
+  };
+
+  const copy = (): boolean => {
+    const taking = takeable();
+    if (!taking || taking.text.length === 0) return false;
+    clipboard.write(taking.text);
+    return true;
+  };
+
+  const cutOut = (): boolean => {
+    if (readonly) return false;
+    const taking = takeable();
+    if (!taking || taking.text.length === 0) return false;
+    clipboard.write(taking.text);
+    const { content, cursor: to } = replace(lines, taking.range, '');
+    write(content, to, { kind: 'delete' });
+    return true;
+  };
+
+  const shiftLines = (out: boolean): void => {
+    const from = selection ? selection.start.line : at.line;
+    const to = selection ? selection.end.line : at.line;
+    const next = reindent(lines, from, to, indent, out);
+    if (next.join('\n') === text) return;
+    // The lines stay selected, so indenting twice is two presses rather than
+    // a reselect between them.
+    write(
+      next.join('\n'),
+      { line: to, column: (next[to] ?? '').length },
+      { anchor: selection ? { line: from, column: 0 } : null },
+    );
   };
 
   // --------------------------------------------------------------- layout
@@ -244,24 +476,43 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
 
   useInput((event) => {
     const key = event.name;
-    if (key === 'up') { move({ line: at.line - 1, column: goal }, true); return true; }
-    if (key === 'down') { move({ line: at.line + 1, column: goal }, true); return true; }
+    const extend = event.shift === true;
+    if (key === 'up') { move({ line: at.line - 1, column: goal }, true, extend); return true; }
+    if (key === 'down') { move({ line: at.line + 1, column: goal }, true, extend); return true; }
     if (key === 'left') {
       if (at.column === 0 && at.line > 0) {
-        move({ line: at.line - 1, column: (lines[at.line - 1] ?? '').length });
-      } else move({ line: at.line, column: at.column - 1 });
+        move({ line: at.line - 1, column: (lines[at.line - 1] ?? '').length }, false, extend);
+      } else move({ line: at.line, column: at.column - 1 }, false, extend);
       return true;
     }
     if (key === 'right') {
       if (at.column >= (lines[at.line] ?? '').length && at.line < lines.length - 1) {
-        move({ line: at.line + 1, column: 0 });
-      } else move({ line: at.line, column: at.column + 1 });
+        move({ line: at.line + 1, column: 0 }, false, extend);
+      } else move({ line: at.line, column: at.column + 1 }, false, extend);
       return true;
     }
-    if (key === 'home') { move({ line: at.line, column: 0 }); return true; }
-    if (key === 'end') { move({ line: at.line, column: (lines[at.line] ?? '').length }); return true; }
-    if (key === 'pageup') { move({ line: at.line - rows, column: goal }, true); return true; }
-    if (key === 'pagedown') { move({ line: at.line + rows, column: goal }, true); return true; }
+    if (key === 'home') { move({ line: at.line, column: 0 }, false, extend); return true; }
+    if (key === 'end') { move({ line: at.line, column: (lines[at.line] ?? '').length }, false, extend); return true; }
+    if (key === 'pageup') { move({ line: at.line - rows, column: goal }, true, extend); return true; }
+    if (key === 'pagedown') { move({ line: at.line + rows, column: goal }, true, extend); return true; }
+
+    // Select all, and copy, work on a file nobody may write.
+    if (event.ctrl && (key === 'a' || key === 'A')) {
+      const last = lines.length - 1;
+      setAnchor({ line: 0, column: 0 });
+      setCursor({ line: last, column: (lines[last] ?? '').length });
+      setGoal((lines[last] ?? '').length);
+      return true;
+    }
+    /*
+     * ctrl+c is quit in a terminal application, and copy in an editor, and
+     * both are right. It is copy only while something is selected, so the
+     * quit an application binds it to is one escape away and never lost -
+     * which is why escape clears a selection below, and is left alone
+     * otherwise so a dialog above still closes on it.
+     */
+    if (event.ctrl && (key === 'c' || key === 'C')) return selected ? copy() : false;
+    if (key === 'escape' && selected) { setAnchor(null); return true; }
 
     if (readonly) return false;
     // Undo before anything that edits, and before the application's own
@@ -272,13 +523,31 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
       return true;
     }
     if (event.ctrl && (key === 'y' || key === 'Y')) { stepForward(); return true; }
+    if (event.ctrl && (key === 'x' || key === 'X')) return cutOut();
+    if (event.ctrl && (key === 'v' || key === 'V')) {
+      const pasted = clipboard.read();
+      if (!pasted) return false;
+      insert(pasted);
+      return true;
+    }
+    // A bracketed paste arrives as one event carrying the whole text, which is
+    // the only reason a hundred-line paste is one undo step and not a hundred.
+    if (key === 'paste' && event.char) { insert(event.char); return true; }
     if (key === 'backspace') { backspace(); return true; }
     if (key === 'delete') { del(); return true; }
     if (key === 'enter') { insert('\n'); return true; }
-    // Tab is deliberately not indentation. In a terminal UI tab is how you
-    // leave a control, and an editor that swallows it is an editor you cannot
-    // get out of without knowing a second key. Indent gets its own binding.
-    if (key === 'tab') return false;
+    /*
+     * Tab is how you leave a control, and an editor that swallows it is an
+     * editor you cannot get out of without knowing a second key. With a
+     * selection it is indent, because a selection is a thing you made on
+     * purpose and escape drops it - the way out is still two keys, and it is
+     * the same two keys as everywhere else.
+     */
+    if (key === 'tab') {
+      if (!selected) return false;
+      shiftLines(event.shift === true);
+      return true;
+    }
     // Anything that produced one printable character is that character.
     if (event.char && !event.ctrl && !event.meta && event.char.length === 1) {
       insert(event.char);
@@ -287,12 +556,17 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     return false;
   }, { focusId: focus.id });
 
+  // Reported from an effect, not from the render that computed it: a callback
+  // fired mid-render is a parent setting state while its child is drawing.
+  const chars = selection && selected ? textIn(lines, selection).length : 0;
+  const spanned = selection && selected ? selection.end.line - selection.start.line + 1 : 0;
+  useEffect(() => { onSelection?.({ chars, lines: spanned }); }, [chars, spanned]);
+
   // --------------------------------------------------------------- render
 
   const rowNodes = window.map((line, i) => {
     const lineNumber = visibleTop + i;
     const onCaretLine = lineNumber === at.line;
-    const lineTokens = tokens[lineNumber];
 
     const gutter = lineNumbers
       ? h('text', {
@@ -301,31 +575,45 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
         })
       : null;
 
-    // The caret is a cell, drawn by splitting the row around it, because a
-    // terminal cursor cannot be relied on to be where a component wants it.
-    if (!onCaretLine) {
-      return h('box', { key: lineNumber, direction: 'row' },
-        gutter,
-        lineTokens && lineTokens.length > 0
-          ? h('box', { direction: 'row' },
-              ...lineTokens.map((token, ti) =>
-                h('text', {
-                  key: ti,
-                  content: token.text,
-                  fg: token.scope === 'plain' ? undefined : theme.syntax[token.scope],
-                })))
-          : h('text', { content: line }));
+    let pieces = piecesOf(line, tokens[lineNumber], theme.syntax);
+
+    /*
+     * The selection is a background, not an inversion.
+     *
+     * `selected` is the token for a row that carries `inverted` text, and this
+     * row carries whatever the highlighter said - so inverting it would either
+     * throw the syntax colours away or write them on a colour picked to be
+     * written on in one specific ink. `active` is the tint that keeps them.
+     */
+    if (selection && selected
+      && lineNumber >= selection.start.line && lineNumber <= selection.end.line) {
+      const from = lineNumber === selection.start.line ? selection.start.column : 0;
+      // A selection that runs on past this line took the newline with it, and
+      // one cell of highlight is how a reader can see that it did.
+      const to = lineNumber === selection.end.line ? selection.end.column : line.length + 1;
+      if (to > from) pieces = paint(pieces, from, to, { bg: 'active' });
     }
 
-    const head = line.slice(0, at.column);
-    const under = line.slice(at.column, at.column + 1) || ' ';
-    const tailText = line.slice(at.column + 1);
-    return h('box', { key: lineNumber, direction: 'row', bg: 'surfaceAlt' },
+    // The caret is a cell, drawn by splitting the row around it, because a
+    // terminal cursor cannot be relied on to be where a component wants it.
+    if (onCaretLine) {
+      pieces = paint(pieces, at.column, at.column + 1, { bg: 'cursor', fg: 'inverted' });
+    }
+
+    const content = pieces
+      .filter((piece) => piece.text.length > 0)
+      .map((piece, pi) => h('text', {
+        key: pi,
+        content: piece.text,
+        ...(piece.fg ? { fg: piece.fg } : {}),
+        ...(piece.bg ? { bg: piece.bg } : {}),
+      }));
+
+    return h('box',
+      { key: lineNumber, direction: 'row', ...(onCaretLine ? { bg: 'surfaceAlt' } : {}) },
       gutter,
-      h('text', { content: head }),
-      h('text', { content: under, bg: 'cursor', fg: 'inverted' }),
-      h('text', { content: tailText }),
-      h('spacer', { flex: 1 }));
+      ...content,
+      onCaretLine ? h('spacer', { flex: 1 }) : null);
   });
 
   // The bar goes beside the rows, not inside them, so it spans the viewport

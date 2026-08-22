@@ -5,6 +5,7 @@ import {
 import type { RenderOutput, Resource } from '@textui/core';
 import { ResourceExplorer, ResourceView } from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
+import { EDITOR_SELECTION } from './commands.js';
 import { WORKSPACE_PATH, type Workspace } from './workspace.js';
 import { iconsFor } from './icons.js';
 
@@ -60,6 +61,7 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
 /** The viewer and the key hints, for the `main` surface. */
 export const Editor: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('Editor', () => {
+    const runtime = useRuntime();
     const uri = useStoreValue<string | null>('$/ui/editor/uri', null);
     const mode = useStoreValue<'view' | 'edit'>('$/ui/editor/mode', 'view');
 
@@ -93,19 +95,45 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
         <ResourceView
           uri={uri ?? null}
           mode={mode}
-          viewerProps={mode === 'edit' ? { autoFocus: true } : undefined}
+          // How much is selected is a fact about the screen, so it goes in the
+          // store and the status bar reads it there. The editor keeps the
+          // selection itself - where the caret is is nobody else's business -
+          // and reports the one number somebody outside it wants.
+          viewerProps={mode === 'edit'
+            ? {
+                autoFocus: true,
+                onSelection: {
+                  handler: (selection: { chars: number; lines: number }) => {
+                    runtime.store.set(EDITOR_SELECTION, selection);
+                  },
+                },
+              }
+            : undefined}
           flex={1}
         />
+        {/*
+          * The hints are what you can do *here*, so editing gets the editing
+          * keys. A row that listed both sets would be a row nobody reads.
+          */}
         <KeyHints
-          hints={[
-            { keys: 'up/down', label: 'move' },
-            { keys: 'right', label: 'expand' },
-            { keys: 'enter', label: 'open' },
-            { keys: 'ctrl+b', label: 'sidebar' },
-            { keys: 'ctrl+p', label: 'commands' },
-            { keys: 'ctrl+e', label: mode === 'edit' ? 'view' : 'edit' },
-            { keys: 'q', label: 'quit' },
-          ]}
+          hints={mode === 'edit'
+            ? [
+                { keys: 'shift+arrows', label: 'select' },
+                { keys: 'ctrl+c/x/v', label: 'copy/cut/paste' },
+                { keys: 'tab', label: 'indent' },
+                { keys: 'ctrl+s', label: 'save' },
+                { keys: 'ctrl+z', label: 'undo' },
+                { keys: 'ctrl+e', label: 'view' },
+              ]
+            : [
+                { keys: 'up/down', label: 'move' },
+                { keys: 'right', label: 'expand' },
+                { keys: 'enter', label: 'open' },
+                { keys: 'ctrl+b', label: 'sidebar' },
+                { keys: 'ctrl+p', label: 'commands' },
+                { keys: 'ctrl+e', label: 'edit' },
+                { keys: 'q', label: 'quit' },
+              ]}
         />
         </Column>
       </Row>

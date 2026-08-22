@@ -3,7 +3,9 @@ import type { BoxProps } from '../jsx/intrinsics.js';
 import type { KeyEvent } from '../types/input.js';
 import type { BorderStyle, SemanticVariant, StyleColor, SurfaceVariant } from '../types/style.js';
 import { h, defineComponent } from '../jsx/factory.js';
-import { useFocus, useInput, useMeasure, useState, useTheme } from '../runtime/hooks.js';
+import {
+  useEffect, useFocus, useInput, useMeasure, useState, useTheme, useTicker,
+} from '../runtime/hooks.js';
 import { graphemes, sliceColumns, stringWidth } from '../util/text.js';
 import { ON_TONE, TONE } from './tone.js';
 
@@ -570,12 +572,37 @@ export interface TextAreaProps extends BoxProps {
   onCancel?(): void;
   /** Up at the top, down at the bottom: for walking a history. */
   onOverflow?(direction: -1 | 1): void;
+  /**
+   * Left at the very start, right at the very end.
+   *
+   * The horizontal pair of `onOverflow`, and separate from it because they
+   * mean different things: up and down walk a history, and left off the front
+   * of the field is "I am done here" - which is how a composer hands the
+   * reader back to what is beside it without them reaching for escape.
+   */
+  onEdge?(edge: 'start' | 'end'): void;
   placeholder?: string;
   /** Rows before it stops growing and starts scrolling. */
   maxRows?: number;
   maxLength?: number;
   autoFocus?: boolean;
   focusId?: string;
+  /**
+   * The caret's colour. `cursor` by default, which is the theme's own.
+   *
+   * A composer usually wants `accent`: the caret is the one thing on the
+   * screen saying where typing goes, and the field it sits in is the point of
+   * the screen.
+   */
+  caretTone?: SemanticVariant;
+  /**
+   * Blink the caret while the field has the keyboard. On by default.
+   *
+   * Driven by the animation ticker, so it stops with every other animation -
+   * a still, a test and a terminal that has animation off all draw the caret
+   * solid rather than at whatever phase the clock happened to be in.
+   */
+  blink?: boolean;
 }
 
 /**
@@ -593,8 +620,8 @@ export interface TextAreaProps extends BoxProps {
 export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
   const theme = useTheme();
   const {
-    value, onChange, onSubmit, onCancel, onOverflow, placeholder, maxRows = 6,
-    maxLength, autoFocus, focusId, disabled, ...rest
+    value, onChange, onSubmit, onCancel, onOverflow, onEdge, placeholder, maxRows = 6,
+    maxLength, autoFocus, focusId, disabled, caretTone, blink = true, ...rest
   } = props;
 
   const focus = useFocus({
@@ -603,6 +630,12 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
     ...(autoFocus ? { autoFocus } : {}),
   });
   const [caret, setCaret] = useState(value.length);
+  const [lit, setLit] = useState(true);
+
+  // Only while it has the keyboard, and solid the moment it loses it: a caret
+  // blinking in a field nobody is typing into is two carets on one screen.
+  useTicker(() => setLit((on) => !on), { fps: 2, enabled: blink && focus.focused });
+  useEffect(() => { setLit(true); }, [focus.focused]);
 
   const chars = graphemes(value);
   const position = Math.min(caret, chars.length);
@@ -633,8 +666,16 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
       if (disabled) return false;
 
       switch (event.name) {
-        case 'left': setCaret(Math.max(0, position - 1)); return true;
-        case 'right': setCaret(Math.min(chars.length, position + 1)); return true;
+        case 'left':
+          // Off the front of the field is the caller's key, the same way up at
+          // the top is - so "left, left, left" walks out of the composer.
+          if (position === 0) { onEdge?.('start'); return true; }
+          setCaret(position - 1);
+          return true;
+        case 'right':
+          if (position === chars.length) { onEdge?.('end'); return true; }
+          setCaret(position + 1);
+          return true;
         case 'home': setCaret(lineStart(caretLine)); return true;
         case 'end': setCaret(lineStart(caretLine) + graphemes(lines[caretLine] ?? '').length); return true;
 
@@ -700,7 +741,9 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
       // only thing on screen saying what enter will do, and hiding it when the
       // caret arrives hides it exactly when it is read.
       ? h('box', { direction: 'row' },
-          focus.focused ? h('text', { content: theme.glyphs.caret, fg: 'cursor' }) : null,
+          focus.focused
+            ? h('text', { content: lit ? theme.glyphs.caret : ' ', fg: caretTone ?? 'cursor' })
+            : null,
           h('text', { content: placeholder ?? '', fg: 'subtle', flex: 1, truncate: 'end' }))
       : shown.map((line, i) => {
         const index = first + i;
@@ -710,7 +753,7 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
         const cells = graphemes(line);
         return h('box', { key: index, direction: 'row' },
           h('text', { content: cells.slice(0, caretColumn).join('') }),
-          h('text', { content: theme.glyphs.caret, fg: 'cursor' }),
+          h('text', { content: lit ? theme.glyphs.caret : ' ', fg: caretTone ?? 'cursor' }),
           h('text', { content: cells.slice(caretColumn).join(''), flex: 1, truncate: 'end' }));
       }),
   );

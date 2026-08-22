@@ -34,6 +34,20 @@ export const STATUS = '$/chat/conv/status' as BindingPath;
  */
 export const RUNNING = '$/chat/conv/running' as BindingPath;
 
+/**
+ * What the next message will be sent as.
+ *
+ * Not a session's state, and deliberately not keyed by session: it is the
+ * composer's own row of choices, which exists before there is a session to
+ * hang them on. Sending is what turns them into one - a `createSession` with
+ * the harness and the workspace, and a `chat/turnStarted` carrying the model,
+ * because AHP hangs the model on the message rather than on the session.
+ */
+export const PROVIDER = '$/chat/compose/provider' as BindingPath;
+export const MODEL = '$/chat/compose/model' as BindingPath;
+export const PERMISSIONS = '$/chat/compose/permissions' as BindingPath;
+export const WORKSPACE = '$/chat/compose/workspace' as BindingPath;
+
 export const OPEN = '$/chat/ui/open' as BindingPath;
 /** The catalogue's highlight. What a session command acts on when none is open. */
 export const SELECTED = '$/chat/ui/selected' as BindingPath;

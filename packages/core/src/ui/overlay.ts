@@ -354,11 +354,16 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   useInput(
     (event) => {
       if (event.name === 'escape') {
-        if (pending) back();
+        // Opened at a command, there is nothing behind the question that
+        // anybody chose to be at: the caller drilled in on their behalf, and
+        // the level underneath is a list of one. Backing out to it reads as
+        // "escape did nothing", and the second escape - the one that would
+        // close it - is spent leaving a screen nobody asked to see.
+        if (pending && !openAt) back();
         else onClose?.();
         return true;
       }
-      if (event.name === 'left' && pending && query === '') { back(); return true; }
+      if (event.name === 'left' && pending && query === '' && !openAt) { back(); return true; }
       // Wrapping, both ways. A list you can walk off the end of makes you
       // check where you are before every press; one that comes round means the
       // last item is one key from the first.

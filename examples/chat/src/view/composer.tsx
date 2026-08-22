@@ -1,13 +1,22 @@
-import { Button, Column, List, Row, TextArea, defineComponent, useTheme } from '@textui/core';
+import { Column, Divider, List, TextArea, defineComponent, useTheme } from '@textui/core';
 import type { BoxProps, ListItem, RenderOutput } from '@textui/core';
+import { ComposerBar } from './controls.js';
+import type { ComposerOption } from './controls.js';
 
 /**
- * What you type, and everything around it.
+ * What you type, and one line saying what it will be sent as.
  *
  * The field itself is `TextArea` from the catalog - growing, scrolling and
  * giving back the keys it does not want is not a chat problem. What is here is
  * the rest of a composer: what enter means while a turn is running, the slash
- * menu over what has already been typed, and the row of actions.
+ * menu over what has already been typed, and the control row.
+ *
+ * The row used to be four ghost buttons naming their own keys - `send enter`,
+ * `newline alt+enter`, `stop ctrl+c`, `commands ctrl+p` - which spent the one
+ * line under the field on a keyboard legend. The keys belong in the footer,
+ * which already lists them and changes with where the focus is. The line under
+ * the field is worth more as *what is about to happen*: which harness, which
+ * model, what it may do without asking, where it runs.
  */
 
 export interface ChatComposerProps extends BoxProps {
@@ -16,30 +25,27 @@ export interface ChatComposerProps extends BoxProps {
   onSubmit(value: string): void;
   onCancel?(): void;
   onHistory?(direction: -1 | 1): void;
-  onStop?(): void;
+  /** Left off the front of the field: out of the composer entirely. */
+  onLeave?(): void;
   /** A turn is running: enter queues rather than sends, and stop is offered. */
   running?: boolean;
   queued?: number;
-  /** Right of the actions: the model, the workspace, whatever is true. */
-  meta?: string;
+  /** The control row. Each is a value, and each may open a picker. */
+  options?: ComposerOption[];
+  onOption?(option: ComposerOption, anchorId: string): void;
+  placeholder?: string;
   /** Offered when the draft starts with a slash. */
   commands?: { id: string; title: string; description?: string }[];
   autoFocus?: boolean;
   focusId?: string;
 }
 
-/**
- * The composer: a field, what the keys do, and what is in the way.
- *
- * The actions are ghost buttons - a glyph and a label, no border - because a
- * bordered control here would draw a second frame inside the one the composer
- * already is, and there are four of them.
- */
 export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
   defineComponent<ChatComposerProps>('ChatComposer', (props) => {
     const {
-      value, onChange, onSubmit, onCancel, onHistory, onStop, running, queued = 0,
-      meta, commands = [], autoFocus, focusId = 'chat.composer', ...rest
+      value, onChange, onSubmit, onCancel, onHistory, onLeave, running, queued = 0,
+      options = [], onOption, placeholder, commands = [], autoFocus,
+      focusId = 'chat.composer', ...rest
     } = props;
     const theme = useTheme();
 
@@ -74,27 +80,26 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
             onSubmit={onSubmit}
             {...(onCancel ? { onCancel } : {})}
             {...(onHistory ? { onOverflow: onHistory } : {})}
-            placeholder={running ? 'The agent is working. Type to queue a message.' : 'Ask, or paste a path. Enter sends.'}
+            {...(onLeave ? { onEdge: (edge: 'start' | 'end') => { if (edge === 'start') onLeave(); } } : {})}
+            placeholder={placeholder
+              ?? (running ? 'The agent is working. Type to queue a message.' : 'Ask the agent anything…')}
             focusId={focusId}
+            // The caret is the one thing on this screen saying where typing
+            // goes, and this field is the point of the screen.
+            caretTone="accent"
             {...(autoFocus ? { autoFocus: true } : {})}
           />
-          <Row gap={2}>
-            <Button
-              label={running ? 'queue' : 'send'}
-              variant="ghost"
-              icon={theme.glyphs.chevronRight}
-              hint="enter"
-              onPress={() => onSubmit(value)}
-            />
-            <Button label="newline" variant="ghost" icon={theme.glyphs.arrowDown} hint="alt+enter" onPress={() => onChange(`${value}\n`)} />
-            {running && onStop ? (
-              <Button label="stop" variant="ghost" tone="danger" icon={theme.glyphs.cross} hint="ctrl+c" onPress={onStop} />
-            ) : null}
-            <Button label="commands" variant="ghost" icon={theme.glyphs.search} hint="ctrl+p" onPress={() => undefined} disabled />
-            <text content="" flex={1} />
-            {queued > 0 ? <text content={`${queued} queued`} fg="warning" /> : null}
-            {meta ? <text content={meta} fg="subtle" /> : null}
-          </Row>
+          {/* Inside the same frame, so the field and what it will be sent as
+              read as one control rather than two stacked boxes. */}
+          <Divider />
+          <ComposerBar
+            options={options}
+            onOpen={(option, anchorId) => onOption?.(option, anchorId)}
+            onSend={() => onSubmit(value)}
+            {...(running ? { running: true } : {})}
+            queued={queued}
+            sendDisabled={value.trim() === ''}
+          />
         </Column>
       </Column>
     );

@@ -69,9 +69,9 @@ Six, and each is a different question.
 
 | | Screen | Is | Reached by |
 |---|---|---|---|
-| 1 | `sessions` | The catalogue: what is running, what is waiting on you, what errored | opens here, `esc` |
-| 2 | `chat` | One conversation: transcript, the block that waits, the composer | `enter` on a row |
-| 3 | `new` | Harness, model, thinking level, workspace, first message | `n`, `ctrl+n` |
+| 1 | `new` | A composer with nothing above it. The first message is what creates the session | opens here, `n`, `ctrl+n` |
+| 2 | `sessions` | The catalogue: what is running, what is waiting on you, what errored | `esc`, `left` off the front of the field |
+| 3 | `chat` | One conversation: transcript, the block that waits, the composer | `enter` on a row |
 | 4 | `changes` | What the session changed on disk, from the changeset channel | `c` |
 | 5 | `settings` | The session's own config schema, and what may be changed while it runs | `s` |
 | 6 | `hosts` | Which host, whether it is answering, what it advertises | palette |
@@ -85,6 +85,38 @@ Everything else that came up is **not** a screen:
 Only `chat` is `keepAlive`. Coming back from the changes list to a conversation
 that had scrolled itself to the top is losing your place in a document that is
 still being written.
+
+**It opens on the composer, not on the catalogue.** Talking to an agent is what
+this is for, and a first screen that lists what already exists makes that a
+two-step errand. There is no Start button either: nothing is created until
+there is something to say, and the message is what says it. That costs nothing
+on a real host - the provider is lazy, does not attach until there is a turn to
+run, and `session/ready` arrives *after* the first dispatch rather than before
+it.
+
+Under the field is one line of what this message will be sent as - the harness,
+the model, how much it may do before it asks, and where it works:
+
+```
+╭───────────────────────────────────────────────────────────────────────╮
+│ ▏Ask the agent anything…                                              │
+│ ───────────────────────────────────────────────────────────────────── │
+│  ● Claude Code ▾   ○ Opus 5 ▾   ☑ Ask each time ▾   › textui ▾  send ▸ │
+╰───────────────────────────────────────────────────────────────────────╯
+```
+
+Every chip is one **command with an argument**, and pressing enter on it opens
+the command palette anchored above it. Not a second overlay: the same one, with
+`openAt` drilling straight into the question. An argument with `choices` is
+picked from, one without is typed into - which is why the workspace chip takes
+a path today and becomes a list of workspaces the day the command grows a
+`choices` function, with no change to anything that draws it.
+
+The same row sits under the composer in a conversation, describing *that*
+session: its harness and workspace are shown rather than asked, because they
+are the process it is running in, while the model and the permission mode are
+decisions about the next message and stay open. Changing the permission mode
+there dispatches `session/configChanged` - one key, merged.
 
 ## The keys
 
@@ -109,6 +141,16 @@ happens to be reading it is not a quit key.
 | `ctrl+t` | theme |
 | `esc` | out of the composer first, then back a screen |
 
+| On the composer | |
+|---|---|
+| `enter` | send - or, with nothing open, create the session and send |
+| `ctrl+enter`, `alt+enter`, `ctrl+j` | a newline. Not `shift+enter`: most terminals cannot tell it from `enter` |
+| `tab` | into the control row: harness, model, permissions, workspace, send |
+| `enter` on a chip | the panel of what it offers, above the chip |
+| `←` at the front of the field | out of the composer - the catalogue, or the transcript |
+| `↑` at the top | the last thing you sent |
+| `/` at the start | commands |
+
 | On the catalogue | |
 |---|---|
 | `↑ ↓` | move · `enter` open |
@@ -129,13 +171,6 @@ happens to be reading it is not a quit key.
 | `f` | stop following / follow again |
 | `c` `s` | changes · settings |
 | `t` | stop the turn |
-
-| In the composer | |
-|---|---|
-| `enter` | send - or queue, while a turn is running |
-| `alt+enter`, `ctrl+j` | a newline. Not `shift+enter`: most terminals cannot tell it from `enter` |
-| `↑` at the top | the last thing you sent |
-| `/` at the start | commands |
 
 | While the agent is waiting | |
 |---|---|
@@ -180,13 +215,19 @@ transcript is not - plus `Panel`, `Row`/`Column`, `RadioGroup`, `Checkbox`,
 `KeyHints`, `CommandPalette`, `confirm()`, and `Button` - including
 `variant="ghost"`, which is what the composer's action row is made of.
 
-A fourth, which is still here rather than in core:
+Two more, still here rather than in core:
 [`SessionDetails`](src/view/details.tsx) - a property list you can walk and
 copy a value out of. `KeyValue` draws the same pairs and is static, so nothing
 selects a row: a URI cannot be read in full and cannot be pasted anywhere. The
 selected row is the one that gets the room - every other row truncates to one
 line, the selected one wraps - which costs nothing when the value is short and
 is the whole answer when it is a URI in a 40-column pane.
+
+And [`ComposerBar`](src/view/controls.tsx) with its chips, which is a row of
+*current values* rather than a row of buttons: a button is a verb and these are
+nouns. What it needed from the catalog it got - `CommandPalette` already knew
+how to ask about one argument - so the only new part is a focusable label that
+opens it, and `LayerPosition` already had the anchoring.
 
 **Still missing, and known:**
 
@@ -195,6 +236,16 @@ is the whole answer when it is a URI in a 40-column pane.
 - a tool call with four hundred lines of output expands to four hundred rows. `CodeViewer` is the right thing inside the row, and the row has to stop being as tall as its content for that to work.
 
 ## Findings worth keeping
+
+**A picker is a palette that was opened at a question.** Four chips, four
+different kinds of answer - a list of harnesses, a list of models that depends
+on the harness, a list of permission modes that comes from the host's own
+schema, and a path that is typed - and none of them needed an overlay written
+for it. `openAt` drills into a command's argument, `choices` may be a list, a
+function or a promise, an argument without choices is answered by typing, and
+`LayerPosition` anchors the panel above the control that asked. The one thing
+that was wrong: escape on a palette opened *at* a command backed out to a list
+of one, so the key that should close it appeared to do nothing. It closes now.
 
 **A fixture that lies reads as a bug in the client.** The scripted host used to
 assign each seeded session a status by hand, and one of them claimed

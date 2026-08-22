@@ -9,7 +9,7 @@ import { decodeStatus } from '../src/ahp/status.js';
 import { SessionFlag } from '../src/ahp/types.js';
 import { CLIPBOARD_PATH, layoutMarkdown, wrapRuns } from '@textui/core';
 import { toBlocks } from '../src/blocks.js';
-import { INPUT, QUEUE, SELECTED, TURNS } from '../src/state.js';
+import { INPUT, OPEN, PERMISSIONS, PROVIDER, QUEUE, SELECTED, TURNS, WORKSPACE } from '../src/state.js';
 import type { Turn } from '../src/ahp/types.js';
 
 /**
@@ -45,6 +45,20 @@ async function open(size = SIZES[0] as { width: number; height: number }): Promi
   return { t, host };
 }
 
+/**
+ * The catalogue, which is no longer where the application starts.
+ *
+ * It opens on the composer with nothing open - the first message is what
+ * creates a session - and the list of what already exists is one screen above
+ * it. Every test about rows, keys and archiving comes through here.
+ */
+async function catalogue(size?: { width: number; height: number }): Promise<Mounted> {
+  const m = await open(size);
+  await m.t.app.execute('go.sessions');
+  for (let i = 0; i < 6; i++) await m.t.settle();
+  return m;
+}
+
 /** Run the script to where it needs an answer, rendering as it goes. */
 async function run(m: Mounted, steps = 100_000): Promise<void> {
   for (let i = 0; i < steps; i++) if (!m.host.pump()) break;
@@ -77,8 +91,18 @@ async function idle(size?: { width: number; height: number }): Promise<Mounted> 
 }
 
 describe.each(SIZES.map((s) => [`${s.width}x${s.height}`, s] as const))('at %s', (_name, size) => {
-  it('opens on the catalogue, urgent first', async () => {
+  it('opens on a composer, with nothing open', async () => {
     const { t } = await open(size);
+    // Not a catalogue. Talking to an agent is the thing this is for, and a
+    // first screen that lists what already exists makes it a two-step errand.
+    expect(t.app.screens.current()?.id).toBe('new');
+    expect(t.app.focus.focused()).toBe('chat.composer');
+    expect(t.hasText('The first message is what starts it.')).toBe(true);
+    await t.unmount();
+  });
+
+  it('lists what already exists, urgent first', async () => {
+    const { t } = await catalogue(size);
     expect(t.app.screens.current()?.id).toBe('sessions');
     // The session waiting on a person is the first row, whatever it was
     // called or when it last moved.
@@ -129,6 +153,12 @@ describe('the transcript', () => {
     // The call's output is not on screen until it is asked for.
     expect(m.t.hasText('#define EVFILT_FS')).toBe(false);
     m.t.app.store.set('$/chat/ui/expanded', { c1: true });
+    // Onto the call itself. The cursor is what scrolls the feed, and the
+    // seeded session has a blocked turn under this one holding the bottom of
+    // the screen.
+    m.t.focus('chat.transcript');
+    m.t.press('home');
+    for (let i = 0; i < 6; i++) { m.t.press('down'); await m.t.settle(); }
     for (let i = 0; i < 4; i++) await m.t.settle();
     expect(m.t.hasText('#define EVFILT_FS')).toBe(true);
     await m.t.unmount();
@@ -245,7 +275,7 @@ describe('the composer', () => {
 
 describe('the catalogue', () => {
   it('puts the keyboard on the list, not in the filter', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     // Every single-letter command depends on this. With focus in the filter,
     // `d` is a letter typed into a text field and the key that disposes a
     // session does nothing - which looks exactly like a key that is missing.
@@ -254,7 +284,7 @@ describe('the catalogue', () => {
   });
 
   it('archives the selected session with a key', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     t.app.store.set('$/chat/ui/selected', 'ahp-session:/9c74');
     await t.settle();
 
@@ -266,7 +296,7 @@ describe('the catalogue', () => {
   });
 
   it('disposes a session after asking', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     t.app.store.set('$/chat/ui/selected', 'ahp-session:/9c74');
     await t.settle();
 
@@ -282,7 +312,7 @@ describe('the catalogue', () => {
   });
 
   it('focuses the filter by name, which is what a key needs to exist', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     await t.app.execute('session.filter');
     await t.settle();
     expect(t.app.focus.focused()).toBe('chat.filter');
@@ -297,7 +327,7 @@ describe('the catalogue', () => {
   });
 
   it('hides archived sessions, and says so', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     expect(t.hasText('Old build script')).toBe(false);
     await t.app.execute('session.toggleArchived');
     for (let i = 0; i < 4; i++) await t.settle();
@@ -353,7 +383,7 @@ describe('the catalogue tells the truth about what is waiting', () => {
     // exactly like a client that drops the request when you leave the screen.
     // Opening the row that says "waiting on you" must produce something to
     // answer, or the row is a lie.
-    const { t } = await open();
+    const { t } = await catalogue();
     expect(t.hasText('waiting on you')).toBe(true);
 
     t.press('enter');
@@ -364,7 +394,7 @@ describe('the catalogue tells the truth about what is waiting', () => {
   });
 
   it('still asks after you leave it and come back', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     t.press('enter');
     for (let i = 0; i < 6; i++) await t.settle();
 
@@ -385,7 +415,7 @@ describe('the catalogue tells the truth about what is waiting', () => {
     // The block used to trap focus, which is defensible until you notice that
     // approving a command is a decision about what is written above it - and
     // that the trap also ate the escape the block itself advertises.
-    const { t } = await open();
+    const { t } = await catalogue();
     t.press('enter');
     for (let i = 0; i < 6; i++) await t.settle();
 
@@ -430,7 +460,7 @@ describe('sessions are not all one session', () => {
 
 describe('what a session actually is', () => {
   it('shows the chat, the permissions and the model, not just the session id', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     t.app.store.set(SELECTED, 'ahp-session:/6b21');
     for (let i = 0; i < 6; i++) await t.settle();
 
@@ -445,7 +475,7 @@ describe('what a session actually is', () => {
   });
 
   it('copies the value under the cursor', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     t.app.store.set(SELECTED, 'ahp-session:/9c74');
     for (let i = 0; i < 6; i++) await t.settle();
 
@@ -465,7 +495,7 @@ describe('what a session actually is', () => {
 
 describe('putting a session away, and taking it back', () => {
   it('unarchives what it archived', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     t.app.store.set(SELECTED, 'ahp-session:/9c74');
     await t.settle();
 
@@ -490,7 +520,7 @@ describe('putting a session away, and taking it back', () => {
   });
 
   it('marks a session unread, and reading it marks it read again', async () => {
-    const { t } = await open();
+    const { t } = await catalogue();
     t.app.store.set(SELECTED, 'ahp-session:/9c74');
     for (let i = 0; i < 6; i++) await t.settle();
     expect(t.hasText('read')).toBe(true);
@@ -509,6 +539,107 @@ describe('putting a session away, and taking it back', () => {
   });
 });
 
+describe('the composer is the front door', () => {
+  it('starts a session from the first message', async () => {
+    const m = await open();
+    expect(m.t.app.screens.current()?.id).toBe('new');
+
+    m.t.focus('chat.composer');
+    m.t.type('run the tests');
+    m.t.feed('\r');
+    for (let i = 0; i < 8; i++) await m.t.settle();
+
+    // The message is what creates it. The provider is lazy - it attaches when
+    // there is a turn to run - so there is nothing to wait for between the two.
+    expect(m.t.app.screens.current()?.id).toBe('chat');
+    expect(m.t.store.get(OPEN)).toBeTruthy();
+    await run(m, 20);
+    expect(m.t.hasText('run the tests')).toBe(true);
+    await m.t.unmount();
+  });
+
+  it('reaches the control row with tab, and answers it in a panel', async () => {
+    const { t } = await open();
+    t.press('tab');
+    await t.settle();
+    expect(t.app.focus.focused()).toBe('chat.option.harness');
+
+    t.press('enter');
+    for (let i = 0; i < 8; i++) await t.settle();
+    // The palette, anchored above the chip - not a second overlay written for
+    // this row. What it is showing is one command's argument.
+    expect(t.hasText('Which agent runs this')).toBe(true);
+    expect(t.hasText('Copilot CLI')).toBe(true);
+
+    t.press('down');
+    t.press('enter');
+    for (let i = 0; i < 8; i++) await t.settle();
+    expect(t.store.get<string>(PROVIDER)).toBe('copilotcli');
+    // And the keyboard is back where it was, not stranded in a layer that has
+    // gone away.
+    expect(t.app.focus.focused()).toBe('chat.option.harness');
+    await t.unmount();
+  });
+
+  it('closes the panel on escape instead of backing out to a list of one', async () => {
+    const { t } = await open();
+    t.press('tab');
+    t.press('enter');
+    for (let i = 0; i < 8; i++) await t.settle();
+    expect(t.hasText('Which agent runs this')).toBe(true);
+
+    t.press('escape');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.hasText('Which agent runs this')).toBe(false);
+    expect(t.app.screens.current()?.id).toBe('new');
+    await t.unmount();
+  });
+
+  it('takes a typed answer where the argument has no choices', async () => {
+    const { t } = await open();
+    await t.app.execute('compose.workspace', { path: '/brb_main/src/brb_framework' });
+    for (let i = 0; i < 6; i++) await t.settle();
+    // The same overlay either way: an argument with choices is picked from and
+    // one without is typed into, which is what makes a workspace list a later
+    // change to the command rather than to anything that draws it.
+    expect(t.store.get<string>(WORKSPACE)).toBe('/brb_main/src/brb_framework');
+    expect(t.hasText('brb_framework')).toBe(true);
+    await t.unmount();
+  });
+
+  it('walks out of the field to the left', async () => {
+    const { t } = await open();
+    t.focus('chat.composer');
+    await t.settle();
+    // Nothing typed, so the caret is already at the front: one more left is
+    // "out of here", which is the same thought as escape and closer to hand.
+    t.press('left');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.app.screens.current()?.id).toBe('sessions');
+    await t.unmount();
+  });
+
+  it('describes the session it is above, once one is open', async () => {
+    const m = await catalogue();
+    m.t.app.store.set(SELECTED, 'ahp-session:/6b21');
+    await m.t.settle();
+    m.t.press('enter');
+    for (let i = 0; i < 8; i++) await m.t.settle();
+
+    // The row is about the next message, so on an open session it has to
+    // describe that session rather than whatever was chosen before it.
+    expect(m.t.store.get<string>(PERMISSIONS)).toBe('acceptEdits');
+    expect(m.t.hasText('Accept edits')).toBe(true);
+    expect(m.t.hasText('Sonnet 5')).toBe(true);
+    // And the harness is not offered: it is the process this is running in.
+    m.t.focus('chat.composer');
+    m.t.press('tab');
+    await m.t.settle();
+    expect(m.t.app.focus.focused()).toBe('chat.option.model');
+    await m.t.unmount();
+  });
+});
+
 describe('the status bar', () => {
   it('follows the screen, rather than keeping the one it was mounted on', async () => {
     const m = await idle();
@@ -519,7 +650,7 @@ describe('the status bar', () => {
     // A surface is not remounted by navigating - that is what a surface is for
     // - so asking `screens.current()` during a render answers once and never
     // again, and the footer keeps offering the keys of the screen you left.
-    m.t.app.screens.pop();
+    await m.t.app.execute('go.sessions');
     for (let i = 0; i < 4; i++) await m.t.settle();
     expect(m.t.hasText('i write')).toBe(false);
     expect(m.t.hasText('n new')).toBe(true);
@@ -560,6 +691,8 @@ describe('leaving, after a session has been open', () => {
       },
     });
     for (let i = 0; i < 8; i++) await t.settle();
+    await t.app.execute('go.sessions');
+    for (let i = 0; i < 6; i++) await t.settle();
 
     // The seeded session is blocked, so its status is 24 and stays there. A
     // stop binding that asked only "is something running" therefore matched

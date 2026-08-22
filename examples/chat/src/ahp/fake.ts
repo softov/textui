@@ -611,6 +611,11 @@ export function fakeHost(): FakeHost {
       { provider: 'copilotcli', displayName: 'Copilot CLI', models: [{ id: 'gpt-5', displayName: 'GPT-5' }] },
     ],
 
+    resolveConfig: async (): Promise<SessionConfig> => ({
+      properties: CONFIG,
+      values: { permissionMode: 'default', isolation: 'workspace' },
+    }),
+
     createSession: async ({ provider, workingDirectory }) => {
       const uri = `ahp-session:/${(0x1000 + summaries.size).toString(16)}`;
       seed({

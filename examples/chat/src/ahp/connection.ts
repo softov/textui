@@ -26,6 +26,17 @@ export interface HostConnection {
   listSessions(): Promise<SessionSummary[]>;
   /** The harnesses the host advertises, and the models each offers. */
   agents(): Promise<Agent[]>;
+  /**
+   * The configuration schema for a session that does not exist yet.
+   *
+   * `resolveSessionConfig`, which is the whole reason it is separate from
+   * `config`: the permission modes a harness offers have to be offerable
+   * *before* anything has been created, and they differ by provider. It is
+   * iterative on a real host - an answer can bring new questions, a git
+   * workspace is what makes a host offer a worktree - so it takes what has
+   * been chosen so far rather than only the provider.
+   */
+  resolveConfig(options: { provider: string; workingDirectory?: string }): Promise<SessionConfig>;
 
   createSession(options: { provider: string; workingDirectory?: string }): Promise<SessionUri>;
   disposeSession(uri: SessionUri): Promise<void>;

@@ -6,7 +6,9 @@ import type { BoxProps, Disposable, TextUIApp } from '@textui/core';
 import { CONTROLLER, createController } from './control.js';
 import { fakeHost } from './ahp/fake.js';
 import type { HostConnection } from './ahp/connection.js';
-import { FOCUS, HOST, INPUT, OPEN, RUNNING, SCREEN, STATUS, openSession, workspaceName } from './state.js';
+import {
+  FOCUS, HOST, INPUT, OPEN, RUNNING, SCREEN, STATUS, WORKSPACE, openSession, workspaceName,
+} from './state.js';
 import type { HostState } from './state.js';
 import { decodeStatus } from './ahp/status.js';
 import {
@@ -149,6 +151,20 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
     );
   }
 
+  if (screen === 'new') {
+    return (
+      <KeyHints
+        {...props}
+        hints={[
+          { keys: 'enter', label: 'start' },
+          { keys: 'tab', label: 'options' },
+          { keys: 'esc', label: 'sessions' },
+          { keys: 'ctrl+c', label: 'quit' },
+        ]}
+      />
+    );
+  }
+
   if (screen !== 'sessions') {
     return (
       <KeyHints
@@ -193,6 +209,14 @@ export interface ChatOptions {
   builtins?: boolean;
   /** The host. Omit for the scripted one, which is what the tests use. */
   host?: HostConnection & { pump?(): boolean };
+  /**
+   * Where a new session works, before anybody chooses otherwise.
+   *
+   * The directory this was started in, which is the only defensible guess: a
+   * session created with no workspace runs in the host's own directory, and an
+   * editor's agents window never shows it.
+   */
+  workspace?: string;
 }
 
 export function registerChat(app: TextUIApp, options: ChatOptions = {}): Disposable {
@@ -201,6 +225,7 @@ export function registerChat(app: TextUIApp, options: ChatOptions = {}): Disposa
 
   const host = options.host ?? fakeHost();
   const controller = createController(app, host);
+  app.store.set(WORKSPACE, options.workspace ?? process.cwd());
   bag.add(controller);
   bag.add(app.services.provide(CONTROLLER, controller));
 
@@ -250,7 +275,10 @@ export function registerChat(app: TextUIApp, options: ChatOptions = {}): Disposa
   }
 
   void controller.refresh();
-  app.screens.reset('sessions');
+  // The composer, with nothing open. A client whose first screen is a
+  // catalogue makes "talk to an agent" a two-step errand; the first message is
+  // what creates the session, so the field is what the application opens on.
+  app.screens.reset('new');
   return bag;
 }
 

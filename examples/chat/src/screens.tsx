@@ -1,13 +1,14 @@
 import {
-  Badge, Button, Column, EmptyState, Panel, RadioGroup, Row, SearchBox,
-  Select, TextArea, TextInput, defineComponent, useApp, useEffect, useFocusScope,
+  Badge, Column, EmptyState, Panel, RadioGroup, Row, SearchBox,
+  defineComponent, useApp, useEffect, useFocusScope,
   useRequiredService, useState, useStore, useStoreSubtree, useStoreValue, useTheme,
 } from '@textui/core';
 import type { BindingPath, RenderOutput, SemanticVariant } from '@textui/core';
 import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE } from './control.js';
 import {
-  ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, HISTORY, HOST, INPUT, OPEN, QUEUE,
-  SELECTED, SESSIONS, TURNS, openSession, visibleSessions, workspaceName,
+  ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, HISTORY, HOST, INPUT, MODEL, OPEN, PERMISSIONS,
+  PROVIDER, QUEUE, SELECTED, SESSIONS, TURNS, WORKSPACE,
+  openSession, visibleSessions, workspaceName,
 } from './state.js';
 import type { HostState } from './state.js';
 import { toBlocks } from './blocks.js';
@@ -22,6 +23,8 @@ import { ChangesList } from './view/changes.js';
 import { ConnectionBadge, SessionList } from './view/sessions.js';
 import { SessionDetails } from './view/details.js';
 import type { DetailField } from './view/details.js';
+import { openPicker } from './view/picker.js';
+import type { ComposerOption } from './view/controls.js';
 
 
 /**
@@ -189,6 +192,68 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
     );
   });
 
+/**
+ * The composer's control row, for whichever session it is above.
+ *
+ * The same four values either way, and what differs is only which of them can
+ * still be answered: a session that exists is running in a harness and a
+ * directory already, so those are shown rather than asked, while the model and
+ * the permission mode are decisions about the *next* message and stay open.
+ *
+ * Labels, never ids. `acceptEdits` is what the host stores and "Accept edits"
+ * is what it calls it, and the schema is the authority on both - so a chip
+ * reads as a sentence about what will happen rather than as a config value.
+ */
+function useComposerOptions(): ComposerOption[] {
+  const theme = useTheme();
+  const controller = useRequiredService(CONTROLLER);
+  const open = useStoreValue<string | null>(OPEN, null) ?? null;
+  const provider = useStoreValue<string>(PROVIDER, 'claude') ?? 'claude';
+  const model = useStoreValue<string>(MODEL, '') ?? '';
+  const permissions = useStoreValue<string>(PERMISSIONS, 'default') ?? 'default';
+  const workspace = useStoreValue<string>(WORKSPACE, '') ?? '';
+
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [config, setConfig] = useState<SessionConfig | null>(null);
+  useEffect(() => { void controller.agents().then(setAgents); }, []);
+  useEffect(() => {
+    void controller.resolveConfig({ provider }).then(setConfig);
+  }, [provider]);
+
+  const agent = agents.find((found) => found.provider === provider);
+  const permission = config?.properties.find((property) => property.key === 'permissionMode')
+    ?.values.find((value) => value.value === permissions);
+
+  return [
+    {
+      id: 'harness',
+      icon: theme.glyphs.bulletFilled,
+      label: agent?.displayName ?? provider,
+      // Fixed once the session exists: it is the process the conversation is
+      // running in.
+      ...(open ? {} : { commandId: 'compose.harness' }),
+    },
+    {
+      id: 'model',
+      icon: theme.glyphs.bulletHollow,
+      label: agent?.models.find((found) => found.id === model)?.displayName ?? (model || 'default'),
+      commandId: 'compose.model',
+    },
+    {
+      id: 'permissions',
+      icon: theme.glyphs.checkboxOn,
+      label: permission?.label ?? permissions,
+      commandId: 'compose.permissions',
+    },
+    {
+      id: 'workspace',
+      icon: theme.glyphs.breadcrumb,
+      label: workspaceName(workspace ? `file://${workspace}` : undefined),
+      ...(open ? {} : { commandId: 'compose.workspace' }),
+    },
+  ];
+}
+
 // -------------------------------------------------------------------- 2. chat
 
 export const ChatScreen: (props: Record<string, never>) => RenderOutput =
@@ -212,6 +277,7 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
     const session = openSession(app.store);
     const running = turns.some((turn) => turn.state === 'running');
     const blocks = toBlocks(turns, queued);
+    const options = useComposerOptions();
 
     if (!session) {
       return <EmptyState title="No session open" message="Open one from the catalogue." flex={1} />;
@@ -254,7 +320,10 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
           value={draft}
           running={running}
           queued={queued.length}
-          meta={`${session.provider}  ${workspaceName(session.workingDirectories[0])}`}
+          options={options}
+          onOption={(option, anchorId) => {
+            if (option.commandId) openPicker(app, { commandId: option.commandId, anchorId });
+          }}
           commands={app.commands.list({ slot: 'palette', enabledOnly: true })
             .map((command) => ({ id: command.id, title: command.title, ...(command.description ? { description: command.description } : {}) }))}
           onChange={(value: string) => app.store.set(DRAFT, value)}
@@ -267,7 +336,7 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
             setRecall(next);
             app.store.set(DRAFT, history[next] ?? '');
           }}
-          onStop={() => controller.stop()}
+          onLeave={() => app.focus.focus('chat.transcript')}
           autoFocus={!input}
         />
       </Column>
@@ -280,86 +349,60 @@ export const NewSessionScreen: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('NewSessionScreen', () => {
     const app = useApp();
     const controller = useRequiredService(CONTROLLER);
-    const [agents, setAgents] = useState<Agent[]>([]);
-    const [provider, setProvider] = useStore<string>('$/screen.new/provider' as BindingPath, 'claude');
-    const [model, setModel] = useStore<string>('$/screen.new/model' as BindingPath, '');
-    const [thinking, setThinking] = useStore<string>('$/screen.new/thinking' as BindingPath, 'medium');
-    const [directory, setDirectory] = useStore<string>('$/screen.new/directory' as BindingPath, '/github/textui');
-    const [first, setFirst] = useStore<string>('$/screen.new/first' as BindingPath, '');
+    const theme = useTheme();
 
-    // What the host advertises, asked once. A real dispatch form asks
-    // `resolveSessionConfig` again after every answer as well: the reply is
-    // the whole property set for the selections passed in, and an answer can
-    // bring new questions - a git workspace is what makes a host offer a
-    // worktree, and taking the worktree is what makes it ask for a base branch.
-    useEffect(() => { void controller.agents().then(setAgents); }, []);
-
-    const agent = agents.find((found) => found.provider === provider);
+    const draft = useStoreValue<string>(DRAFT, '') ?? '';
+    const history = useStoreValue<string[]>(HISTORY, []) ?? [];
+    const [recall, setRecall] = useState(history.length);
+    const options = useComposerOptions();
 
     return (
-      <Panel title="New session" flex={1}>
-        <Column gap={1} flex={1}>
-          <Select
-            label="Harness"
-            options={agents.map((found) => ({ value: found.provider, label: found.displayName }))}
-            value={provider ?? 'claude'}
-            onChange={(value: string) => setProvider(value)}
-          />
-          <Select
-            label="Model"
-            options={(agent?.models ?? []).map((found) => ({ value: found.id, label: found.displayName }))}
-            value={model ?? ''}
-            placeholder="the harness default"
-            onChange={(value: string) => setModel(value)}
-          />
-          <RadioGroup
-            label="Thinking"
-            inline
-            options={(agent?.models.find((m) => m.id === model)?.thinkingLevels ?? ['low', 'medium', 'high'])
-              .map((level) => ({ value: level, label: level }))}
-            value={thinking ?? 'medium'}
-            onChange={(value: string) => setThinking(value)}
-          />
-          <TextInput
-            label="Workspace"
-            value={directory ?? ''}
-            onChange={(value: string) => setDirectory(value)}
-          />
-          <text content="A session created with no workspace runs in the host's own directory, and an editor's agents window never shows it." fg="subtle" wrap="word" />
-
-          <Panel title="First message" flex={1}>
-            <TextArea
-              value={first ?? ''}
-              onChange={(value: string) => setFirst(value)}
-              maxRows={6}
-              placeholder="What should it do?"
-            />
-          </Panel>
-
-          <Row gap={2}>
-            <Button
-              label="Start"
-              tone="success"
-              variant="solid"
-              disabled={(first ?? '').trim() === ''}
-              onPress={() => {
-                // The model rides on the first turn, not on `createSession`:
-                // AHP hangs the selection on the message, so a session does
-                // not have a model - each message does.
-                void controller.create({
-                  provider: provider ?? 'claude',
-                  ...(directory ? { workingDirectory: directory } : {}),
-                  first: first ?? '',
-                }).then(() => {
-                  setFirst('');
-                  app.screens.replace('chat');
-                });
-              }}
-            />
-            <Button label="Cancel" variant="ghost" onPress={() => app.screens.pop()} />
-          </Row>
+      <Column flex={1} gap={1}>
+        {/* Nothing has been said, so there is nothing to draw above the field.
+            What fills the space is the invitation, and it stays out of the way
+            of the one control that matters. */}
+        <Column flex={1} justify="center" align="center" gap={0}>
+          <text content="A new session" fg="muted" />
+          <text content="The first message is what starts it." fg="subtle" />
+          <text content={`${theme.glyphs.chevronLeft} esc for the sessions you already have`} fg="subtle" />
         </Column>
-      </Panel>
+
+        <ChatComposer
+          value={draft}
+          options={options}
+          onOption={(option, anchorId) => {
+            if (option.commandId) openPicker(app, { commandId: option.commandId, anchorId });
+          }}
+          commands={app.commands.list({ slot: 'palette', enabledOnly: true })
+            .map((command) => ({ id: command.id, title: command.title, ...(command.description ? { description: command.description } : {}) }))}
+          onChange={(value: string) => app.store.set(DRAFT, value)}
+          // The message *is* the session. Nothing is created until there is
+          // something to say, which is why there is no Start button to leave
+          // pressed by mistake - and why the provider being lazy costs nothing:
+          // it does not attach until there is a turn to run, and this is one.
+          onSubmit={(value: string) => {
+            const first = value.trim();
+            if (!first) return;
+            setRecall(history.length + 1);
+            const workspace = app.store.get<string>(WORKSPACE) ?? '';
+            void controller.create({
+              provider: app.store.get<string>(PROVIDER) ?? 'claude',
+              ...(workspace ? { workingDirectory: workspace } : {}),
+              first,
+            }).then(() => app.screens.push('chat'));
+          }}
+          onCancel={() => app.execute('go.sessions')}
+          // Left off the front of the field, twice over, is the same thought as
+          // escape: out of here, back to what already exists.
+          onLeave={() => app.execute('go.sessions')}
+          onHistory={(direction: -1 | 1) => {
+            const next = Math.max(0, Math.min(history.length, recall + direction));
+            setRecall(next);
+            app.store.set(DRAFT, history[next] ?? '');
+          }}
+          autoFocus
+        />
+      </Column>
     );
   });
 

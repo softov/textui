@@ -4,7 +4,8 @@ import type { HostConnection } from './ahp/connection.js';
 import type { Agent, Answer, SessionConfig, SessionDetail, SessionUri, Turn } from './ahp/types.js';
 import { SessionFlag } from './ahp/types.js';
 import {
-  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, INPUT, OPEN, QUEUE, RUNNING, SCREEN, SELECTED, TURNS,
+  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, INPUT, MODEL, OPEN, PERMISSIONS, PROVIDER, QUEUE,
+  RUNNING, SCREEN, SELECTED, TURNS, WORKSPACE,
   applyEvent, pendingInput, queue, sessions, turns, writeSessions, writeStatus,
 } from './state.js';
 
@@ -52,6 +53,8 @@ export interface Controller {
   /** The session channel's own state: its chat, its lifecycle, its settings. */
   detail(uri: SessionUri): Promise<SessionDetail>;
   config(uri: SessionUri): Promise<SessionConfig>;
+  /** The schema for a session that does not exist yet. */
+  resolveConfig(options: { provider: string; workingDirectory?: string }): Promise<SessionConfig>;
   setConfig(uri: SessionUri, key: string, value: string): void;
   /** Drive the scripted host. A real connection has a socket instead. */
   pump(): boolean;
@@ -90,6 +93,10 @@ export function createController(
   app.store.set(EXPANDED, {});
   app.store.set(QUEUE, []);
   app.store.set(DRAFT, '');
+  // What the first message will be sent as, before there is a session to ask.
+  app.store.set(PROVIDER, 'claude');
+  app.store.set(MODEL, '');
+  app.store.set(PERMISSIONS, 'default');
 
   const controller: Controller = {
     async refresh() {
@@ -110,6 +117,22 @@ export function createController(
       subscription = host.subscribe(uri, (event) => {
         model = applyEvent(app.store, event, model);
         if (event.type === 'status') void controller.refresh();
+      });
+
+      // The composer's row is about the next message, so on an open session it
+      // has to describe *that* session: its harness, its workspace, the
+      // permission mode in force and what its last turn ran on. Left alone it
+      // would keep describing whatever was chosen on the new-session screen,
+      // which is a row of confident, wrong answers.
+      const summary = sessions(app.store).find((found) => found.resource === uri);
+      if (summary) {
+        app.store.set(PROVIDER, summary.provider);
+        app.store.set(WORKSPACE, (summary.workingDirectories[0] ?? '').replace(/^file:\/\//, ''));
+      }
+      void host.detail(uri).then((detail) => {
+        if (app.store.get<SessionUri>(OPEN) !== uri) return;
+        app.store.set(PERMISSIONS, detail.config.values.permissionMode ?? 'default');
+        if (detail.model) app.store.set(MODEL, detail.model);
       });
     },
 
@@ -140,7 +163,11 @@ export function createController(
         app.store.set(QUEUE, [...queue(app.store), trimmed]);
         return;
       }
-      host.say(uri, trimmed);
+      // The model rides on the turn, not on the session: AHP hangs it on the
+      // message, so the composer's choice is applied here rather than being
+      // set on the session once.
+      const chosen = app.store.get<string>(MODEL);
+      host.say(uri, trimmed, chosen || undefined);
     },
 
     stop() {
@@ -202,6 +229,7 @@ export function createController(
 
     agents: () => host.agents(),
     detail: (uri) => host.detail(uri),
+    resolveConfig: (options) => host.resolveConfig(options),
     config: (uri) => host.config(uri),
     setConfig: (uri, key, value) => host.setConfig(uri, key, value),
 
@@ -220,6 +248,26 @@ export function createController(
 /** What to put back when a preview is abandoned. Only this knows what it changed. */
 const previous: { theme: string | null; shell: string | null } = { theme: null, shell: null };
 
+/**
+ * The composer's chips, as commands.
+ *
+ * Each one is a command with a single argument that has `choices`, which is
+ * what lets the palette ask about it - anchored above the chip rather than in
+ * the middle of the screen, but the same overlay, the same drill-in and the
+ * same "an argument with no choices is answered by typing". A chip that offers
+ * a list of workspaces later is this same command with a `choices` function
+ * added, and no change to anything that draws it.
+ *
+ * The palette hands back the *label*, because labels are what a person picked
+ * from: a live host's ids are opaque and sometimes whole sentences. So each
+ * command resolves the label to the value the host wants, from the same list
+ * it offered.
+ */
+interface Catalogue {
+  agents: Agent[];
+  config: SessionConfig | null;
+}
+
 function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
   const selected = (): SessionUri | null => app.store.get<SessionUri>(SELECTED) ?? null;
   const openUri = (): SessionUri | null => app.store.get<SessionUri>(OPEN) ?? null;
@@ -235,6 +283,53 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
   const target = (): SessionUri | null =>
     (app.screens.current()?.id === 'chat' ? openUri() : null) ?? selected() ?? openUri();
   const running = (): boolean => turns(app.store).some((turn) => turn.state === 'running');
+
+  /**
+   * The catalogue, one screen above the composer.
+   *
+   * Reset-then-push rather than push: the catalogue is reachable from the
+   * composer, from a conversation and from the palette, and pushing from each
+   * of those would stack three copies of it that escape then walks back
+   * through one at a time.
+   */
+  const toSessions = (): void => {
+    app.screens.reset('new');
+    app.screens.push('sessions');
+    void controller.refresh();
+  };
+
+  /**
+   * What the host last said it offers.
+   *
+   * Filled by the `choices` functions, which the palette calls when it opens
+   * one of these - so the labels a person is choosing from and the list a
+   * choice is resolved against are always the same fetch.
+   */
+  const known: Catalogue = { agents: [], config: null };
+
+  const provider = (): string => app.store.get<string>(PROVIDER) ?? 'claude';
+  const agent = (): Agent | undefined => known.agents.find((found) => found.provider === provider());
+
+  const listAgents = async (): Promise<string[]> => {
+    known.agents = await controller.agents();
+    return known.agents.map((found) => found.displayName);
+  };
+
+  const listModels = async (): Promise<string[]> => {
+    if (known.agents.length === 0) await listAgents();
+    return (agent()?.models ?? []).map((model) => model.displayName);
+  };
+
+  const listPermissions = async (): Promise<string[]> => {
+    const uri = openUri();
+    // An open session answers about itself; a session that does not exist yet
+    // is what `resolveSessionConfig` is for.
+    known.config = uri
+      ? await controller.config(uri)
+      : await controller.resolveConfig({ provider: provider() });
+    return (known.config?.properties.find((p) => p.key === 'permissionMode')?.values ?? [])
+      .map((value) => value.label);
+  };
 
   return [
     {
@@ -258,13 +353,32 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
         });
       },
     },
-    { id: 'go.back', title: 'Back', category: 'Go', slots: ['palette'], run: () => { app.screens.pop(); } },
+    {
+      id: 'go.back',
+      title: 'Back',
+      category: 'Go',
+      slots: ['palette'],
+      run: () => {
+        // The composer is the root, so there is nothing under it to pop to -
+        // and escape on the one screen that has no way back would do nothing
+        // at all. From there it means "show me what already exists".
+        if (app.screens.current()?.id === 'new') { toSessions(); return; }
+        app.screens.pop();
+      },
+    },
     {
       id: 'go.sessions',
       title: 'Sessions',
       category: 'Go',
       slots: ['palette'],
-      run: () => { app.screens.reset('sessions'); void controller.refresh(); },
+      run: () => toSessions(),
+    },
+    {
+      id: 'go.new',
+      title: 'New session',
+      category: 'Go',
+      slots: ['palette'],
+      run: () => { app.screens.reset('new'); app.focus.focus('chat.composer'); },
     },
     {
       id: 'go.changes',
@@ -343,6 +457,113 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       },
     },
 
+    // The composer's control row. Four questions about what the next message
+    // will be sent as, each asked by the palette, anchored above its chip.
+    {
+      id: 'compose.harness',
+      title: 'Harness',
+      category: 'Compose',
+      slots: ['palette'],
+      // Fixed once a session exists: it is the process the conversation is
+      // running in, and a chip offering to change it would be offering a lie.
+      when: `!${OPEN}`,
+      args: [{
+        name: 'id',
+        type: 'string' as const,
+        required: true,
+        description: 'Which agent runs this',
+        choices: listAgents,
+      }],
+      run: (args: Record<string, unknown>) => {
+        const chosen = known.agents.find((found) => found.displayName === String(args.id));
+        if (!chosen) return;
+        app.store.set(PROVIDER, chosen.provider);
+        // A model belongs to a harness. Kept across a change it names one the
+        // new harness has never heard of, and the host refuses the turn.
+        app.store.set(MODEL, '');
+      },
+    },
+    {
+      id: 'compose.model',
+      title: 'Model',
+      category: 'Compose',
+      slots: ['palette'],
+      args: [{
+        name: 'id',
+        type: 'string' as const,
+        required: true,
+        description: 'What the next message runs on',
+        choices: listModels,
+      }],
+      run: (args: Record<string, unknown>) => {
+        const chosen = agent()?.models.find((model) => model.displayName === String(args.id));
+        // The id, not the label. AHP hangs the model on the message, so this
+        // is what rides on the next `chat/turnStarted`.
+        if (chosen) app.store.set(MODEL, chosen.id);
+      },
+    },
+    {
+      id: 'compose.permissions',
+      title: 'Permissions',
+      category: 'Compose',
+      slots: ['palette'],
+      args: [{
+        name: 'id',
+        type: 'string' as const,
+        required: true,
+        description: 'How much it may do before it asks',
+        choices: listPermissions,
+      }],
+      run: (args: Record<string, unknown>) => {
+        const values = known.config?.properties.find((p) => p.key === 'permissionMode')?.values ?? [];
+        const chosen = values.find((value) => value.label === String(args.id));
+        if (!chosen) return;
+        app.store.set(PERMISSIONS, chosen.value);
+        // On a session that exists this is a change to it, and one key at a
+        // time: the action merges, so sending the object writes back whatever
+        // this client happened to be holding.
+        const uri = openUri();
+        if (uri) controller.setConfig(uri, 'permissionMode', chosen.value);
+      },
+    },
+    {
+      id: 'compose.workspace',
+      title: 'Workspace',
+      category: 'Compose',
+      slots: ['palette'],
+      when: `!${OPEN}`,
+      // No `choices`, so the palette asks for it as text - the same overlay,
+      // with its field as the answer rather than as a filter. Give it a
+      // `choices` function later and the same chip becomes a list of
+      // workspaces without anything else changing.
+      args: [{
+        name: 'path',
+        type: 'string' as const,
+        required: true,
+        description: 'Where the agent works. A path on the host, not on this machine.',
+      }],
+      run: (args: Record<string, unknown>) => {
+        const path = String(args.path ?? '').trim();
+        if (path) app.store.set(WORKSPACE, path);
+      },
+    },
+    {
+      id: 'compose.start',
+      title: 'Start a session with what has been typed',
+      category: 'Compose',
+      slots: ['palette'],
+      when: `!${OPEN}`,
+      run: () => {
+        const first = (app.store.get<string>(DRAFT) ?? '').trim();
+        if (!first) return;
+        void controller.create({
+          provider: provider(),
+          ...(app.store.get<string>(WORKSPACE) ? { workingDirectory: app.store.get<string>(WORKSPACE) as string } : {}),
+          first,
+        }).then(() => app.screens.push('chat'));
+      },
+    },
+
     {
       id: 'session.open',
       title: 'Open session',
@@ -361,7 +582,13 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       title: 'New session',
       category: 'Session',
       slots: ['palette'],
-      run: () => app.screens.push('new'),
+      run: () => {
+        // Nothing open, so the control row describes a session that does not
+        // exist yet rather than the one that was on screen a moment ago.
+        controller.close();
+        app.screens.reset('new');
+        app.focus.focus('chat.composer');
+      },
     },
     {
       id: 'session.refresh',

@@ -637,9 +637,22 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       category: 'View',
       slots: ['palette'],
       keepOpen: true,
+      // A switch, so the View menu and the palette can both draw its state
+      // rather than each keeping their own idea of it.
+      checked: MARK_LINES,
       run: (_args: Record<string, unknown>, ctx: CommandContext) => {
         const on = ctx.store.get<boolean>(MARK_LINES as BindingPath) === true;
         ctx.store.set(MARK_LINES as BindingPath, !on);
+        // Turning it on below 24-bit colour does nothing at all: the wash
+        // mixes 14% of a tone into the canvas, and two of sixteen palette
+        // colours blend to a third that already means something else. Silence
+        // here is a switch that looks broken, so say it instead.
+        if (!on && ctx.app.terminal.capabilities().colorDepth < 24) {
+          notify(ctx.app, {
+            tone: 'warning',
+            message: 'This terminal has too few colours to wash a line. Marks still show.',
+          });
+        }
       },
     },
     {

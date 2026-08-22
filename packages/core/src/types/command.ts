@@ -104,6 +104,16 @@ export interface CommandDefinition {
   /** The instance this registration belongs to, for non-app scopes. */
   scopeId?: string;
   when?: WhenClause;
+  /**
+   * The state of a command that is a switch, as a clause over the store.
+   *
+   * A toggle's row has to say what it is toggling *to*, and the definition is
+   * registered once while the state changes under it - so this is a clause
+   * evaluated per read, the same way `when` is, rather than a boolean nobody
+   * would remember to update. Absent means the command is not a switch, which
+   * a menu needs to tell apart from a switch that is off.
+   */
+  checked?: WhenClause;
   args?: ArgsSchema;
   /** Slots this command publishes itself into: 'palette', 'menu:tab', ... */
   slots?: string[];
@@ -124,4 +134,6 @@ export interface CommandRegistry {
   ): Promise<unknown>;
   /** True when the command exists and its `when` clause passes. */
   enabled(id: string): boolean;
+  /** A switch's state, or undefined when the command is not a switch. */
+  isChecked(id: string): boolean | undefined;
 }

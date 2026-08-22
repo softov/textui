@@ -136,6 +136,12 @@ export interface MenuItem {
   disabled?: boolean;
   tone?: SemanticVariant;
   separatorBefore?: boolean;
+  /**
+   * A switch, and whether it is on. Absent means the row is not a switch, so
+   * a menu of ordinary commands keeps its left edge rather than indenting
+   * every label to make room for a mark nothing uses.
+   */
+  checked?: boolean;
   children?: MenuItem[];
 }
 
@@ -191,6 +197,11 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
   const start = Math.max(0, Math.min(highlight - Math.floor(rows / 2), items.length - rows));
   const window = items.slice(start, start + rows);
 
+  // One switch in the menu gives every row the column, blank on the rows that
+  // are not switches. Per-row would left-align the labels differently
+  // depending on what happened to be a toggle, which reads as a broken menu.
+  const switches = items.some((item) => item.checked !== undefined);
+
   return h('box', { id: focus.id, role: 'menu', direction: 'column', ...rest },
     ...window.flatMap((item, i) => {
       const active = start + i === highlight;
@@ -206,6 +217,9 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
         onClick: () => { if (!item.disabled) onSelect?.(item.id, item); },
       },
         h('text', { content: active ? theme.glyphs.chevronRight : ' ', shrink: 0 }),
+        switches
+          ? h('text', { content: item.checked === true ? theme.glyphs.check : ' ', shrink: 0 })
+          : null,
         // The mark never gives up room. It is the shortest thing on the row
         // and the one that stays legible when everything else is an ellipsis.
         item.icon ? h('text', { content: item.icon, shrink: 0 }) : null,

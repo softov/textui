@@ -43,7 +43,11 @@ export const MENUS: MenuSpec[] = [
     // with this array.
     // "Open With" is core's, not this application's: the list comes off the
     // resource registry, so it grows when an extension registers a renderer.
-    items: ['panel.openWith', null, 'view.theme', 'view.layout', null, 'app.palette'],
+    items: [
+      'panel.openWith', null,
+      'view.theme', 'view.layout', 'view.markLines', null,
+      'app.palette',
+    ],
   },
   { id: 'help', label: 'Help', items: ['help.keys', 'help.about'] },
 ];
@@ -74,6 +78,9 @@ function itemsFor(app: TextUIApp, spec: MenuSpec): MenuItem[] {
       ...(shortcut ? { shortcut } : {}),
       disabled: app.commands.enabled(id) === false,
       separatorBefore: spec.items[i - 1] === null && i > 0,
+      // Undefined for everything that is not a switch, which is what keeps
+      // the mark's column out of a menu that has none.
+      checked: app.commands.isChecked(id),
       // A command that will ask a question gets a chevron, as in the palette.
       ...((command.args ?? []).some((a) => a.choices) ? { children: [] } : {}),
     }];

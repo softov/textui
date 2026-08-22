@@ -1184,3 +1184,54 @@ describe('Badge', () => {
     await t.unmount();
   });
 });
+
+/**
+ * A menu row that is a switch.
+ *
+ * The column is the whole design question: reserving it per row would left-
+ * align labels differently depending on what happened to be a toggle, which
+ * reads as a broken menu rather than as a menu with toggles in it.
+ */
+describe('a menu with switches in it', () => {
+  const ITEMS = [
+    { id: 'on', label: 'Wrap Lines', checked: true },
+    { id: 'off', label: 'Show Marks', checked: false },
+    { id: 'plain', label: 'Open With' },
+  ];
+
+  it('marks the one that is on and not the one that is off', async () => {
+    const t = await render(h('Menu', { items: ITEMS, autoFocus: true }), { width: 30, height: 6 });
+    const line = (label: string): string => t.lines().find((l) => l.includes(label)) ?? '';
+
+    expect(line('Wrap Lines')).toContain('✓');
+    expect(line('Show Marks')).not.toContain('✓');
+    expect(line('Open With')).not.toContain('✓');
+    await t.unmount();
+  });
+
+  it('gives every row the column, so the labels line up', async () => {
+    const t = await render(h('Menu', { items: ITEMS, autoFocus: true }), { width: 30, height: 6 });
+    const at = (label: string): number =>
+      (t.lines().find((l) => l.includes(label)) ?? '').indexOf(label);
+
+    expect(at('Show Marks')).toBe(at('Wrap Lines'));
+    expect(at('Open With')).toBe(at('Wrap Lines'));
+    await t.unmount();
+  });
+
+  it('keeps the column out of a menu that has no switches', async () => {
+    const plain = [{ id: 'a', label: 'Open With' }, { id: 'b', label: 'Theme' }];
+    const withSwitch = await render(
+      h('Menu', { items: [...plain, { id: 'c', label: 'Wrap', checked: false }], autoFocus: true }),
+      { width: 30, height: 6 },
+    );
+    const indented = (withSwitch.lines().find((l) => l.includes('Open With')) ?? '')
+      .indexOf('Open With');
+    await withSwitch.unmount();
+
+    const t = await render(h('Menu', { items: plain, autoFocus: true }), { width: 30, height: 6 });
+    const plainAt = (t.lines().find((l) => l.includes('Open With')) ?? '').indexOf('Open With');
+    expect(plainAt).toBeLessThan(indented);
+    await t.unmount();
+  });
+});

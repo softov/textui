@@ -100,6 +100,11 @@ export class Commands implements CommandRegistry {
     return this.resolve(id) !== undefined;
   }
 
+  isChecked(id: string): boolean | undefined {
+    const clause = this.resolve(id)?.checked;
+    return clause === undefined ? undefined : this.deps.when.evaluate(clause);
+  }
+
   async execute(
     id: string,
     args: Record<string, unknown> = {},

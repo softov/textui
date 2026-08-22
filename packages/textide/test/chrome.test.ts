@@ -349,14 +349,14 @@ describe('the command palette', () => {
     expect(open_layers()).toBe(1);
 
     const seen: string[] = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       t.press('down');
       for (let j = 0; j < 2; j++) await t.settle();
       seen.push(highlighted());
       // The menu must still be the one menu that is open.
       expect(open_layers(), 'down must not reopen or close the dropdown').toBe(1);
     }
-    expect(seen).toEqual(['Theme', 'Layout', 'Command Palette']);
+    expect(seen).toEqual(['Theme', 'Layout', 'Highlight Changed Lines', 'Command Palette']);
     await t.unmount();
   });
 

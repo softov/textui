@@ -37,6 +37,31 @@ app.commands.register({
 - **`slots`** is where the command offers itself: `palette`, `hints`, `context`, or anything an application invents.
 - **`args`** are validated before `run`, so a typo in a keybinding fails loudly rather than passing `undefined` into an API call. An arg that declares `choices` also becomes a sub-menu in the palette - see below.
 
+## A command that is a switch
+
+`checked` is a clause like `when`, and it makes a command a toggle. A menu
+draws the mark, and `keepOpen` leaves the list up so a run of switches can be
+walked rather than reopened one at a time.
+
+```ts
+app.commands.register({
+  id: 'view.wrap',
+  title: 'Wrap Lines',
+  slots: ['palette'],
+  checked: '$/ui/editor/wrap',
+  keepOpen: true,
+  run: (_args, ctx) => {
+    ctx.store.set('$/ui/editor/wrap', ctx.store.get<boolean>('$/ui/editor/wrap') !== true);
+  },
+});
+```
+
+A clause rather than a boolean because the definition is registered once and
+the state changes under it - and absent rather than `false` because a menu has
+to tell "not a switch" from "a switch that is off". `app.commands.isChecked(id)`
+returns `undefined` for the first and `false` for the second, which is what
+keeps the mark's column out of a menu that has no toggles in it.
+
 ## The palette
 
 ```tsx

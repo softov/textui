@@ -5,6 +5,11 @@ import { filesystemAdapter } from './filesystem.js';
 import { seedWorkspace, type Workspace } from './workspace.js';
 import { rememberSettings, seedSettings } from './settings.js';
 import { Editor, Explorer } from './app.js';
+import {
+  EXTENSION_KINDS, EXTENSION_VIEWERS, ExtensionView, ExtensionsPanel,
+  createExtensionProvider, extensionUri,
+} from './panels/extensions.js';
+import { EDITOR_URI } from './tabs.js';
 import { TitleBar } from './chrome/titlebar.js';
 import { StatusLine } from './chrome/statusbar.js';
 import { MenuBar } from './chrome/menubar.js';
@@ -48,6 +53,31 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ...(workspace.exclude ? { exclude: workspace.exclude } : {}),
   })));
   bag.add(app.registerAdapter(jsonAdapter()));
+  // An extension is a thing you open, so it is a resource and it opens through
+  // the registry like anything else - which is what makes the detail a tab
+  // with room for its actions rather than a caption under a narrow list.
+  bag.add(app.registerAdapter({
+    id: 'textide.extensions',
+    title: 'Extensions',
+    kinds: EXTENSION_KINDS,
+    viewers: EXTENSION_VIEWERS,
+    providers: [createExtensionProvider()],
+    commands: [{
+      id: 'extensions.show',
+      title: 'Show Extension',
+      category: 'Extensions',
+      slots: ['palette'],
+      args: [{ name: 'id', type: 'string', required: true }],
+      // The editor's own tab strip, not a second mount on `main`. Setting the
+      // open URI is what git does for `git:log/<path>`, and it is why an
+      // extension arrives as a tab beside your files rather than as a pane
+      // competing with them for the region.
+      run: (args, ctx) => {
+        const id = String(args.id ?? '');
+        if (id) ctx.store.set(EDITOR_URI, extensionUri(id));
+      },
+    }],
+  }));
 
   seedWorkspace(app, workspace);
   // What the workspace remembered, before the first frame - and a subscription
@@ -242,6 +272,8 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     { component: 'TitleBar', category: 'chrome', renderer: { kind: 'function', render: TitleBar }, description: 'Workspace, open file and unsaved marker.' },
     { component: 'StatusLine', category: 'chrome', renderer: { kind: 'function', render: StatusLine }, description: 'Where you are and what is true right now.' },
     { component: 'Explorer', category: 'chrome', renderer: { kind: 'function', render: Explorer }, description: 'The workspace tree.' },
+    { component: 'ExtensionsPanel', category: 'chrome', renderer: { kind: 'function', render: ExtensionsPanel }, description: 'What is loaded, and how many are wrong.' },
+    { component: 'ExtensionView', category: 'chrome', renderer: { kind: 'function', render: ExtensionView }, description: 'One extension: what it is, what it brought, what can be done to it.' },
     { component: 'Editor', category: 'chrome', renderer: { kind: 'function', render: Editor }, description: 'The open files, the pane or panes, and the key hints.' },
   ]));
 
@@ -260,6 +292,15 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     key: 'explorer',
     target: { component: 'Explorer' },
     display: { title: 'Explorer' },
+  }));
+  // The second sidebar panel, and the reason the sidebar shows one at a time.
+  // Mounted at boot rather than by the loader: the panel that says nothing
+  // loaded has to exist before anything has tried to load.
+  bag.add(app.open({
+    surface: 'sidebar',
+    key: 'extensions',
+    target: { component: 'ExtensionsPanel' },
+    display: { title: 'Extensions' },
   }));
   bag.add(app.open({ surface: 'main', key: 'editor', target: { component: 'Editor' } }));
   bag.add(app.open({ surface: 'status', key: 'status', target: { component: 'StatusLine' } }));

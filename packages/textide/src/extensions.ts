@@ -286,5 +286,40 @@ export async function loadExtensions(
 
   publish();
   bag.add({ dispose: () => { app.store.set(EXTENSIONS_PATH as never, []); } });
+
+  // Registered here because this is the only thing holding the bags. A command
+  // rather than a method the panel calls, so the panel and the palette run one
+  // implementation - and so a keybinding could reach it without this file
+  // hearing about it.
+  bag.add(app.commands.register({
+    id: 'extensions.disable',
+    title: 'Disable Extension',
+    category: 'Extensions',
+    slots: ['palette'],
+    keepOpen: true,
+    args: [{
+      name: 'id', type: 'string', required: true,
+      choices: () => [...records.values()]
+        .filter((e) => e.state === 'loaded')
+        .map((e) => e.source.id),
+    }],
+    run: (args) => {
+      const id = String(args.id ?? '');
+      const record = records.get(id);
+      if (!record) return;
+      if (record.state !== 'loaded') {
+        notify(app, { message: `${record.source.displayName ?? id} is already off.` });
+        return;
+      }
+      nothing.disable(id);
+      // Until the workspace remembers this, it lasts as long as the session -
+      // and a switch that quietly forgets is worse than one that says so.
+      notify(app, {
+        tone: 'warning',
+        message: `${record.source.displayName ?? id} is off until textide restarts.`,
+      });
+    },
+  }));
+
   return nothing;
 }

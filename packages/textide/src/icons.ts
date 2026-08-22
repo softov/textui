@@ -94,6 +94,12 @@ export const FULL_ICONS = {
   about: 'ℹ',
   camera: '⎙',
 
+  // Not a plug and not a puzzle piece: both live outside the BMP and measure
+  // two cells, which is the same trap the folder glyph fell into. A box with a
+  // mark in it is what fits, and it is next to `layout` in shape on purpose -
+  // an extension is a thing that adds a region, and it should look like one.
+  extension: '▣',
+
   // --- state -------------------------------------------------------------
   //
   // The rule down the left of the main pane, which is the only thing on screen
@@ -173,6 +179,7 @@ export const ASCII_ICONS: IconSet = {
   newFolder: '+',
   rename: 'r',
   delete: 'd',
+  extension: 'X',
 
   layout: '#',
   arrangement: '%',

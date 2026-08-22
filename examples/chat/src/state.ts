@@ -23,6 +23,16 @@ export const TURNS = '$/chat/conv/turns' as BindingPath;
 export const INPUT = '$/chat/conv/input' as BindingPath;
 export const CHANGES = '$/chat/conv/changes' as BindingPath;
 export const STATUS = '$/chat/conv/status' as BindingPath;
+/**
+ * Is there a turn to stop, as a `when` clause can ask it.
+ *
+ * The status is a bitset carrying client flags as well as activity - an idle
+ * session that has been read is 33 - so "status > 1" is not "something is
+ * happening", it is "something is happening, or somebody looked at it". The
+ * decoding belongs in one place, and a clause cannot call it, so the answer is
+ * written beside the number.
+ */
+export const RUNNING = '$/chat/conv/running' as BindingPath;
 
 export const OPEN = '$/chat/ui/open' as BindingPath;
 export const DRAFT = '$/chat/ui/draft' as BindingPath;
@@ -31,6 +41,17 @@ export const HISTORY = '$/chat/ui/history' as BindingPath;
 export const FILTER = '$/chat/ui/filter' as BindingPath;
 export const ARCHIVED = '$/chat/ui/archived' as BindingPath;
 export const EXPANDED = '$/chat/ui/expanded' as BindingPath;
+
+/**
+ * The runtime's own state, read rather than asked for.
+ *
+ * `screens.current()` and `focus.focused()` are method calls: correct at the
+ * moment they run and attached to nothing. A surface that survives navigating -
+ * which is the whole point of a surface - has to subscribe instead, or it
+ * keeps the chrome of the screen you left.
+ */
+export const SCREEN = '$/layout/screen/current' as BindingPath;
+export const FOCUS = '$/focus/id' as BindingPath;
 
 export interface HostState {
   id: string;
@@ -54,7 +75,7 @@ export function applyEvent(store: ReactiveStore, event: HostEvent, model: Turn[]
       const next = [...event.turns, ...(event.active ? [event.active] : [])];
       writeTurns(store, next);
       store.set(INPUT, event.input ?? null);
-      store.set(STATUS, event.status);
+      writeStatus(store, event.status);
       return next;
     }
     case 'turnStarted': {
@@ -80,7 +101,7 @@ export function applyEvent(store: ReactiveStore, event: HostEvent, model: Turn[]
       store.set(INPUT, null);
       return model;
     case 'status':
-      store.set(STATUS, event.status);
+      writeStatus(store, event.status);
       return model;
     case 'changes':
       store.set(CHANGES, event.changes);
@@ -88,6 +109,13 @@ export function applyEvent(store: ReactiveStore, event: HostEvent, model: Turn[]
     default:
       return model;
   }
+}
+
+/** The number, and the one question everything else asks of it. */
+export function writeStatus(store: ReactiveStore, status: number): void {
+  const activity = decodeStatus(status).activity;
+  store.set(STATUS, status);
+  store.set(RUNNING, activity === 'running' || activity === 'input');
 }
 
 /** A new array every time, and new part arrays inside it, or nothing redraws. */

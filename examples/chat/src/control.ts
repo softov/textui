@@ -3,8 +3,8 @@ import type { CommandDefinition, Disposable, ServiceKey, TextUIApp } from '@text
 import type { HostConnection } from './ahp/connection.js';
 import type { Agent, Answer, SessionConfig, SessionUri, Turn } from './ahp/types.js';
 import {
-  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, INPUT, OPEN, QUEUE, STATUS, TURNS,
-  applyEvent, pendingInput, queue, turns, visibleSessions, writeSessions,
+  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, INPUT, OPEN, QUEUE, RUNNING, SCREEN, TURNS,
+  applyEvent, pendingInput, queue, turns, visibleSessions, writeSessions, writeStatus,
 } from './state.js';
 
 /**
@@ -113,7 +113,7 @@ export function createController(
       app.store.set(INPUT, null);
       // Idle, because nothing is open. A status that outlived the conversation
       // it described is a header saying "running" over an empty screen.
-      app.store.set(STATUS, 1);
+      writeStatus(app.store, 1);
     },
 
     send(text) {
@@ -202,6 +202,9 @@ export function createController(
 }
 
 // ------------------------------------------------------------------- commands
+
+/** What to put back when a preview is abandoned. Only this knows what it changed. */
+const previous: { theme: string | null; shell: string | null } = { theme: null, shell: null };
 
 function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
   const selected = (): SessionUri | null => app.store.get<SessionUri>('$/chat/ui/selected') ?? null;
@@ -401,11 +404,12 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       title: 'Stop the turn',
       category: 'Chat',
       slots: ['palette'],
-      // Both halves matter. Without the open session, a status left behind by
-      // the last conversation makes `ctrl+c` "stop" something nobody is
-      // looking at - and, because the binding matched, it never falls through
-      // to the one that closes the application.
-      when: `${OPEN} && ${STATUS} > 1`,
+      // On the screen that is showing the turn. A session left open behind
+      // you keeps its status - a blocked one reads 24 for ever - so a clause
+      // that only asked "is something running" swallowed `ctrl+c` on every
+      // other screen from the moment a session was first opened, and the
+      // application could never be closed again.
+      when: `${SCREEN} == 'chat' && ${RUNNING}`,
       run: () => controller.stop(),
     },
     {

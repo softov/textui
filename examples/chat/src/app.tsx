@@ -6,7 +6,7 @@ import type { BoxProps, Disposable, TextUIApp } from '@textui/core';
 import { CONTROLLER, createController } from './control.js';
 import { fakeHost } from './ahp/fake.js';
 import type { HostConnection } from './ahp/connection.js';
-import { HOST, INPUT, STATUS, openSession, workspaceName } from './state.js';
+import { FOCUS, HOST, INPUT, OPEN, RUNNING, SCREEN, STATUS, openSession, workspaceName } from './state.js';
 import type { HostState } from './state.js';
 import { decodeStatus } from './ahp/status.js';
 import {
@@ -38,6 +38,14 @@ const Header = defineComponent<Record<string, never>>('ChatHeader', () => {
   const theme = useTheme();
   const host = useStoreValue<HostState>(HOST);
   const status = useStoreValue<number>(STATUS, 1) ?? 1;
+  // Subscribed, not asked. `screens.current()` is a method call in the middle
+  // of a render: it reads the right answer once and nothing tells this to look
+  // again, so a surface that navigating does not remount keeps the last
+  // screen's chrome for ever.
+  // Subscribed so the title follows what is open, without the header being
+  // remounted to notice.
+  useStoreValue<string | null>(SCREEN, null);
+  useStoreValue<string | null>(OPEN, null);
   const session = openSession(app.store);
   const decoded = decodeStatus(status);
 
@@ -65,15 +73,23 @@ const Header = defineComponent<Record<string, never>>('ChatHeader', () => {
  * while the composer has the keyboard, every letter is a letter.
  */
 const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
-  const app = useApp();
   const theme = useTheme();
   const waiting = useStoreValue<{ kind: string } | null>(INPUT, null);
   const arrows = `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown}`;
   // Which keys exist is a property of where you are, not of what is open: a
   // session stays open while its changes are on screen, and `i write` there
   // is an offer nothing honours.
-  const screen = app.screens.current()?.id ?? 'sessions';
-  const running = (useStoreValue<number>(STATUS, 1) ?? 1) > 1;
+  const screen = useStoreValue<string | null>(SCREEN, 'sessions') ?? 'sessions';
+  // Not `status > 1`: the bitset carries "a client has read this" in the same
+  // number, so an idle session somebody looked at is 33 and every hint would
+  // read "stop".
+  const running = useStoreValue<boolean>(RUNNING, false) ?? false;
+  // Where the keyboard is decides what the keys mean. While the composer has
+  // it, escape leaves the field; from the transcript, escape leaves the
+  // screen - and a hint row that said one of those in both places is wrong
+  // half the time.
+  const focused = useStoreValue<string | null>(FOCUS, null);
+  const composing = focused === 'chat.composer';
 
   // A question is not a confirmation, and the keys are not the same either.
   // Offering "a approve" over an elicitation is the same mistake as rendering
@@ -110,17 +126,25 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
     return (
       <KeyHints
         {...props}
-        hints={[
-          { keys: 'enter', label: 'send' },
-          { keys: 'esc', label: 'read' },
-          { keys: 'i', label: 'write' },
-          { keys: 'G', label: 'follow' },
-          { keys: 'c', label: 'changes' },
-          // The same key, and it does say which: while a turn is running it
-          // stops it, and when none is it leaves. A hint that always read
-          // "stop" is a hint that is wrong most of the time.
-          { keys: 'ctrl+c', label: running ? 'stop' : 'quit' },
-        ]}
+        hints={composing
+          ? [
+            { keys: 'enter', label: 'send' },
+            { keys: 'alt+enter', label: 'newline' },
+            { keys: 'esc', label: 'read' },
+            { keys: 'ctrl+c', label: running ? 'stop' : 'quit' },
+          ]
+          : [
+            { keys: arrows, label: 'move' },
+            { keys: 'enter', label: 'expand' },
+            { keys: 'i', label: 'write' },
+            { keys: 'G', label: 'follow' },
+            { keys: 'c', label: 'changes' },
+            { keys: 'esc', label: 'back' },
+            // The same key, and it says which: while a turn is running it
+            // stops it, and when none is it leaves. A hint that always read
+            // "stop" is wrong most of the time.
+            { keys: 'ctrl+c', label: running ? 'stop' : 'quit' },
+          ]}
       />
     );
   }
@@ -156,18 +180,11 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
 });
 
 const Status = defineComponent<Record<string, never>>('ChatStatus', () => {
-  const app = useApp();
-  const theme = useTheme();
-  const screen = app.screens.current();
+  const screen = useStoreValue<string | null>(SCREEN, 'sessions');
   return (
     <Row gap={2}>
       <Hints flex={1} />
-      <text
-        content={[screen?.id ?? '-', app.screens.canGoBack() ? 'esc back' : '']
-          .filter(Boolean)
-          .join(`  ${theme.glyphs.separator}  `)}
-        fg="muted"
-      />
+      <text content={screen ?? '-'} fg="muted" />
     </Row>
   );
 });

@@ -260,7 +260,7 @@ export const NewSessionScreen: (props: Record<string, never>) => RenderOutput =
           />
           <text content="A session created with no workspace runs in the host's own directory, and an editor's agents window never shows it." fg="subtle" wrap="word" />
 
-          <Panel title="First message" flex={1} border="single">
+          <Panel title="First message" flex={1}>
             <TextArea
               value={first ?? ''}
               onChange={(value: string) => setFirst(value)}

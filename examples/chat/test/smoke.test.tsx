@@ -324,6 +324,103 @@ describe('leaving', () => {
   });
 });
 
+describe('the status bar', () => {
+  it('follows the screen, rather than keeping the one it was mounted on', async () => {
+    const m = await conversation();
+    m.t.focus('chat.transcript');
+    await m.t.settle();
+    expect(m.t.hasText('i write')).toBe(true);
+
+    // A surface is not remounted by navigating - that is what a surface is for
+    // - so asking `screens.current()` during a render answers once and never
+    // again, and the footer keeps offering the keys of the screen you left.
+    m.t.app.screens.pop();
+    for (let i = 0; i < 4; i++) await m.t.settle();
+    expect(m.t.hasText('i write')).toBe(false);
+    expect(m.t.hasText('n new')).toBe(true);
+    await m.t.unmount();
+  });
+
+  it('says what ctrl+c will do where you are', async () => {
+    // An idle session: nothing to stop, so the key leaves instead.
+    const m = await open();
+    m.t.app.services.require(CONTROLLER).open(IDLE);
+    m.t.app.screens.push('chat');
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    m.t.focus('chat.transcript');
+    await m.t.settle();
+    expect(m.t.hasText('ctrl+c quit')).toBe(true);
+
+    m.t.app.services.require(CONTROLLER).send('go');
+    for (let i = 0; i < 20; i++) m.host.pump();
+    for (let i = 0; i < 4; i++) await m.t.settle();
+    expect(m.t.hasText('ctrl+c stop')).toBe(true);
+    await m.t.unmount();
+  });
+});
+
+describe('leaving, after a session has been open', () => {
+  it('still quits once the conversation is behind you', async () => {
+    const quits: string[] = [];
+    const host = fakeHost();
+    const t = await renderApp({
+      width: 100,
+      height: 30,
+      shell: 'workbench',
+      theme: 'workbench',
+      onBoot: (app) => {
+        registerChat(app, { host });
+        app.commands.register({ id: 'app.quit', title: 'Quit', run: () => quits.push('quit') });
+        app.keybindings.register({ keys: 'ctrl+c', commandId: 'app.quit' });
+      },
+    });
+    for (let i = 0; i < 8; i++) await t.settle();
+
+    // The seeded session is blocked, so its status is 24 and stays there. A
+    // stop binding that asked only "is something running" therefore matched
+    // for ever after the first session was opened, on every screen, and the
+    // application could not be closed again.
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.app.screens.current()?.id).toBe('chat');
+
+    t.press('escape');
+    t.press('escape');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.app.screens.current()?.id).toBe('sessions');
+
+    t.press('ctrl+c');
+    await t.settle();
+    expect(quits).toEqual(['quit']);
+    await t.unmount();
+  });
+});
+
+/**
+ * The acceptance test, as this repository states it: the same graph under
+ * every shell. If one of them needs something the others cannot use, the
+ * boundary is in the wrong place.
+ */
+describe.each(['plain', 'console', 'paper', 'workbench'])('under the %s shell', (shell) => {
+  it('draws the conversation, inside the frame', async () => {
+    const host = fakeHost();
+    const t = await renderApp({
+      width: 92,
+      height: 26,
+      shell,
+      theme: shell === 'plain' ? 'dark' : shell,
+      onBoot: (app) => { registerChat(app, { host }); },
+    });
+    t.app.services.require(CONTROLLER).open(SEEDED);
+    t.app.screens.push('chat');
+    for (let i = 0; i < 8; i++) await t.settle();
+
+    expect(t.hasText('libkqueue')).toBe(true);
+    expect(t.lines().every((line) => line.length <= 92)).toBe(true);
+    await t.unmount();
+  });
+});
+
 describe('on a terminal that can only do ASCII', () => {
   it('draws nothing that terminal cannot draw', async () => {
     const host = fakeHost();

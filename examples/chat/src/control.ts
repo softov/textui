@@ -1,10 +1,11 @@
 import { confirm, createBag, serviceKey } from '@textui/core';
 import type { CommandDefinition, Disposable, ServiceKey, TextUIApp } from '@textui/core';
 import type { HostConnection } from './ahp/connection.js';
-import type { Agent, Answer, SessionConfig, SessionUri, Turn } from './ahp/types.js';
+import type { Agent, Answer, SessionConfig, SessionDetail, SessionUri, Turn } from './ahp/types.js';
+import { SessionFlag } from './ahp/types.js';
 import {
-  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, INPUT, OPEN, QUEUE, RUNNING, SCREEN, TURNS,
-  applyEvent, pendingInput, queue, turns, visibleSessions, writeSessions, writeStatus,
+  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, INPUT, OPEN, QUEUE, RUNNING, SCREEN, SELECTED, TURNS,
+  applyEvent, pendingInput, queue, sessions, turns, writeSessions, writeStatus,
 } from './state.js';
 
 /**
@@ -31,6 +32,8 @@ export interface Controller {
   deny(): void;
   answer(answers: Record<string, Answer>, accepted?: boolean): void;
   setArchived(uri: SessionUri, archived: boolean): void;
+  /** Put the bold back, or take it away. A client flag, not activity. */
+  setRead(uri: SessionUri, read: boolean): void;
   /**
    * End the session on the host.
    *
@@ -46,6 +49,8 @@ export interface Controller {
   create(options: { provider: string; workingDirectory?: string; first?: string }): Promise<SessionUri>;
   /** The harnesses this host advertises, and the models each offers. */
   agents(): Promise<Agent[]>;
+  /** The session channel's own state: its chat, its lifecycle, its settings. */
+  detail(uri: SessionUri): Promise<SessionDetail>;
   config(uri: SessionUri): Promise<SessionConfig>;
   setConfig(uri: SessionUri, key: string, value: string): void;
   /** Drive the scripted host. A real connection has a socket instead. */
@@ -96,6 +101,9 @@ export function createController(
       // duplicate is what silently kills the stream everything else reads.
       subscription?.close();
       model = [];
+      // Reading it is what makes it read, and the host tells every other
+      // client so. Nobody marks their own mail by hand.
+      host.setRead(uri, true);
       app.store.set(OPEN, uri);
       app.store.set(TURNS, []);
       app.store.set(INPUT, null);
@@ -170,6 +178,11 @@ export function createController(
       void controller.refresh();
     },
 
+    setRead(uri, read) {
+      host.setRead(uri, read);
+      void controller.refresh();
+    },
+
     async disposeSession(uri) {
       await host.disposeSession(uri);
       if (app.store.get<SessionUri>(OPEN) === uri) controller.close();
@@ -188,6 +201,7 @@ export function createController(
     },
 
     agents: () => host.agents(),
+    detail: (uri) => host.detail(uri),
     config: (uri) => host.config(uri),
     setConfig: (uri, key, value) => host.setConfig(uri, key, value),
 
@@ -207,7 +221,7 @@ export function createController(
 const previous: { theme: string | null; shell: string | null } = { theme: null, shell: null };
 
 function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
-  const selected = (): SessionUri | null => app.store.get<SessionUri>('$/chat/ui/selected') ?? null;
+  const selected = (): SessionUri | null => app.store.get<SessionUri>(SELECTED) ?? null;
   const openUri = (): SessionUri | null => app.store.get<SessionUri>(OPEN) ?? null;
 
   /**
@@ -364,10 +378,25 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       slots: ['palette'],
       run: () => {
         const uri = target();
-        const session = visibleSessions(app.store).find((s) => s.resource === uri)
-          ?? (uri ? { resource: uri, status: 0 } : null);
+        // Every session, not the visible ones. An archived session is hidden
+        // by default, so reading the flag off the filtered list found nothing,
+        // fell back to a status of zero, and archived it a second time - which
+        // is a toggle that only ever goes one way.
+        const session = sessions(app.store).find((found) => found.resource === uri);
         if (!uri || !session) return;
-        controller.setArchived(uri, (session.status & 64) === 0);
+        controller.setArchived(uri, (session.status & SessionFlag.IsArchived) === 0);
+      },
+    },
+    {
+      id: 'session.read',
+      title: 'Mark read / unread',
+      category: 'Session',
+      slots: ['palette'],
+      run: () => {
+        const uri = target();
+        const session = sessions(app.store).find((found) => found.resource === uri);
+        if (!uri || !session) return;
+        controller.setRead(uri, (session.status & SessionFlag.IsRead) === 0);
       },
     },
     {
@@ -514,6 +543,7 @@ function keys(): {
     { keys: 'n', commandId: 'session.new', scopeId: SESSIONS_SCOPE },
     { keys: 'r', commandId: 'session.refresh', scopeId: SESSIONS_SCOPE },
     { keys: 'a', commandId: 'session.archive', scopeId: SESSIONS_SCOPE },
+    { keys: 'u', commandId: 'session.read', scopeId: SESSIONS_SCOPE },
     { keys: 'x', commandId: 'session.toggleArchived', scopeId: SESSIONS_SCOPE },
     { keys: 'd', commandId: 'session.dispose', scopeId: SESSIONS_SCOPE },
     { keys: '/', commandId: 'session.filter', scopeId: SESSIONS_SCOPE },

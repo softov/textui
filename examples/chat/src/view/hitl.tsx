@@ -39,10 +39,18 @@ export const ChatHitl: (props: ChatHitlProps) => RenderOutput =
   defineComponent<ChatHitlProps>('ChatHitl', (props) => {
     const { input, onApprove, onDeny, onAnswer, onEscape, ...rest } = props;
     const theme = useTheme();
-    // Trapping is the point: the answer is the only thing to do, and tab
-    // wandering off into the transcript behind it is how a turn stays blocked
-    // with the cursor somewhere else.
-    useFocusScope({ id: 'chat.hitl', trap: true, autoFocus: true, restore: true });
+    // Focused on arrival, and not trapped.
+    //
+    // Trapping read well - the answer is the only thing to do - and it was
+    // wrong. A trap routes every key inside the scope, so while a session was
+    // blocked the transcript could not be scrolled, escape could not leave the
+    // screen, and the block that said `esc read` was the one thing making that
+    // impossible. You approve a command on the strength of what is written
+    // above it, so reading has to stay available while it is up.
+    //
+    // The keys that answer it are global (see `ConfirmRequest`), so they still
+    // work from wherever the reader has gone.
+    useFocusScope({ id: 'chat.hitl', autoFocus: true, restore: true });
 
     return (
       <Panel

@@ -1,23 +1,27 @@
 import {
-  Badge, Button, Column, EmptyState, KeyValue, Panel, RadioGroup, Row, SearchBox,
+  Badge, Button, Column, EmptyState, Panel, RadioGroup, Row, SearchBox,
   Select, TextArea, TextInput, defineComponent, useApp, useEffect, useFocusScope,
   useRequiredService, useState, useStore, useStoreSubtree, useStoreValue, useTheme,
 } from '@textui/core';
-import type { BindingPath, RenderOutput } from '@textui/core';
+import type { BindingPath, RenderOutput, SemanticVariant } from '@textui/core';
 import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE } from './control.js';
 import {
   ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, HISTORY, HOST, INPUT, OPEN, QUEUE,
-  SESSIONS, TURNS, openSession, visibleSessions, workspaceName,
+  SELECTED, SESSIONS, TURNS, openSession, visibleSessions, workspaceName,
 } from './state.js';
 import type { HostState } from './state.js';
 import { toBlocks } from './blocks.js';
-import type { Agent, Changeset, PendingInput, SessionConfig, Turn } from './ahp/types.js';
+import type {
+  Agent, Changeset, PendingInput, SessionConfig, SessionDetail, SessionSummary, Turn,
+} from './ahp/types.js';
 import { decodeStatus } from './ahp/status.js';
 import { ChatTranscript } from './view/transcript.js';
 import { ChatComposer } from './view/composer.js';
 import { ChatHitl } from './view/hitl.js';
 import { ChangesList } from './view/changes.js';
 import { ConnectionBadge, SessionList } from './view/sessions.js';
+import { SessionDetails } from './view/details.js';
+import type { DetailField } from './view/details.js';
 
 
 /**
@@ -33,7 +37,54 @@ import { ConnectionBadge, SessionList } from './view/sessions.js';
  * `control.ts`, and what is left here is which part goes where.
  */
 
-const SELECTED = '$/chat/ui/selected' as BindingPath;
+/**
+ * Everything the catalogue knows about one session, as rows.
+ *
+ * Two sources, and they are not interchangeable: the summary is what
+ * `listSessions` returns and the detail is the session channel's own state -
+ * the chat URI, the lifecycle and the settings in force are only ever on the
+ * second. A pane that showed the summary alone could not answer "which chat is
+ * this" or "what may it do without asking", which are the two questions
+ * somebody reading a catalogue of agents actually has.
+ */
+function describe(session: SessionSummary, detail: SessionDetail | null): DetailField[] {
+  const status = decodeStatus(session.status);
+  const setting = (key: string): string => {
+    const value = detail?.config.values[key];
+    if (value === undefined) return '';
+    // The host's own wording. `acceptEdits` is an id, "Accept edits" is what
+    // the schema calls it, and the provider is the authority on both.
+    const property = detail?.config.properties.find((found) => found.key === key);
+    return property?.values.find((choice) => choice.value === value)?.label ?? value;
+  };
+  const changes = session.changes;
+
+  return [
+    { id: 'status', label: 'Status', value: status.label, tone: status.tone as SemanticVariant },
+    { id: 'activity', label: 'Doing', value: session.activity ?? detail?.activity ?? '', absent: 'nothing it says' },
+    { id: 'flags', label: 'Flags', value: [status.read ? 'read' : 'unread', status.archived ? 'archived' : ''].filter(Boolean).join(', ') },
+    { id: 'provider', label: 'Harness', value: session.provider },
+    { id: 'model', label: 'Model', value: detail?.model ?? '', absent: 'nothing said yet' },
+    { id: 'permissions', label: 'Permissions', value: setting('permissionMode') },
+    { id: 'isolation', label: 'Isolation', value: setting('isolation') },
+    { id: 'workspace', label: 'Workspace', value: session.workingDirectories.map((dir) => dir.replace(/^file:\/\//, '')).join(', '), absent: 'the host\'s own directory' },
+    // The identifiers, in full and copyable. A URI you can read half of is
+    // worse than one you cannot see at all: it looks like the whole thing.
+    { id: 'session', label: 'Session', value: session.resource },
+    { id: 'chat', label: 'Chat', value: detail?.chat ?? '', absent: 'no chat yet' },
+    { id: 'lifecycle', label: 'Lifecycle', value: detail?.lifecycle ?? '' },
+    { id: 'created', label: 'Started', value: session.createdAt.slice(0, 16).replace('T', ' ') },
+    { id: 'modified', label: 'Updated', value: session.modifiedAt.slice(0, 16).replace('T', ' ') },
+    {
+      id: 'changes',
+      label: 'Changes',
+      value: changes?.files
+        ? `${changes.files} files  +${changes.additions ?? 0} -${changes.deletions ?? 0}`
+        : '',
+      absent: 'nothing yet',
+    },
+  ];
+}
 
 // ---------------------------------------------------------------- 1. sessions
 
@@ -65,6 +116,18 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
     const current = sessions.find((session) => session.resource === selected);
     const status = current ? decodeStatus(current.status) : null;
     const waiting = sessions.filter((session) => decodeStatus(session.status).activity === 'input').length;
+
+    // The channel's own state, asked for one session at a time. Asking for
+    // every row would be a round trip per row on a screen that already has
+    // everything a row needs.
+    const [detail, setDetail] = useState<SessionDetail | null>(null);
+    useEffect(() => {
+      setDetail(null);
+      if (!selected) return;
+      let live = true;
+      void controller.detail(selected).then((found) => { if (live) setDetail(found); });
+      return () => { live = false; };
+    }, [selected ?? '']);
 
     return (
       <Row flex={1} gap={1}>
@@ -99,23 +162,18 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
           {!archived ? <text content="x  show archived" fg="subtle" /> : null}
         </Panel>
 
-        <Panel title="Session" width={36}>
+        <Panel title="Session" width={40} meta={current ? 'enter copies' : ''}>
           {current && status ? (
             <Column gap={1} flex={1}>
-              <text content={current.title} bold wrap="word" />
               <Row gap={1}>
                 <text content={theme.glyphs[status.glyph]} fg={status.tone} />
-                <text content={status.label} fg={status.tone} />
+                <text content={current.title} bold wrap="word" flex={1} />
                 {status.archived ? <Badge label="archived" tone="muted" /> : null}
               </Row>
-              <KeyValue
-                items={[
-                  { label: 'Harness', value: current.provider },
-                  { label: 'Workspace', value: workspaceName(current.workingDirectories[0]) },
-                  { label: 'Started', value: current.createdAt.slice(0, 16).replace('T', ' ') },
-                  { label: 'Session', value: current.resource },
-                ]}
-              />
+              {/* Tab reaches this, arrows walk it, enter copies the row. The
+                  identifiers are the reason: they are what gets pasted into a
+                  shell, and they are exactly what does not fit on one line. */}
+              <SessionDetails fields={describe(current, detail)} focusId="chat.details" />
               <text content="" flex={1} />
               <ConnectionBadge
                 url={host?.url ?? ''}
@@ -179,7 +237,16 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
             onApprove={(option?: string) => controller.approve(option)}
             onDeny={() => controller.deny()}
             onAnswer={(answers, accepted) => controller.answer(answers, accepted)}
-            onEscape={() => app.focus.focus('chat.transcript')}
+            // The block takes keys globally while it is up, escape included -
+            // which is right for `a` and `d` and wrong for the one key that is
+            // how you leave. Sent back to the transcript unconditionally it
+            // read as "escape does nothing", and a session blocked on a
+            // confirmation could not be left without answering it. So escape
+            // leaves whatever it is in: the block first, then the screen.
+            onEscape={() => {
+              if (app.focus.focused() === 'chat.transcript') app.screens.pop();
+              else app.focus.focus('chat.transcript');
+            }}
           />
         ) : null}
 

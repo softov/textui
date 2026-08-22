@@ -7,9 +7,9 @@ import { fakeHost } from '../src/ahp/fake.js';
 import type { FakeHost } from '../src/ahp/fake.js';
 import { decodeStatus } from '../src/ahp/status.js';
 import { SessionFlag } from '../src/ahp/types.js';
-import { layoutMarkdown, wrapRuns } from '@textui/core';
+import { CLIPBOARD_PATH, layoutMarkdown, wrapRuns } from '@textui/core';
 import { toBlocks } from '../src/blocks.js';
-import { INPUT, QUEUE, TURNS } from '../src/state.js';
+import { INPUT, QUEUE, SELECTED, TURNS } from '../src/state.js';
 import type { Turn } from '../src/ahp/types.js';
 
 /**
@@ -59,6 +59,23 @@ async function conversation(size?: { width: number; height: number }): Promise<M
   return m;
 }
 
+/**
+ * A session with nothing waiting on it.
+ *
+ * The seeded one is blocked on a confirmation - deliberately, so that the row
+ * saying a person is wanted is a row where one is - and while a turn is
+ * running a message is queued rather than sent, the composer does not take the
+ * keyboard, and escape belongs to the block. None of which is what a test
+ * about sending, typing or leaving means to exercise.
+ */
+async function idle(size?: { width: number; height: number }): Promise<Mounted> {
+  const m = await open(size);
+  m.t.app.services.require(CONTROLLER).open(IDLE);
+  m.t.app.screens.push('chat');
+  for (let i = 0; i < 6; i++) await m.t.settle();
+  return m;
+}
+
 describe.each(SIZES.map((s) => [`${s.width}x${s.height}`, s] as const))('at %s', (_name, size) => {
   it('opens on the catalogue, urgent first', async () => {
     const { t } = await open(size);
@@ -79,6 +96,11 @@ describe.each(SIZES.map((s) => [`${s.width}x${s.height}`, s] as const))('at %s',
 describe('the transcript', () => {
   it('renders a conversation from a snapshot, not only from deltas', async () => {
     const { t } = await conversation();
+    // At the top of it: the seeded session has a blocked turn at the bottom,
+    // and a transcript that follows the tail is showing that instead.
+    t.focus('chat.transcript');
+    t.press('home');
+    for (let i = 0; i < 4; i++) await t.settle();
     expect(t.hasText('EVFILT_FS never fires')).toBe(true);
     // The prose is in `content`, not `markdown` or `text`. Reading the wrong
     // field costs every word the agent said and nothing else.
@@ -89,8 +111,8 @@ describe('the transcript', () => {
   });
 
   it('grows one bubble as the words arrive', async () => {
-    const m = await conversation();
-    m.t.app.services.require(CONTROLLER).send('Why does q quit while I am typing?');
+    const m = await idle();
+    m.t.app.services.require(CONTROLLER).send('run the input router tests');
     await run(m, 40);
 
     const turns = m.t.store.get<Turn[]>(TURNS) ?? [];
@@ -172,7 +194,7 @@ describe('when the agent is waiting', () => {
 
 describe('the composer', () => {
   it('takes a letter that is also a command key', async () => {
-    const m = await conversation();
+    const m = await idle();
     m.t.focus('chat.composer');
     await m.t.settle();
 
@@ -188,9 +210,9 @@ describe('the composer', () => {
   });
 
   it('queues a message rather than starting a second turn', async () => {
-    const m = await conversation();
+    const m = await idle();
     const controller = m.t.app.services.require(CONTROLLER);
-    controller.send('first');
+    controller.send('run the tests');
     await run(m, 6);
 
     controller.send('and another thing');
@@ -324,9 +346,172 @@ describe('leaving', () => {
   });
 });
 
+describe('the catalogue tells the truth about what is waiting', () => {
+  it('has something to answer on the session that says a person is wanted', async () => {
+    // The status is a bitset the host derives from its own state, and a seeded
+    // one that claimed `InputNeeded` while holding no pending input looked
+    // exactly like a client that drops the request when you leave the screen.
+    // Opening the row that says "waiting on you" must produce something to
+    // answer, or the row is a lie.
+    const { t } = await open();
+    expect(t.hasText('waiting on you')).toBe(true);
+
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.store.get(INPUT)).not.toBeNull();
+    expect(t.hasText('Approve')).toBe(true);
+    await t.unmount();
+  });
+
+  it('still asks after you leave it and come back', async () => {
+    const { t } = await open();
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    t.press('escape');
+    t.press('escape');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.app.screens.current()?.id).toBe('sessions');
+
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+    // Unanswered is unanswered. The host holds it, the snapshot carries it,
+    // and coming back is not answering it.
+    expect(t.hasText('Approve')).toBe(true);
+    await t.unmount();
+  });
+
+  it('lets the transcript be read while it is blocked', async () => {
+    // The block used to trap focus, which is defensible until you notice that
+    // approving a command is a decision about what is written above it - and
+    // that the trap also ate the escape the block itself advertises.
+    const { t } = await open();
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    t.focus('chat.transcript');
+    t.press('home');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.hasText('EVFILT_FS never fires')).toBe(true);
+    await t.unmount();
+  });
+});
+
+describe('sessions are not all one session', () => {
+  it('opens each on its own conversation', async () => {
+    const m = await open();
+    const controller = m.t.app.services.require(CONTROLLER);
+    controller.open('ahp-session:/9c74');
+    m.t.app.screens.push('chat');
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    expect(m.t.hasText('that is the focus model working')).toBe(true);
+    expect(m.t.hasText('EVFILT')).toBe(false);
+    await m.t.unmount();
+  });
+
+  it('answers differently depending on what was said', async () => {
+    const m = await idle();
+    const controller = m.t.app.services.require(CONTROLLER);
+    controller.send('run the tests');
+    await run(m);
+    // A command that asks first.
+    expect(m.t.store.get(INPUT)).not.toBeNull();
+
+    const other = await idle();
+    other.t.app.services.require(CONTROLLER).send('is that the focus model');
+    await run(other);
+    // Prose, no tool call, nothing to answer. One canned reply to everything
+    // only ever proves the client can render that one reply.
+    expect(other.t.store.get(INPUT)).toBeNull();
+    await m.t.unmount();
+    await other.t.unmount();
+  });
+});
+
+describe('what a session actually is', () => {
+  it('shows the chat, the permissions and the model, not just the session id', async () => {
+    const { t } = await open();
+    t.app.store.set(SELECTED, 'ahp-session:/6b21');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    // A session is not a conversation: it holds chats, and the chat URI is
+    // what a turn is dispatched to. It is on the session channel, never in the
+    // catalogue's summary.
+    expect(t.hasText('ahp-chat:/6b21')).toBe(true);
+    // The host's own wording for its own setting, not the id it stores.
+    expect(t.hasText('Accept edits')).toBe(true);
+    expect(t.hasText('claude-sonnet-5')).toBe(true);
+    await t.unmount();
+  });
+
+  it('copies the value under the cursor', async () => {
+    const { t } = await open();
+    t.app.store.set(SELECTED, 'ahp-session:/9c74');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    t.focus('chat.details');
+    // Down to the row that holds the session URI. Which is the point of it
+    // being walkable: the identifier is what gets pasted into a shell, and it
+    // is exactly what does not fit on one line of a 40-column pane.
+    for (let i = 0; i < 8; i++) { t.press('down'); await t.settle(); }
+    t.press('enter');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    expect(t.store.get<string>(CLIPBOARD_PATH)).toBe('ahp-session:/9c74');
+    expect(t.hasText('copied')).toBe(true);
+    await t.unmount();
+  });
+});
+
+describe('putting a session away, and taking it back', () => {
+  it('unarchives what it archived', async () => {
+    const { t } = await open();
+    t.app.store.set(SELECTED, 'ahp-session:/9c74');
+    await t.settle();
+
+    t.press('a');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.hasText('Why does the composer')).toBe(false);
+
+    // Show them, then take it back. Reading the flag off the *visible* list
+    // found nothing, fell back to a status of zero, and archived it again -
+    // a toggle that only ever went one way.
+    t.press('x');
+    for (let i = 0; i < 4; i++) await t.settle();
+    t.app.store.set(SELECTED, 'ahp-session:/9c74');
+    await t.settle();
+    t.press('a');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    t.press('x');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.hasText('Why does the composer')).toBe(true);
+    await t.unmount();
+  });
+
+  it('marks a session unread, and reading it marks it read again', async () => {
+    const { t } = await open();
+    t.app.store.set(SELECTED, 'ahp-session:/9c74');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.hasText('read')).toBe(true);
+
+    t.press('u');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.hasText('unread')).toBe(true);
+
+    // Opening it is what marks it read. Nobody marks their own mail by hand.
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+    t.press('escape');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.hasText('unread')).toBe(false);
+    await t.unmount();
+  });
+});
+
 describe('the status bar', () => {
   it('follows the screen, rather than keeping the one it was mounted on', async () => {
-    const m = await conversation();
+    const m = await idle();
     m.t.focus('chat.transcript');
     await m.t.settle();
     expect(m.t.hasText('i write')).toBe(true);

@@ -113,9 +113,11 @@ happens to be reading it is not a quit key.
 |---|---|
 | `↑ ↓` | move · `enter` open |
 | `n` `r` | new · refresh |
-| `a` `x` | archive · show archived |
+| `a` `x` | archive / unarchive · show archived |
+| `u` | mark read / unread — opening a session marks it read on its own |
 | `d` | dispose (asks first) |
 | `/` | into the filter |
+| `tab` | into the detail pane: `↑ ↓` walks it, `enter` copies the row |
 
 | In a conversation | |
 |---|---|
@@ -178,6 +180,14 @@ transcript is not - plus `Panel`, `Row`/`Column`, `RadioGroup`, `Checkbox`,
 `KeyHints`, `CommandPalette`, `confirm()`, and `Button` - including
 `variant="ghost"`, which is what the composer's action row is made of.
 
+A fourth, which is still here rather than in core:
+[`SessionDetails`](src/view/details.tsx) - a property list you can walk and
+copy a value out of. `KeyValue` draws the same pairs and is static, so nothing
+selects a row: a URI cannot be read in full and cannot be pasted anywhere. The
+selected row is the one that gets the room - every other row truncates to one
+line, the selected one wraps - which costs nothing when the value is short and
+is the whole answer when it is a URI in a 40-column pane.
+
 **Still missing, and known:**
 
 - the composer's action row truncates below ~80 cells rather than dropping labels for glyphs. It needs `breakpoints`, which the primitives have and this does not use yet.
@@ -185,6 +195,29 @@ transcript is not - plus `Panel`, `Row`/`Column`, `RadioGroup`, `Checkbox`,
 - a tool call with four hundred lines of output expands to four hundred rows. `CodeViewer` is the right thing inside the row, and the row has to stop being as tall as its content for that to work.
 
 ## Findings worth keeping
+
+**A fixture that lies reads as a bug in the client.** The scripted host used to
+assign each seeded session a status by hand, and one of them claimed
+`InputNeeded` while holding no pending input. Opening the row that said
+"waiting on you" showed a conversation with nothing to answer - which is
+indistinguishable from a client that drops the request when you leave the
+screen, and was debugged as one. The status is now *derived* from what the host
+is actually holding, so it cannot disagree with it.
+
+**One canned reply proves only that the client can render that reply.** Every
+session opening on the same transcript and every message getting the same
+answer hides everything that only goes wrong on prose of another shape. The
+scripted agent now has four: a short answer with no tool calls, a command that
+asks before it runs, a question, and a failure - chosen from what was said, so
+a person driving the example can pick one.
+
+**A trap is not the same as focus.** The block that waits on a person took the
+focus *and trapped it*, on the reasoning that answering is the only thing to
+do. But you approve a command on the strength of what is written above it, so
+the transcript has to stay readable - and the trap also swallowed the escape
+the block itself advertises, which is why a blocked session could not be left
+without answering it. It autofocuses and does not trap; the keys that answer it
+are global, so they still work from wherever the reader has gone.
 
 **A running turn is not in the history.** `ChatState.turns` is the completed
 turns; the one in flight is `activeTurn`. A client that renders only `turns`

@@ -1,6 +1,6 @@
 import type {
-  Agent, Answer, Changeset, PendingInput, SessionConfig, SessionSummary, SessionUri,
-  ToolCall, Turn,
+  Agent, Answer, Changeset, PendingInput, SessionConfig, SessionDetail, SessionSummary,
+  SessionUri, ToolCall, Turn,
 } from './types.js';
 
 /**
@@ -30,6 +30,13 @@ export interface HostConnection {
   createSession(options: { provider: string; workingDirectory?: string }): Promise<SessionUri>;
   disposeSession(uri: SessionUri): Promise<void>;
   setArchived(uri: SessionUri, archived: boolean): void;
+  /**
+   * Mark read, or put the bold back.
+   *
+   * A client flag, not activity: `IsRead` says a person has looked since the
+   * last change, and the host tells every other client that one of them has.
+   */
+  setRead(uri: SessionUri, read: boolean): void;
 
   /**
    * Subscribe to a session: a snapshot, then an ordered stream of what happens.
@@ -50,6 +57,15 @@ export interface HostConnection {
   completeInput(uri: SessionUri, requestId: string, accepted: boolean, answers: Record<string, Answer>): void;
 
   changes(uri: SessionUri): Promise<Changeset>;
+
+  /**
+   * The session channel's own state: its chat, its lifecycle, its settings.
+   *
+   * Separate from `listSessions` because a summary is what a *row* needs and
+   * this is what a reader needs - asking every session about itself to draw a
+   * catalogue is a round trip per row.
+   */
+  detail(uri: SessionUri): Promise<SessionDetail>;
 
   /** What this session can be told to do differently. */
   config(uri: SessionUri): Promise<SessionConfig>;

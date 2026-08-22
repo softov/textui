@@ -38,6 +38,37 @@ export interface SessionSummary {
   createdAt: string;
   modifiedAt: string;
   workingDirectories: string[];
+  /** What the host says it is doing, in its own words. Often absent. */
+  activity?: string;
+  /** The footprint, so a list can show it without subscribing to a changeset. */
+  changes?: { files?: number; additions?: number; deletions?: number };
+}
+
+/**
+ * Everything else about a session, which the catalogue does not carry.
+ *
+ * `listSessions` returns summaries, and a summary is deliberately thin - it is
+ * what a list row needs. The chat URI, the lifecycle and the configuration in
+ * force all live on the session channel, and a client that wants them
+ * subscribes and reads its state. Kept apart here for the same reason: the
+ * catalogue can be refreshed without asking every session about itself.
+ */
+export interface SessionDetail {
+  resource: SessionUri;
+  /**
+   * The default chat.
+   *
+   * A session is not a conversation - it *holds* chats, and everything said is
+   * dispatched to one of them. `defaultChat` is the one a session created the
+   * ordinary way has, and guessing a chat URI is what having it avoids.
+   */
+  chat: string | null;
+  chats: { resource: string; title: string }[];
+  lifecycle: 'creating' | 'ready' | 'creationFailed';
+  config: SessionConfig;
+  /** What the last turn ran on. A session has no model; each message has one. */
+  model?: string;
+  activity?: string;
 }
 
 export type ToolCallStatus =
@@ -122,9 +153,20 @@ export interface Question {
  * second as the first loses the entire request: the choices vanish and what is
  * left on screen is a heading and an Approve button.
  */
-export type PendingInput =
-  | { kind: 'toolConfirmation'; id: string; call: ToolCall }
-  | { kind: 'chatInput'; id: string; message: string; questions: Question[] };
+export interface ToolConfirmation {
+  kind: 'toolConfirmation';
+  id: string;
+  call: ToolCall;
+}
+
+export interface ChatInputRequest {
+  kind: 'chatInput';
+  id: string;
+  message: string;
+  questions: Question[];
+}
+
+export type PendingInput = ToolConfirmation | ChatInputRequest;
 
 /** Keyed by question id. The value names its own kind. */
 export type Answer =

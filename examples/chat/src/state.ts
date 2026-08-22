@@ -35,6 +35,8 @@ export const STATUS = '$/chat/conv/status' as BindingPath;
 export const RUNNING = '$/chat/conv/running' as BindingPath;
 
 export const OPEN = '$/chat/ui/open' as BindingPath;
+/** The catalogue's highlight. What a session command acts on when none is open. */
+export const SELECTED = '$/chat/ui/selected' as BindingPath;
 export const DRAFT = '$/chat/ui/draft' as BindingPath;
 export const QUEUE = '$/chat/ui/queue' as BindingPath;
 export const HISTORY = '$/chat/ui/history' as BindingPath;

@@ -14,6 +14,12 @@ import { renderApp } from '../packages/testing/dist/index.js';
  *
  * Numbers move between machines and between runs; what matters is the ratio
  * against the run you did five minutes ago on the same machine.
+ *
+ * Each shape runs three times and the *best* is reported. Noise on a shared
+ * machine only ever adds time - a scheduler taking the core away, a GC pause -
+ * so the fastest run is the one least contaminated by things that are not the
+ * code. Taking a mean instead made two runs of the same commit differ by 20%,
+ * which is more than most of the changes worth making.
  */
 
 const WIDTH = 200;
@@ -118,11 +124,16 @@ const only = process.argv[2];
 const names = only ? [only] : Object.keys(SHAPES);
 const frames = Number(process.argv[3] ?? 300);
 
+const REPEATS = 3;
+
 for (const name of names) {
   if (!SHAPES[name]) {
     process.stdout.write(`no such shape: ${name}\n`);
     process.exit(1);
   }
-  const per = await run(name, frames);
-  process.stdout.write(`${name.padEnd(9)} ${per.toFixed(2)} ms/frame  (${(1000 / per).toFixed(0)} fps)\n`);
+  let best = Infinity;
+  for (let i = 0; i < REPEATS; i++) best = Math.min(best, await run(name, frames));
+  process.stdout.write(
+    `${name.padEnd(9)} ${best.toFixed(2)} ms/frame  (${(1000 / best).toFixed(0)} fps)\n`,
+  );
 }

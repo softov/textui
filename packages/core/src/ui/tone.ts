@@ -24,14 +24,25 @@ export const TONE: Record<SemanticVariant, StyleColor> = {
   muted: 'muted',
 };
 
+// Adding a tone, or renaming an `on*` token, means three edits and only two of
+// them are checked:
+//
+//   1. this map and its `TONE` pair;
+//   2. every theme in themes/builtin.ts, or the token resolves to nothing;
+//   3. the palette list in docs/themes/tokens.md - which `pnpm docs:check`
+//      does NOT catch, because that check reads component prop interfaces and
+//      knows nothing about token names.
+//
+// The third is the one that gets missed. `onDefault`, `onSecondary` and
+// `onMuted` were absent from that page until they were added by hand.
 export const ON_TONE: Record<SemanticVariant, StyleColor> = {
-  default: 'inverted',
+  default: 'onDefault',
   primary: 'onPrimary',
-  secondary: 'inverted',
+  secondary: 'onSecondary',
   accent: 'onAccent',
   success: 'onSuccess',
   warning: 'onWarning',
   danger: 'onDanger',
   info: 'onInfo',
-  muted: 'inverted',
+  muted: 'onMuted',
 };

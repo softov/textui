@@ -24,7 +24,7 @@ export const FULL_GLYPHS: ThemeGlyphs = {
   arrowDown: '↓',
   ellipsis: '…',
   search: '⌕',
-  radioOn: '◉',
+  radioOn: '⬤',
   radioOff: '◯',
   checkboxOn: '☑',
   checkboxOff: '☐',

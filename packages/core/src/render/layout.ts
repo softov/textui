@@ -39,6 +39,22 @@ export interface LayoutBox {
   content: Rect;
   /** Content larger than `content`, when overflow is 'scroll'. */
   scrollSize?: Size;
+
+  /**
+   * The last answer `measureBox` gave for this box, and what it was asked.
+   *
+   * Sizing a flex container measures its children to find their intrinsic
+   * size, then measures them again against the space they were given - so a
+   * frame asks the same subtree the same question about twice, and the deeper
+   * the tree the more of it is repeated work. Counted on a 400-row list: 866
+   * calls, 407 of them distinct.
+   *
+   * One slot, not a map: the repeats are adjacent, and a map per box is an
+   * allocation per box to avoid an allocation per box. No invalidation either,
+   * because layout boxes are rebuilt from the instance tree every frame - the
+   * cache cannot outlive the thing it describes.
+   */
+  measured?: { w: number; h: number; size: Size };
 }
 
 export function resolveEdges(spec: EdgeSpec | undefined): Edges {
@@ -187,6 +203,9 @@ function frameOf(box: LayoutBox): { margin: Edges; inset: Edges } {
 export function measureBox(box: LayoutBox, availW: number, availH: number): Size {
   if (isHidden(box)) return { width: 0, height: 0 };
 
+  const seen = box.measured;
+  if (seen !== undefined && seen.w === availW && seen.h === availH) return seen.size;
+
   const { margin, inset } = frameOf(box);
 
   const fixedW = resolveDimension(box.style.width, availW);
@@ -281,7 +300,9 @@ export function measureBox(box: LayoutBox, availW: number, availH: number): Size
 
   const width = clamp(contentW + edgeH(inset), box.style.minWidth, box.style.maxWidth);
   const height = clamp(contentH + edgeV(inset), box.style.minHeight, box.style.maxHeight);
-  return { width, height };
+  const size = { width, height };
+  box.measured = { w: availW, h: availH, size };
+  return size;
 }
 
 /**

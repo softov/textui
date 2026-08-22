@@ -31,6 +31,8 @@ export {
   setLayout, splitEditor, stepTab, tabFromPath, tabLabel, tabPath, unsplit,
 } from './tabs.js';
 export type { EditorLayout, Group } from './tabs.js';
+export { REMEMBERED, seedSettings, rememberSettings } from './settings.js';
+export type { Remembered, SaveOptions } from './settings.js';
 export { quitCommand } from './quit.js';
 export type { QuitOptions } from './quit.js';
 export { attachLog, fileSink, unixSink } from './log.js';

@@ -3,6 +3,7 @@ import { createBag, notify, registerBuiltins } from '@textui/core';
 import { jsonAdapter, registerDocuments } from '@textui/documents';
 import { filesystemAdapter } from './filesystem.js';
 import { seedWorkspace, type Workspace } from './workspace.js';
+import { rememberSettings, seedSettings } from './settings.js';
 import { Editor, Explorer } from './app.js';
 import { TitleBar } from './chrome/titlebar.js';
 import { StatusLine } from './chrome/statusbar.js';
@@ -17,6 +18,13 @@ export interface RegisterOptions {
   builtins?: boolean;
   /** Where `view.screenshot` writes. Defaults to the working directory. */
   shots?: string;
+  /**
+   * Write settings back to `.textide.json` as they change. On by default.
+   *
+   * Off for a test, and for a host embedding textide in something that owns
+   * its own configuration.
+   */
+  remember?: boolean;
 }
 
 /**
@@ -41,6 +49,11 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
   bag.add(app.registerAdapter(jsonAdapter()));
 
   seedWorkspace(app, workspace);
+  // What the workspace remembered, before the first frame - and a subscription
+  // that writes the next change back. A preference you have to set again every
+  // morning is not a preference.
+  seedSettings(app, workspace);
+  if (options.remember !== false) bag.add(rememberSettings(app, workspace));
 
   const Icon = iconsFor(app.capabilities.unicode);
 

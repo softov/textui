@@ -29,6 +29,10 @@ export interface WorkspaceConfig {
   readonly?: boolean;
   /** Spaces per indent level, for the editor. */
   tabWidth?: number;
+  /** How diffs are laid out: one column, or before and after side by side. */
+  diff?: 'unified' | 'split';
+  /** How the editor groups are arranged: tabs, a split or a stack. */
+  layout?: 'tabs' | 'split' | 'stack';
   /**
    * Modules to load into the application at boot.
    *

@@ -6,6 +6,7 @@ import { loadWorkspace } from './workspace.js';
 import { registerTextide, type RegisterOptions } from './register.js';
 import { createReloader } from './reload.js';
 import { loadExtensions, resolveSpecifier, type ExtensionModule } from './extensions.js';
+import { quitCommand } from './quit.js';
 import { attachLog, fileSink, unixSink } from './log.js';
 import { Editor, Explorer } from './app.js';
 import { TitleBar } from './chrome/titlebar.js';
@@ -195,17 +196,18 @@ async function main(): Promise<void> {
     onBoot: (booted) => {
       bag = registerTextide(booted, registration);
 
-      booted.commands.register({
-        id: 'app.quit',
-        title: 'Quit',
-        slots: ['palette', 'hints'],
-        run: () => {
-          void app.stop().then(() => process.exit(0));
-        },
-      });
-      // Only the keys that belong to running as a program. The editor's own
-      // are registered by `registerTextide`, so an embedded textide keeps them.
-      booted.keybindings.register({ keys: 'q', commandId: 'app.quit' });
+      booted.commands.register(quitCommand(booted, {
+        exit: async () => { await app.stop(); process.exit(0); },
+      }));
+      /*
+       * Only the keys that belong to running as a program. The editor's own
+       * are registered by `registerTextide`, so an embedded textide keeps them.
+       *
+       * `ctrl+c` and nothing else. A bare `q` was bound too, which quits from
+       * anywhere that does not take the key first - so typing `q` in the file
+       * tree closed the editor. That is a convention for a pager, where there
+       * is nothing to lose, and a hazard in a thing that holds unsaved files.
+       */
       booted.keybindings.register({ keys: 'ctrl+c', commandId: 'app.quit' });
     },
   });

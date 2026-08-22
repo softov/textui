@@ -1248,6 +1248,24 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
     { focusId: focus.id, enabled: focusable },
   );
 
+  const drawn = entries.map((entry, i) => h(FeedEntry, {
+    key: i,
+    onHeight: (height: number) => { heights.current[i] = height; },
+  }, entry));
+
+  // Content-sized: draw everything and let the box grow. Clamping to a
+  // measurement here would clamp to how tall this happened to be last frame,
+  // which for a box sized *by* its own content is nothing at all - the entries
+  // vanish and the panel is empty.
+  if (!fills) {
+    return h('box', {
+      id: id ?? focus.id,
+      role: 'list',
+      ...rest,
+      direction: 'column',
+    }, ...drawn);
+  }
+
   return h('box', {
     id: id ?? focus.id,
     role: 'list',
@@ -1260,11 +1278,7 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
       return true;
     },
   },
-    h('box', { flex: 1, direction: 'column', scrollTop: top, overflow: 'scroll' },
-      ...entries.map((entry, i) => h(FeedEntry, {
-        key: i,
-        onHeight: (height: number) => { heights.current[i] = height; },
-      }, entry))),
+    h('box', { flex: 1, direction: 'column', scrollTop: top, overflow: 'scroll' }, ...drawn),
     // Only when there is somewhere to scroll. A track down the side of a feed
     // that fits is chrome that states something untrue.
     scrollbar && limit > 0 ? h(FeedScrollbar, {}) : null,

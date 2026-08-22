@@ -855,6 +855,20 @@ describe('Feed', () => {
     await t.unmount();
   });
 
+  it('draws everything when nothing gave it a size', async () => {
+    // The catalog's rule: layout-sized components fill and scroll, content
+    // sized ones draw everything. A feed that clamped to its own measurement
+    // here would clamp to nothing, and the panel holding it would be empty.
+    const t = await render(
+      { component: 'Feed', children: entries(4) },
+      { width: 30, height: 10 },
+    );
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.hasText('entry 0')).toBe(true);
+    expect(t.hasText('entry 3')).toBe(true);
+    await t.unmount();
+  });
+
   it('draws no scrollbar when everything fits', async () => {
     // A track down the side of a feed that fits states something untrue.
     const short = await render(

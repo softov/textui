@@ -1,6 +1,6 @@
 import {
-  KeyHints, Row, createBag, defineComponent, registerBuiltins, useApp, useTheme,
-  useStoreValue,
+  KeyHints, Row, createBag, defineComponent, registerBuiltins, useApp, useCapabilities,
+  useTheme, useStoreValue,
 } from '@textui/core';
 import type { BoxProps, Disposable, TextUIApp } from '@textui/core';
 import { CONTROLLER, createController } from './control.js';
@@ -76,6 +76,15 @@ const Header = defineComponent<Record<string, never>>('ChatHeader', () => {
  */
 const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
   const theme = useTheme();
+  /**
+   * Which key makes a newline, on *this* terminal.
+   *
+   * `ctrl+enter` is the one people reach for, and it only exists where the
+   * keyboard protocol is on: without it a terminal sends 0x0d for both, so
+   * enter and ctrl+enter are the same key and naming it would be advertising
+   * something that cannot happen. `alt+enter` works either way.
+   */
+  const newline = useCapabilities().kittyKeyboard ? 'ctrl+enter' : 'alt+enter';
   const waiting = useStoreValue<{ kind: string } | null>(INPUT, null);
   const arrows = `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown}`;
   // Which keys exist is a property of where you are, not of what is open: a
@@ -131,7 +140,7 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
         hints={composing
           ? [
             { keys: 'enter', label: 'send' },
-            { keys: 'alt+enter', label: 'newline' },
+            { keys: newline, label: 'newline' },
             { keys: 'esc', label: 'read' },
             { keys: 'ctrl+c', label: running ? 'stop' : 'quit' },
           ]
@@ -157,6 +166,7 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
         {...props}
         hints={[
           { keys: 'enter', label: 'start' },
+          { keys: newline, label: 'newline' },
           { keys: 'tab', label: 'options' },
           { keys: 'esc', label: 'sessions' },
           { keys: 'ctrl+c', label: 'quit' },

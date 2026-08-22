@@ -82,7 +82,16 @@ export function detectCapabilities(input: DetectionInput): TerminalCapabilities 
   const mux = inMultiplexer(env);
   const program = env.TERM_PROGRAM ?? '';
 
-  const kitty = Boolean(env.KITTY_WINDOW_ID) || program === 'WezTerm' || program === 'ghostty';
+  // Terminals that speak the kitty keyboard protocol, which is what makes
+  // `ctrl+enter` a different key from `enter` rather than the same byte.
+  //
+  // VS Code belongs here: its terminal is xterm.js, which has implemented the
+  // protocol since 6.1, and `terminal.integrated.enableKittyKeyboardProtocol`
+  // defaults to on. Without it in this list nothing ever pushes `CSI > 1 u`,
+  // so the terminal keeps sending legacy codes and every modified enter,
+  // tab and escape arrives as its unmodified twin.
+  const kitty = Boolean(env.KITTY_WINDOW_ID) || program === 'WezTerm'
+    || program === 'ghostty' || program === 'vscode';
   const modern =
     kitty || program === 'iTerm.app' || Boolean(env.WT_SESSION) ||
     term.startsWith('alacritty') || program === 'vscode';

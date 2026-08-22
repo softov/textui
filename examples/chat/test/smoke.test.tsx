@@ -255,6 +255,24 @@ describe('the composer', () => {
     await m.t.unmount();
   });
 
+  it('makes a newline of ctrl+enter, where the terminal can say it', async () => {
+    const m = await idle();
+    const before = (m.t.store.get<Turn[]>(TURNS) ?? []).length;
+    m.t.focus('chat.composer');
+    m.t.type('first line');
+    // The bytes a terminal sends *with the keyboard protocol on*. Without it
+    // both keys are 0x0d and there is nothing here to tell apart - which is
+    // why the capability is what decides whether the footer names this key.
+    m.t.feed('\u001b[13;5u');
+    m.t.type('second');
+    for (let i = 0; i < 4; i++) await m.t.settle();
+
+    expect(m.t.store.get<string>('$/chat/ui/draft')).toBe('first line\nsecond');
+    // And nothing was sent: this is the key that is *not* send.
+    expect((m.t.store.get<Turn[]>(TURNS) ?? []).length).toBe(before);
+    await m.t.unmount();
+  });
+
   it('sends on enter, from bytes rather than a synthesised event', async () => {
     const m = await open();
     m.t.app.services.require(CONTROLLER).open(IDLE);

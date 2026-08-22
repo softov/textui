@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@microsoft/agent-host-protocol": "^0.8.0",
     "@textui/core": "workspace:*",
     "@textui/terminal": "workspace:*"
   },

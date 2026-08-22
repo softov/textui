@@ -178,7 +178,8 @@ happens to be reading it is not a quit key.
 | On the composer | |
 |---|---|
 | `enter` | send - or, with nothing open, create the session and send |
-| `ctrl+enter`, `alt+enter`, `ctrl+j` | a newline. Not `shift+enter`: most terminals cannot tell it from `enter` |
+| `ctrl+enter` | a newline — where the terminal can say it (see below) |
+| `alt+enter`, `ctrl+j` | a newline, everywhere. Not `shift+enter`: no terminal can tell it from `enter` |
 | `tab` | into the control row: harness, model, permissions, workspace, send |
 | `enter` on a chip | the panel of what it offers, above the chip |
 | `←` at the front of the field | out of the composer - the catalogue, or the transcript |
@@ -217,6 +218,26 @@ happens to be reading it is not a quit key.
 A question is not a confirmation, and the hint row says so: offering "a
 approve" over an elicitation is the same mistake as rendering one as the other,
 made in the row that exists to explain it.
+
+### `ctrl+enter`, and why a key can be missing
+
+Enter sends and `ctrl+enter` makes a newline - which a terminal has to be
+*able to say*. In the legacy encoding both are one byte, `0x0d`, so they are
+not two keys: they are one key pressed with a modifier nothing transmits.
+
+The [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)
+is what separates them, and asking for it is one sequence at startup
+(`CSI > 1 u`). Then `ctrl+enter` arrives as `CSI 13;5u`, escape as `CSI 27u`,
+and `ctrl+i` stops being tab. `@textui/terminal` asks for it wherever the
+terminal advertises support - kitty, WezTerm, ghostty and **VS Code**, whose
+terminal is xterm.js and has had the protocol since 6.1 with
+`terminal.integrated.enableKittyKeyboardProtocol` on by default. Inside tmux or
+screen it is not asked for, because the multiplexer is the terminal then and
+rewrites what reaches it.
+
+The footer names whichever key this terminal can actually deliver: `ctrl+enter`
+where the protocol is on, `alt+enter` where it is not. A hint that names a key
+which does nothing is worse than no hint.
 
 ## What this needed that the catalog does not have
 

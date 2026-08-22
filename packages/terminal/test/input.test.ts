@@ -203,4 +203,30 @@ describe('kitty keyboard', () => {
     c.feed(`${ESC}[105;5u`);
     expect(keys(c.events)[0]).toMatchObject({ char: 'i', ctrl: true });
   });
+
+  it('tells ctrl+enter from enter', () => {
+    // The whole point of asking for the protocol. Without it both are 0x0d,
+    // so a composer cannot offer "enter sends, ctrl+enter is a newline" - the
+    // two keys are the same key.
+    const c = collect();
+    c.feed(`${ESC}[13u`);
+    c.feed(`${ESC}[13;5u`);
+    c.feed(`${ESC}[13;3u`);
+    expect(keys(c.events)).toMatchObject([
+      { name: 'enter', ctrl: false, alt: false },
+      { name: 'enter', ctrl: true },
+      { name: 'enter', alt: true },
+    ]);
+  });
+
+  it('still names the keys that arrive as codepoints', () => {
+    // Escape, tab and backspace all come through in this form once the
+    // protocol is on, and a decoder that reported them as characters would
+    // break every one of them at once.
+    const c = collect();
+    c.feed(`${ESC}[27u`);
+    c.feed(`${ESC}[9u`);
+    c.feed(`${ESC}[127u`);
+    expect(keys(c.events).map((k) => k.name)).toEqual(['escape', 'tab', 'backspace']);
+  });
 });

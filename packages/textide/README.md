@@ -75,9 +75,39 @@ directory until it is configured is an editor nobody opens.
   "hidden": false,
   "exclude": ["node_modules", ".git", "dist"],
   "readonly": false,
-  "tabWidth": 2
+  "tabWidth": 2,
+  "extensions": ["@textui/textide-git"]
 }
 ```
+
+## Extensions
+
+An extension is a module that exports `activate(app, context)` and returns a
+`Disposable`. That is the whole contract, and it is the same one
+`registerTextide` follows: the registries are already late-binding, so
+registering *is* the activation - there is no manifest, no activation event and
+no lifecycle to learn.
+
+```js
+export function activate(app, context) {
+  return app.commands.register({
+    id: 'mine.hello',
+    title: `Hello from ${context.root}`,
+    slots: ['palette'],
+    run: () => {},
+  });
+}
+```
+
+`extensions` in `.textide.json` names them: a path relative to the workspace,
+or a package resolved from the workspace's own `node_modules` - which is where
+a project's extensions belong, rather than beside the editor. One that fails to
+load is reported and skipped; an editor that will not open because a plugin is
+missing has made the plugin mandatory.
+
+[`@textui/textide-git`](../textide-git) is the one that exists, and it is the
+proof the boundary is in the right place: git arrives as an adapter, some
+commands, a component and a mount, and unloading it leaves nothing behind.
 
 ## What is here
 
@@ -90,13 +120,9 @@ directory until it is configured is an editor nobody opens.
 | Tabs | Every open file, `ctrl+pageup`/`ctrl+pagedown` between them, `ctrl+w` to close |
 | Split | A second pane beside the first, on another file or the same one |
 | Reload | `pnpm dev:watch`, then f5 or a save - the screen is rebuilt, the store is not |
+| Extensions | Whatever `.textide.json` lists, loaded at boot |
 | Files | New file, new folder, rename, delete-with-confirmation, as commands |
 | Config | `.textide.json`, in the store like everything else |
-
-## What is not, yet
-
-- **Git.** Diff, stage, commit and branches arrive as a loadable extension
-  rather than as part of this package.
 
 ## Why it is a package
 

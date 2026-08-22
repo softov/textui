@@ -1,0 +1,26 @@
+{
+  "name": "@textui/textide-git",
+  "version": "0.1.0",
+  "description": "Git for textide: status, diff, stage, commit and branches, as a loadable extension",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/documents": "workspace:*"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*",
+    "@textui/terminal": "workspace:*"
+  },
+  "publishConfig": { "access": "public" }
+}

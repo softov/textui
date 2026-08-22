@@ -4,6 +4,7 @@ import { createNodeTerminal, createWriter } from '@textui/terminal';
 import { loadWorkspace } from './workspace.js';
 import { registerTextide, type RegisterOptions } from './register.js';
 import { createReloader } from './reload.js';
+import { loadExtensions } from './extensions.js';
 import { attachLog, fileSink, unixSink } from './log.js';
 import { Editor, Explorer } from './app.js';
 import { TitleBar } from './chrome/titlebar.js';
@@ -215,6 +216,11 @@ async function main(): Promise<void> {
 
   app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
   await app.start();
+
+  // After the first frame, and in its own bag: an extension that is slow to
+  // load should not hold up the screen, and a reload of textide's own screen
+  // has no business unloading somebody's git panel.
+  await loadExtensions(app, workspace);
 
   if (process.env.TEXTIDE_RELOAD && bag) await attachReload(app, bag, registration);
 }

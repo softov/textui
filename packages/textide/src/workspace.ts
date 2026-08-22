@@ -29,6 +29,14 @@ export interface WorkspaceConfig {
   readonly?: boolean;
   /** Spaces per indent level, for the editor. */
   tabWidth?: number;
+  /**
+   * Modules to load into the application at boot.
+   *
+   * A path, relative to the workspace, or a package name resolved from the
+   * workspace's own `node_modules`. Each one exports
+   * `activate(app, context)` and returns a `Disposable`.
+   */
+  extensions?: string[];
 }
 
 export interface Workspace extends WorkspaceConfig {

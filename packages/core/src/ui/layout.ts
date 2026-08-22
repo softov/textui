@@ -59,10 +59,17 @@ export const Grid = defineComponent<GridProps>('Grid', ({ columns, columnGap, ro
   return h('box', { direction: 'column', gap: rowGap ?? props.gap ?? 0, ...props },
     ...rows.map((row, i) =>
       h('box', { key: i, direction: 'row', gap: columnGap ?? props.gap ?? 1 },
-        ...row.map((cell, j) => h('box', { key: j, flex: 1 }, cell)),
+        // `basis: 0` is what makes the columns *equal* rather than merely
+        // flexible. Without it a cell starts at the width its content asked
+        // for and only the space left over is shared - so a pane holding one
+        // long unwrapped line takes two thirds of the row and the one beside
+        // it is squeezed to a column of single words. Equal columns is what
+        // this component says it is for; anything that wants to be sized by
+        // its content wants a `Row`.
+        ...row.map((cell, j) => h('box', { key: j, flex: 1, basis: 0, minWidth: 0 }, cell)),
         // Pad the last row so its cells keep the same width as the others.
         ...Array.from({ length: columns - row.length }, (_, k) =>
-          h('box', { key: `pad${k}`, flex: 1 })),
+          h('box', { key: `pad${k}`, flex: 1, basis: 0 })),
       ),
     ),
   );

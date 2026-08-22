@@ -577,7 +577,24 @@ export function useFocus(options: UseFocusOptions = {}): FocusHandle {
       if (!claimed) runtime.focus.focus(id);
     }
     return () => registration.dispose();
-  }, [id, options.disabled, options.skipTab, options.order, scopeId]);
+    // Only identity is a reason to register again. `disabled`, `skipTab` and
+    // `order` are *state on* a focusable, not a different focusable - and
+    // re-registering to change one costs the control its place in the tab
+    // order, because a registration that was disposed and made again goes on
+    // the end. A Submit button that is disabled until a field is filled in
+    // therefore ended up after Cancel the moment it became usable, which is
+    // the one control the reader was tabbing towards.
+  }, [id, scopeId]);
+
+  // The mutable half, pushed rather than re-registered.
+  useEffect(() => {
+    if (!runtime.focus.has(id)) return;
+    runtime.focus.update(id, {
+      disabled: options.disabled,
+      skipTab: options.skipTab,
+      order: options.order,
+    });
+  }, [id, options.disabled, options.skipTab, options.order]);
 
   return {
     id,

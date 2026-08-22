@@ -151,6 +151,16 @@ export class Focus implements FocusManager {
     const node = this.nodes.get(id);
     if (!node) return;
     this.nodes.set(id, { ...node, ...patch });
+
+    // Focus cannot sit on something that has just been disabled. Nothing else
+    // would move it - the keys it would have handled are now nobody's - so the
+    // tab order is the only way out and this is what puts the reader back in
+    // it.
+    if (patch.disabled === true && this.current === id) {
+      this.current = null;
+      node.onBlur?.();
+      this.onChange();
+    }
   }
 
   has(id: string): boolean {

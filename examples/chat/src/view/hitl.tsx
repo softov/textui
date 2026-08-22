@@ -48,7 +48,7 @@ export const ChatHitl: (props: ChatHitlProps) => RenderOutput =
       <Panel
         title={input.kind === 'toolConfirmation' ? (input.call.confirmationTitle ?? 'The agent asks') : 'The agent asks'}
         tone="warning"
-        border="single"
+        border={theme.border}
         meta={`${theme.glyphs.warning} waiting on you`}
         {...rest}
       >

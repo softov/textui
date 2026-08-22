@@ -30,6 +30,8 @@ interface Options {
   pump?: number;
   screen: string;
   session?: string;
+  theme: string;
+  shell: string;
   /** Say something on the open session before the frame is taken. */
   say?: string;
   /** Answer the confirmation the script stops at, to reach the question. */
@@ -46,6 +48,8 @@ function parse(argv: string[]): Options {
     tick: 40,
     settled: false,
     screen: 'sessions',
+    theme: 'workbench',
+    shell: 'workbench',
     approve: false,
     answer: false,
   };
@@ -63,6 +67,8 @@ function parse(argv: string[]): Options {
       case '--approve': options.approve = true; break;
       case '--answer': options.answer = true; break;
       case '--screen': options.screen = String(argv[++i]); break;
+      case '--theme': options.theme = String(argv[++i]); break;
+      case '--shell': options.shell = String(argv[++i]); break;
       case '--session': options.session = String(argv[++i]); break;
       default: break;
     }
@@ -87,8 +93,8 @@ async function still(options: Options): Promise<void> {
   const host = fakeHost();
   const app = createApp({
     terminal,
-    theme: 'workbench',
-    shell: 'workbench',
+    theme: options.theme,
+    shell: options.shell,
     onBoot: (booted) => { registerChat(booted, { host }); },
   });
   app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
@@ -133,8 +139,10 @@ async function main(): Promise<void> {
   const host = fakeHost();
   const app = createApp({
     terminal,
-    theme: 'workbench',
-    shell: 'workbench',
+    // A starting point, not a fixture. `ctrl+t` and the palette change both
+    // while it runs, and the screens are the same graph under either.
+    theme: options.theme,
+    shell: options.shell,
     session: { managed: true, altScreen: true, mouse: true, title: 'assistant' },
     onBoot: (booted) => {
       registerChat(booted, { host });

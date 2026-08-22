@@ -267,6 +267,65 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
     },
     { id: 'go.hosts', title: 'Hosts', category: 'Go', slots: ['palette'], run: () => app.screens.push('hosts') },
 
+    // Appearance is a registration, not a rewrite. The same graph is mounted
+    // under whichever theme and shell are chosen, which is the claim the
+    // runtime makes and the one an example is meant to be evidence for.
+    {
+      id: 'view.theme',
+      title: 'Theme',
+      category: 'View',
+      slots: ['palette'],
+      // The command says what it needs and the palette asks. Wearing it while
+      // the highlight moves is what makes a theme choosable at all: the names
+      // mean nothing until the screen is in one.
+      args: [{
+        name: 'id',
+        type: 'string' as const,
+        required: true,
+        choices: app.themes.list().map((theme) => theme.id),
+        default: app.theme.id,
+        preview: (value: string | null) => {
+          previous.theme ??= app.theme.id;
+          if (value === null) {
+            if (previous.theme) app.setTheme(previous.theme);
+            previous.theme = null;
+            return;
+          }
+          app.setTheme(value);
+        },
+      }],
+      run: (args: Record<string, unknown>) => {
+        previous.theme = null;
+        if (args.id) app.setTheme(String(args.id));
+      },
+    },
+    {
+      id: 'view.shell',
+      title: 'Layout',
+      category: 'View',
+      slots: ['palette'],
+      args: [{
+        name: 'id',
+        type: 'string' as const,
+        required: true,
+        choices: app.shells.list().map((shell) => shell.id),
+        default: app.activeShell(),
+        preview: (value: string | null) => {
+          previous.shell ??= app.activeShell();
+          if (value === null) {
+            if (previous.shell) app.setShell(previous.shell);
+            previous.shell = null;
+            return;
+          }
+          app.setShell(value);
+        },
+      }],
+      run: (args: Record<string, unknown>) => {
+        previous.shell = null;
+        if (args.id) app.setShell(String(args.id));
+      },
+    },
+
     {
       id: 'session.open',
       title: 'Open session',
@@ -441,9 +500,10 @@ function keys(): {
     // matches has handled the key - whether or not the command it names then
     // declines to run - so a `when` that lives only on the command swallows
     // `ctrl+c` and it never reaches the one below that closes the application.
-    { keys: 'ctrl+c', commandId: 'chat.stop', when: `${OPEN} && ${STATUS} > 1` },
+    { keys: 'ctrl+c', commandId: 'chat.stop', when: `${SCREEN} == 'chat' && ${RUNNING}` },
     { keys: 'ctrl+n', commandId: 'session.new' },
     { keys: 'ctrl+r', commandId: 'session.refresh' },
+    { keys: 'ctrl+t', commandId: 'view.theme' },
     { keys: 'escape', commandId: 'go.back' },
 
     // The catalogue.

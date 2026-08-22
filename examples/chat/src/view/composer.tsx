@@ -58,12 +58,16 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
     return (
       <Column {...rest} gap={0}>
         {matches.length > 0 ? (
-          <Column border="single" padding={[0, 1]}>
+          // The theme's border, never a named one. A hardcoded `single` draws
+          // a box-drawing frame inside an ascii one on a terminal that cannot
+          // do either, and an airy theme gets a line it deliberately does not
+          // draw anywhere else.
+          <Column border={theme.border} padding={[0, 1]}>
             <List items={matches} focusable={false} emptyMessage="no command" />
           </Column>
         ) : null}
 
-        <Column border="single" padding={[0, 1]}>
+        <Column border={theme.border} padding={[0, 1]}>
           <TextArea
             value={value}
             onChange={onChange}

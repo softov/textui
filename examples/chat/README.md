@@ -8,7 +8,14 @@ waits for a person.
 pnpm example chat                       # run it
 pnpm example chat --static --width 100  # one frame, to stdout
 pnpm example chat --tick 15             # stream faster
+pnpm example chat --shell paper --theme paper-dark   # the same screens, elsewhere
 ```
+
+The shell and the theme are a starting point rather than a fixture: `ctrl+t`
+changes the theme while it runs and the palette has both, previewing each as
+the highlight moves. Nothing in `view/` names a border style or a glyph - they
+come from the theme, which is what lets the same graph render under an ascii
+console and an airy borderless page.
 
 It exists to answer one question: **which components does a chat application
 need that the catalog does not have?** The answer is at the bottom, and it is
@@ -95,11 +102,12 @@ happens to be reading it is not a quit key.
 | Everywhere | |
 |---|---|
 | `ctrl+p` | commands |
-| `ctrl+c` | stop the running turn |
+| `ctrl+c` | stop the turn you are watching - or quit, when there is none |
 | `ctrl+n` | new session |
 | `ctrl+r` | refresh the catalogue |
 | `ctrl+q` | quit |
-| `esc` | back, and out of the composer |
+| `ctrl+t` | theme |
+| `esc` | out of the composer first, then back a screen |
 
 | On the catalogue | |
 |---|---|

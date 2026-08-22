@@ -1,6 +1,6 @@
 import {
   Badge, Column, EmptyState, Panel, RadioGroup, Row, SearchBox,
-  defineComponent, useApp, useEffect, useFocusScope,
+  defineComponent, useApp, useCapabilities, useEffect, useFocusScope,
   useRequiredService, useSize, useState, useStore, useStoreSubtree, useStoreValue, useTheme,
 } from '@textui/core';
 import type { BindingPath, RenderOutput, SemanticVariant } from '@textui/core';
@@ -19,6 +19,7 @@ import { decodeStatus } from './ahp/status.js';
 import { ChatTranscript } from './view/transcript.js';
 import { ChatComposer } from './view/composer.js';
 import { Creature } from './view/creature.js';
+import { settingIcon, valueIcon } from './view/icons.js';
 import { ChatHitl } from './view/hitl.js';
 import { ChangesList } from './view/changes.js';
 import { ConnectionBadge, SessionList } from './view/sessions.js';
@@ -246,7 +247,7 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
  * reads as a sentence about what will happen rather than as a config value.
  */
 function useComposerOptions(): ComposerOption[] {
-  const theme = useTheme();
+  const unicode = useCapabilities().unicode;
   const controller = useRequiredService(CONTROLLER);
   const open = useStoreValue<string | null>(OPEN, null) ?? null;
   const provider = useStoreValue<string>(PROVIDER, 'claude') ?? 'claude';
@@ -275,7 +276,11 @@ function useComposerOptions(): ComposerOption[] {
   return [
     {
       id: 'harness',
-      icon: theme.glyphs.bulletFilled,
+      // A mark on every chip, and it is not decoration. The row truncates
+      // labels from the right as the terminal narrows, and a chip that is only
+      // a label truncates to nothing you can identify; one that leads with a
+      // mark still says which question it is at four cells wide.
+      icon: settingIcon(unicode, 'harness'),
       label: agent?.displayName ?? provider,
       // Fixed once the session exists: it is the process the conversation is
       // running in.
@@ -283,7 +288,7 @@ function useComposerOptions(): ComposerOption[] {
     },
     {
       id: 'model',
-      icon: theme.glyphs.bulletHollow,
+      icon: settingIcon(unicode, 'model'),
       label: models?.find((found) => found.id === model)?.displayName
         ?? (model || (models !== null && models.length === 0 ? 'no models' : 'default')),
       ...(models !== null && models.length === 0 ? {} : { commandId: 'compose.model' }),
@@ -292,10 +297,17 @@ function useComposerOptions(): ComposerOption[] {
       .filter((property) => property.values.length > 0)
       .map((property): ComposerOption => {
         const value = settings[property.key];
+        const chosen = property.values.find((found) => found.value === value);
         return {
           id: property.key,
-          label: property.values.find((found) => found.value === value)?.label
-            ?? value ?? property.title,
+          // The value's own mark where it has one - which of five approval
+          // modes is in force is the thing worth reading from the row itself.
+          // The question's mark otherwise, so a branch chip is still a branch.
+          icon: (value !== undefined
+            ? valueIcon(unicode, value, chosen?.label)
+            : undefined)
+            ?? settingIcon(unicode, property.key, property.title),
+          label: chosen?.label ?? value ?? property.title,
           // Shown but not asked where the host says it cannot be changed on a
           // running session: offering it produces a refusal, not an edit.
           ...(open && !property.sessionMutable ? {} : { commandId: settingCommand(property.key) }),
@@ -303,7 +315,7 @@ function useComposerOptions(): ComposerOption[] {
       }),
     {
       id: 'workspace',
-      icon: theme.glyphs.breadcrumb,
+      icon: settingIcon(unicode, 'workspace'),
       label: workspaceName(workspace ? `file://${workspace}` : undefined),
       ...(open ? {} : { commandId: 'compose.workspace' }),
     },

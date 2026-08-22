@@ -379,6 +379,54 @@ describe('the command palette', () => {
       await t.unmount();
     });
 
+    /**
+     * A choice that has to be explained.
+     *
+     * An agent's approval modes are five phrases that all sound alike - "Auto
+     * Mode", "Plan Mode", "Ask Before Edits" - and the sentence under each one
+     * is what tells them apart. So a choice carries a mark, a label and a line
+     * of its own, and the command is handed the *value* rather than whatever
+     * the label happened to say.
+     */
+    it('shows a choice with its mark and its own sentence', async () => {
+      const { ran, mount } = withChoices([
+        { value: 'plan', label: 'Plan Mode', icon: '=', description: 'Writes a plan first' },
+        { value: 'bypass', label: 'Bypass', icon: '!', description: 'Nothing is confirmed' },
+      ]);
+      const t = await mount();
+      await t.settle();
+
+      t.press('enter');
+      await t.settle();
+      expect(t.hasText('Plan Mode')).toBe(true);
+      expect(t.hasText('Writes a plan first')).toBe(true);
+
+      t.press('enter');
+      await t.settle();
+      expect(ran).toEqual([{ tone: 'plan' }]);
+      await t.unmount();
+    });
+
+    it('finds a choice by what it does, not only by what it is called', async () => {
+      const { ran, mount } = withChoices([
+        { value: 'default', label: 'Ask Before Edits', description: 'Asks before editing files' },
+        { value: 'acceptEdits', label: 'Edit Automatically', description: 'Edits without asking' },
+      ]);
+      const t = await mount();
+      await t.settle();
+      t.press('enter');
+      await t.settle();
+
+      // Neither label contains "without". The description does, and it is what
+      // a person remembers about a mode whose name is two generic words.
+      t.type('without');
+      await t.settle();
+      t.press('enter');
+      await t.settle();
+      expect(ran).toEqual([{ tone: 'acceptEdits' }]);
+      await t.unmount();
+    });
+
     it('goes back a level on escape rather than closing', async () => {
       const { mount } = withChoices(['info', 'danger']);
       const t = await mount();

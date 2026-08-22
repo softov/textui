@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, renderApp } from '../src/index.js';
-import { h, Button, Column, Row, Field, Form, Progress, ScrollView, Select, TextArea, TextInput, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
+import { h, Button, Column, Marquee, Row, Field, Form, Progress, ScrollView, Select, TextArea, TextInput, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
 
 const ROWS = [
   { id: 'api', name: 'api-gateway', status: 'up', cpu: '12.4', mem: '310' },
@@ -1070,6 +1070,88 @@ function backdrop(t: { app: { buffer(): { get(x: number, y: number): { bg: unkno
  * `ghost` now, which is the name that already meant "the tone and no chrome"
  * on Button.
  */
+/**
+ * Text too long for its box, read by sliding it.
+ *
+ * The case it exists for is a menu: a row is a label and a description, both
+ * of them are the answer to "what is this", and there is nothing else on the
+ * row to take room from. Truncating is right for the rows being scanned past
+ * and useless for the one the cursor has stopped on.
+ */
+describe('Marquee', () => {
+  const LONG = 'the quick brown fox jumps over the lazy dog';
+
+  const marquee = (props: Record<string, unknown>) => ({
+    component: 'Column',
+    width: 20,
+    children: [{ component: 'Marquee', content: LONG, ...props }],
+  });
+
+  /** A cycle's worth of frames, so an assertion is about behaviour not timing. */
+  const cycle = async (t: Awaited<ReturnType<typeof render>>): Promise<string[]> => {
+    const seen: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      t.advance(500);
+      await t.settle();
+      seen.push(t.lines()[0]?.trim() ?? '');
+    }
+    return seen;
+  };
+
+  it('sits still and truncates when it is not the one being read', async () => {
+    const t = await render(marquee({ active: false }), { width: 40, height: 3 });
+    await t.settle();
+    expect(t.lines()[0]?.trim()).toBe('the quick brown fox…');
+    // Nothing moves, and nothing is scheduled to: a marquee at rest holds no
+    // ticker, which is what makes a menu one animation rather than one per row.
+    expect(new Set(await cycle(t)).size).toBe(1);
+    await t.unmount();
+  });
+
+  it('waits, then slides far enough to read both ends', async () => {
+    const t = await render(marquee({ active: true }), { width: 40, height: 3 });
+    await t.settle();
+    // Rests at the start first: text that begins moving the instant the cursor
+    // lands on it is text nobody gets to read the beginning of.
+    expect(t.lines()[0]?.trim()).toBe('the quick brown fox');
+    expect(t.lines()[0]).not.toContain('…');
+
+    const seen = await cycle(t);
+    expect(seen.some((line) => line.includes('lazy dog'))).toBe(true);
+    // And comes back rather than wrapping around. Text reappearing from the
+    // right while its own tail is still leaving reads as two strings.
+    expect(seen.some((line) => line.startsWith('the quick brown'))).toBe(true);
+    await t.unmount();
+  });
+
+  it('goes back to the beginning when it stops', async () => {
+    const slider = defineComponent<{ active: boolean }>('Slider', ({ active }) =>
+      h(Column, { width: 20 }, h(Marquee, { content: LONG, active })));
+
+    const moving = await render(h(slider, { active: true }), { width: 40, height: 3 });
+    await moving.settle();
+    moving.advance(2000);
+    await moving.settle();
+    expect(moving.lines()[0]?.trim()).not.toBe('the quick brown fox');
+    await moving.unmount();
+
+    const still = await render(h(slider, { active: false }), { width: 40, height: 3 });
+    await still.settle();
+    still.advance(4000);
+    await still.settle();
+    expect(still.lines()[0]?.trim()).toBe('the quick brown fox…');
+    await still.unmount();
+  });
+
+  it('does not move where animation is off', async () => {
+    const t = await render(marquee({ active: true }), { width: 40, height: 3, animations: false });
+    await t.settle();
+    expect(t.lines()[0]?.trim()).toBe('the quick brown fox…');
+    expect(new Set(await cycle(t)).size).toBe(1);
+    await t.unmount();
+  });
+});
+
 describe('Badge', () => {
   it('draws nothing around the label by default', async () => {
     const t = await render({ component: 'Badge', label: 'up', tone: 'success' }, { width: 20, height: 3 });

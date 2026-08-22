@@ -3,6 +3,7 @@ import type { BoxProps } from '../jsx/intrinsics.js';
 import type { SemanticVariant, StyleColor } from '../types/style.js';
 import { h, defineComponent } from '../jsx/factory.js';
 import { TONE } from './tone.js';
+import { Marquee } from './display.js';
 import { useFocus, useInput, useState, useTheme } from '../runtime/hooks.js';
 
 /**
@@ -204,11 +205,26 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
         fg: item.disabled ? 'disabled' : active ? 'inverted' : item.tone ? TONE[item.tone] : undefined,
         onClick: () => { if (!item.disabled) onSelect?.(item.id, item); },
       },
-        h('text', { content: active ? theme.glyphs.chevronRight : ' ' }),
-        item.icon ? h('text', { content: item.icon }) : null,
-        h('text', { content: item.label }),
+        h('text', { content: active ? theme.glyphs.chevronRight : ' ', shrink: 0 }),
+        // The mark never gives up room. It is the shortest thing on the row
+        // and the one that stays legible when everything else is an ellipsis.
+        item.icon ? h('text', { content: item.icon, shrink: 0 }) : null,
+        // The row under the cursor reads itself out. Everything else is
+        // truncated and still, which is what you want of nineteen rows you
+        // are scanning past - and useless for the one you have stopped on.
+        h(Marquee, { content: item.label, active }),
         h('spacer', { flex: 1 }),
-        item.description ? h('text', { content: item.description, fg: active ? 'inverted' : 'muted', truncate: 'end' }) : null,
+        // The description yields first, and by a lot. It is the elaboration;
+        // the label is the thing being chosen, and a row reading "Accept ed…"
+        // beside a full sentence has given up the wrong half.
+        item.description
+          ? h(Marquee, {
+            content: item.description,
+            active,
+            fg: active ? 'inverted' : 'muted',
+            shrink: 8,
+          })
+          : null,
         item.shortcut ? h('text', { content: item.shortcut, fg: active ? 'inverted' : 'subtle' }) : null,
         // Present but empty means "this opens something, contents unknown" -
         // which is what the command palette knows about an argument whose

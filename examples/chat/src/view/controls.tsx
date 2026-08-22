@@ -133,14 +133,20 @@ const Chip = defineComponent<ChipProps>('ComposerChip', (props) => {
       {...(focus.focused ? { bg: 'selected' as const } : {})}
       onClick={disabled ? undefined : onOpen}
     >
-      {icon ? <text content={icon} fg={focus.focused ? 'inverted' : tone ?? 'muted'} /> : null}
+      {/* The mark and the chevron never give up room. As the terminal
+          narrows the labels truncate from the right, and a chip that has
+          given up its mark as well is four cells of ellipsis that could be
+          any of six questions. */}
+      {icon ? <text content={icon} shrink={0} fg={focus.focused ? 'inverted' : tone ?? 'muted'} /> : null}
       <text
         content={label}
+        truncate="end"
         fg={focus.focused ? 'inverted' : disabled ? 'disabled' : tone ?? undefined}
         {...(tone ? { bold: true } : {})}
       />
       <text
         content={trailing ?? theme.glyphs.chevronDown}
+        shrink={0}
         fg={focus.focused ? 'inverted' : 'subtle'}
       />
     </Row>

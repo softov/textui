@@ -1,8 +1,9 @@
 import { confirm, createBag, serviceKey } from '@textui/core';
-import type { CommandDefinition, Disposable, ServiceKey, TextUIApp } from '@textui/core';
+import type { ArgChoices, CommandDefinition, Disposable, ServiceKey, TextUIApp } from '@textui/core';
 import type { HostConnection } from './ahp/connection.js';
 import type { Agent, Answer, SessionConfig, SessionDetail, SessionUri, Turn } from './ahp/types.js';
 import { SessionFlag } from './ahp/types.js';
+import { valueIcon } from './view/icons.js';
 import {
   ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, HOST_ERROR, INPUT, MODEL, OPEN, PROVIDER,
   QUEUE, RUNNING, SCREEN, SELECTED, SETTINGS, TURNS, WORKSPACE,
@@ -133,6 +134,7 @@ export function createController(
    * a new chip and a new palette entry, and this file does not change.
    */
   const offered = new Map<string, Disposable>();
+  const unicode = app.capabilities.unicode;
 
   const offer = (config: SessionConfig, uri: SessionUri | null): void => {
     const keep = new Set<string>();
@@ -146,6 +148,10 @@ export function createController(
       const id = settingCommand(property.key);
       keep.add(id);
       offered.get(id)?.dispose();
+      // Whether the values are worth a mark at all. Five approval modes named
+      // in the same two words need one; a list of branch names does not, and a
+      // column of identical dots beside them is noise with a shape.
+      const marked = property.values.some((value) => valueIcon(unicode, value.value, value.label));
       offered.set(id, app.commands.register({
         id,
         title: property.title,
@@ -156,12 +162,19 @@ export function createController(
           type: 'string' as const,
           required: true,
           description: property.description ?? `Choose ${property.title.toLowerCase()}`,
-          // Labels, because labels are what a person picked from. The host's
-          // values are ids, and some of them are whole sentences.
-          choices: () => property.values.map((value) => value.label),
+          // The host's own words, all three of them. "Auto Mode" and "Plan
+          // Mode" are two words apart and mean entirely different things; the
+          // sentence under each is what tells them apart, and it is the
+          // difference between picking and guessing.
+          choices: () => property.values.map((value) => ({
+            value: value.value,
+            label: value.label,
+            ...(marked ? { icon: valueIcon(unicode, value.value, value.label, { fallback: true }) } : {}),
+            ...(value.description ? { description: value.description } : {}),
+          })),
         }],
         run: (args: Record<string, unknown>) => {
-          const chosen = property.values.find((value) => value.label === String(args.value));
+          const chosen = property.values.find((value) => value.value === String(args.value));
           if (!chosen) return;
           const current = app.store.get<Record<string, string>>(SETTINGS) ?? {};
           app.store.set(SETTINGS, { ...current, [property.key]: chosen.value });
@@ -441,16 +454,29 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
   const provider = (): string => app.store.get<string>(PROVIDER) ?? 'claude';
   const agent = (): Agent | undefined => known.agents.find((found) => found.provider === provider());
 
-  const listAgents = async (): Promise<string[]> => {
+  const listAgents = async (): Promise<ArgChoices> => {
     try {
       known.agents = await controller.agents();
     } catch (error) { controller.report(error); }
-    return known.agents.map((found) => found.displayName);
+    // The provider id is what the command is answered with, and the harness's
+    // own description is what tells two of them apart - a person choosing
+    // between "Copilot" and "Claude" is choosing between two sentences.
+    return known.agents.map((found) => ({
+      value: found.provider,
+      label: found.displayName,
+      ...(found.description ? { description: found.description } : {}),
+    }));
   };
 
-  const listModels = async (): Promise<string[]> => {
+  const listModels = async (): Promise<ArgChoices> => {
     if (known.agents.length === 0) await listAgents();
-    return (agent()?.models ?? []).map((model) => model.displayName);
+    // The id under the name: `claude-sonnet-4-5-20250929` is what a person
+    // recognises from a config file, and what they would search for.
+    return (agent()?.models ?? []).map((model) => ({
+      value: model.id,
+      label: model.displayName,
+      ...(model.displayName === model.id ? {} : { description: model.id }),
+    }));
   };
 
   return [
@@ -597,7 +623,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
         choices: listAgents,
       }],
       run: (args: Record<string, unknown>) => {
-        const chosen = known.agents.find((found) => found.displayName === String(args.id));
+        const chosen = known.agents.find((found) => found.provider === String(args.id));
         if (!chosen) return;
         app.store.set(PROVIDER, chosen.provider);
         // A model belongs to a harness. Kept across a change it names one the
@@ -618,9 +644,9 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
         choices: listModels,
       }],
       run: (args: Record<string, unknown>) => {
-        const chosen = agent()?.models.find((model) => model.displayName === String(args.id));
         // The id, not the label. AHP hangs the model on the message, so this
         // is what rides on the next `chat/turnStarted`.
+        const chosen = agent()?.models.find((model) => model.id === String(args.id));
         if (chosen) app.store.set(MODEL, chosen.id);
       },
     },

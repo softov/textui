@@ -34,6 +34,15 @@ export interface RenderOptions {
   encode?: boolean;
   /** Collect errors instead of printing them. On by default. */
   captureErrors?: boolean;
+  /**
+   * Whether anything is allowed to move. On by default, and driven by hand -
+   * `advance` is the clock.
+   *
+   * Off is the reader who asked for stillness, and it is a behaviour worth
+   * testing rather than assuming: a component that animates has a second
+   * rendering nobody sees until somebody sets this.
+   */
+  animations?: boolean;
 }
 
 export interface QueryOptions {
@@ -164,7 +173,7 @@ async function mount(options: RenderOptions & { root?: ComponentNode }): Promise
     themes: options.themes,
     shell: options.shell ?? 'plain',
     locale: options.locale,
-    animations: true,
+    animations: options.animations ?? true,
     diagnostics: true,
     session: { managed: false, altScreen: false, hideCursor: false },
     onBoot: async (booted) => {

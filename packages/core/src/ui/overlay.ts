@@ -4,7 +4,7 @@ import type { SemanticVariant } from '../types/style.js';
 import type { LayerEntry, LayerPosition } from '../types/layer.js';
 import type { ComponentNode } from '../types/graph.js';
 import type { RenderOutput } from '../types/render.js';
-import type { ArgSpec, CommandDefinition } from '../types/command.js';
+import type { ArgChoice, ArgSpec, CommandDefinition } from '../types/command.js';
 import type { TextUIApp } from '../types/app.js';
 import type { Disposable } from '../types/disposable.js';
 import type { ResolvedTheme } from '../types/theme.js';
@@ -193,7 +193,7 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     /** Answers given so far, for a command that asks for more than one. */
     collected: Record<string, unknown>;
   } | null>(null);
-  const [choices, setChoices] = useState<string[]>([]);
+  const [choices, setChoices] = useState<ArgChoice[]>([]);
   /**
    * Whether the answer to "what may I choose" is still on its way.
    *
@@ -214,15 +214,21 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const all = given ?? app?.commands.list({ slot: 'palette', enabledOnly: true }) ?? [];
 
   const matches = pending ? [] : filterCommands(all, query);
-  const rows = pending ? filterStrings(choices, query) : matches.map((c) => c.id);
+  const offered = pending ? filterChoices(choices, query) : [];
+  const rows = pending ? offered.map((choice) => choice.value) : matches.map((c) => c.id);
   const index = Math.max(0, Math.min(highlight, rows.length - 1));
 
   const items: MenuItem[] = pending
-    ? (rows.length > 0
-      ? rows.map((choice) => ({
-        id: choice,
-        label: choice,
-        description: pending.arg.default === choice ? 'default' : undefined,
+    ? (offered.length > 0
+      ? offered.map((choice) => ({
+        id: choice.value,
+        label: choice.label ?? choice.value,
+        ...(choice.icon ? { icon: choice.icon } : {}),
+        // What it means, when the choice says; "default" otherwise, which is
+        // the only thing the palette itself knows about a value.
+        ...(choice.description
+          ? { description: choice.description }
+          : pending.arg.default === choice.value ? { description: 'default' } : {}),
       }))
       // One row, saying which kind of nothing this is. A disabled item rather
       // than no items: the panel keeps its height, so the answer arriving does
@@ -309,7 +315,7 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     setHighlight(0);
     if (Array.isArray(resolved)) {
       setAsking(false);
-      setChoices(resolved);
+      setChoices(resolved.map(asChoice));
       return;
     }
     setChoices([]);
@@ -317,7 +323,7 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     // Answered either way: a `choices` function that rejects leaves the panel
     // saying "nothing to choose", which is true of what it can offer.
     void resolved
-      .then((list) => setChoices(list))
+      .then((list) => setChoices(list.map(asChoice)))
       .catch(() => setChoices([]))
       .finally(() => setAsking(false));
   };
@@ -427,8 +433,16 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
 
   const highlighted = pending ? undefined : matches[index];
   const move = `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown} move`;
+  // What the highlighted row is, in full.
+  //
+  // The rows themselves have to fit, so a choice's own sentence is truncated
+  // there - and a sentence about what a mode does is exactly the thing a
+  // person needs whole. So the line under the list follows the highlight: the
+  // choice's description while there is one, the question's otherwise.
+  const chosen = pending ? offered[index] : undefined;
   const detail = pending
-    ? pending.arg.description ?? `${pending.command.title} needs a ${pending.arg.name}`
+    ? chosen?.description
+      ?? pending.arg.description ?? `${pending.command.title} needs a ${pending.arg.name}`
     : highlighted?.description ?? highlighted?.id ?? '';
 
   return h('box', {
@@ -518,10 +532,23 @@ function argumentOf(
   );
 }
 
-function filterStrings(values: string[], query: string): string[] {
+/** The short form and the long one, as one shape. */
+function asChoice(choice: string | ArgChoice): ArgChoice {
+  return typeof choice === 'string' ? { value: choice } : choice;
+}
+
+/**
+ * Filter on everything a person can see.
+ *
+ * The label, because that is what they are reading; the value, because a host
+ * id is often what somebody types from memory; and the description, because
+ * "asks before editing" is how you find a mode whose label is "Default".
+ */
+function filterChoices(choices: ArgChoice[], query: string): ArgChoice[] {
   const q = query.trim().toLowerCase();
-  if (q === '') return values;
-  return values.filter((value) => value.toLowerCase().includes(q));
+  if (q === '') return choices;
+  return choices.filter((choice) => `${choice.label ?? ''} ${choice.value} ${choice.description ?? ''}`
+    .toLowerCase().includes(q));
 }
 
 export function filterCommands(commands: CommandDefinition[], query: string): CommandDefinition[] {

@@ -11,13 +11,37 @@ import type { TextUIApp } from './app.js';
  */
 export type CommandScope = 'app' | 'screen' | 'region' | 'component';
 
+/**
+ * One thing an argument may be answered with.
+ *
+ * A bare string is the short form and stays the common one - the value is the
+ * label and there is nothing else to say. The long form is for a choice that
+ * has to be *explained*: an agent's approval modes are five words that all
+ * sound alike ("Auto Mode", "Plan Mode") and the sentence under each one is
+ * what tells them apart, which is the difference between picking and guessing.
+ *
+ * The command is handed `value`, never the label. A host's ids are opaque and
+ * its labels are prose, and resolving one back to the other at the far end is
+ * a lookup that can be wrong.
+ */
+export interface ArgChoice {
+  value: string;
+  /** What a person reads. The value, when there is nothing better. */
+  label?: string;
+  icon?: string;
+  /** A line under it: what choosing this would mean. */
+  description?: string;
+}
+
+export type ArgChoices = (string | ArgChoice)[];
+
 export interface ArgSpec {
   name: string;
   type: 'string' | 'number' | 'boolean' | 'unknown';
   required?: boolean;
   description?: string;
   /** Fixed choices, or a resolver for a picker. */
-  choices?: string[] | (() => Promise<string[]> | string[]);
+  choices?: ArgChoices | (() => Promise<ArgChoices> | ArgChoices);
   default?: unknown;
 
   /**

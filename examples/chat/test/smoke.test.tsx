@@ -678,7 +678,10 @@ describe('the composer is the front door', () => {
     // And the command that asks about one is registered under the host's key.
     expect(t.app.commands.get('compose.set.isolation')).toBeTruthy();
 
-    await t.app.execute('compose.set.isolation', { value: 'Worktree' });
+    // The value, not the label. A host's ids are what it stores and its
+    // labels are prose, and resolving one back to the other at the far end is
+    // a lookup that can be wrong.
+    await t.app.execute('compose.set.isolation', { value: 'worktree' });
     for (let i = 0; i < 6; i++) await t.settle();
     expect(t.store.get<Record<string, string>>(SETTINGS)?.isolation).toBe('worktree');
     expect(t.hasText('Worktree')).toBe(true);

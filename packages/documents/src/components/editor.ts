@@ -1,12 +1,12 @@
 import type { BoxProps } from '@textui/core';
 import type {
-  ComponentDefinition, LineMark, RenderOutput, ResolvedTheme, StyleColor, SyntaxToken,
+  Color, ComponentDefinition, LineMark, RenderOutput, ResolvedTheme, StyleColor, SyntaxToken,
 } from '@textui/core';
 import {
-  h, chorded, defineComponent, ScrollThumb, sliceColumns, stringWidth, useClipboard,
-  useEffect, useFocus, useHighlight, useInput, useLineMarks, useMeasure, useMemo,
-  usePanelState, usePanelStatus, useState, useTheme,
-  viewportRows,
+  h, chorded, defineComponent, mix, packColor, ScrollThumb, sliceColumns, stringWidth,
+  unpackColor, useCapabilities, useClipboard, useEffect, useFocus, useHighlight, useInput,
+  useLineMarks, useMeasure, useMemo, usePanelState, usePanelStatus, useState, useStoreValue,
+  useTheme, viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
 import { EMPTY_HISTORY, record, redo, undo, type History, type Snapshot } from '../history.js';
@@ -38,7 +38,7 @@ export interface CodeEditorProps extends BoxProps {
   value?: string;
   onChange?(value: string): void;
   lineNumbers?: boolean;
-  /** Spaces one indent step is worth. Also what a soft tab inserts. */
+    /** Spaces one indent step is worth. Also what a soft tab inserts. */
   tabWidth?: number;
   readonly?: boolean;
   /** Ask the syntax registry for a highlighter. */
@@ -52,6 +52,9 @@ export interface CodeEditorProps extends BoxProps {
   /** Claim focus on mount, if nothing in this scope already has it. */
   autoFocus?: boolean;
 }
+
+/** Whether a marked line is washed with its mark's colour, as well as marked. */
+export const MARK_LINES = '$/ui/editor/markLines';
 
 interface Cursor { line: number; column: number }
 
@@ -180,6 +183,29 @@ const MARK_TONE: Record<LineMark, StyleColor> = {
 };
 
 /**
+ * How much of the mark's colour the line itself gets.
+ *
+ * Small on purpose. The row already carries syntax colour and possibly a
+ * selection, and a background strong enough to name is a background that
+ * fights both - the mark in the gutter is what *says* what happened, and this
+ * only has to say "here".
+ */
+const TINT = 0.14;
+
+/**
+ * A tone washed into the background, or nothing.
+ *
+ * Nothing on a palette-only terminal: mixing two of the sixteen colours lands
+ * on a third one that means something else entirely, and a line tinted the
+ * wrong colour is worse than a line that is not tinted. The gutter mark works
+ * everywhere and is unaffected.
+ */
+function tintOf(base: Color, tone: Color, depth: number): Color | undefined {
+  if (depth < 24) return undefined;
+  return unpackColor(mix(packColor(base), packColor(tone), TINT));
+}
+
+/**
  * A row as coloured runs.
  *
  * Falls back to one plain run when the highlighter's tokens do not add back up
@@ -272,6 +298,7 @@ function spansOf(pieces: Piece[], left: number, width: number): RenderOutput[] {
 
 export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props) => {
   const theme = useTheme();
+  const capabilities = useCapabilities();
   const {
     uri = null, value, onChange, lineNumbers = true, tabWidth = 2,
     readonly: readonlyProp, language, kind, onCursor, onSelection, scrollbar = true,
@@ -538,6 +565,22 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   const marked = Object.keys(marks).length > 0;
   const markWidth = marked ? 1 : 0;
 
+  /*
+   * And the same three marks as a wash over the line, when asked for.
+   *
+   * Off by default: it is a second way of saying what the gutter already says,
+   * and it costs contrast on every row it touches. On, it is the difference
+   * between finding what you changed and hunting for it.
+   */
+  const tinting = useStoreValue<boolean>(MARK_LINES, false) === true;
+  const tints = useMemo(() => (tinting && marked
+    ? {
+        added: tintOf(theme.colors.canvas, theme.colors.success, capabilities.colorDepth),
+        changed: tintOf(theme.colors.canvas, theme.colors.warning, capabilities.colorDepth),
+        removed: tintOf(theme.colors.canvas, theme.colors.danger, capabilities.colorDepth),
+      }
+    : null), [tinting, marked, theme, capabilities.colorDepth]);
+
   const gutterWidth = lineNumbers ? String(lines.length).length + 1 : 0;
   // This component always renders into a `flex: 1` box, so it is layout-sized
   // whether or not the caller said so - and a caller usually cannot: the node
@@ -760,6 +803,8 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     // lose the colour and neither loses the character. One cell, and the three
     // are ASCII, because a mark that measures two would slide every line in
     // the file sideways on a terminal that disagrees about its width.
+    const tint = tints?.[marks[lineNumber] as LineMark];
+
     const mark = marked
       ? h('text', {
           content: MARK_GLYPH[marks[lineNumber] as LineMark] ?? ' ',
@@ -799,7 +844,9 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
       // One row is one line. A row free to be two rows tall is a row that
       // wraps, and a wrapped line is one the caret cannot be moved along.
       height: 1,
-      ...(onCaretLine ? { bg: 'surfaceAlt' } : {}),
+      // The caret's own row wins: where you are is more urgent than what
+      // happened to the line, and both at once is neither.
+      ...(onCaretLine ? { bg: 'surfaceAlt' } : tint ? { bg: tint } : {}),
     },
       mark,
       gutter,

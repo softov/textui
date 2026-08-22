@@ -6,6 +6,7 @@ import {
   canRedoDocument, canUndoDocument, getDocument, isDocumentDirty, redoDocument,
   revertDocument, saveDocument, undoDocument,
 } from '@textui/documents';
+import { MARK_LINES } from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
 import { iconsFor } from './icons.js';
 import {
@@ -520,6 +521,25 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
           panel: paneScope(focusedIndex(ctx.store)),
           ...(uri ? { uri } : {}),
         });
+      },
+    },
+    {
+      /*
+       * The changed lines, washed as well as marked.
+       *
+       * A toggle rather than a setting buried in a file, because it is the
+       * kind of thing you want on while you are working through a diff and off
+       * while you are reading.
+       */
+      id: 'view.markLines',
+      icon: Icon.edit,
+      title: 'Highlight Changed Lines',
+      category: 'View',
+      slots: ['palette'],
+      keepOpen: true,
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const on = ctx.store.get<boolean>(MARK_LINES as BindingPath) === true;
+        ctx.store.set(MARK_LINES as BindingPath, !on);
       },
     },
     {

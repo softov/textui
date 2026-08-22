@@ -26,6 +26,7 @@ export interface Remembered {
 export const REMEMBERED: Remembered[] = [
   { path: '$/ui/theme' as BindingPath, key: 'theme' },
   { path: '$/ui/diff/mode' as BindingPath, key: 'diff' },
+  { path: '$/ui/editor/markLines' as BindingPath, key: 'markLines' },
   { path: '$/ui/editor/layout' as BindingPath, key: 'layout' },
   { path: '$/ui/sidebar/collapsed' as BindingPath, key: 'sidebarCollapsed' },
 ];

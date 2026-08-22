@@ -125,6 +125,20 @@ describe('the caret has a column', () => {
 
 });
 
+describe('what a line means', () => {
+  it('washes a marked line only when asked, and only where colours mix', async () => {
+    const { t } = await editing('alpha\nbeta\ngamma\n');
+    // No marks, no column and no wash: a file nobody has an opinion about is
+    // exactly as wide as it was.
+    const plain = t.text();
+
+    t.app.store.set('$/ui/line-marks/test/x', { 1: 'changed' });
+    await settle(t);
+    expect(t.text(), 'a mark for another file changes nothing').toBe(plain);
+    await t.unmount();
+  });
+});
+
 describe('tab is a tab', () => {
   it('inserts an indent where the caret is', async () => {
     const { t, read } = await editing('alpha\nbeta\n');

@@ -202,3 +202,25 @@ describe('the actions on a file', () => {
     await t.unmount();
   });
 });
+
+/**
+ * The changed lines, washed as well as marked.
+ *
+ * Off by default: it says a second time what the gutter already says, and it
+ * costs contrast on every row it touches.
+ */
+describe('highlighting what changed', () => {
+  it('is a toggle, and the workspace remembers it', async () => {
+    const { t, quiet } = await open();
+    expect(t.store.get('$/ui/editor/markLines')).toBeFalsy();
+
+    await t.app.execute('view.markLines');
+    await quiet();
+    expect(t.store.get('$/ui/editor/markLines')).toBe(true);
+
+    await t.app.execute('view.markLines');
+    await quiet();
+    expect(t.store.get('$/ui/editor/markLines')).toBe(false);
+    await t.unmount();
+  });
+});

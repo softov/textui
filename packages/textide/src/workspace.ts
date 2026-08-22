@@ -31,6 +31,8 @@ export interface WorkspaceConfig {
   tabWidth?: number;
   /** How diffs are laid out: one column, or before and after side by side. */
   diff?: 'unified' | 'split';
+  /** Wash a changed line with its mark's colour, as well as marking the gutter. */
+  markLines?: boolean;
   /** How the editor groups are arranged: tabs, a split or a stack. */
   layout?: 'tabs' | 'split' | 'stack';
   /**

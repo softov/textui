@@ -158,6 +158,22 @@ export function mix(a: PackedColor, b: PackedColor, t: number): PackedColor {
   );
 }
 
+/**
+ * A packed colour back as a `Color`, which is the shape a style takes.
+ *
+ * The inverse of `packColor`, for the places that compute a colour and then
+ * have to hand it to a component - blending a tint out of two theme colours,
+ * say. Painting goes the other way and should stay packed.
+ */
+export function unpackColor(packed: PackedColor): Color {
+  if (packed === COLOR_DEFAULT) return 'default';
+  if (isRgb(packed)) {
+    const [r, g, b] = unpackRgb(packed);
+    return { rgb: [r, g, b] };
+  }
+  return { palette: packed };
+}
+
 export function toHex(c: PackedColor): string {
   const [r, g, b] = isRgb(c) ? unpackRgb(c) : palette256ToRgb(Math.max(0, c));
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;

@@ -3,6 +3,7 @@ import { clearDecorations, clearLineMarks, createBag, setDecorations, setLineMar
 import { createGit, type Git } from './git.js';
 import { GIT_KINDS, GIT_VIEWERS, createGitProvider, safeStatus } from './provider.js';
 import { DIFF_COMPONENTS } from './diff.js';
+import { HISTORY_COMPONENTS } from './views.js';
 import { GitChanges, STATUS_PATH, STATUS_SEGMENTS } from './changes.js';
 import { gitCommands, refresh } from './commands.js';
 import { GIT_SOURCE, decorationsOf } from './decorate.js';
@@ -39,9 +40,13 @@ export { GUTTER_SOURCE, marksOf, gutterFor } from './gutter.js';
 export { parseHunks, patchFor, hunkAt } from './hunks.js';
 export type { Hunk, Diff } from './hunks.js';
 export {
-  SCHEME, DIFF_PREFIX, diffUri, diffPath, createGitProvider, safeStatus,
-  GIT_KINDS, GIT_VIEWERS,
+  SCHEME, DIFF_PREFIX, LOG_PREFIX, BLAME_PREFIX,
+  diffUri, diffPath, logUri, logPath, blameUri, blamePath,
+  createGitProvider, safeStatus, GIT_KINDS, GIT_VIEWERS,
 } from './provider.js';
+export { GitLog, GitBlame, HISTORY_COMPONENTS } from './views.js';
+export { parseLog, parseBlame, readLog, readBlame, authorWidth, LOG_FORMAT } from './history.js';
+export type { Commit, BlameLine } from './history.js';
 
 /** Where a host publishes what it has open. Read, never written. */
 const EDITOR_OPEN = '$/ui/editor/uri' as BindingPath;
@@ -67,6 +72,7 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
 
   bag.add(app.components.registerMany([
     ...DIFF_COMPONENTS,
+    ...HISTORY_COMPONENTS,
     {
       component: 'GitChanges',
       category: 'chrome',

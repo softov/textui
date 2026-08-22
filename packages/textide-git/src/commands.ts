@@ -1,12 +1,12 @@
 import { rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { CommandContext, CommandDefinition, TextUIApp } from '@textui/core';
+import type { BindingPath, CommandContext, CommandDefinition, TextUIApp } from '@textui/core';
 import { confirm, notify, prompt } from '@textui/core';
 import { closeDocument } from '@textui/documents';
 import { readBranches, type Git, type Status } from './git.js';
 import { safeStatus } from './provider.js';
-import { diffUri } from './provider.js';
+import { blameUri, diffUri, logUri } from './provider.js';
 import { SELECTED_PATH, STATUS_PATH, STATUS_SEGMENTS, summarize } from './changes.js';
 import { DIFF_MODE } from './diff.js';
 import { parseHunks, patchFor } from './hunks.js';
@@ -40,6 +40,20 @@ export async function refresh(app: TextUIApp, git: Git): Promise<Status | null> 
     app.store.set(SELECTED_PATH, status?.changes[0]?.path ?? null);
   }
   return status;
+}
+
+/**
+ * The open file, as a path relative to the working tree.
+ *
+ * `$/ui/editor/uri` is a `file://` URI and git speaks in repository-relative
+ * paths, so this is the one place that translation lives.
+ */
+function pathOfOpen(ctx: CommandContext, root: string): string | null {
+  const uri = ctx.store.get<string>(EDITOR_URI as BindingPath);
+  if (typeof uri !== 'string') return null;
+  const base = root.endsWith('/') ? root.slice(0, -1) : root;
+  const prefix = `file://${base}/`;
+  return uri.startsWith(prefix) ? uri.slice(prefix.length) : null;
 }
 
 /** The path a command acts on: the argument, then the panel's selection. */
@@ -250,6 +264,41 @@ export function gitCommands(app: TextUIApp, options: CommandOptions): CommandDef
         await git('commit', '-m', message);
         await refresh(ctx.app, git);
         notify(ctx.app, { tone: 'success', message: 'Committed.' });
+      },
+    },
+    {
+      /*
+       * What happened - to the repository, or to one path.
+       *
+       * A resource, so it opens as a tab through the registry like a diff
+       * does. The alternative was a panel with its own scrolling and its own
+       * keys, which is a second editor for text that is already text.
+       */
+      id: 'git.log',
+      title: 'History',
+      category: 'Git',
+      slots: ['palette'],
+      args: [{ name: 'path', type: 'string' as const, description: 'One path, or all of it' }],
+      run: async (args: Record<string, unknown>, ctx: CommandContext) => {
+        const path = typeof args.path === 'string' ? args.path : '';
+        ctx.store.set(EDITOR_URI as BindingPath, logUri(path));
+      },
+    },
+    {
+      id: 'git.blame',
+      title: 'Blame',
+      category: 'Git',
+      slots: ['palette'],
+      args: [{ name: 'path', type: 'string' as const }],
+      run: async (args: Record<string, unknown>, ctx: CommandContext) => {
+        // The file you are looking at, when nothing says otherwise - blaming
+        // the panel's selection is what a person means by "who wrote this".
+        const path = target(args, ctx) ?? pathOfOpen(ctx, options.root);
+        if (path === null) {
+          notify(ctx.app, { message: 'Nothing to blame.' });
+          return;
+        }
+        ctx.store.set(EDITOR_URI as BindingPath, blameUri(path));
       },
     },
     {

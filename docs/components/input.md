@@ -10,7 +10,7 @@ What takes input, and the machinery around a screenful of it.
 
 ## Controls
 
-`Button` `Checkbox` `Switch` `RadioGroup` `Slider` `TextInput` `Select` `SearchBox`
+`Button` `Checkbox` `Switch` `RadioGroup` `Slider` `TextInput` `TextArea` `Select` `SearchBox`
 
 Every one is focusable and states its own focus ring. A terminal has no hover to
 fall back on: if the focused control is not obvious, the interface is unusable.
@@ -21,6 +21,22 @@ label and the search glyph before it, and scrolling the value sideways to keep
 the caret in view. `hideLabel` keeps the label as the field's accessible name
 without drawing it inside the field, for a form or a dialog that already shows
 it.
+
+`TextArea` is the one that is a paragraph: it grows to what has been typed,
+then stops and scrolls, takes a newline that is not a submit (`alt+enter` or
+`ctrl+j` - never `shift+enter`, which most terminals cannot tell from `enter`),
+and hands back every key it does not want. Passing `onSubmit` is what makes
+enter mean "done"; without it, enter is a newline like any other key.
+
+It also settles the question a single-letter keybinding raises. The focused
+node is offered a key **before** any keybinding, so while a text field has the
+keyboard, `q` is a letter - which is what lets an application with a composer
+in it keep `n`, `r` and `d` as commands, and why a global `q` for quit is a key
+that only works where nothing happens to be reading it.
+
+Both fields take a `focusId`. Without one a control's focus id is derived from
+its instance, which nothing outside the render can know - so a command that
+means "focus the filter" has nothing to name.
 
 `Button` **inverts when it is selected**: a line and a label in its tone at rest,
 and when focused the tone becomes the background and the label flips to the

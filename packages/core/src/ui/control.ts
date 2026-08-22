@@ -369,6 +369,14 @@ export interface TextInputProps extends BoxProps {
   autoFocus?: boolean;
   /** Draw a search glyph before the field. */
   search?: boolean;
+  /**
+   * A stable focus id, so a command can send the reader here by name.
+   *
+   * Without one a control's id is derived from its instance, which nothing
+   * outside the render can know - so "focus the filter" has nothing to name
+   * and the key that would do it cannot be written.
+   */
+  focusId?: string;
 }
 
 /**
@@ -382,11 +390,11 @@ export const TextInput = defineComponent<TextInputProps>('TextInput', (props) =>
   const theme = useTheme();
   const {
     value, onChange, onSubmit, placeholder, label, hideLabel, mask, maxLength,
-    autoFocus, search, disabled, ...rest
+    autoFocus, search, disabled, focusId, ...rest
   } = props;
   const inlineLabel = label && !search && !hideLabel ? label : undefined;
 
-  const focus = useFocus({ disabled, autoFocus });
+  const focus = useFocus({ ...(focusId ? { id: focusId } : {}), disabled, autoFocus });
   const measured = useMeasure();
   const [caret, setCaret] = useState(value.length);
   const [scroll, setScroll] = useState(0);
@@ -505,6 +513,167 @@ export interface SelectOption {
   disabled?: boolean;
   icon?: string;
 }
+
+
+export interface TextAreaProps extends BoxProps {
+  value: string;
+  onChange(value: string): void;
+  /**
+   * Enter. A newline is `alt+enter` or `ctrl+j`, because in every place a
+   * multi-line field is worth having, enter already means "done".
+   *
+   * Left off, enter inserts a newline like every other key does.
+   */
+  onSubmit?(value: string): void;
+  /** Escape, when there is nothing inside the field to cancel. */
+  onCancel?(): void;
+  /** Up at the top, down at the bottom: for walking a history. */
+  onOverflow?(direction: -1 | 1): void;
+  placeholder?: string;
+  /** Rows before it stops growing and starts scrolling. */
+  maxRows?: number;
+  maxLength?: number;
+  autoFocus?: boolean;
+  focusId?: string;
+}
+
+/**
+ * A field that is a paragraph.
+ *
+ * `TextInput` is one line, and a message, a note or a commit body is not. It
+ * grows to what has been typed and then scrolls, keeps the caret visible, and
+ * hands back every key it does not want - which is what lets the thing behind
+ * it keep its own shortcuts while this has the keyboard.
+ *
+ * It takes a printable character before any keybinding sees it, because that
+ * is what typing is. That single fact is why an application with one of these
+ * cannot have single-letter global commands, and why it does not need to.
+ */
+export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
+  const theme = useTheme();
+  const {
+    value, onChange, onSubmit, onCancel, onOverflow, placeholder, maxRows = 6,
+    maxLength, autoFocus, focusId, disabled, ...rest
+  } = props;
+
+  const focus = useFocus({
+    ...(focusId ? { id: focusId } : {}),
+    disabled,
+    ...(autoFocus ? { autoFocus } : {}),
+  });
+  const [caret, setCaret] = useState(value.length);
+
+  const chars = graphemes(value);
+  const position = Math.min(caret, chars.length);
+  const before = chars.slice(0, position).join('');
+  const lines = value === '' ? [''] : value.split('\n');
+  const caretLine = before.split('\n').length - 1;
+  const caretColumn = graphemes(before.split('\n').pop() ?? '').length;
+
+  const rows = Math.min(maxRows, Math.max(1, lines.length));
+  const first = Math.max(0, Math.min(caretLine - rows + 1, lines.length - rows));
+
+  const lineStart = (index: number): number =>
+    lines.slice(0, index).reduce((n, line) => n + graphemes(line).length + 1, 0);
+
+  const replace = (next: string, at: number): void => {
+    const capped = maxLength !== undefined ? next.slice(0, maxLength) : next;
+    onChange(capped);
+    setCaret(Math.max(0, Math.min(graphemes(capped).length, at)));
+  };
+
+  const insert = (text: string): void => {
+    const inserted = graphemes(text);
+    replace([...chars.slice(0, position), ...inserted, ...chars.slice(position)].join(''), position + inserted.length);
+  };
+
+  useInput(
+    (event: KeyEvent) => {
+      if (disabled) return false;
+
+      switch (event.name) {
+        case 'left': setCaret(Math.max(0, position - 1)); return true;
+        case 'right': setCaret(Math.min(chars.length, position + 1)); return true;
+        case 'home': setCaret(lineStart(caretLine)); return true;
+        case 'end': setCaret(lineStart(caretLine) + graphemes(lines[caretLine] ?? '').length); return true;
+
+        case 'up': {
+          // At the top there is nowhere to go inside the field, so the caller
+          // gets the key - which is where "the last thing you sent" comes from.
+          if (caretLine === 0) { onOverflow?.(-1); return true; }
+          const target = caretLine - 1;
+          setCaret(lineStart(target) + Math.min(caretColumn, graphemes(lines[target] ?? '').length));
+          return true;
+        }
+        case 'down': {
+          if (caretLine === lines.length - 1) { onOverflow?.(1); return true; }
+          const target = caretLine + 1;
+          setCaret(lineStart(target) + Math.min(caretColumn, graphemes(lines[target] ?? '').length));
+          return true;
+        }
+
+        case 'backspace':
+          if (position > 0) replace([...chars.slice(0, position - 1), ...chars.slice(position)].join(''), position - 1);
+          return true;
+        case 'delete':
+          if (position < chars.length) replace([...chars.slice(0, position), ...chars.slice(position + 1)].join(''), position);
+          return true;
+
+        case 'enter':
+          // Alt or ctrl says "a line, not a message". `shift+enter` is not in
+          // this list on purpose: most terminals cannot tell it from enter, so
+          // binding it produces a key that works on one machine.
+          if (!onSubmit || event.alt || event.ctrl) { insert('\n'); return true; }
+          onSubmit(value);
+          setCaret(0);
+          return true;
+
+        case 'escape': onCancel?.(); return true;
+        case 'paste': insert(event.char ?? ''); return true;
+        default: break;
+      }
+
+      if (event.name === 'j' && event.ctrl) { insert('\n'); return true; }
+
+      if (event.char && !event.ctrl && !event.alt && !event.meta) {
+        insert(event.char);
+        return true;
+      }
+      return false;
+    },
+    { focusId: focus.id, enabled: !disabled },
+  );
+
+  const shown = lines.slice(first, first + rows);
+
+  return h('box', {
+    id: focus.id,
+    role: 'textbox',
+    label: placeholder,
+    direction: 'column',
+    height: rows,
+    ...rest,
+  },
+    value === ''
+      // The placeholder stays while the field is focused and empty: it is the
+      // only thing on screen saying what enter will do, and hiding it when the
+      // caret arrives hides it exactly when it is read.
+      ? h('box', { direction: 'row' },
+          focus.focused ? h('text', { content: theme.glyphs.caret, fg: 'cursor' }) : null,
+          h('text', { content: placeholder ?? '', fg: 'subtle', flex: 1, truncate: 'end' }))
+      : shown.map((line, i) => {
+        const index = first + i;
+        if (index !== caretLine || !focus.focused) {
+          return h('text', { key: index, content: line === '' ? ' ' : line, wrap: 'none', truncate: 'end' });
+        }
+        const cells = graphemes(line);
+        return h('box', { key: index, direction: 'row' },
+          h('text', { content: cells.slice(0, caretColumn).join('') }),
+          h('text', { content: theme.glyphs.caret, fg: 'cursor' }),
+          h('text', { content: cells.slice(caretColumn).join(''), flex: 1, truncate: 'end' }));
+      }),
+  );
+});
 
 export interface SelectProps extends BoxProps {
   options: SelectOption[];
@@ -648,6 +817,7 @@ export const CONTROL_COMPONENTS: ComponentDefinition[] = [
   { component: 'Switch', category: 'control', renderer: { kind: 'function', render: Switch }, role: 'switch', description: 'Two-state toggle with words, not only colour.' },
   { component: 'RadioGroup', category: 'control', renderer: { kind: 'function', render: RadioGroup }, role: 'radio', description: 'One of several.' },
   { component: 'Slider', category: 'control', renderer: { kind: 'function', render: Slider }, role: 'slider', description: 'A value along a track.' },
+  { component: 'TextArea', category: 'control', renderer: { kind: 'function', render: TextArea }, role: 'textbox', description: 'A field that is a paragraph: grows, scrolls, and gives back the keys it does not want.' },
   { component: 'TextInput', category: 'control', renderer: { kind: 'function', render: TextInput }, role: 'textbox', description: 'Single-line text with a real caret.' },
   { component: 'Select', category: 'control', renderer: { kind: 'function', render: Select }, role: 'combobox', description: 'Pick from a list, collapsed or open.' },
   { component: 'SearchBox', category: 'control', renderer: { kind: 'function', render: SearchBox }, role: 'searchbox', description: 'A text field that looks like search.' },

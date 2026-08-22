@@ -62,6 +62,7 @@ export * from './adapters/index.js';
 
 // Utilities
 export * from './util/text.js';
+export * from './util/markdown.js';
 export * from './util/paths.js';
 export * from './util/stream.js';
 export { createBag, toDisposable, disposeAll, NOOP_DISPOSABLE } from './util/disposable.js';

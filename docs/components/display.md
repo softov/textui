@@ -18,7 +18,7 @@ colour and keep the glyph.
 
 ## Data
 
-`List` `Table` `Tree` `Pagination` `LogViewer` `CodeViewer`
+`List` `Table` `Tree` `Pagination` `LogViewer` `CodeViewer` `MarkdownView` `Feed`
 
 `Table` is responsive by column priority, not by squeezing: as it narrows it
 drops the lowest-priority column and never the first one, because a row you
@@ -27,6 +27,29 @@ its position, so it never ties with one explicitly marked unimportant.
 
 `LogViewer` follows the tail until the reader scrolls, then stops - the one
 behaviour that separates a log you can read from one that yanks itself away.
+
+`Feed` is the one between `List` and `ScrollView`, and it is neither: `List` is
+fixed-height rows with a selection, `ScrollView` is a viewport that knows
+nothing about what is in it, and a feed is entries whose height is whatever
+their text wrapped to - with a cursor that moves between them and a tail it
+follows. A transcript, an activity stream, results with snippets and a diff
+whose files expand are all the same component.
+
+Its heights are **measured, not computed**. What a paragraph wraps to is
+decided by the layout, so each entry reports its height once it has been laid
+out and the feed scrolls by summing them. That is one frame behind, which is
+invisible, and it is the only answer that is not a guess. Anything that needs
+the same trick - "how tall did that turn out to be" - can read how it is done
+there rather than inventing a second way.
+
+`MarkdownView` draws markdown into the width it was given and does *not*
+scroll, because a document viewer owns its viewport and a message in a
+transcript does not. Pass `content` and it lays out what it measured; pass
+`rows` from `layoutMarkdown` plus a `window` and it paints that slice of
+somebody else's layout - which is exactly what `MarkdownViewer` in
+`@textui/documents` does with it. Inline emphasis, code and links survive the
+wrap, because in text a service or an agent wrote for a person they are
+meaning rather than markup.
 
 `CodeViewer` is a viewport, not a column of lines: it renders the rows it was
 laid out into, scrolls with the keyboard and the wheel, slices each line to the

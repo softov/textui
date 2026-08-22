@@ -1,16 +1,19 @@
 import type { ComponentDefinition } from '../types/component-registry.js';
 import type { BoxProps } from '../jsx/intrinsics.js';
 import type { RenderOutput } from '../types/render.js';
-import type { SemanticVariant } from '../types/style.js';
+import type { SemanticVariant, StyleColor } from '../types/style.js';
+import type { MarkdownRow, MarkdownRun } from '../types/markdown.js';
 import type { SyntaxToken } from '../types/syntax.js';
 import type { ResolvedTheme } from '../types/theme.js';
 import { h, defineComponent } from '../jsx/factory.js';
 import { TONE } from './tone.js';
 import {
-  useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useState, useTheme,
+  useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useRef,
+  useScrollExtent, useState, useTheme,
 } from '../runtime/hooks.js';
-import { expandTabs, fitTo, sliceColumns, stringWidth } from '../util/text.js';
-import { viewportRows } from './viewport.js';
+import { expandTabs, fitTo, repeatToWidth, sliceColumns, stringWidth } from '../util/text.js';
+import { layoutMarkdown } from '../util/markdown.js';
+import { sizedByLayout, viewportRows } from './viewport.js';
 import { EmptyState } from './display.js';
 
 /**
@@ -895,6 +898,375 @@ export const ScrollThumb = defineComponent<{
  */
 export const Table = TableImpl as <T extends object>(props: TableProps<T>) => RenderOutput;
 
+
+// ------------------------------------------------------------------ markdown
+
+export interface MarkdownViewProps extends BoxProps {
+  /** The document. Ignored when `rows` is passed. */
+  content?: string;
+  /** Already laid out - for a viewer that windows the rows itself. */
+  rows?: MarkdownRow[];
+  /** Paint only this slice. The caller owns the scrolling when it passes one. */
+  window?: { first: number; count: number };
+  /** Collapse past this many rows, with a count of what is hidden. */
+  maxLines?: number;
+  /** Dim everything, for reasoning and other second-voice text. */
+  quiet?: boolean;
+}
+
+/**
+ * Markdown, drawn into the width it was given.
+ *
+ * It fills the space it is in and does not scroll: a document viewer owns its
+ * viewport and a message in a transcript does not, so scrolling belongs to
+ * whoever holds the rows, not to the thing that paints them. Pass `content`
+ * and it lays out what it measured; pass `rows` and a `window` and it paints
+ * that slice of somebody else's layout.
+ *
+ * Inline emphasis, code and links survive, because they are meaning rather
+ * than markup wherever the text was written by an agent or a service for a
+ * person to read.
+ */
+export const MarkdownView = defineComponent<MarkdownViewProps>('MarkdownView', (props) => {
+  const { content = '', rows: given, window: slice, maxLines, quiet, ...rest } = props;
+  const theme = useTheme();
+  const measured = useMeasure();
+  const width = measured.width > 0 ? measured.width : 0;
+  const ruled = theme.border !== 'none';
+
+  const laid = useMemo(
+    () => given ?? layoutMarkdown(content, {
+      width,
+      bullet: theme.glyphs.bulletFilled,
+      quoteBar: theme.borderChars().left,
+      ruled,
+    }),
+    [given, content, width, theme, ruled],
+  );
+
+  const first = slice?.first ?? 0;
+  const shown = slice ? laid.slice(first, first + slice.count) : laid;
+  const capped = maxLines !== undefined ? shown.slice(0, maxLines) : shown;
+  const hidden = shown.length - capped.length;
+
+  const out: unknown[] = [];
+  for (let i = 0; i < capped.length;) {
+    const row = capped[i] as MarkdownRow;
+    const key = first + i;
+
+    if (row.kind === 'fence') {
+      // A fence the window cuts through is still one box, with only the rules
+      // that are actually on screen.
+      let end = i;
+      while (end < capped.length) {
+        const next = capped[end] as MarkdownRow;
+        if (next.kind !== 'fence' || next.fence !== row.fence) break;
+        end++;
+      }
+      const group = capped.slice(i, end) as Extract<MarkdownRow, { kind: 'fence' }>[];
+      const code = group.filter((r) => r.part === 'code').map((r) => r.text ?? '');
+      const language = group.find((r) => r.language)?.language;
+
+      if (!ruled) {
+        out.push(h('box', { key, padding: [0, 1], bg: 'surfaceAlt' }, h(CodeViewer, {
+          content: code.join('\n'),
+          lineNumbers: false, scrollbar: false, showCaret: false, disabled: true,
+          ...(language ? { language } : {}),
+        })));
+      } else if (code.length === 0) {
+        // Only one edge of the box is on screen, and a box one row tall cannot
+        // say which. Drawn directly, so the seam is invisible as it scrolls.
+        out.push(h('text', {
+          key,
+          content: fenceEdge(theme, width, group.some((r) => r.part === 'open')),
+          fg: 'borderSubtle',
+          wrap: 'none',
+        }));
+      } else {
+        out.push(h('box', {
+          key,
+          border: {
+            style: theme.border,
+            color: 'borderSubtle',
+            sides: {
+              top: group.some((r) => r.part === 'open'),
+              bottom: group.some((r) => r.part === 'close'),
+              left: true,
+              right: true,
+            },
+          },
+          padding: [0, 1],
+        }, h(CodeViewer, {
+          content: code.join('\n'),
+          lineNumbers: false, scrollbar: false, showCaret: false,
+          // A fence inside a rendered document is typography, not a control.
+          // Focusable, every code block in a README becomes a tab stop.
+          disabled: true,
+          ...(language ? { language } : {}),
+        })));
+      }
+      i = end;
+      continue;
+    }
+
+    if (row.kind === 'rule') {
+      out.push(h('box', { key, height: 1, fill: theme.borderChars().top, fg: 'borderSubtle' }));
+      i++;
+      continue;
+    }
+
+    if (row.kind === 'heading') {
+      out.push(h('box', { key, direction: 'row', overflow: 'hidden' },
+        ...runNodes(row.runs, {
+          bold: row.level <= 2,
+          underline: row.level === 1,
+          fg: quiet ? 'muted' : row.level <= 2 ? 'text' : 'muted',
+        })));
+      i++;
+      continue;
+    }
+
+    const style = { ...(quiet ? { fg: 'muted' as StyleColor } : row.fg ? { fg: row.fg } : {}) };
+    if (row.prefix !== undefined) {
+      out.push(h('box', { key, direction: 'row', gap: 1, overflow: 'hidden' },
+        h('text', { content: row.prefix, fg: quiet ? 'subtle' : row.prefixFg ?? 'accent' }),
+        h('box', { direction: 'row', flex: 1, overflow: 'hidden' }, ...runNodes(row.runs, style))));
+      i++;
+      continue;
+    }
+
+    out.push(h('box', { key, direction: 'row', overflow: 'hidden' }, ...runNodes(row.runs, style)));
+    i++;
+  }
+
+  return h('box', { role: 'document', direction: 'column', ...rest },
+    ...out,
+    hidden > 0
+      ? h('text', { content: `${theme.glyphs.ellipsis} ${hidden} more lines`, fg: 'subtle' })
+      : null,
+  );
+});
+
+/** One `text` per run, so a bold half of a sentence stays bold after wrapping. */
+function runNodes(runs: MarkdownRun[], style: Record<string, unknown>): unknown[] {
+  return runs.map((run, i) => h('text', {
+    key: i,
+    content: run.text,
+    wrap: 'none',
+    ...style,
+    ...(run.bold ? { bold: true } : {}),
+    ...(run.italic ? { italic: true } : {}),
+    ...(run.code ? { fg: 'accent', bg: 'surfaceAlt' } : {}),
+    ...(run.link ? { underline: true, fg: 'info', link: run.link } : {}),
+  }));
+}
+
+/** The top or bottom edge of a fence, for when the window shows only that row. */
+function fenceEdge(theme: ResolvedTheme, width: number, top: boolean): string {
+  const chars = theme.borderChars();
+  const [left, mid, right] = top
+    ? [chars.topLeft, chars.top, chars.topRight]
+    : [chars.bottomLeft, chars.bottom, chars.bottomRight];
+  return `${left}${repeatToWidth(mid, Math.max(0, width - 2))}${right}`;
+}
+
+
+// ---------------------------------------------------------------------- feed
+
+export interface FeedProps extends BoxProps {
+  /** The entries. Any height each - that is the whole point of this one. */
+  children?: unknown;
+  /**
+   * Stick to the newest entry. Turned off when the reader scrolls up, and back
+   * on at the bottom - a feed that yanks itself away is one you cannot read.
+   */
+  follow?: boolean;
+  onFollowChange?(follow: boolean): void;
+  /**
+   * The cursor, by index. Passed, the caller owns it; omitted, the arrows
+   * scroll by line instead, which is what a feed with nothing to activate
+   * wants.
+   */
+  selectedIndex?: number;
+  onSelect?(index: number): void;
+  onActivate?(index: number): void;
+  scrollbar?: boolean;
+  focusable?: boolean;
+  autoFocus?: boolean;
+  /** So a command can send the reader here by name. */
+  focusId?: string;
+}
+
+/**
+ * A viewport over entries of any height.
+ *
+ * The one between `List` and `ScrollView`, and it is not either of them:
+ * `List` is fixed-height rows with a selection, `ScrollView` is a dumb
+ * viewport, and a feed is entries whose height is whatever their text wrapped
+ * to, with a cursor that moves between them and a tail it follows.
+ *
+ * Heights are **measured, not computed**. What a paragraph wraps to is decided
+ * by the layout, so each entry reports its height after it is laid out and the
+ * feed scrolls by summing them. That is one frame behind, which is invisible,
+ * and it is the only answer that is not a guess.
+ *
+ * A transcript, an activity stream, search results with snippets, a diff whose
+ * files expand - all the same component, because all of them are "an ordered
+ * list of things that are not one line tall".
+ */
+export const Feed = defineComponent<FeedProps>('Feed', (props) => {
+  const {
+    children, follow: followProp, onFollowChange, selectedIndex, onSelect, onActivate,
+    scrollbar = true, focusable = true, autoFocus, focusId, id, ...rest
+  } = props;
+
+  const focus = useFocus({
+    ...(focusId ? { id: focusId } : {}),
+    disabled: !focusable,
+    ...(autoFocus ? { autoFocus } : {}),
+  });
+  const measured = useMeasure();
+  const extent = useScrollExtent();
+  const heights = useRef<number[]>([]);
+
+  // The catalog's rule, and this has to follow it like every other viewport:
+  // given `flex`, a `height`, a `maxHeight` or a `basis`, the layout decided
+  // the size and the feed fills it and scrolls; given none of those, the
+  // content decides and it draws everything. Clamping to a measurement in the
+  // second case is clamping to how tall it happened to be last frame, which
+  // for a box that is sized *by* this content is nothing at all - the entries
+  // vanish and the panel is empty.
+  const fills = sizedByLayout(props) && measured.height > 0;
+
+  // Null is "at the tail", rather than a boolean beside a number: the two can
+  // disagree, and a follow flag that says yes while the offset says otherwise
+  // is how a log ends up frozen three lines from the bottom.
+  const [internalTop, setInternalTop] = useState<number | null>(null);
+  const [internalIndex, setInternalIndex] = useState(0);
+
+  const entries = (Array.isArray(children) ? children : [children]).filter((c) => c != null);
+  const count = entries.length;
+  const selects = onSelect !== undefined || selectedIndex !== undefined;
+  const index = Math.max(0, Math.min(count - 1, selectedIndex ?? internalIndex));
+
+  const total = extent?.height ?? 0;
+  const limit = Math.max(0, total - measured.height);
+  const following = followProp ?? (internalTop === null);
+  const top = following ? limit : Math.min(internalTop ?? 0, limit);
+
+  const scrollTo = (next: number | null): void => {
+    if (next === null) {
+      setInternalTop(null);
+      onFollowChange?.(true);
+      return;
+    }
+    const clamped = Math.max(0, Math.min(next, limit));
+    setInternalTop(clamped);
+    // Scrolled back to the bottom is following again, without a second key.
+    onFollowChange?.(clamped >= limit);
+  };
+
+  /** Where an entry starts, from what the layout measured last frame. */
+  const startOf = (target: number): number => {
+    let y = 0;
+    for (let i = 0; i < target && i < heights.current.length; i++) y += (heights.current[i] ?? 1);
+    return y;
+  };
+
+  const reveal = (target: number): void => {
+    const start = startOf(target);
+    const height = heights.current[target] ?? 1;
+    const view = Math.max(1, measured.height);
+    if (start < top) scrollTo(start);
+    else if (start + height > top + view) scrollTo(start + height - view);
+    else scrollTo(top);
+  };
+
+  const move = (delta: number): void => {
+    if (count === 0) return;
+    const next = Math.max(0, Math.min(count - 1, index + delta));
+    if (selectedIndex === undefined) setInternalIndex(next);
+    onSelect?.(next);
+    reveal(next);
+  };
+
+  useInput(
+    (event) => {
+      const page = Math.max(1, measured.height - 2);
+      switch (event.name) {
+        case 'up': case 'k':
+          if (selects) move(-1); else scrollTo(top - 1);
+          return true;
+        case 'down': case 'j':
+          if (selects) move(1); else scrollTo(top + 1);
+          return true;
+        case 'pageup': scrollTo(top - page); return true;
+        case 'pagedown': scrollTo(top + page); return true;
+        case 'home': case 'g':
+          scrollTo(0);
+          if (selects) { if (selectedIndex === undefined) setInternalIndex(0); onSelect?.(0); }
+          return true;
+        case 'end': case 'G':
+          scrollTo(null);
+          if (selects && count > 0) {
+            if (selectedIndex === undefined) setInternalIndex(count - 1);
+            onSelect?.(count - 1);
+          }
+          return true;
+        case 'f': scrollTo(following ? top : null); return true;
+        case 'enter': case 'space':
+          if (onActivate && count > 0) { onActivate(index); return true; }
+          return false;
+        default: return false;
+      }
+    },
+    { focusId: focus.id, enabled: focusable },
+  );
+
+  return h('box', {
+    id: id ?? focus.id,
+    role: 'list',
+    ...rest,
+    direction: 'row',
+    overflow: 'hidden',
+    onMouse: (event: { action: string; wheel?: number }) => {
+      if (event.action !== 'wheel') return false;
+      scrollTo(top + (event.wheel ?? 0) * 3);
+      return true;
+    },
+  },
+    h('box', { flex: 1, direction: 'column', scrollTop: top, overflow: 'scroll' },
+      ...entries.map((entry, i) => h(FeedEntry, {
+        key: i,
+        onHeight: (height: number) => { heights.current[i] = height; },
+      }, entry))),
+    // Only when there is somewhere to scroll. A track down the side of a feed
+    // that fits is chrome that states something untrue.
+    scrollbar && limit > 0 ? h(FeedScrollbar, {}) : null,
+  );
+});
+
+/**
+ * An entry that reports how tall it turned out to be.
+ *
+ * Through a ref rather than state, deliberately: a height arriving must not
+ * schedule a render, or every measurement would cause the next measurement.
+ */
+const FeedEntry = defineComponent<BoxProps & { onHeight(height: number): void }>(
+  'FeedEntry',
+  (props) => {
+    const { onHeight, children, ...rest } = props;
+    const measured = useMeasure();
+    useEffect(() => { onHeight(measured.height); }, [measured.height]);
+    return h('box', { direction: 'column', ...rest }, children);
+  },
+);
+
+const FeedScrollbar = defineComponent<Record<string, never>>('FeedScrollbar', () => {
+  const theme = useTheme();
+  return h('box', { width: 1, fill: theme.borderChars().left, fg: 'borderSubtle' });
+});
+
 export const DATA_COMPONENTS: ComponentDefinition[] = [
   { component: 'List', category: 'data', renderer: { kind: 'function', render: List }, role: 'list', description: 'Selectable rows with keyboard navigation.' },
   { component: 'Table', category: 'data', renderer: { kind: 'function', render: TableImpl }, role: 'table', description: 'Columns that drop by priority as space runs out.' },
@@ -902,4 +1274,6 @@ export const DATA_COMPONENTS: ComponentDefinition[] = [
   { component: 'Pagination', category: 'data', renderer: { kind: 'function', render: Pagination }, description: 'Page of pages.' },
   { component: 'LogViewer', category: 'data', renderer: { kind: 'function', render: LogViewer }, role: 'log', description: 'Streaming lines that follow the tail until you scroll.' },
   { component: 'CodeViewer', category: 'data', renderer: { kind: 'function', render: CodeViewer }, role: 'document', description: 'A scrolling, syntax-coloured file viewer.' },
+  { component: 'MarkdownView', category: 'data', renderer: { kind: 'function', render: MarkdownView }, role: 'document', description: 'Markdown drawn into the width it was given. Does not scroll.' },
+  { component: 'Feed', category: 'data', renderer: { kind: 'function', render: Feed }, role: 'list', description: 'A viewport over entries of any height, with a cursor and a tail it follows.' },
 ];

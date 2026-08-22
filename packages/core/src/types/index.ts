@@ -28,3 +28,4 @@ export * from './manifest.js';
 export * from './app.js';
 export * from './syntax.js';
 export * from './adapter.js';
+export * from './markdown.js';

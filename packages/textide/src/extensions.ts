@@ -124,10 +124,11 @@ export async function loadExtensions(
       }
       bag.add(await module.activate(app, context));
     } catch (error) {
-      // Silently, for one nobody asked for: an editor that opens with an error
-      // toast because an optional extension is not installed has made it
-      // mandatory in every way that matters to the person reading the toast.
-      if (!automatic.includes(specifier)) report(specifier, error);
+      // Including the ones nobody asked for. An automatic extension is only
+      // attempted when the workspace warrants it - git, in a repository - so
+      // reaching this line means something that should have worked did not,
+      // and silence there is what makes "why is there no git" unanswerable.
+      report(specifier, error);
     }
   }
   return bag;

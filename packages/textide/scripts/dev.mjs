@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { context } from 'esbuild';
 import { spawn } from 'node:child_process';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -45,18 +45,39 @@ const args = argv.filter((a) => a !== '--watch' && a !== '--build-only');
 
 await mkdir(out, { recursive: true });
 
-/** The workspace packages, and the file each one is bundled to. */
+/**
+ * The workspace packages, and the file each one is bundled to.
+ *
+ * `textide-git` is in here for the same reason the runtime is: it is loaded at
+ * runtime by specifier, and a bare `import('@textui/textide-git')` resolves
+ * through `node_modules` to its built `dist` - which imports `@textui/core`
+ * the same way and ends up holding a *second* copy of the runtime. Its
+ * components' hooks then read a `currentInstance` this process's renderer
+ * never sets, and every one of them throws on its first render. Bundling it
+ * here makes it import `./core.mjs` like everything else.
+ */
 const RUNTIME = {
   '@textui/core': 'core.mjs',
   '@textui/terminal': 'terminal.mjs',
   '@textui/documents': 'documents.mjs',
+  '@textui/textide-git': 'textide-git.mjs',
 };
 
 const SOURCE = {
   '@textui/core': resolve(repo, 'packages/core/src/index.ts'),
   '@textui/terminal': resolve(repo, 'packages/terminal/src/index.ts'),
   '@textui/documents': resolve(repo, 'packages/documents/src/index.ts'),
+  '@textui/textide-git': resolve(repo, 'packages/textide-git/src/index.ts'),
 };
+
+/**
+ * Which specifiers the host should import from beside itself.
+ *
+ * Written out rather than inferred from a file name: the host is told what was
+ * bundled, instead of guessing that a package called `@textui/textide-git`
+ * might have become a file called `textide-git.mjs`.
+ */
+const BUNDLED = { '@textui/textide-git': './textide-git.mjs' };
 
 /**
  * Keep the runtime out of a bundle, and point at the one file it lives in.
@@ -140,6 +161,7 @@ async function buildAll() {
 }
 
 await buildAll();
+await writeFile(resolve(out, 'bundled.json'), `${JSON.stringify(BUNDLED, null, 2)}\n`);
 
 if (buildOnly) {
   await Promise.all(all.map((c) => c.dispose()));

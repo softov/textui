@@ -1,10 +1,11 @@
+import { readFile } from 'node:fs/promises';
 import type { CapabilityOverrides, ColorDepth, Disposable, TextUIApp, UnicodeLevel } from '@textui/core';
 import { createApp, WRITER_KEY, renderToString } from '@textui/core';
 import { createNodeTerminal, createWriter } from '@textui/terminal';
 import { loadWorkspace } from './workspace.js';
 import { registerTextide, type RegisterOptions } from './register.js';
 import { createReloader } from './reload.js';
-import { loadExtensions } from './extensions.js';
+import { loadExtensions, resolveSpecifier, type ExtensionModule } from './extensions.js';
 import { attachLog, fileSink, unixSink } from './log.js';
 import { Editor, Explorer } from './app.js';
 import { TitleBar } from './chrome/titlebar.js';
@@ -220,9 +221,36 @@ async function main(): Promise<void> {
   // After the first frame, and in its own bag: an extension that is slow to
   // load should not hold up the screen, and a reload of textide's own screen
   // has no business unloading somebody's git panel.
-  await loadExtensions(app, workspace);
+  await loadExtensions(app, workspace, {
+    load: (specifier) => bundledFirst(specifier, workspace.root),
+  });
 
   if (process.env.TEXTIDE_RELOAD && bag) await attachReload(app, bag, registration);
+}
+
+/**
+ * An extension that was bundled into this process, in preference to the
+ * package of the same name.
+ *
+ * The dev runner bundles the runtime once and has everything import that one
+ * copy, because two copies of `@textui/core` means components whose hooks read
+ * a `currentInstance` this renderer never sets. An extension loaded by
+ * specifier would walk straight past that and pull in its own - so the runner
+ * writes down what it bundled, and this reads the note.
+ *
+ * There is no note beside the published `dist`, which is the correct answer
+ * there: nothing was bundled, and the package resolves normally.
+ */
+async function bundledFirst(specifier: string, root: string): Promise<ExtensionModule> {
+  const note = new URL('./bundled.json', import.meta.url);
+  try {
+    const map = JSON.parse(await readFile(note, 'utf8')) as Record<string, string>;
+    const file = map[specifier];
+    if (file) return await (import(new URL(file, import.meta.url).href) as Promise<ExtensionModule>);
+  } catch {
+    // No note, or an unreadable one. Resolve the specifier as anyone would.
+  }
+  return import(resolveSpecifier(specifier, root)) as Promise<ExtensionModule>;
 }
 
 /**

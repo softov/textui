@@ -71,6 +71,40 @@ app.manifest.unload('acme.services');   // everything above, undone
 
 Views mount last, because they may name a component the same manifest just added.
 
+`app.manifest.sources()` lists what is loaded, and `loaded(id)` answers for one.
+That is what lets an application show its own extensions without knowing any of
+them by name.
+
+## Loading one from disk
+
+A manifest is a value, so something has to go and get it. In textide that is
+`loadExtensions`, which reads the specifiers out of `.textide.json` and imports
+each one. A module may export a `manifest`, an `activate`, or both:
+
+<!-- docs:nocheck -->
+```ts
+// The declarative half. No code runs; the registries take the definitions.
+export const manifest: Manifest = {
+  source: { id: 'acme.services', displayName: 'Services', description: 'What is running.' },
+  contributes: {
+    components: [ServiceListDefinition],
+    views: [{ surface: 'sidebar', key: 'services', target: { component: 'ServiceList' } }],
+  },
+};
+
+// The other half, for what a declaration cannot express - a subscription, a
+// process, anything that needs the app in hand. Returns its own undo.
+export function activate(app: TextUIApp, context: ExtensionContext): Disposable {
+  return app.store.subscribe('$/services/list', () => { /* … */ });
+}
+```
+
+The manifest loads first, because `activate` may want what it brought. Each
+extension gets its own bag, so one can be disposed without touching the others,
+and the loader keeps what only a loader knows: which specifier produced which
+source, which one failed and why, and which one has been turned off.
+`app.manifest.sources()` lists what loaded - it cannot list what did not.
+
 ## Services
 
 A typed lookup table, not a dependency-injection container. No lifecycles, no scoping rules, no auto-wiring - a child falls back to its parent and that is all.

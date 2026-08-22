@@ -23,6 +23,8 @@ export interface ManifestSource {
   id: string;
   version?: string;
   displayName?: string;
+  /** One line, for a list of sources that has room to say what each one is. */
+  description?: string;
 }
 
 export interface Contributes {

@@ -1,4 +1,4 @@
-import type { BindingPath, Disposable, TextUIApp } from '@textui/core';
+import type { BindingPath, Disposable, Manifest, TextUIApp } from '@textui/core';
 import { clearDecorations, clearLineMarks, createBag, setDecorations, setLineMarks } from '@textui/core';
 import { createGit, type Git } from './git.js';
 import { GIT_KINDS, GIT_VIEWERS, createGitProvider, safeStatus } from './provider.js';
@@ -58,6 +58,16 @@ export interface GitExtensionOptions {
   git?: Git;
   /** Open the panel as soon as it loads. On by default. */
   reveal?: boolean;
+  /**
+   * Put the Source Control panel on a surface. On by default.
+   *
+   * Off when textide loads this as an extension: the panel is declared in the
+   * manifest and the loader mounts it, which is what puts it on the list a
+   * View menu offers before it puts it on the screen. A host calling
+   * `registerGit` directly is not going through that loader and still wants
+   * its panel.
+   */
+  mount?: boolean;
   /** How diffs open. Unified unless the workspace remembered otherwise. */
   mode?: DiffMode;
 }
@@ -100,12 +110,14 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
     ],
   }));
 
-  bag.add(app.open({
-    surface: 'aside',
-    key: 'git',
-    target: { component: 'GitChanges' },
-    display: { title: 'Source Control' },
-  }));
+  if (options.mount !== false) {
+    bag.add(app.open({
+      surface: 'aside',
+      key: GIT_PANEL.id,
+      target: { component: GIT_PANEL.component },
+      display: { title: GIT_PANEL.title },
+    }));
+  }
 
   if (options.reveal !== false) {
     const wasVisible = app.store.get<boolean>('$/ui/aside/visible') ?? false;
@@ -173,6 +185,42 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
   return bag;
 }
 
+/** The one panel this brings, named once so the manifest and the mount agree. */
+const GIT_PANEL = {
+  id: 'git',
+  title: 'Source Control',
+  surface: 'aside',
+  component: 'GitChanges',
+} as const;
+
+/**
+ * What this extension is, for anything that wants to list it.
+ *
+ * A core `Manifest`, so textide's loader hands it straight to
+ * `app.manifest.load` and gets exact disposal back - there is no second
+ * manifest shape to keep in step with this one.
+ *
+ * Identity and the panel, and nothing else. The commands, kinds, viewers and
+ * actions come through `registerAdapter` in `activate`, and the loader
+ * observes what appeared rather than reading a list here that would be a
+ * second copy of the one in `registerGit`.
+ */
+export const manifest: Manifest = {
+  source: {
+    id: 'textui.git',
+    displayName: 'Git',
+    description: 'Diffs, staging, commits and branches.',
+  },
+  contributes: {
+    views: [{
+      surface: GIT_PANEL.surface,
+      key: GIT_PANEL.id,
+      target: { component: GIT_PANEL.component },
+      display: { title: GIT_PANEL.title },
+    }],
+  },
+};
+
 /**
  * The shape textide loads.
  *
@@ -183,12 +231,14 @@ export function activate(
   app: TextUIApp,
   context: { root: string; workspace?: { diff?: DiffMode } },
 ): Disposable {
-  // Quietly. textide loads this by itself in a repository, and a panel that
-  // opens because of what a directory contains is an editor rearranging its
-  // own screen without being asked. `ctrl+g` brings it out.
+  // Quietly, and without mounting: textide loads this by itself in a
+  // repository, and a panel that opens because of what a directory contains
+  // is an editor rearranging its own screen without being asked. `ctrl+g`
+  // brings it out. The loader mounts what the manifest declares.
   return registerGit(app, {
     root: context.root,
     reveal: false,
+    mount: false,
     ...(context.workspace?.diff !== undefined ? { mode: context.workspace.diff } : {}),
   });
 }

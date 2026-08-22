@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
 import { loadExtensions, loadWorkspace, registerTextide, resolveSpecifier } from '../src/index.js';
-import type { ExtensionModule } from '../src/index.js';
+import type { ExtensionModule, LoadedExtension } from '../src/index.js';
+import { EXTENSIONS_PATH } from '../src/index.js';
 
 /**
  * Extensions.
@@ -125,5 +126,231 @@ describe('resolving what the config says', () => {
    */
   it('leaves a bare specifier alone when the workspace has no answer', () => {
     expect(resolveSpecifier('@someone/textide-thing', dir)).toBe('@someone/textide-thing');
+  });
+});
+
+/**
+ * The manifest.
+ *
+ * It exists because nothing could ask an extension what it was: git registered
+ * five kinds of thing inside `activate` and handed back one opaque disposable.
+ * What these check is that the answer is now available without anything naming
+ * git - identity from the manifest, contributions observed rather than
+ * re-declared, and a failure that is a row saying so rather than an absence.
+ */
+describe('what an extension says about itself', () => {
+  const withManifest: ExtensionModule = {
+    manifest: {
+      source: {
+        id: 'test.demo',
+        displayName: 'Demo',
+        version: '2.1.0',
+        description: 'Something to list.',
+      },
+    },
+    activate: (app) => app.commands.register({
+      id: 'demo.run', title: 'Run', slots: ['palette'], run: () => {},
+    }),
+  };
+
+  it('lists an extension by its manifest', async () => {
+    const { t, workspace } = await open(['demo']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: () => Promise.resolve(withManifest),
+    });
+
+    expect(extensions.list()).toHaveLength(1);
+    const one = extensions.get('test.demo');
+    expect(one?.source.displayName).toBe('Demo');
+    expect(one?.source.version).toBe('2.1.0');
+    expect(one?.state).toBe('loaded');
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  it('gives one with no manifest an identity from its specifier', async () => {
+    const { t, workspace } = await open(['@acme/textide-spell-check']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: () => Promise.resolve<ExtensionModule>({ activate: () => ({ dispose: () => {} }) }),
+    });
+
+    const one = extensions.list()[0];
+    expect(one?.source.id).toBe('@acme/textide-spell-check');
+    expect(one?.source.displayName).toBe('Spell Check');
+    expect(one?.state).toBe('loaded');
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  /**
+   * Observed, not declared. A manifest that also listed the commands would be
+   * a second copy of a list that already exists, and it would be wrong within
+   * a release.
+   */
+  it('records what appeared in the registries while it was activating', async () => {
+    const { t, workspace } = await open(['demo']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: () => Promise.resolve<ExtensionModule>({
+        manifest: { source: { id: 'test.demo', displayName: 'Demo' } },
+        activate: (app) => {
+          const bag = [
+            app.commands.register({ id: 'demo.one', title: 'One', slots: [], run: () => {} }),
+            app.commands.register({ id: 'demo.two', title: 'Two', slots: [], run: () => {} }),
+            app.resources.registerKind({ id: 'demo.thing', title: 'Thing' }),
+          ];
+          return { dispose: () => { for (const d of bag) d.dispose(); } };
+        },
+      }),
+    });
+
+    const one = extensions.get('test.demo');
+    expect(one?.contributed.commands).toEqual(['demo.one', 'demo.two']);
+    expect(one?.contributed.kinds).toEqual(['demo.thing']);
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  it('keeps a failed one on the list, with why', async () => {
+    const { t, workspace } = await open(['broken']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      onError: () => {},
+      load: () => Promise.reject(new Error('no such module')),
+    });
+
+    const one = extensions.list()[0];
+    expect(one?.state).toBe('failed');
+    expect(one?.error).toContain('no such module');
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  it('publishes the list, so a panel reads it like anything else', async () => {
+    const { t, workspace } = await open(['demo']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: () => Promise.resolve(withManifest),
+    });
+
+    const published = t.app.store.get<LoadedExtension[]>(EXTENSIONS_PATH as never) ?? [];
+    expect(published.map((e) => e.source.id)).toEqual(['test.demo']);
+    extensions.dispose();
+    await t.unmount();
+  });
+});
+
+/**
+ * One bag each.
+ *
+ * The single shared bag that came before could only be emptied all at once,
+ * which is why nothing could be turned off on its own.
+ */
+describe('disabling one of them', () => {
+  it('takes out exactly that one and leaves the rest', async () => {
+    const { t, workspace } = await open(['one', 'two']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: (specifier) => Promise.resolve<ExtensionModule>({
+        manifest: { source: { id: `test.${specifier}`, displayName: specifier } },
+        activate: (app) => app.commands.register({
+          id: `${specifier}.hello`, title: 'Hello', slots: [], run: () => {},
+        }),
+      }),
+    });
+
+    expect(t.app.commands.get('one.hello')).toBeDefined();
+    expect(t.app.commands.get('two.hello')).toBeDefined();
+
+    extensions.disable('test.one');
+    expect(t.app.commands.get('one.hello')).toBeUndefined();
+    expect(t.app.commands.get('two.hello'), 'the other one is untouched').toBeDefined();
+
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  it('leaves the row in place, saying it is off', async () => {
+    const { t, workspace } = await open(['one']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: () => Promise.resolve<ExtensionModule>({
+        manifest: { source: { id: 'test.one', displayName: 'One' } },
+        activate: () => ({ dispose: () => {} }),
+      }),
+    });
+
+    extensions.disable('test.one');
+    // Something you turned off is something you want to see and turn back on,
+    // not something that vanished.
+    expect(extensions.get('test.one')?.state).toBe('disabled');
+    expect(extensions.list()).toHaveLength(1);
+    extensions.dispose();
+    await t.unmount();
+  });
+});
+
+/**
+ * A panel is `contributes.views`, which is core's, and it mounts last so it
+ * may name a component the same manifest just registered. Nothing about a
+ * panel is textide's own idea.
+ */
+describe('a panel an extension brings', () => {
+  const panels: ExtensionModule = {
+    manifest: {
+      source: { id: 'test.panels', displayName: 'Panels' },
+      contributes: {
+        components: [{
+          component: 'DemoPanel',
+          category: 'chrome',
+          renderer: { kind: 'node', node: { component: 'text', content: 'demo panel' } },
+        }],
+        views: [{
+          surface: 'sidebar',
+          key: 'demo.list',
+          target: { component: 'DemoPanel' },
+          display: { title: 'Demo' },
+        }],
+      },
+    },
+  };
+
+  it('needs no activate at all, and is mounted by the manifest', async () => {
+    const { t, workspace } = await open(['panels']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: () => Promise.resolve(panels),
+    });
+
+    expect(t.app.surfaces.get('sidebar', 'demo.list')).toBeDefined();
+    extensions.dispose();
+    expect(t.app.surfaces.get('sidebar', 'demo.list'), 'and unmounted again').toBeUndefined();
+    await t.unmount();
+  });
+
+  /**
+   * Which is what `view.sidebarPanel` reads. The command asks the surface
+   * registry, not an extension list, so the explorer and a panel git brought
+   * are the same kind of thing to it.
+   */
+  it('joins the explorer in the sidebar, as one more mount', async () => {
+    const { t, workspace } = await open(['panels']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: () => Promise.resolve(panels),
+    });
+
+    const keys = t.app.surfaces.mounts('sidebar').map((m) => m.key);
+    expect(keys).toContain('explorer');
+    expect(keys).toContain('demo.list');
+
+    // And one at a time: the explorer is still what is showing.
+    expect(t.hasText('demo panel')).toBe(false);
+    extensions.dispose();
+    await t.unmount();
+  });
+
+  it('records the mount it brought, alongside its commands', async () => {
+    const { t, workspace } = await open(['panels']);
+    const extensions = await loadExtensions(t.app, workspace, {
+      load: () => Promise.resolve(panels),
+    });
+
+    expect(extensions.get('test.panels')?.contributed.views).toEqual(['sidebar/demo.list']);
+    extensions.dispose();
+    await t.unmount();
   });
 });

@@ -23,6 +23,29 @@ await app.start();
 
 Everything else follows from that: one reactive store addressed by paths, typed registries for components, commands, themes, shells and resources, and a renderer that diffs cells rather than redrawing frames.
 
+## Why TypeScript, and how close it is to needing no build
+
+Types are stripped rather than compiled now. Node has erased them since 22.6
+behind a flag, and by default since 23.6 - so a `.ts` file with no non-erasable
+syntax in it is a file Node runs. Nothing transpiles it; the annotations are
+skipped the way a comment is.
+
+That is the direction this library is aimed at. It has **no dependencies**, so
+the only thing between the source and a `node` invocation is the syntax it uses
+- and most of the syntax is already fine. Types, interfaces, generics,
+`satisfies`, `as`, `import type`: all erasable, all stripped.
+
+**What is not, here:** eleven parameter properties (`constructor(private x: T)`)
+across ten files. That form declares a field *and* assigns it, so there is
+runtime behaviour inside a type annotation and stripping cannot be correct.
+Enums and value-carrying namespaces are the other two, and this codebase has
+neither.
+
+`"erasableSyntaxOnly": true` in the tsconfig makes the compiler refuse the
+non-erasable forms, so the constraint is enforced rather than remembered. The
+eleven are a mechanical change - the field written out and assigned in the
+body. Worth doing before it is worth claiming.
+
 ## Packages
 
 | Package | What it is |

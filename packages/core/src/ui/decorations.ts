@@ -1,6 +1,6 @@
 import type { BindingPath } from '../types/graph.js';
 import type { ReactiveStore } from '../types/store.js';
-import type { SemanticVariant } from '../types/style.js';
+import type { SemanticVariant, StyleColor } from '../types/style.js';
 import { useStoreSubtree, useRuntime } from '../runtime/hooks.js';
 import { escapeSegment } from '../util/paths.js';
 
@@ -109,6 +109,27 @@ export type LineMark = 'added' | 'changed' | 'removed';
 
 /** Line numbers count from zero, like an index, because a caret does. */
 export type LineMarks = Record<number, LineMark>;
+
+/**
+ * What a marked line looks like, in one cell.
+ *
+ * ASCII, so every terminal draws one - and here rather than in whichever
+ * component happened to need it first, because two renderers drawing the same
+ * mark differently is the same file looking like two files. It lived in the
+ * editor, which is why the *viewer* drew no marks at all: you turned the
+ * setting on, stayed in view mode, and nothing happened.
+ */
+export const MARK_GLYPH: Record<LineMark, string> = {
+  added: '+',
+  changed: '~',
+  removed: '_',
+};
+
+export const MARK_TONE: Record<LineMark, StyleColor> = {
+  added: 'success',
+  changed: 'warning',
+  removed: 'danger',
+};
 
 export function lineMarksPath(source: string, uri: string): BindingPath {
   return `${LINE_MARKS_ROOT}/${escapeSegment(source)}/${escapeSegment(uri)}` as BindingPath;

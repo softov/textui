@@ -3,7 +3,8 @@ import type {
   Color, ComponentDefinition, LineMark, RenderOutput, ResolvedTheme, StyleColor, SyntaxToken,
 } from '@textui/core';
 import {
-  findMatches, h, chorded, defineComponent, matchAt, mix, packColor, ScrollThumb,
+  findMatches, h, chorded, defineComponent, MARK_GLYPH, MARK_TONE, matchAt, mix,
+  packColor, ScrollThumb,
   sliceColumns, stepMatch, stringWidth, unpackColor, useCapabilities, useClipboard, useEffect,
   useFind, useFocus, useHighlight, useInput, useLineMarks, useMeasure, useMemo, usePanelState,
   usePanelStatus, useRef, useState, useStoreValue, useTheme, viewportRows,
@@ -198,19 +199,6 @@ export function horizontalWindow(options: {
 }
 
 /** What a marked line looks like. ASCII, so every terminal draws one cell. */
-const MARK_GLYPH: Record<LineMark, string> = {
-  added: '+',
-  changed: '~',
-  // The line is gone, so the mark sits on the one below the gap it left.
-  removed: '_',
-};
-
-const MARK_TONE: Record<LineMark, StyleColor> = {
-  added: 'success',
-  changed: 'warning',
-  removed: 'danger',
-};
-
 /**
  * How much of the mark's colour the line itself gets.
  *

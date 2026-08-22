@@ -6,6 +6,7 @@ import type { MarkdownRow, MarkdownRun } from '../types/markdown.js';
 import type { SyntaxToken } from '../types/syntax.js';
 import type { ResolvedTheme } from '../types/theme.js';
 import { h, defineComponent } from '../jsx/factory.js';
+import { MARK_GLYPH, MARK_TONE, useLineMarks, type LineMark } from './decorations.js';
 import { TONE } from './tone.js';
 import {
   chorded, useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useRef,
@@ -733,11 +734,24 @@ export const CodeViewer = defineComponent<CodeViewerProps>('CodeViewer', (props)
 
   const rows = viewportRows(props, measured, lines.length, { requested: visibleRows });
 
+  /*
+   * The same marks the editor draws, for the same reason.
+   *
+   * "This line changed" is true of the file, not of whether you happen to be
+   * editing it - and it lived only in the editor, so turning the setting on
+   * while reading did nothing at all and said nothing about why.
+   *
+   * The column costs a cell only when somebody has actually marked something,
+   * so a viewer nobody has decorated is the width it always was.
+   */
+  const marks = useLineMarks(uri ?? null);
+  const markWidth = Object.keys(marks).length > 0 ? 1 : 0;
+
   const gutter = lineNumbers ? String(startLine + lines.length - 1).length : 0;
   const bars = scrollbar && lines.length > rows ? 1 : 0;
   const textWidth = Math.max(
     1,
-    (measured.width > 0 ? measured.width : 80) - (lineNumbers ? gutter + 1 : 0) - bars,
+    (measured.width > 0 ? measured.width : 80) - (lineNumbers ? gutter + 1 : 0) - markWidth - bars,
   );
 
   const longest = useMemo(
@@ -828,6 +842,16 @@ export const CodeViewer = defineComponent<CodeViewerProps>('CodeViewer', (props)
               content: `${String(number).padStart(gutter)} `,
               fg: onCaret || marked ? 'text' : 'subtle',
               width: gutter + 1,
+            })
+          : null,
+        // Between the number and the code, which is where the editor puts it
+        // too - so swapping a viewer for an editor on the same file does not
+        // move the text sideways.
+        markWidth > 0
+          ? h('text', {
+              content: MARK_GLYPH[marks[index] as LineMark] ?? ' ',
+              fg: MARK_TONE[marks[index] as LineMark] ?? 'border',
+              width: 1,
             })
           : null,
         ...spansFor(

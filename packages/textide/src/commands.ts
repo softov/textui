@@ -694,7 +694,7 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
         if (!on && ctx.app.terminal.capabilities().colorDepth < 24) {
           notify(ctx.app, {
             tone: 'warning',
-            message: 'This terminal has too few colours to wash a line. Marks still show.',
+            message: 'This terminal has too few colours to wash a line. The gutter marks do show.',
           });
         }
       },

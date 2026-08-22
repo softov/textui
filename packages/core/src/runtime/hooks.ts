@@ -218,12 +218,27 @@ function useStorePath<T>(path: BindingPath): { absolute: BindingPath; value: T |
   const runtime = instance.runtime;
   const absolute = resolvePath(path, instance.dataContext);
 
+  const value = runtime.store.get<T>(absolute);
+
   useEffect(() => {
     const sub = runtime.store.subscribe(absolute, () => invalidate(instance, `store ${absolute}`));
+    /*
+     * And catch a write that landed between the render and this line.
+     *
+     * Subscribing happens in an effect, and effects run after the render that
+     * asked for them - so a component that reads a path in the same frame that
+     * something else writes it has already missed the notification, and will
+     * never hear about that value again unless it happens to change twice.
+     *
+     * It is not a rare shape: a status bar reading which panel has the
+     * keyboard renders before the panel's own effect publishes it, and stayed
+     * empty for the life of the process.
+     */
+    if (runtime.store.get<T>(absolute) !== value) invalidate(instance, `store ${absolute}`);
     return () => sub.dispose();
   }, [absolute]);
 
-  return { absolute, value: runtime.store.get<T>(absolute) };
+  return { absolute, value };
 }
 
 /**

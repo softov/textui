@@ -181,8 +181,19 @@ export const Editor: (props: Record<string, never>) => RenderOutput =
      * what - and dropped for a single group with a single tab, where it would
      * be a row costing a line to say what the titlebar already says.
      */
+    /*
+     * `basis={0}` is what makes two groups the same size.
+     *
+     * `flex` divides what is *left over* after every child has taken its
+     * content size, so a group showing 90-column lines starts 90 columns wide
+     * and a group showing `aaa` starts three - and the split came out as a
+     * sliver beside a pane. Starting both at nothing means the whole axis is
+     * what gets divided. It reads as a wrapping bug and is a sizing one, which
+     * is why hiding the sidebar appeared to fix it: more free space to share
+     * made the difference between the two look smaller.
+     */
     const groupNode = (group: Group, index: number): RenderOutput => (
-      <Column key={String(index)} flex={1}>
+      <Column key={String(index)} flex={1} basis={0}>
         {group.tabs.length > 1 || live.length > 1
           ? (
             <Tabs

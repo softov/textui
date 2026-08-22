@@ -100,6 +100,30 @@ describe('coming back to a file', () => {
   });
 });
 
+describe('a split', () => {
+  it('divides the pane in half, whatever is in each side', async () => {
+    const { t, quiet, uri } = await open();
+    // One side holds 40-column lines and the other holds nine, which is the
+    // case that used to come out as a sliver beside a pane: `flex` shares out
+    // what is *left* after content, so the wide side started wide.
+    openTab(t.app.store, uri('long.txt'));
+    openTab(t.app.store, uri('short.txt'));
+    await quiet();
+    await t.app.execute('view.split');
+    await quiet();
+    t.app.layers.closeLayer('notification');
+    await quiet();
+
+    const strips = t.getAllByRole('tablist');
+    expect(strips).toHaveLength(2);
+    const widths = strips.map((s) => s.rect?.width ?? 0);
+    expect(widths[0]).toBeGreaterThan(10);
+    expect(Math.abs((widths[0] ?? 0) - (widths[1] ?? 0)), 'the two halves match')
+      .toBeLessThanOrEqual(1);
+    await t.unmount();
+  });
+});
+
 describe('how a file opens', () => {
   it('offers every renderer registered for the kind', async () => {
     const { t, quiet, uri } = await open();

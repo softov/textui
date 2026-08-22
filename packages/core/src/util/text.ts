@@ -13,9 +13,33 @@ const segmenter =
     ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
     : null;
 
-/** Split into grapheme clusters. Falls back to code points without Intl. */
+/**
+ * True for a string that is entirely printable ASCII.
+ *
+ * Worth asking, because the answer is yes for very nearly all of it: source
+ * code, file names, labels, key hints. Every character is then one grapheme
+ * one cell wide, and none of the Unicode machinery below has anything to do.
+ */
+function isAscii(text: string): boolean {
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (c < 0x20 || c > 0x7e) return false;
+  }
+  return true;
+}
+
+/**
+ * Split into grapheme clusters. Falls back to code points without Intl.
+ *
+ * The ASCII path skips `Intl.Segmenter` entirely. It is not a micro-tweak:
+ * painting walks the graphemes of every string on screen every frame, and
+ * segmentation was measuring at about a sixth of the frame in a list of plain
+ * ASCII rows - all of it spent proving that `r`, `o` and `w` are one character
+ * each.
+ */
 export function graphemes(text: string): string[] {
   if (text === '') return [];
+  if (isAscii(text)) return text.split('');
   if (segmenter) {
     const out: string[] = [];
     for (const { segment } of segmenter.segment(text)) out.push(segment);
@@ -71,6 +95,18 @@ function isWide(cp: number): boolean {
  */
 export function graphemeWidth(cluster: string): number {
   if (cluster === '') return 0;
+  /*
+   * One printable ASCII character is one cell, and that is the overwhelming
+   * majority of every cluster this is ever asked about.
+   *
+   * The general path below builds two arrays - `Array.from` then `.map` - for
+   * every cluster, which is two allocations per cell per frame. Answering the
+   * common case from the character code costs nothing and allocates nothing.
+   */
+  if (cluster.length === 1) {
+    const only = cluster.charCodeAt(0);
+    if (only >= 0x20 && only <= 0x7e) return 1;
+  }
   const cps = Array.from(cluster).map((c) => c.codePointAt(0) as number);
   const base = cps[0] as number;
   if (base < 0x20 || base === 0x7f) return 0;
@@ -85,12 +121,7 @@ export function graphemeWidth(cluster: string): number {
 export function stringWidth(text: string): number {
   if (text === '') return 0;
   // Fast path: pure ASCII printable.
-  let ascii = true;
-  for (let i = 0; i < text.length; i++) {
-    const c = text.charCodeAt(i);
-    if (c < 0x20 || c > 0x7e) { ascii = false; break; }
-  }
-  if (ascii) return text.length;
+  if (isAscii(text)) return text.length;
 
   let w = 0;
   for (const g of graphemes(text)) w += graphemeWidth(g);

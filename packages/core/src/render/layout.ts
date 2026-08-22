@@ -215,13 +215,18 @@ export function measureBox(box: LayoutBox, availW: number, availH: number): Size
     contentW = fixedW !== null ? Math.max(0, fixedW - edgeH(inset)) : m.width;
     contentH = fixedH !== null ? Math.max(0, fixedH - edgeV(inset)) : m.height;
   } else {
-    const flow = box.children.filter((c) => !isAbsolute(c) && !isHidden(c));
     const gaps = gapsOf(box);
     const column = isColumn(box);
 
+    // Skipped in the loop rather than filtered into an array first: measuring
+    // is the hot recursive walk of the whole tree, and this is one throwaway
+    // array per box per measure. `count` is what `flow.length` used to say.
+    let count = 0;
     const mains: number[] = [];
     const crosses: number[] = [];
-    for (const child of flow) {
+    for (const child of box.children) {
+      if (isAbsolute(child) || isHidden(child)) continue;
+      count++;
       const m = measureBox(child, innerAvailW, innerAvailH);
       const cm = resolveEdges(child.style.margin);
       mains.push(column ? m.height + edgeV(cm) : m.width + edgeH(cm));
@@ -230,7 +235,7 @@ export function measureBox(box: LayoutBox, availW: number, availH: number): Size
 
     let main = 0;
     let cross = 0;
-    if (isWrapping(box) && flow.length > 1) {
+    if (isWrapping(box) && count > 1) {
       // Wrapping trades one axis for the other: the main extent is whatever
       // the widest line came to - never more than the room it was given - and
       // the cross extent grows by a line at a time. Measuring it any other way

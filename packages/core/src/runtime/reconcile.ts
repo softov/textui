@@ -294,8 +294,16 @@ function reconcileChildren(
     next.push(child);
   }
 
+  /*
+   * `next` as a set, because `includes` inside a loop over `previous` is
+   * quadratic - fine for a row of buttons, not for a list with a thousand
+   * children, which is exactly where a reconciler has to stay cheap.
+   *
+   * Built only here, where the answer is needed, rather than alongside `used`.
+   */
+  const kept = new Set(next);
   for (const child of previous) {
-    if (!used.has(child) && !next.includes(child)) unmountInstance(child);
+    if (!used.has(child) && !kept.has(child)) unmountInstance(child);
   }
 
   instance.children = next;

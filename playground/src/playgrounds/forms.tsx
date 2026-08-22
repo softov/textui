@@ -1,6 +1,6 @@
 import {
   Column, Field, Form, FormActions, FormSection, KeyValue, Panel, Row,
-  RadioGroup, Slider, Switch, TextInput,
+  RadioGroup, Slider, Switch, TextArea, TextInput,
   fieldValidators, useForm, validators,
 } from '@textui/core';
 
@@ -31,6 +31,7 @@ export function FormsPlayground() {
       role: 'viewer',
       replicas: 3,
       notify: true,
+      notes: '',
       host: '',
       port: '8443',
     },
@@ -103,6 +104,23 @@ export function FormsPlayground() {
             </Field>
             <Field name="notify" label="Notify" labelWidth={12}>
               <Switch value={form.values.notify} onChange={(v) => form.setValue('notify', v)} />
+            </Field>
+            {/*
+              * The field that is a paragraph.
+              *
+              * It sits in a `Field` like any other control, which is the
+              * point: a form does not have to know that this one is three
+              * rows tall and the one above it is one. Enter is a newline
+              * here, because nothing passed it an `onSubmit` - in a form,
+              * submitting is the button's job.
+              */}
+            <Field name="notes" label="Notes" labelWidth={12} hint="alt+enter for a newline">
+              <TextArea
+                value={String(form.values.notes)}
+                onChange={(v: string) => form.setValue('notes', v)}
+                maxRows={3}
+                placeholder="Anything the next person should know"
+              />
             </Field>
           </FormSection>
 

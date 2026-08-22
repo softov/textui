@@ -1,7 +1,7 @@
 import type {
   Resource, ResourceActionDefinition, ResourceEditorDefinition, ResourceKind,
   ResourceMetadata, ResourceProvider, ResourceRegistry, ResourceURI,
-  ResourceViewerDefinition,
+  ResourceRendererDefinition, ResourceViewerDefinition,
 } from '../types/resource.js';
 import type { ComponentNode } from '../types/graph.js';
 import type { ComponentRegistry } from '../types/component-registry.js';
@@ -188,6 +188,42 @@ export class Resources implements ResourceRegistry {
       .filter((e) => e.kinds.some((k) => this.kindMatches(kind, k)))
       .filter((e) => this.deps.when.evaluate(e.when))
       .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  }
+
+  /**
+   * Every way of showing this kind, best first.
+   *
+   * Three registries answer the same question - an editor, a viewer and a
+   * component that declared `opens` are all "a component that can put this on
+   * screen" - and a panel offering "open with" wants one list. Saving is a
+   * property of the renderer here rather than the registry it came from, which
+   * is what lets `file.markdown` list an editor, a rendered view and plain
+   * text together and lets the panel pick between them.
+   */
+  renderersFor(kind: string): ResourceRendererDefinition[] {
+    const seen = new Set<string>();
+    const out: ResourceRendererDefinition[] = [];
+    const add = (def: ResourceRendererDefinition): void => {
+      if (seen.has(def.id)) return;
+      seen.add(def.id);
+      out.push(def);
+    };
+
+    for (const e of this.editorsFor(kind)) add({ ...e, saves: true });
+    for (const v of this.viewersFor(kind)) add({ ...v, saves: false });
+    for (const c of this.deps.components.findOpeners(kind)) {
+      add({
+        id: c.component,
+        title: c.opens?.title ?? c.component,
+        kinds: c.opens?.resourceKinds ?? [],
+        component: c.component,
+        ...(c.opens?.icon !== undefined ? { icon: c.opens.icon } : {}),
+        ...(c.opens?.priority !== undefined ? { priority: c.opens.priority } : {}),
+        saves: c.opens?.mode === 'edit',
+      });
+    }
+
+    return out.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
   }
 
   actionsFor(kind: string, slot?: string): ResourceActionDefinition[] {

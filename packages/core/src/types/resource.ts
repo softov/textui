@@ -111,8 +111,30 @@ export interface ResourceRegistry {
 
   viewersFor(kind: string): ResourceViewerDefinition[];
   editorsFor(kind: string): ResourceEditorDefinition[];
+  /** Every renderer for this kind - editors, viewers and openers - best first. */
+  renderersFor(kind: string): ResourceRendererDefinition[];
   actionsFor(kind: string, slot?: string): ResourceActionDefinition[];
 
   /** The node that displays this resource, viewer chosen by the registry. */
   nodeFor(resource: Resource, options?: { viewerId?: string; mode?: 'view' | 'edit' }): ComponentNode | null;
+}
+
+/**
+ * One way of showing a resource.
+ *
+ * A viewer, an editor and a component that declared `opens` are three ways of
+ * registering the same thing: a component that can put this kind on screen.
+ * A panel wants the list, not the three lists - which one saves is a property
+ * of the renderer, not a different registry.
+ */
+export interface ResourceRendererDefinition {
+  id: string;
+  title: string;
+  kinds: string[];
+  component: string;
+  icon?: string;
+  priority?: number;
+  when?: WhenClause;
+  /** True when this renderer can write the resource back. */
+  saves?: boolean;
 }

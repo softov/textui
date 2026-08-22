@@ -13,6 +13,7 @@ import { OVERLAY_COMPONENTS } from './overlay.js';
 import { CHART_COMPONENTS } from './chart.js';
 import { SURFACE_COMPONENTS, BUILTIN_LAYOUTS } from './surface.js';
 import { SHELL_COMPONENTS, BUILTIN_SHELLS } from './shells.js';
+import { PANEL_COMPONENTS, panelCommands } from './panel.js';
 
 export * from './primitives.js';
 export * from './layout.js';
@@ -25,6 +26,7 @@ export * from './overlay.js';
 export * from './chart.js';
 export * from './surface.js';
 export * from './shells.js';
+export * from './panel.js';
 export * from './viewport.js';
 export * from './tone.js';
 
@@ -41,6 +43,7 @@ export const CATALOG: ComponentDefinition[] = [
   ...CHART_COMPONENTS,
   ...SURFACE_COMPONENTS,
   ...SHELL_COMPONENTS,
+  ...PANEL_COMPONENTS,
 ];
 
 /**
@@ -54,5 +57,9 @@ export function registerBuiltins(app: TextUIApp): Disposable {
   bag.add(app.components.registerMany(CATALOG));
   for (const layout of BUILTIN_LAYOUTS) bag.add(app.layouts.register(layout));
   for (const shell of BUILTIN_SHELLS) bag.add(app.shells.register(shell));
+  // The panel commands come with the panel: what they offer is read off the
+  // resource registry, so a host that mounts a panel has already said
+  // everything "open with" needs. Keys stay the host's choice.
+  for (const command of panelCommands(app)) bag.add(app.commands.register(command));
   return bag;
 }

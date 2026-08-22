@@ -4,8 +4,8 @@ import type { HostConnection } from './ahp/connection.js';
 import type { Agent, Answer, SessionConfig, SessionDetail, SessionUri, Turn } from './ahp/types.js';
 import { SessionFlag } from './ahp/types.js';
 import {
-  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, INPUT, MODEL, OPEN, PERMISSIONS, PROVIDER, QUEUE,
-  RUNNING, SCREEN, SELECTED, TURNS, WORKSPACE,
+  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, HOST_ERROR, INPUT, MODEL, OPEN, PERMISSIONS, PROVIDER,
+  QUEUE, RUNNING, SCREEN, SELECTED, TURNS, WORKSPACE,
   applyEvent, pendingInput, queue, sessions, turns, writeSessions, writeStatus,
 } from './state.js';
 
@@ -35,6 +35,8 @@ export interface Controller {
   setArchived(uri: SessionUri, archived: boolean): void;
   /** Put the bold back, or take it away. A client flag, not activity. */
   setRead(uri: SessionUri, read: boolean): void;
+  /** Say that the host refused something, wherever it was noticed. */
+  report(error: unknown): void;
   /**
    * End the session on the host.
    *
@@ -98,10 +100,29 @@ export function createController(
   app.store.set(MODEL, '');
   app.store.set(PERMISSIONS, 'default');
 
+  /**
+   * What to do when the host says no.
+   *
+   * Everything below is either fire-and-forget or driven from an effect, so a
+   * rejection has nowhere to be caught by the caller - and an unhandled
+   * rejection ends the process, from a terminal sitting in its alternate
+   * screen. A refusal is information: it goes where the screens can read it.
+   */
+  const failed = (error: unknown): void => {
+    const rpc = error as { code?: number; message?: string } | null;
+    const message = rpc?.message ?? String(error);
+    app.store.set(HOST_ERROR, typeof rpc?.code === 'number' ? `${message} (${rpc.code})` : message);
+  };
+
   const controller: Controller = {
     async refresh() {
-      writeSessions(app.store, await host.listSessions());
+      try {
+        writeSessions(app.store, await host.listSessions());
+        app.store.set(HOST_ERROR, null);
+      } catch (error) { failed(error); }
     },
+
+    report: failed,
 
     open(uri) {
       // Closing drops this consumer only. Unsubscribing the channel to shed a
@@ -211,12 +232,17 @@ export function createController(
     },
 
     async disposeSession(uri) {
-      await host.disposeSession(uri);
+      try {
+        await host.disposeSession(uri);
+      } catch (error) { failed(error); }
       if (app.store.get<SessionUri>(OPEN) === uri) controller.close();
       await controller.refresh();
     },
 
     async create({ provider, workingDirectory, first }) {
+      // Not caught here: the caller is a screen that navigates on success, and
+      // navigating into a session the host refused to create is worse than the
+      // failure. It catches, and reports through `report`.
       const uri = await host.createSession({ provider, ...(workingDirectory ? { workingDirectory } : {}) });
       await controller.refresh();
       controller.open(uri);
@@ -311,7 +337,9 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
   const agent = (): Agent | undefined => known.agents.find((found) => found.provider === provider());
 
   const listAgents = async (): Promise<string[]> => {
-    known.agents = await controller.agents();
+    try {
+      known.agents = await controller.agents();
+    } catch (error) { controller.report(error); }
     return known.agents.map((found) => found.displayName);
   };
 
@@ -324,9 +352,11 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
     const uri = openUri();
     // An open session answers about itself; a session that does not exist yet
     // is what `resolveSessionConfig` is for.
-    known.config = uri
-      ? await controller.config(uri)
-      : await controller.resolveConfig({ provider: provider() });
+    try {
+      known.config = uri
+        ? await controller.config(uri)
+        : await controller.resolveConfig({ provider: provider() });
+    } catch (error) { controller.report(error); }
     return (known.config?.properties.find((p) => p.key === 'permissionMode')?.values ?? [])
       .map((value) => value.label);
   };
@@ -560,7 +590,9 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
           provider: provider(),
           ...(app.store.get<string>(WORKSPACE) ? { workingDirectory: app.store.get<string>(WORKSPACE) as string } : {}),
           first,
-        }).then(() => app.screens.push('chat'));
+        })
+          .then(() => app.screens.push('chat'))
+          .catch((error: unknown) => controller.report(error));
       },
     },
 

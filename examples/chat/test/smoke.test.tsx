@@ -9,7 +9,9 @@ import { decodeStatus } from '../src/ahp/status.js';
 import { SessionFlag } from '../src/ahp/types.js';
 import { CLIPBOARD_PATH, layoutMarkdown, wrapRuns } from '@textui/core';
 import { toBlocks } from '../src/blocks.js';
-import { INPUT, OPEN, PERMISSIONS, PROVIDER, QUEUE, SELECTED, TURNS, WORKSPACE } from '../src/state.js';
+import {
+  HOST_ERROR, INPUT, OPEN, PERMISSIONS, PROVIDER, QUEUE, SELECTED, TURNS, WORKSPACE,
+} from '../src/state.js';
 import type { Turn } from '../src/ahp/types.js';
 
 /**
@@ -655,6 +657,82 @@ describe('the composer is the front door', () => {
     await m.t.settle();
     expect(m.t.app.focus.focused()).toBe('chat.option.model');
     await m.t.unmount();
+  });
+});
+
+describe('when the host says no', () => {
+  /**
+   * A host that refuses one thing.
+   *
+   * This is what a live catalogue does: it lists sessions whose agent has
+   * exited and then answers `-32001 No agent for session` to anything that
+   * asks about one. Every one of those calls is started by an effect or a
+   * keypress, so nothing is waiting to catch it - and an unhandled rejection
+   * ends the process, from a terminal in its alternate screen.
+   */
+  const refusing = (): FakeHost => {
+    const host = fakeHost();
+    return {
+      ...host,
+      detail: async () => {
+        const error = Object.assign(new Error('No agent for session'), { code: -32001 });
+        throw error;
+      },
+    };
+  };
+
+  it('stays up, and says what the host said', async () => {
+    const host = refusing();
+    const t = await renderApp({
+      width: 100, height: 30, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => { registerChat(app, { host }); },
+    });
+    for (let i = 0; i < 8; i++) await t.settle();
+    await t.app.execute('go.sessions');
+    for (let i = 0; i < 8; i++) await t.settle();
+
+    // The pane asks about whatever is highlighted, so this fires on arrival
+    // and again on every arrow key.
+    expect(t.store.get<string>(HOST_ERROR)).toContain('No agent for session');
+    expect(t.hasText('No agent for session')).toBe(true);
+
+    // And it is still an application: the list still moves.
+    t.press('down');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.app.screens.current()?.id).toBe('sessions');
+    await t.unmount();
+  });
+
+  it('takes an error the host sends mid-session', async () => {
+    const host = fakeHost();
+    const t = await renderApp({
+      width: 100, height: 30, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => {
+        registerChat(app, {
+          host: {
+            ...host,
+            subscribe: (uri, observer) => {
+              // After the snapshot, which is the honest order: the channel
+              // answered, and then something on it was refused. A snapshot
+              // clears the last refusal, because it is evidence the channel is
+              // working again.
+              const handle = host.subscribe(uri, observer);
+              observer({ type: 'error', message: 'Authentication is required to use Claude (-32007)' });
+              return handle;
+            },
+          },
+        });
+      },
+    });
+    for (let i = 0; i < 8; i++) await t.settle();
+    t.app.services.require(CONTROLLER).open(IDLE);
+    t.app.screens.push('chat');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    // A refusal is not a dropped connection: the two want opposite things from
+    // a person, so the host's own words are what is shown.
+    expect(t.hasText('Authentication is required')).toBe(true);
+    await t.unmount();
   });
 });
 

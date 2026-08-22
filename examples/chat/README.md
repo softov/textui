@@ -71,9 +71,26 @@ and answer a turn. Every action rebuilds the view and re-emits it as a
 snapshot, which the transcript already renders from - that is what it does when
 you open one.
 
-It is written from protocol 0.7.0's own `src/types/` and from Advisor's client,
-and it has **not** been driven against a live host from here. The scripted one
-is what the tests cover.
+It is written from protocol 0.7.0's own `src/types/` and from Advisor's client.
+Driven against a real host it found one thing immediately, and it is the rule
+this file is now built on: **a host that says no is answering.**
+
+A live catalogue lists sessions whose agent has exited, and the host replies
+`-32001 No agent for session` to anything that tries to watch one. Every call
+that asks is started by an effect or a keypress - the detail pane asks about
+whatever row is highlighted - so nothing was waiting to catch the rejection,
+and an unhandled rejection ends the Node process. From a terminal in its
+alternate screen, with the cursor hidden and raw mode on. So:
+
+- a refusal is recorded, reported and *remembered*, so an arrow key does not
+  re-ask a hundred times; a refresh forgets them, which is how you retry;
+- it is not a lost connection. The two want opposite things from a person -
+  forget this session, or go and sign in on the host - so the host's own words
+  and code are carried through to the status bar rather than replaced with
+  "offline";
+- nothing dispatches into a bare promise any more, and `main.tsx` stops the
+  application before anything exits, because the alternative is a shell nobody
+  can type into.
 
 ## Layout
 

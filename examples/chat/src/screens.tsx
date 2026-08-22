@@ -75,7 +75,10 @@ function describe(session: SessionSummary, detail: SessionDetail | null): Detail
     // worse than one you cannot see at all: it looks like the whole thing.
     { id: 'session', label: 'Session', value: session.resource },
     { id: 'chat', label: 'Chat', value: detail?.chat ?? '', absent: 'no chat yet' },
-    { id: 'lifecycle', label: 'Lifecycle', value: detail?.lifecycle ?? '' },
+    // What the host said when it would not answer. `-32001 No agent for
+    // session` is a live catalogue listing something whose agent has exited:
+    // the row is real, and everything on the session channel is not there.
+    { id: 'lifecycle', label: 'Lifecycle', value: detail?.refusal ?? detail?.lifecycle ?? '', ...(detail?.refusal ? { tone: 'danger' as SemanticVariant } : {}) },
     { id: 'created', label: 'Started', value: session.createdAt.slice(0, 16).replace('T', ' ') },
     { id: 'modified', label: 'Updated', value: session.modifiedAt.slice(0, 16).replace('T', ' ') },
     {
@@ -128,7 +131,13 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
       setDetail(null);
       if (!selected) return;
       let live = true;
-      void controller.detail(selected).then((found) => { if (live) setDetail(found); });
+      // Caught, not `void`ed. A live catalogue lists sessions whose agent has
+      // gone, the host refuses to talk about them, and an unhandled rejection
+      // from a highlight moving is an application that exits when you press a
+      // down arrow.
+      void controller.detail(selected)
+        .then((found) => { if (live) setDetail(found); })
+        .catch((error: unknown) => controller.report(error));
       return () => { live = false; };
     }, [selected ?? '']);
 
@@ -215,9 +224,12 @@ function useComposerOptions(): ComposerOption[] {
 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [config, setConfig] = useState<SessionConfig | null>(null);
-  useEffect(() => { void controller.agents().then(setAgents); }, []);
   useEffect(() => {
-    void controller.resolveConfig({ provider }).then(setConfig);
+    void controller.agents().then(setAgents).catch((error: unknown) => controller.report(error));
+  }, []);
+  useEffect(() => {
+    void controller.resolveConfig({ provider }).then(setConfig)
+      .catch((error: unknown) => controller.report(error));
   }, [provider]);
 
   const agent = agents.find((found) => found.provider === provider);
@@ -389,7 +401,11 @@ export const NewSessionScreen: (props: Record<string, never>) => RenderOutput =
               provider: app.store.get<string>(PROVIDER) ?? 'claude',
               ...(workspace ? { workingDirectory: workspace } : {}),
               first,
-            }).then(() => app.screens.push('chat'));
+            })
+              .then(() => app.screens.push('chat'))
+              // Stay here. A host that refused to create the session has left
+              // nothing to navigate to, and the draft is still in the field.
+              .catch((error: unknown) => controller.report(error));
           }}
           onCancel={() => app.execute('go.sessions')}
           // Left off the front of the field, twice over, is the same thought as
@@ -431,7 +447,8 @@ export const SettingsScreen: (props: Record<string, never>) => RenderOutput =
 
     useEffect(() => {
       if (!uri) return;
-      void controller.config(uri).then(setConfig);
+      void controller.config(uri).then(setConfig)
+        .catch((error: unknown) => controller.report(error));
     }, [uri ?? '']);
 
     if (!config) return <EmptyState title="Reading the session" flex={1} />;

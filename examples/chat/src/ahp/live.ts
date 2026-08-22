@@ -42,6 +42,14 @@ export interface LiveHostOptions {
   clientId?: string;
   /** Told when the socket drops, so the badge can stop claiming otherwise. */
   onState?(state: 'connecting' | 'connected' | 'offline'): void;
+  /**
+   * Told when the host refuses one channel, in the host's own words.
+   *
+   * Separate from `onState` because they mean opposite things: a refusal is
+   * the host answering, and reporting it as a lost connection sends somebody
+   * to debug their network over a session whose agent has simply gone.
+   */
+  onRefusal?(uri: string, message: string): void;
 }
 
 /**
@@ -460,26 +468,80 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
 
   /** The chat a session dispatches to, remembered so it is asked for once. */
   const chats = new Map<SessionUri, string>();
+  /**
+   * Channels this host has refused, and what it said.
+   *
+   * A live catalogue contains sessions whose agent is gone - the host lists
+   * them and then answers `-32001 No agent for session` to anything that tries
+   * to watch one. That is an *answer*, not a failure of the connection, and
+   * asking again on every keystroke turns one refusal into a stream of them.
+   */
+  const refused = new Map<string, string>();
 
-  const snapshotOf = async (uri: string): Promise<Bag> => {
-    const { result, subscription } = await client.subscribe(uri);
-    // Closing drops *this consumer*. `unsubscribe` is channel-wide and would
-    // kill the stream whatever else is reading it depends on.
-    void subscription.close();
-    return bag(result.snapshot?.state);
+  /**
+   * The reason a host gave, in the words it used.
+   *
+   * `-32001` is "no agent for this session", `-32007` is "authentication is
+   * required to use Claude". They want opposite things from a person - forget
+   * this session, or go and sign in on the host - so the message is carried
+   * through rather than replaced with one of ours.
+   */
+  const reason = (error: unknown): string => {
+    const rpc = error as { code?: number; message?: string } | null;
+    const message = rpc?.message ?? String(error);
+    return typeof rpc?.code === 'number' ? `${message} (${rpc.code})` : message;
+  };
+
+  /**
+   * A snapshot, or nothing.
+   *
+   * Nothing is a real answer here: a session with no agent still has a row in
+   * the catalogue, and a detail pane that shows what the summary knows is
+   * better than an application that exits. This threw, and the rejection was
+   * unhandled, and an unhandled rejection ends the process - from a terminal
+   * in its alternate screen, which is the worst way for anything to end.
+   */
+  const snapshotOf = async (uri: string): Promise<Bag | null> => {
+    const known = refused.get(uri);
+    if (known !== undefined) return null;
+    try {
+      const { result, subscription } = await client.subscribe(uri);
+      // Closing drops *this consumer*. `unsubscribe` is channel-wide and would
+      // kill the stream whatever else is reading it depends on.
+      void subscription.close().catch(() => undefined);
+      return bag(result.snapshot?.state);
+    } catch (error) {
+      const said = reason(error);
+      refused.set(uri, said);
+      options.onRefusal?.(uri, said);
+      return null;
+    }
   };
 
   const chatOf = async (uri: SessionUri): Promise<string | null> => {
     const known = chats.get(uri);
     if (known) return known;
-    const found = str((await snapshotOf(uri)).defaultChat);
+    const found = str((await snapshotOf(uri) ?? {}).defaultChat);
     if (found) chats.set(uri, found);
     return found ?? null;
   };
 
-  const dispatch = async (uri: SessionUri, action: unknown): Promise<void> => {
-    const chat = await chatOf(uri);
-    if (chat) client.dispatch(chat, action);
+  /**
+   * Dispatch to the session's chat, and never reject.
+   *
+   * These are the fire-and-forget half of the protocol: nothing awaits them,
+   * so a rejection here has nowhere to go but `unhandledRejection`, which ends
+   * the process. What a caller gets instead is the refusal, reported.
+   */
+  const dispatch = (uri: SessionUri, action: unknown): void => {
+    void (async () => {
+      const chat = await chatOf(uri);
+      if (!chat) {
+        options.onRefusal?.(uri, refused.get(uri) ?? 'this session has no chat to speak to');
+        return;
+      }
+      client.dispatch(chat, action);
+    })().catch((error: unknown) => options.onRefusal?.(uri, reason(error)));
   };
 
   return {
@@ -489,6 +551,11 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
 
     listSessions: async () => {
       const result = await client.request('listSessions', { channel: ROOT, limit: 100 });
+      // Asking again is what a refresh is for. A refusal is remembered so that
+      // moving the highlight does not re-ask a hundred times, and forgotten
+      // here so that `r` is a way to try - which matters for the refusals that
+      // are temporary, like a harness nobody had signed into yet.
+      refused.clear();
       return list(result.items).map(summary);
     },
 
@@ -533,14 +600,19 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
     disposeSession: async (uri) => {
       await client.request('disposeSession', { channel: uri });
       chats.delete(uri);
+      refused.delete(uri);
     },
 
     setArchived: (uri, archived) => {
-      client.dispatch(uri, { type: 'session/isArchivedChanged', isArchived: archived });
+      try {
+        client.dispatch(uri, { type: 'session/isArchivedChanged', isArchived: archived });
+      } catch (error) { options.onRefusal?.(uri, reason(error)); }
     },
 
     setRead: (uri, read) => {
-      client.dispatch(uri, { type: 'session/isReadChanged', isRead: read });
+      try {
+        client.dispatch(uri, { type: 'session/isReadChanged', isRead: read });
+      } catch (error) { options.onRefusal?.(uri, reason(error)); }
     },
 
     /**
@@ -575,6 +647,8 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
       };
 
       void (async () => {
+        const known = refused.get(uri);
+        if (known !== undefined) { observer({ type: 'error', message: known }); return; }
         const opened = await client.subscribe(uri);
         if (!live) { void opened.subscription.close(); return; }
         closers.push(() => void opened.subscription.close());
@@ -602,7 +676,15 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
           session = bag(ahp.sessionReducer(session, bag(event.params).action));
           emit();
         }
-      })().catch(() => moveTo('offline'));
+      })().catch((error: unknown) => {
+        // The host answering "no" is not the host being gone. Marking the
+        // connection offline over one dead session is how a person is sent to
+        // check their network about a session whose agent simply exited.
+        const said = reason(error);
+        refused.set(uri, said);
+        options.onRefusal?.(uri, said);
+        if (live) observer({ type: 'error', message: said });
+      });
 
       return {
         close: () => {
@@ -613,7 +695,7 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
     },
 
     say: (uri, text, model) => {
-      void dispatch(uri, {
+      dispatch(uri, {
         type: 'chat/turnStarted',
         turnId: randomUUID(),
         startedAt: new Date().toISOString(),
@@ -632,7 +714,7 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
         // The id is read back rather than remembered: a turn somebody started
         // in an editor is stoppable from here too, and its id is in the state.
         const state = await snapshotOf(chatUri);
-        const active = bag(state.activeTurn);
+        const active = bag(bag(state).activeTurn);
         const turnId = str(active.id);
         if (!turnId) return;
         const started = Date.parse(str(active.startedAt) ?? '');
@@ -641,11 +723,11 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
           turnId,
           duration: Number.isNaN(started) ? 0 : Math.max(0, Date.now() - started),
         });
-      })();
+      })().catch((error: unknown) => options.onRefusal?.(uri, reason(error)));
     },
 
     confirmToolCall: (uri, toolCallId, approved, optionId) => {
-      void dispatch(uri, approved
+      dispatch(uri, approved
         ? {
           type: 'chat/toolCallConfirmed',
           toolCallId,
@@ -662,7 +744,7 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
       const typed = Object.fromEntries(
         Object.entries(answers).map(([id, answer]) => [id, answerValue(answer)]),
       );
-      void dispatch(uri, {
+      dispatch(uri, {
         type: 'chat/inputCompleted',
         requestId,
         response: accepted ? 'accept' : 'decline',
@@ -675,21 +757,21 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
 
     changes: async (uri) => {
       const state = await snapshotOf(uri);
-      const entry = list(state.changesets)
+      const entry = list(bag(state).changesets)
         .map(bag)
         // The session-wide view. A template with variables in it is a diff
         // between two turns, and there is nothing here to fill them in from.
         .find((found) => str(found.uriTemplate) && !str(found.uriTemplate)?.includes('{'));
       const template = str(entry?.uriTemplate);
       if (!template) return { status: 'complete', files: [] };
-      return changeset(await snapshotOf(template));
+      return changeset(await snapshotOf(template) ?? {});
     },
 
     detail: async (uri): Promise<SessionDetail> => {
-      const state = await snapshotOf(uri);
+      const state = bag(await snapshotOf(uri));
       const chatUri = str(state.defaultChat) ?? null;
       if (chatUri) chats.set(uri, chatUri);
-      const talking = chatUri ? await snapshotOf(chatUri) : {};
+      const talking = bag(chatUri ? await snapshotOf(chatUri) : {});
       const last = [...list(talking.turns), talking.activeTurn]
         .map(bag)
         .reverse()
@@ -702,20 +784,25 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
           resource: str(bag(entry).resource) ?? '',
           title: str(bag(entry).title) ?? 'Chat',
         })),
+        // What the host said, when it said no. A pane reading "creating" over
+        // a session whose agent is gone is worse than one that says so.
         lifecycle: (str(state.lifecycle) ?? 'creating') as SessionDetail['lifecycle'],
+        ...(refused.has(uri) ? { refusal: refused.get(uri) as string } : {}),
         config: config(state.config),
         ...(last ? { model: str(bag(bag(bag(last).message).model).id) as string } : {}),
         ...(str(state.activity) ? { activity: str(state.activity) as string } : {}),
       };
     },
 
-    config: async (uri) => config((await snapshotOf(uri)).config),
+    config: async (uri) => config(bag(await snapshotOf(uri)).config),
 
     setConfig: (uri, key, value) => {
       // One key. The action merges into `config.values`, so sending the object
       // writes back everything this client happened to be holding - including
       // whatever another client changed while it was on screen.
-      client.dispatch(uri, { type: 'session/configChanged', config: { [key]: value } });
+      try {
+        client.dispatch(uri, { type: 'session/configChanged', config: { [key]: value } });
+      } catch (error) { options.onRefusal?.(uri, reason(error)); }
     },
 
     close: async () => {

@@ -48,6 +48,9 @@ export const MODEL = '$/chat/compose/model' as BindingPath;
 export const PERMISSIONS = '$/chat/compose/permissions' as BindingPath;
 export const WORKSPACE = '$/chat/compose/workspace' as BindingPath;
 
+/** What the host last refused, in the host's own words. Cleared by success. */
+export const HOST_ERROR = '$/chat/host/error' as BindingPath;
+
 export const OPEN = '$/chat/ui/open' as BindingPath;
 /** The catalogue's highlight. What a session command acts on when none is open. */
 export const SELECTED = '$/chat/ui/selected' as BindingPath;
@@ -92,6 +95,9 @@ export function applyEvent(store: ReactiveStore, event: HostEvent, model: Turn[]
       writeTurns(store, next);
       store.set(INPUT, event.input ?? null);
       writeStatus(store, event.status);
+      // A snapshot arrived, so whatever the host last refused is not what is
+      // on screen any more.
+      store.set(HOST_ERROR, null);
       return next;
     }
     case 'turnStarted': {
@@ -118,6 +124,9 @@ export function applyEvent(store: ReactiveStore, event: HostEvent, model: Turn[]
       return model;
     case 'status':
       writeStatus(store, event.status);
+      return model;
+    case 'error':
+      store.set(HOST_ERROR, event.message);
       return model;
     case 'changes':
       store.set(CHANGES, event.changes);

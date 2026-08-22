@@ -7,7 +7,8 @@ import { CONTROLLER, createController } from './control.js';
 import { fakeHost } from './ahp/fake.js';
 import type { HostConnection } from './ahp/connection.js';
 import {
-  FOCUS, HOST, INPUT, OPEN, RUNNING, SCREEN, STATUS, WORKSPACE, openSession, workspaceName,
+  FOCUS, HOST, HOST_ERROR, INPUT, OPEN, RUNNING, SCREEN, STATUS, WORKSPACE,
+  openSession, workspaceName,
 } from './state.js';
 import type { HostState } from './state.js';
 import { decodeStatus } from './ahp/status.js';
@@ -207,9 +208,15 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
 
 const Status = defineComponent<Record<string, never>>('ChatStatus', () => {
   const screen = useStoreValue<string | null>(SCREEN, 'sessions');
+  // What the host last refused, where a person is already looking. A refusal
+  // that only reaches a log is a client that appears to have ignored the key
+  // you pressed.
+  const error = useStoreValue<string | null>(HOST_ERROR, null) ?? null;
   return (
     <Row gap={2}>
-      <Hints flex={1} />
+      {error
+        ? <text content={error} fg="danger" flex={1} truncate="end" />
+        : <Hints flex={1} />}
       <text content={screen ?? '-'} fg="muted" />
     </Row>
   );

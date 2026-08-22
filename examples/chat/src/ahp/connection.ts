@@ -106,4 +106,13 @@ export type HostEvent =
   | { type: 'inputResolved' }
   | { type: 'turnComplete'; turn: Turn }
   | { type: 'status'; status: number }
-  | { type: 'changes'; changes: Changeset };
+  | { type: 'changes'; changes: Changeset }
+  /**
+   * The host answered, and the answer was no.
+   *
+   * Not the same as the connection dropping, and worth its own event for that
+   * reason: a session whose agent has gone is refused for ever while the host
+   * is perfectly well, and a client that reported that as "offline" would send
+   * somebody to check their network.
+   */
+  | { type: 'error'; message: string };

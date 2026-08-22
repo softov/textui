@@ -69,6 +69,15 @@ export interface SessionDetail {
   /** What the last turn ran on. A session has no model; each message has one. */
   model?: string;
   activity?: string;
+  /**
+   * Why the host would not talk about this session, in its own words.
+   *
+   * A live catalogue lists sessions whose agent is gone, and the host answers
+   * `-32001 No agent for session` to anything that tries to watch one. The row
+   * is still real - it is what the catalogue returned - so this says what is
+   * missing rather than the pane quietly showing a session's worth of blanks.
+   */
+  refusal?: string;
 }
 
 export type ToolCallStatus =

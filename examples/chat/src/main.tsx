@@ -8,6 +8,7 @@ import { CONTROLLER } from './control.js';
 import { fakeHost } from './ahp/fake.js';
 import { MissingProtocolPackage, liveHost } from './ahp/live.js';
 import type { HostConnection } from './ahp/connection.js';
+import { HOST_ERROR } from './state.js';
 
 /**
  * The entry point.
@@ -103,12 +104,26 @@ function overrides(options: Options): CapabilityOverrides {
  * The one place the choice is made, and the only place either implementation
  * is named. A live connection is asked for by URL; anything else is the script.
  */
+/**
+ * Where a refusal goes before there is an application to put it in.
+ *
+ * The host is built first - it has to be, the application is registered
+ * against it - so its callbacks are given a box to write into and the box is
+ * filled once there is a store. Until then a refusal goes to stderr, which is
+ * where a connection that fails during the handshake belongs anyway.
+ */
+const sink: { report(message: string): void } = {
+  report: (message) => process.stderr.write(`${message}\n`),
+};
+
 async function connect(options: Options): Promise<HostConnection & { pump?(): boolean }> {
   if (!options.host) return fakeHost();
   try {
     return await liveHost({
       url: options.host,
       ...(options.token ? { token: options.token } : {}),
+      onRefusal: (_uri, message) => sink.report(message),
+      onState: (state) => { if (state === 'offline') sink.report('The host stopped answering'); },
     });
   } catch (error) {
     if (error instanceof MissingProtocolPackage) {
@@ -204,7 +219,26 @@ async function main(): Promise<void> {
   });
 
   app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
+  sink.report = (message) => app.store.set(HOST_ERROR, message);
   await app.start();
+
+  /**
+   * The last resort, and the reason it exists at all.
+   *
+   * A promise nobody caught ends the Node process, and this process is holding
+   * a terminal in its alternate screen with the cursor hidden and raw mode on.
+   * Exiting from there leaves a shell nobody can type into. So whatever it is,
+   * the application is stopped first - which puts the terminal back - and then
+   * the error is printed where it can be read.
+   */
+  const bail = (label: string) => (error: unknown): void => {
+    void app.stop().finally(() => {
+      process.stderr.write(`${label}: ${error instanceof Error ? error.stack ?? error.message : String(error)}\n`);
+      process.exit(1);
+    });
+  };
+  process.on('unhandledRejection', bail('Unhandled rejection'));
+  process.on('uncaughtException', bail('Uncaught exception'));
 
   // The clock, for the scripted host only. A real connection has a socket
   // pushing actions, and everything above it cannot tell the difference -

@@ -11,6 +11,7 @@ import {
   chorded, useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useRef,
   useScrollExtent, useState, useTheme,
 } from '../runtime/hooks.js';
+import { usePanelState } from './panel.js';
 import { expandTabs, fitTo, repeatToWidth, sliceColumns, stringWidth } from '../util/text.js';
 import { layoutMarkdown } from '../util/markdown.js';
 import { sizedByLayout, viewportRows } from './viewport.js';
@@ -406,8 +407,19 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
   const focus = useFocus({ autoFocus });
   const measured = useMeasure();
   const treePage = viewportRows(props, measured, 10, { requested: visibleRows });
-  const [internalExpanded, setInternalExpanded] = useState<string[]>([]);
-  const [internalSelected, setInternalSelected] = useState<string | null>(null);
+  /*
+   * Uncontrolled expansion belongs to the panel when there is one: a JSON file
+   * opened as a structure, switched away from and switched back to, comes back
+   * open where it was rather than collapsed to the root. A tree in a sidebar
+   * is in no panel and keeps ordinary component state, which is what it had.
+   */
+  const [treeView, setTreeView] = usePanelState<{ expanded: string[]; selected: string | null }>(
+    { expanded: [], selected: null },
+  );
+  const internalExpanded = treeView.expanded;
+  const setInternalExpanded = (next: string[]): void => setTreeView({ expanded: next });
+  const internalSelected = treeView.selected;
+  const setInternalSelected = (next: string | null): void => setTreeView({ selected: next });
 
   const expanded = new Set(expandedIds ?? internalExpanded);
   const rows = flatten(nodes, expanded);
@@ -699,9 +711,25 @@ export const CodeViewer = defineComponent<CodeViewerProps>('CodeViewer', (props)
   const auto = useHighlight(tokens ? '' : text, { language, kind, uri });
   const lineTokens = tokens ?? auto;
 
-  const [top, setTop] = useState(0);
-  const [left, setLeft] = useState(0);
-  const [internalLine, setInternalLine] = useState(1);
+  /*
+   * Where this viewer is looking belongs to the panel, not to this component.
+   *
+   * Switching tabs and coming back, or swapping this viewer for an editor on
+   * the same file, both unmount it - and both are the moments a reader most
+   * expects to land where they left. `line`, `column`, `top` and `left` are
+   * the shared vocabulary for a renderer that measures in source lines, so an
+   * editor picks up the caret this viewer left behind. Outside a panel the
+   * hook is ordinary component state, which is what a viewer in a dialog gets.
+   */
+  const [view, setView] = usePanelState({ top: 0, left: 0, line: 0 });
+  const top = view.top;
+  const setTop = (next: number): void => setView({ top: next });
+  const left = view.left;
+  const setLeft = (next: number): void => setView({ left: next });
+  // The record counts from zero, like an index; this component's `line` prop
+  // counts from one, like a gutter. The conversion lives here, once.
+  const internalLine = view.line + 1;
+  const setInternalLine = (next: number): void => setView({ line: next - 1 });
 
   const rows = viewportRows(props, measured, lines.length, { requested: visibleRows });
 

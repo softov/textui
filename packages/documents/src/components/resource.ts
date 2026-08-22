@@ -3,11 +3,11 @@ import type { BoxProps } from '@textui/core';
 import type { Resource, ResourceViewerDefinition } from '@textui/core';
 import { h, defineComponent } from '@textui/core';
 import {
-  chorded, useFocus, useInput, useMeasure, useMemo, useRuntime, useState, useTheme,
-  useTask, useEffect,
+  chorded, useFocus, useInput, useMeasure, useMemo, usePanelState, useRuntime,
+  useState, useTheme, useEffect,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
-import { Tree, CodeViewer, MarkdownView, layoutMarkdown, type TreeNode } from '@textui/core';
+import { Tree, CodeViewer, MarkdownView, ResourcePanel, layoutMarkdown, type TreeNode } from '@textui/core';
 import { EmptyState, ErrorState, KeyValue, Spinner } from '@textui/core';
 import { Breadcrumb, Menu } from '@textui/core';
 import { viewportRows } from '@textui/core';
@@ -67,7 +67,16 @@ export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownView
   const doc = useDocument(content === undefined ? (uri ?? resource?.uri ?? null) : null);
   const measured = useMeasure();
   const focus = useFocus({});
-  const [top, setTop] = useState(0);
+  /*
+   * Counted in rendered rows, not source lines, which is why it is not the
+   * `top` an editor keeps: one heading is one row, one paragraph is several,
+   * and a fence is its lines plus two rules. A key of its own says so - the
+   * panel record is shared, and two renderers agreeing to disagree about what
+   * a number means is how a restored position lands in the wrong place.
+   */
+  const [view, setView] = usePanelState({ row: 0 });
+  const top = view.row;
+  const setTop = (next: number): void => setView({ row: next });
 
   const text = content ?? doc.content;
 
@@ -171,6 +180,8 @@ export const FallbackViewer = defineComponent<FallbackViewerProps>('FallbackView
 
 export interface ResourceViewProps extends BoxProps {
   uri: string | null;
+  /** The panel this is, when the host has more than one. */
+  id?: string;
   /** Force a specific registered viewer. */
   viewerId?: string;
   mode?: 'view' | 'edit';
@@ -182,41 +193,30 @@ export interface ResourceViewProps extends BoxProps {
    * why the mode changed, so take focus".
    */
   viewerProps?: Record<string, unknown>;
+  autoFocus?: boolean;
 }
 
 /**
- * Show a resource using whichever viewer the registry picks. This is the
- * component an explorer mounts, and the reason the explorer needs no knowledge
- * of file types.
+ * Show a resource using whichever renderer the registry picks.
+ *
+ * A panel with the older vocabulary on the outside: `viewerId` is a renderer,
+ * `mode` is an intent. What it adds over `ResourcePanel` is the fallback for a
+ * kind nothing is registered for, which is a documents concern - core has no
+ * opinion about what an unrenderable file should look like.
  */
 export const ResourceView = defineComponent<ResourceViewProps>('ResourceView', (props) => {
-  const theme = useTheme();
-  const runtime = useRuntime();
-  const { uri, viewerId, mode, viewerProps, ...rest } = props;
-  const app = runtime.app();
+  const { uri, id, viewerId, mode, viewerProps, autoFocus, ...rest } = props;
 
-  const task = useTask(async () => {
-    if (!uri || !app) return null;
-    return app.resources.stat(uri);
-  }, [uri]);
-
-  useEffect(() => {
-    void task.run();
-  }, [uri]);
-
-  if (!uri) return h(EmptyState, { title: 'Nothing selected', ...rest });
-  if (task.status === 'running') return h(Spinner, { label: `Loading${theme.glyphs.ellipsis}`, ...rest });
-  if (task.status === 'error') return h(ErrorState, { error: task.error, ...rest });
-
-  const resource = task.data;
-  if (!resource) return h(EmptyState, { title: 'Not found', message: uri, ...rest });
-  if (!app) return null;
-
-  const node = app.resources.nodeFor(resource, { viewerId, mode });
-  if (!node) return h(FallbackViewer, { resource, ...rest });
-
-  return h('box', { direction: 'column', flex: 1, ...rest },
-    viewerProps ? { ...node, ...viewerProps } : node);
+  return h(ResourcePanel, {
+    uri,
+    ...(id !== undefined ? { id } : {}),
+    ...(viewerId !== undefined ? { renderer: viewerId } : {}),
+    ...(mode !== undefined ? { mode } : {}),
+    ...(viewerProps !== undefined ? { rendererProps: viewerProps } : {}),
+    ...(autoFocus !== undefined ? { autoFocus } : {}),
+    fallbackComponent: 'FallbackViewer',
+    ...rest,
+  });
 });
 
 export interface ResourceExplorerProps extends BoxProps {
@@ -396,7 +396,10 @@ export const ResourceOpenWith = defineComponent<ResourceOpenWithProps>('Resource
   const app = runtime.app();
   if (!resource || !app) return null;
 
-  const viewers = app.resources.viewersFor(resource.kind);
+  // Every renderer, not only the viewers: an editor and a component that
+  // declared `opens` are two more ways to open this, and a menu called "open
+  // with" that omits them is answering a narrower question than it asks.
+  const viewers = app.resources.renderersFor(resource.kind);
   return h(Menu, {
     items: viewers.map((v) => ({ id: v.id, label: v.title, description: v.kinds.join(', ') })),
     onSelect: (id: string) => {

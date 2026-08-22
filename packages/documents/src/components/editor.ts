@@ -4,7 +4,8 @@ import type {
 } from '@textui/core';
 import {
   h, chorded, defineComponent, ScrollThumb, sliceColumns, stringWidth, useClipboard,
-  useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useState, useTheme,
+  useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, usePanelState,
+  usePanelStatus, useState, useTheme,
   viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
@@ -280,12 +281,28 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   const readonly = readonlyProp ?? (uri ? doc.readonly : false);
   const lines = text.split('\n');
 
-  const [cursor, setCursor] = useState<Cursor>({ line: 0, column: 0 });
+  /*
+   * The caret and the viewport belong to the panel, not to this component.
+   *
+   * `ctrl+e` unmounts the editor and mounts a viewer on the same file, and
+   * switching tabs unmounts it too; both are exactly when a writer expects to
+   * come back to the line they left. The record is shared with any renderer
+   * that measures in source lines - `CodeViewer` keeps the same four keys - so
+   * reading a file and then editing it does not start over at the top.
+   *
+   * Outside a panel this is ordinary component state, so a standalone editor
+   * in a dialog behaves as it always did.
+   */
+  const [view, setView] = usePanelState({ line: 0, column: 0, top: 0, left: 0 });
+  const cursor: Cursor = { line: view.line, column: view.column };
+  const setCursor = (next: Cursor): void => setView({ line: next.line, column: next.column });
   /** Where the selection started, or null when there is no selection. */
   const [anchor, setAnchor] = useState<Cursor | null>(null);
-  const [top, setTop] = useState(0);
+  const top = view.top;
+  const setTop = (next: number): void => setView({ top: next });
   /** Leftmost visible cell. The horizontal half of the same viewport. */
-  const [left, setLeft] = useState(0);
+  const left = view.left;
+  const setLeft = (next: number): void => setView({ left: next });
   /** The column a vertical move aims for, so up/down past a short line recovers. */
   const [goal, setGoal] = useState(0);
 
@@ -661,6 +678,13 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   const chars = selection && selected ? textIn(lines, selection).length : 0;
   const spanned = selection && selected ? selection.end.line - selection.start.line + 1 : 0;
   useEffect(() => { onSelection?.({ chars, lines: spanned }); }, [chars, spanned]);
+
+  // The same fact, published where a status bar can read it without knowing
+  // which renderer is mounted. `onSelection` stays for a caller holding this
+  // component directly; the panel is how everything else hears about it.
+  usePanelStatus(chars > 0
+    ? `${chars} selected${spanned > 1 ? ` in ${spanned} lines` : ''}`
+    : null);
 
   // --------------------------------------------------------------- render
 

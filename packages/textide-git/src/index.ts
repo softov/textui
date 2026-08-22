@@ -1,10 +1,11 @@
 import type { Disposable, TextUIApp } from '@textui/core';
-import { createBag } from '@textui/core';
+import { clearDecorations, createBag, setDecorations } from '@textui/core';
 import { createGit, type Git } from './git.js';
 import { GIT_KINDS, GIT_VIEWERS, createGitProvider, safeStatus } from './provider.js';
 import { DIFF_COMPONENTS } from './diff.js';
 import { GitChanges, STATUS_PATH, STATUS_SEGMENTS } from './changes.js';
 import { gitCommands, refresh } from './commands.js';
+import { GIT_SOURCE, decorationsOf } from './decorate.js';
 import type { Status } from './git.js';
 
 /**
@@ -27,6 +28,7 @@ export type { Git, GitOptions, Change, Status } from './git.js';
 export { GitDiff, classify, scrollDiff, DIFF_COMPONENTS } from './diff.js';
 export { GitChanges, codeOf, toneOf, summarize, GIT_ROOT, STATUS_PATH, SELECTED_PATH } from './changes.js';
 export { gitCommands, refresh } from './commands.js';
+export { GIT_SOURCE, decorationsOf } from './decorate.js';
 export {
   SCHEME, DIFF_PREFIX, diffUri, diffPath, createGitProvider, safeStatus,
   GIT_KINDS, GIT_VIEWERS,
@@ -70,7 +72,7 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
       { id: 'git.diff', title: 'Diff', kinds: ['*'], slots: ['context'], run: (args, ctx) => ctx.app.execute('git.diff', args) },
     ],
     keybindings: [
-      { keys: 'ctrl+g', commandId: 'git.refresh' },
+      { keys: 'ctrl+g', commandId: 'git.show' },
     ],
   }));
 
@@ -89,6 +91,21 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
     bag.add({ dispose: () => { app.store.set('$/ui/aside/visible', wasVisible); } });
   }
 
+  /*
+   * The explorer's marks follow the status, rather than being pushed by
+   * whatever caused it to change.
+   *
+   * Every command here ends in a refresh, and a commit made in another window
+   * arrives the same way - so subscribing to the answer means the tree is
+   * right after all of them, and no command has to remember to say so.
+   */
+  bag.add(app.store.subscribe(STATUS_PATH, () => {
+    setDecorations(app.store, GIT_SOURCE, decorationsOf(
+      app.store.get<Status>(STATUS_PATH) ?? null,
+      options.root,
+    ));
+  }));
+
   // The status is store state like everything else, so the panel, the status
   // bar and every command read one answer. Seeding it here means the first
   // frame after loading already says which branch you are on.
@@ -96,6 +113,7 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
 
   bag.add({
     dispose: () => {
+      clearDecorations(app.store, GIT_SOURCE);
       app.store.set(STATUS_PATH, null);
       const rest = (app.store.get<{ id: string }[]>(STATUS_SEGMENTS) ?? [])
         .filter((s) => s.id !== 'git');
@@ -113,7 +131,10 @@ export function registerGit(app: TextUIApp, options: GitExtensionOptions): Dispo
  * - which this one is - does not have to choose between the two.
  */
 export function activate(app: TextUIApp, context: { root: string }): Disposable {
-  return registerGit(app, { root: context.root });
+  // Quietly. textide loads this by itself in a repository, and a panel that
+  // opens because of what a directory contains is an editor rearranging its
+  // own screen without being asked. `ctrl+g` brings it out.
+  return registerGit(app, { root: context.root, reveal: false });
 }
 
 export { safeStatus as readSafeStatus };

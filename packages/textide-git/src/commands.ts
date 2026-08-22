@@ -64,6 +64,25 @@ export function gitCommands(app: TextUIApp, options: CommandOptions): CommandDef
       run: async () => { await refresh(app, git); },
     },
     {
+      /*
+       * Show me git.
+       *
+       * Loading in a repository without being asked means the panel cannot
+       * open itself as well - an editor that rearranges its own screen because
+       * a directory happens to be a repository is doing too much. So it
+       * registers quietly and this is the key that brings it out, which is
+       * also the moment to make sure what it shows is current.
+       */
+      id: 'git.show',
+      title: 'Source Control',
+      category: 'Git',
+      slots: ['palette'],
+      run: async (_args: Record<string, unknown>, ctx: CommandContext) => {
+        ctx.store.set('$/ui/aside/visible', true);
+        await refresh(app, git);
+      },
+    },
+    {
       id: 'git.diff',
       title: 'Open Diff',
       category: 'Git',

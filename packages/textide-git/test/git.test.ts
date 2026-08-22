@@ -5,12 +5,13 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
-import { registerBuiltins } from '@textui/core';
+import { decorationsPath, registerBuiltins } from '@textui/core';
 import { registerDocuments } from '@textui/documents';
 import {
-  classify, codeOf, createGit, diffPath, diffUri, parseStatus, readDiff, readStatus,
-  registerGit, summarize, STATUS_PATH, SELECTED_PATH,
+  classify, codeOf, createGit, decorationsOf, diffPath, diffUri, parseStatus, readDiff,
+  readStatus, registerGit, summarize, GIT_SOURCE, STATUS_PATH, SELECTED_PATH,
 } from '../src/index.js';
+import type { Change, Status } from '../src/index.js';
 
 const run = promisify(execFile);
 
@@ -273,6 +274,93 @@ describe('loading and unloading', () => {
       .toBe(false);
 
     bag.dispose();
+    await git('checkout', '--', 'tracked.txt');
+    await t.unmount();
+  });
+});
+
+/**
+ * Git in the file tree.
+ *
+ * The explorer knows nothing about git; it draws whatever marks were published
+ * for a URI. So the whole of "show me what changed without leaving the file
+ * list" is a status turned into marks, and this is that turn.
+ */
+describe('marks on the tree', () => {
+  async function mounted() {
+    const t = await renderApp({
+      width: 100, height: 20, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => { registerBuiltins(app); registerDocuments(app); },
+    });
+    const quiet = async (): Promise<void> => {
+      for (let i = 0; i < 10; i++) { await t.settle(); t.advance(50); t.flush(); }
+    };
+    await quiet();
+    return { t, quiet };
+  }
+
+  const status = (changes: Partial<Change>[]): Status => ({
+    branch: 'main',
+    ahead: 0,
+    behind: 0,
+    clean: false,
+    changes: changes.map((c) => ({
+      path: '', index: ' ', work: ' ', staged: false, unstaged: false, untracked: false, ...c,
+    })) as Change[],
+  });
+
+  it('marks a file with the code git printed', () => {
+    const marks = decorationsOf(
+      status([{ path: 'a.txt', index: ' ', work: 'M', unstaged: true }]),
+      '/repo',
+    );
+    expect(marks['file:///repo/a.txt']).toEqual({ badge: '·M', tone: 'warning' });
+  });
+
+  it('carries it up to every folder above', () => {
+    const marks = decorationsOf(
+      status([{ path: 'src/deep/a.ts', index: 'A', work: ' ', staged: true }]),
+      '/repo',
+    );
+    // A change three levels down is invisible otherwise, and finding things
+    // you have not opened yet is what a file tree is for.
+    expect(marks['file:///repo/src']).toEqual({ badge: '·', tone: 'success' });
+    expect(marks['file:///repo/src/deep']).toEqual({ badge: '·', tone: 'success' });
+    expect(marks['file:///repo/src/deep/a.ts']?.badge).toBe('A·');
+  });
+
+  it('gives a folder the loudest of what is under it', () => {
+    const marks = decorationsOf(
+      status([
+        { path: 'src/staged.ts', index: 'A', work: ' ', staged: true },
+        { path: 'src/dirty.ts', index: ' ', work: 'M', unstaged: true },
+      ]),
+      '/repo',
+    );
+    expect(marks['file:///repo/src']?.tone).toBe('warning');
+  });
+
+  it('says nothing about a clean tree', () => {
+    expect(decorationsOf(status([]), '/repo')).toEqual({});
+    expect(decorationsOf(null, '/repo')).toEqual({});
+  });
+
+  it('publishes them whenever the status changes, and takes them back', async () => {
+    const { t, quiet } = await mounted();
+    await writeFile(join(dir, 'tracked.txt'), 'one\nchanged\n');
+    const bag = registerGit(t.app, { root: dir });
+    await quiet();
+
+    const published = (): Record<string, unknown> =>
+      t.app.store.get<Record<string, unknown>>(decorationsPath(GIT_SOURCE)) ?? {};
+    expect(Object.keys(published()).length, 'the working tree is dirty').toBeGreaterThan(0);
+
+    // Unloading git leaves no marks behind. A tree still showing what an
+    // unloaded extension thought is worse than a tree showing nothing.
+    bag.dispose();
+    await quiet();
+    expect(t.app.store.get(decorationsPath(GIT_SOURCE))).toBeFalsy();
+
     await git('checkout', '--', 'tracked.txt');
     await t.unmount();
   });

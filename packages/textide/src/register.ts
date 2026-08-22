@@ -127,6 +127,14 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+n', 'fs.newFile'],
     // The editor takes these while it has focus, because only it can put the
     // caret back. These are the same step from anywhere else.
+    /*
+     * And a second way to save, for a terminal that never passes the first.
+     *
+     * `ctrl+s` is XOFF to a terminal and "save the file" to the editor hosting
+     * one - VS Code keeps it for itself by default, so the key arrives
+     * nowhere. Nothing here can win that argument, so there is another key.
+     */
+    ['alt+s', 'file.save'],
     ['ctrl+z', 'edit.undo'],
     ['ctrl+y', 'edit.redo'],
     ['ctrl+e', 'file.edit'],

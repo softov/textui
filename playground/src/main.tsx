@@ -2,6 +2,8 @@ import {
   BUILTIN_SHELLS, BUILTIN_THEMES, createApp, registerBuiltins, renderToString, WRITER_KEY,
 } from '@textui/core';
 import { createNodeTerminal, createWriter } from '@textui/terminal';
+import { readFileSync } from 'node:fs';
+import { TILE_PATH, tileFrom } from './tile.js';
 import { PLAYGROUNDS, findPlayground, setupPlayground } from './registry.js';
 import { fixtures } from './data.js';
 
@@ -25,6 +27,8 @@ interface Options {
   ascii: boolean;
   mono: boolean;
   noAnimations: boolean;
+  /** A text file to tile with, for the pattern playground. */
+  tile?: string;
 }
 
 function parse(argv: string[]): Options {
@@ -53,11 +57,35 @@ function parse(argv: string[]): Options {
       case '--height': options.height = Number(argv[++i]); break;
       case '--theme': options.theme = argv[++i]; break;
       case '--shell': options.shell = argv[++i]; break;
+      case '--tile': options.tile = argv[++i]; break;
       default:
         if (!token.startsWith('-')) options.id = token;
     }
   }
   return options;
+}
+
+/**
+ * The tile named on the command line, if there was one.
+ *
+ * Read here rather than in the playground so a tile can be tried without
+ * touching any code, and so nothing under `src/` has to import `node:fs`.
+ * A file that cannot be read is worth saying so about and carrying on with
+ * the built-in tile - it is a playground, not a build.
+ */
+function seedTile(options: Options): Record<string, unknown> {
+  if (options.tile === undefined) return {};
+  try {
+    const tile = tileFrom(readFileSync(options.tile, 'utf8'), options.tile);
+    if (tile === null) {
+      process.stderr.write(`Tile file "${options.tile}" is empty. Using the built-in tile.\n`);
+      return {};
+    }
+    return { [TILE_PATH]: tile };
+  } catch (error) {
+    process.stderr.write(`Cannot read tile "${options.tile}": ${String(error)}\n`);
+    return {};
+  }
 }
 
 /** Two columns, the left one padded to the widest key. */
@@ -94,6 +122,7 @@ function help(): void {
     ['    --height N', 'Rows to render at.'],
     ['    --theme X', 'One of the themes below.'],
     ['    --shell Y', 'One of the shells below.'],
+    ['    --tile FILE', 'Tile the pattern playground with this text file.'],
     ['    --ascii', 'Pretend the terminal cannot draw Unicode.'],
     ['    --mono', 'Pretend the terminal has no colour.'],
     ['    --no-animations', 'Hold every animation on its first frame.'],
@@ -147,7 +176,7 @@ async function main(): Promise<void> {
         height: options.height,
         theme: options.theme ?? playground.theme ?? 'dark',
         capabilities: capabilityOverrides,
-        initialState: fixtures(),
+        initialState: { ...fixtures(), ...seedTile(options) },
       })}\n`,
     );
     return;
@@ -164,6 +193,9 @@ async function main(): Promise<void> {
     onBoot: (booted) => {
       registerBuiltins(booted);
       setupPlayground(booted, playground);
+      for (const [path, value] of Object.entries(seedTile(options))) {
+        booted.store.set(path as never, value);
+      }
 
       booted.commands.register({
         id: 'app.quit',

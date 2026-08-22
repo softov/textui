@@ -14,6 +14,7 @@ import { CapabilitiesPlayground } from './playgrounds/capabilities.js';
 import { AnimationPlayground } from './playgrounds/animation.js';
 import { StressPlayground } from './playgrounds/stress.js';
 import { ShellsPlayground } from './playgrounds/shells.js';
+import { PatternPlayground } from './playgrounds/pattern.js';
 import { Explorer } from './examples/explorer.js';
 import { registerFilesystem } from './examples/filesystem.js';
 import { jsonAdapter, registerDocuments } from '@textui/documents';
@@ -55,6 +56,14 @@ export const PLAYGROUNDS: Playground[] = [
     description: 'Flex, grid, scrolling and splitters. Resize while it runs.',
     exercises: ['layout', 'resizing'],
     node: () => h(LayoutPlayground, {}),
+  },
+  {
+    id: 'pattern',
+    title: 'Pattern',
+    description: 'A tile repeated across and down, under or over its content.',
+    exercises: ['repeat counts', 'layering', 'measurement'],
+    minSize: { width: 84, height: 24 },
+    node: () => h(PatternPlayground, {}),
   },
   {
     id: 'store',

@@ -38,6 +38,19 @@ export interface ResourceMetadata {
   [key: string]: unknown;
 }
 
+/**
+ * What a *resource* can have done to it - not what its provider implements.
+ *
+ * Per resource on purpose: a read-only mount, a file the user has no
+ * permission on, and something inherently immutable all come back the same
+ * shape, and a caller deciding whether to offer Delete should never have to
+ * know which of the three it is looking at.
+ *
+ * This is what to ask before calling; the registry method still throws if the
+ * answer changed in between. `stream` is the odd one - declarative only, no
+ * registry method reads it. It stays for a log provider to claim, and comes
+ * out if none does.
+ */
 export type ResourceCapability =
   | 'read' | 'write' | 'delete' | 'rename' | 'list' | 'watch' | 'stream';
 
@@ -104,22 +117,24 @@ export interface ResourceRegistry {
   /** True when `kind` is `ancestor` or specialises it. */
   kindMatches(kind: string, ancestor: string): boolean;
 
-  // Asymmetric with ResourceProvider, and deliberately so until someone
-  // decides otherwise: a provider may implement `delete`, `rename` and
-  // `watch`, but the registry forwards only these four. Anything wanting the
-  // other three has to reach the provider some other way, and there is no
-  // public path to one.
+  // The registry forwards every operation a provider can offer, so a caller
+  // never needs to reach past it to a provider - there is no public path to
+  // one, and a caller that found one would be hardcoding a scheme.
   //
-  // UNRESOLVED before commit: either add the three passthroughs, or leave it.
-  // docs/documents/viewers.md used to show `resources.delete?.(uri)`, which
-  // typechecked as `undefined` and silently did nothing - the Delete action
-  // appeared in the context menu and no file was ever deleted. The optional
-  // call is what hid it. If the passthroughs are added, that example can go
-  // back to the direct form.
+  // `list` and `watch` answer emptily when the provider cannot serve them;
+  // `read`, `write`, `delete` and `rename` throw. The split is intent: an
+  // absent listing is a fact about the resource, and an absent delete is a
+  // request that did not happen and must say so.
   stat(uri: ResourceURI): Promise<Resource | null>;
   list(uri: ResourceURI): Promise<Resource[]>;
   read(uri: ResourceURI): Promise<string | Uint8Array>;
   write(uri: ResourceURI, content: string | Uint8Array): Promise<void>;
+  /** Throws when the provider cannot. Ask `Resource.capabilities` first. */
+  delete(uri: ResourceURI): Promise<void>;
+  /** Within one scheme. Across two it throws - that is a copy and a delete. */
+  rename(from: ResourceURI, to: ResourceURI): Promise<void>;
+  /** A provider that cannot watch gives back a disposable that does nothing. */
+  watch(uri: ResourceURI, fn: (event: 'change' | 'create' | 'delete') => void): Disposable;
 
   viewersFor(kind: string): ResourceViewerDefinition[];
   editorsFor(kind: string): ResourceEditorDefinition[];

@@ -2,7 +2,8 @@ import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/p
 import { basename, dirname, extname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type {
-  Resource, ResourceAdapter, ResourceProvider, CommandContext, BindingPath,
+  Resource, ResourceAdapter, ResourceCapability, ResourceProvider, CommandContext,
+  BindingPath,
 } from '@textui/core';
 import { confirm, notify, prompt } from '@textui/core';
 
@@ -31,6 +32,26 @@ export function pathToUri(path: string): string {
 
 export function extensionOf(uri: string): string {
   return extname(uriToPath(uri)).toLowerCase();
+}
+
+/**
+ * The last segment of a URI, and a URI beside it under a new name.
+ *
+ * On the URI rather than on a path, so a rename asks the registry rather than
+ * the disk. `fs.delete` and `fs.rename` used to call `rm` and `rename` from
+ * `node:fs` on `uriToPath(uri)`, which is right only while `file:` is the
+ * only provider registered - the first remote one turns those into a wrong
+ * path or a throw.
+ */
+export function nameOf(uri: string): string {
+  const at = uri.lastIndexOf('/');
+  return decodeURIComponent(at === -1 ? uri : uri.slice(at + 1));
+}
+
+export function siblingOf(uri: string, name: string): string {
+  const at = uri.lastIndexOf('/');
+  const parent = at === -1 ? '' : uri.slice(0, at + 1);
+  return parent + encodeURIComponent(name);
 }
 
 export interface FilesystemOptions {
@@ -151,6 +172,26 @@ function targetOf(
   return typeof active === 'string' && active !== '' ? active : null;
 }
 
+/**
+ * Whether this resource can have this done to it, said before it is tried.
+ *
+ * The action is registered for `*` because a kind does not know what a
+ * provider allows - `readonly` is per resource, and one workspace can hold a
+ * writable file and a read-only mount. Asking here is what keeps Delete from
+ * being offered on something that will refuse it, and the registry still
+ * throws if the answer changes between the offer and the call.
+ */
+async function can(
+  ctx: CommandContext,
+  uri: string,
+  capability: ResourceCapability,
+): Promise<boolean> {
+  const resource = await ctx.app.resources.stat(uri);
+  if (resource?.capabilities.includes(capability) === true) return true;
+  notify(ctx.app, { tone: 'warning', message: `Cannot ${capability} ${nameOf(uri)}.` });
+  return false;
+}
+
 /** The directory a new entry lands in: the selection, or its parent. */
 async function containerOf(app: CommandContext['app'], uri: string): Promise<string> {
   const resource = await app.resources.stat(uri);
@@ -249,12 +290,13 @@ export function filesystemAdapter(options: FilesystemOptions = {}): ResourceAdap
             run: async (args: Record<string, unknown>, ctx: CommandContext) => {
               const uri = target(args, ctx);
               if (!uri) return;
-              const path = uriToPath(uri);
+              if (!(await can(ctx, uri, 'rename'))) return;
+              const was = nameOf(uri);
               const name = await prompt(ctx.app.layers, {
-                title: 'Rename', message: path, initialValue: basename(path),
+                title: 'Rename', message: uriToPath(uri), initialValue: was,
               });
-              if (!name || name === basename(path)) return;
-              await rename(path, join(dirname(path), name));
+              if (!name || name === was) return;
+              await ctx.app.resources.rename(uri, siblingOf(uri, name));
               notify(ctx.app, { tone: 'success', message: `Renamed to ${name}` });
             },
           },
@@ -266,18 +308,19 @@ export function filesystemAdapter(options: FilesystemOptions = {}): ResourceAdap
             run: async (args: Record<string, unknown>, ctx: CommandContext) => {
               const uri = target(args, ctx);
               if (!uri) return;
-              const path = uriToPath(uri);
+              if (!(await can(ctx, uri, 'delete'))) return;
+              const name = nameOf(uri);
               // Deleting is the one thing here that cannot be undone, so it is
               // the one thing that asks.
               const ok = await confirm(ctx.app.layers, {
                 title: 'Delete',
-                message: `Delete ${basename(path)}? This cannot be undone.`,
+                message: `Delete ${name}? This cannot be undone.`,
                 confirmLabel: 'Delete',
                 tone: 'danger',
               });
               if (!ok) return;
-              await rm(path, { recursive: true, force: true });
-              notify(ctx.app, { tone: 'success', message: `Deleted ${basename(path)}` });
+              await ctx.app.resources.delete(uri);
+              notify(ctx.app, { tone: 'success', message: `Deleted ${name}` });
             },
           },
         ]

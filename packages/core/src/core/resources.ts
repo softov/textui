@@ -170,6 +170,53 @@ export class Resources implements ResourceRegistry {
     return provider.write(uri, content);
   }
 
+  /**
+   * Destructive calls throw when the provider cannot serve them, the same way
+   * `write` does. A silent no-op is the failure mode worth designing against:
+   * a Delete that appears in the menu and removes nothing is worse than one
+   * that says it cannot.
+   *
+   * Whether to *offer* the action is a different question, answered before
+   * the call by `Resource.capabilities` - which is per resource rather than
+   * per provider, so a read-only mount, a file without permission and an
+   * inherently immutable resource are all the same shape. The throw is for
+   * the race that asking first cannot close: the remote goes away, the
+   * permission changes, between the offer and the call.
+   */
+  async delete(uri: ResourceURI): Promise<void> {
+    const provider = this.provider(uri);
+    if (!provider.delete) throw new Error(`[textui] "${schemeOf(uri)}:" cannot delete`);
+    return provider.delete(uri);
+  }
+
+  /**
+   * A rename is within one provider. Two schemes is a move between providers,
+   * which is a copy and a delete and belongs above a registry that dispatches
+   * on a single scheme by construction.
+   */
+  async rename(from: ResourceURI, to: ResourceURI): Promise<void> {
+    const scheme = schemeOf(from);
+    if (schemeOf(to) !== scheme) {
+      throw new Error(
+        `[textui] cannot rename across schemes: "${scheme}:" to "${schemeOf(to)}:"`,
+      );
+    }
+    const provider = this.provider(from);
+    if (!provider.rename) throw new Error(`[textui] "${scheme}:" cannot rename`);
+    return provider.rename(from, to);
+  }
+
+  /**
+   * Watching follows `list` rather than `write`: a provider that cannot watch
+   * gets a disposable that does nothing, because "I will never tell you about
+   * a change" is a truthful answer to an optional question. Making every
+   * caller guard a subscription would buy nothing.
+   */
+  watch(uri: ResourceURI, fn: (event: 'change' | 'create' | 'delete') => void): Disposable {
+    const provider = this.provider(uri);
+    return provider.watch?.(uri, fn) ?? toDisposable(() => {});
+  }
+
   viewersFor(kind: string): ResourceViewerDefinition[] {
     const specific = this.viewers
       .filter((v) => !v.fallback && v.kinds.some((k) => this.kindMatches(kind, k)))

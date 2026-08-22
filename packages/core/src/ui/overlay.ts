@@ -359,8 +359,14 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
         // the level underneath is a list of one. Backing out to it reads as
         // "escape did nothing", and the second escape - the one that would
         // close it - is spent leaving a screen nobody asked to see.
-        if (pending && !openAt) back();
-        else onClose?.();
+        if (pending && !openAt) { back(); return true; }
+        // Whatever a highlighted choice previewed has to be put back on the
+        // way out, and `null` is how the command is told to undo it - only it
+        // knows what it changed. `back()` did that, so closing instead of
+        // backing has to do it too, or escaping a theme picker leaves the
+        // theme it was merely showing you.
+        pending?.arg.preview?.(null);
+        onClose?.();
         return true;
       }
       if (event.name === 'left' && pending && query === '' && !openAt) { back(); return true; }

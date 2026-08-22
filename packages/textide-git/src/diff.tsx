@@ -1,11 +1,13 @@
 import {
   ScrollThumb, chorded, defineComponent, h, sliceColumns, useFocus, useInput, useMeasure,
-  useState, useStoreValue, viewportRows,
+  useRuntime, useState, useStoreValue, viewportRows,
 } from '@textui/core';
 import type {
   BindingPath, BoxProps, ComponentDefinition, RenderOutput, StyleColor,
 } from '@textui/core';
 import { useDocument } from '@textui/documents';
+import { parseHunks } from './hunks.js';
+import { diffPath } from './provider.js';
 
 /**
  * A diff.
@@ -132,6 +134,28 @@ export function scrollDiff(current: number, delta: number, max: number): number 
   return Math.max(0, Math.min(max, current + delta));
 }
 
+/**
+ * Which hunk a row of the *diff* is in - not a row of the file.
+ *
+ * Counting `@@` lines at or above the row is the whole rule, and it is the
+ * same rule in both layouts once the rows are the right list.
+ */
+export function hunkOfLine(lines: string[], row: number): number {
+  let index = -1;
+  for (let i = 0; i <= row && i < lines.length; i++) {
+    if (classify(lines[i] as string) === 'hunk') index++;
+  }
+  return Math.max(0, index);
+}
+
+export function hunkOfPair(pairs: DiffPair[], row: number): number {
+  let index = -1;
+  for (let i = 0; i <= row && i < pairs.length; i++) {
+    if ((pairs[i] as DiffPair).full?.kind === 'hunk') index++;
+  }
+  return Math.max(0, index);
+}
+
 const TONE: Record<Row, StyleColor | undefined> = {
   add: 'success',
   remove: 'danger',
@@ -142,6 +166,11 @@ const TONE: Record<Row, StyleColor | undefined> = {
 
 export const GitDiff = defineComponent<GitDiffProps>('GitDiff', (props) => {
   const { uri = null, value, mode, autoFocus, scrollbar = true, ...rest } = props;
+  const runtime = useRuntime();
+  const app = runtime.app();
+  // The path this diff is of, for the commands that act on it. The viewer is
+  // opened on a `git:diff/<path>` resource, so the URI already says.
+  const path = uri !== null ? diffPath(uri) : null;
   const doc = useDocument(uri);
   const measured = useMeasure();
   const focus = useFocus({ autoFocus });
@@ -169,6 +198,29 @@ export const GitDiff = defineComponent<GitDiffProps>('GitDiff', (props) => {
 
   useInput((event) => {
     if (chorded(event)) return false;
+
+    /*
+     * `s` stages what you are looking at, `u` takes it back.
+     *
+     * Plain letters, because a diff is a viewer and has no text to type into -
+     * and the hunk is the one the top of the view is sitting on, which is the
+     * one a person means when they scrolled to it.
+     */
+    if (event.name === 's' || event.name === 'u') {
+      if (path === null) return false;
+      const { hunks } = parseHunks(text);
+      if (hunks.length === 0) return false;
+      const index = layout === 'split'
+        ? hunkOfPair(pairs, first)
+        : hunkOfLine(lines, first);
+      void app?.execute('git.stageHunk', {
+        path,
+        hunk: index,
+        ...(event.name === 'u' ? { reverse: true } : {}),
+      });
+      return true;
+    }
+
     const to = (delta: number): boolean => {
       setTop(scrollDiff(first, delta, maxTop));
       return true;

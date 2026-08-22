@@ -9,7 +9,8 @@ import { decorationsPath, lineMarksFor, registerBuiltins } from '@textui/core';
 import { registerDocuments } from '@textui/documents';
 import {
   classify, codeOf, createGit, decorationsOf, diffPath, diffUri, parseStatus, readDiff,
-  readStatus, registerGit, summarize, marksOf, pairsOf,
+  readStatus, registerGit, summarize, marksOf, pairsOf, parseHunks, patchFor, hunkAt,
+  hunkOfLine, hunkOfPair,
   DIFF_MODE, GIT_SOURCE, STATUS_PATH, SELECTED_PATH,
 } from '../src/index.js';
 import type { Change, Status } from '../src/index.js';
@@ -504,5 +505,159 @@ describe('two ways to read a diff', () => {
 
     bag.dispose();
     await t.unmount();
+  });
+});
+
+/**
+ * One hunk at a time.
+ *
+ * A working copy usually holds two or three unrelated edits and a commit
+ * should hold one of them. Cutting a hunk out of a diff is string work, so it
+ * is tested as string work - and then once against a real repository, because
+ * whether `git apply` accepts what we built is not a question strings answer.
+ */
+describe('staging a hunk', () => {
+  async function mounted() {
+    const t = await renderApp({
+      width: 100, height: 20, shell: 'workbench', theme: 'workbench',
+      onBoot: (app) => { registerBuiltins(app); registerDocuments(app); },
+    });
+    const quiet = async (): Promise<void> => {
+      for (let i = 0; i < 10; i++) { await t.settle(); t.advance(50); t.flush(); }
+    };
+    await quiet();
+    return { t, quiet };
+  }
+
+  const DIFF = [
+    'diff --git a/f.txt b/f.txt',
+    'index 111..222 100644',
+    '--- a/f.txt',
+    '+++ b/f.txt',
+    '@@ -1,2 +1,3 @@',
+    ' one',
+    '+added',
+    ' two',
+    '@@ -10 +11,2 @@',
+    '-gone',
+    '+back',
+    '+and more',
+    '',
+  ].join('\n');
+
+  it('splits a diff into its header and its hunks', () => {
+    const diff = parseHunks(DIFF);
+    expect(diff.preamble).toEqual([
+      'diff --git a/f.txt b/f.txt', 'index 111..222 100644', '--- a/f.txt', '+++ b/f.txt',
+    ]);
+    expect(diff.hunks).toHaveLength(2);
+    expect(diff.hunks[0]).toMatchObject({ start: 1, count: 3 });
+    expect(diff.hunks[1]).toMatchObject({ start: 11, count: 2 });
+  });
+
+  it('hands one back as a patch git can place', () => {
+    const patch = patchFor(parseHunks(DIFF), 1);
+    // The file header comes with it - a patch without `--- a/…` is a patch git
+    // cannot place - and it ends with a newline, or `apply` rejects it.
+    expect(patch).toContain('--- a/f.txt');
+    expect(patch).toContain('@@ -10 +11,2 @@');
+    expect(patch).not.toContain('+added');
+    expect(patch?.endsWith('\n')).toBe(true);
+  });
+
+  it('says nothing about a hunk that is not there', () => {
+    expect(patchFor(parseHunks(DIFF), 9)).toBeNull();
+    expect(patchFor(parseHunks(''), 0)).toBeNull();
+  });
+
+  it('finds the hunk a line falls in, or the next one below it', () => {
+    const { hunks } = parseHunks(DIFF);
+    expect(hunkAt(hunks, 2)).toBe(0);
+    // In unchanged code between two hunks: the one a person means is the next
+    // change below them, not none at all.
+    expect(hunkAt(hunks, 7)).toBe(1);
+    expect(hunkAt(hunks, 11)).toBe(1);
+    expect(hunkAt(hunks, 900)).toBe(1);
+  });
+
+  it('stages one edit out of two, against a real repository', async () => {
+    // Its own repository, and a file long enough that two edits are two hunks:
+    // with three lines of context either side, edits closer than that merge
+    // into one and there is nothing to choose between.
+    const solo = await mkdtemp(join(tmpdir(), 'textide-hunks-'));
+    const at = async (...args: string[]): Promise<void> => {
+      await run('git', args, { cwd: solo });
+    };
+    await at('init', '-b', 'main');
+    await at('config', 'user.email', 'test@example.com');
+    await at('config', 'user.name', 'Test');
+    const twenty = Array.from({ length: 20 }, (_, i) => `line ${i + 1}`);
+    await writeFile(join(solo, 'f.txt'), `${twenty.join('\n')}\n`);
+    await at('add', '.');
+    await at('commit', '-m', 'first');
+
+    const edited = [...twenty];
+    edited[0] = 'FIRST EDIT';
+    edited[19] = 'SECOND EDIT';
+    await writeFile(join(solo, 'f.txt'), `${edited.join('\n')}\n`);
+
+    const { t, quiet } = await mounted();
+    const bag = registerGit(t.app, { root: solo });
+    await quiet();
+
+    await t.app.execute('git.stageHunk', { path: 'f.txt', hunk: 0 });
+    await quiet();
+
+    const staged = (await run('git', ['diff', '--cached', '--no-color'], { cwd: solo })).stdout;
+    expect(staged, 'the first edit is in the index').toContain('FIRST EDIT');
+    expect(staged, 'and the second is still only in the tree').not.toContain('SECOND EDIT');
+
+    const change = t.app.store.get<{ changes: { staged: boolean; unstaged: boolean }[] }>(
+      STATUS_PATH,
+    )?.changes[0];
+    expect(change, 'staged and dirty at once').toMatchObject({ staged: true, unstaged: true });
+
+    // And back out again, which is the same patch reversed.
+    await t.app.execute('git.stageHunk', { path: 'f.txt', hunk: 0, reverse: true });
+    await quiet();
+    const after = (await run('git', ['diff', '--cached', '--no-color'], { cwd: solo })).stdout;
+    expect(after.trim(), 'the index is empty again').toBe('');
+
+    bag.dispose();
+    await t.unmount();
+    await rm(solo, { recursive: true, force: true });
+  }, 30_000);
+});
+
+describe('which hunk you are looking at', () => {
+  const rows = [
+    'diff --git a/f.txt b/f.txt',   // 0
+    '--- a/f.txt',                   // 1
+    '+++ b/f.txt',                   // 2
+    '@@ -1,2 +1,3 @@',               // 3  hunk 0
+    ' one',                          // 4
+    '+added',                        // 5
+    '@@ -10 +11,2 @@',               // 6  hunk 1
+    '-gone',                         // 7
+  ];
+
+  it('counts the hunk headers above the row', () => {
+    // Before the first header there is no hunk yet, and the answer a person
+    // means is still the first one.
+    expect(hunkOfLine(rows, 0)).toBe(0);
+    expect(hunkOfLine(rows, 4)).toBe(0);
+    expect(hunkOfLine(rows, 5)).toBe(0);
+    expect(hunkOfLine(rows, 6)).toBe(1);
+    expect(hunkOfLine(rows, 7)).toBe(1);
+  });
+
+  it('says the same thing about a side-by-side row', () => {
+    const pairs = pairsOf(rows);
+    // A hunk header spans both columns, so it is a `full` row, and the rule is
+    // the same rule once the rows are the right list.
+    const headers = pairs.filter((p) => p.full?.kind === 'hunk').length;
+    expect(headers).toBe(2);
+    expect(hunkOfPair(pairs, pairs.length - 1)).toBe(1);
+    expect(hunkOfPair(pairs, 0)).toBe(0);
   });
 });

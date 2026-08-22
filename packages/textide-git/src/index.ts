@@ -27,12 +27,17 @@ import type { Status } from './git.js';
 
 export { createGit, parseStatus, readStatus, readDiff, readBranches, isRepository, GitError, EMPTY_STATUS } from './git.js';
 export type { Git, GitOptions, Change, Status } from './git.js';
-export { GitDiff, classify, pairsOf, trimTrailing, scrollDiff, DIFF_MODE, DIFF_COMPONENTS } from './diff.js';
+export {
+  GitDiff, classify, pairsOf, trimTrailing, scrollDiff, hunkOfLine, hunkOfPair,
+  DIFF_MODE, DIFF_COMPONENTS,
+} from './diff.js';
 export type { DiffMode, DiffCell, DiffPair } from './diff.js';
 export { GitChanges, codeOf, toneOf, summarize, GIT_ROOT, STATUS_PATH, SELECTED_PATH } from './changes.js';
 export { gitCommands, refresh } from './commands.js';
 export { GIT_SOURCE, decorationsOf } from './decorate.js';
 export { GUTTER_SOURCE, marksOf, gutterFor } from './gutter.js';
+export { parseHunks, patchFor, hunkAt } from './hunks.js';
+export type { Hunk, Diff } from './hunks.js';
 export {
   SCHEME, DIFF_PREFIX, diffUri, diffPath, createGitProvider, safeStatus,
   GIT_KINDS, GIT_VIEWERS,

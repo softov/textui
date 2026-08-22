@@ -1,3 +1,6 @@
+import { rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { CommandContext, CommandDefinition, TextUIApp } from '@textui/core';
 import { confirm, notify, prompt } from '@textui/core';
 import { closeDocument } from '@textui/documents';
@@ -6,6 +9,7 @@ import { safeStatus } from './provider.js';
 import { diffUri } from './provider.js';
 import { SELECTED_PATH, STATUS_PATH, STATUS_SEGMENTS, summarize } from './changes.js';
 import { DIFF_MODE } from './diff.js';
+import { parseHunks, patchFor } from './hunks.js';
 
 /**
  * What git can be asked to do.
@@ -155,6 +159,64 @@ export function gitCommands(app: TextUIApp, options: CommandOptions): CommandDef
         await git('restore', '--staged', '--', path);
         await refresh(ctx.app, git);
         notify(ctx.app, { message: `Unstaged ${path}` });
+      },
+    },
+    {
+      /*
+       * One hunk, rather than the whole file.
+       *
+       * A working copy usually holds two or three unrelated edits and a commit
+       * should hold one of them. Git can already do this - `apply --cached`
+       * puts a patch in the index and nowhere else - so this cuts one hunk out
+       * of the diff and hands it back as a patch of its own.
+       *
+       * Through a file rather than a pipe: `git apply` takes a path, and a
+       * temporary file is a smaller thing to get right than a stdin contract
+       * threaded through an injectable `exec`.
+       */
+      id: 'git.stageHunk',
+      title: 'Stage Hunk',
+      category: 'Git',
+      slots: ['palette'],
+      args: [
+        { name: 'path', type: 'string' as const },
+        { name: 'hunk', type: 'number' as const, description: 'Which one, counting from zero' },
+        { name: 'reverse', type: 'boolean' as const, description: 'Take it back out again' },
+      ],
+      run: async (args: Record<string, unknown>, ctx: CommandContext) => {
+        const path = target(args, ctx);
+        if (!path) return;
+
+        const reverse = args.reverse === true;
+        // Staged hunks are read out of the index, not the working tree: taking
+        // one back out means diffing what is already there.
+        const raw = reverse
+          ? await git.lenient('diff', '--no-color', '--cached', '--', path)
+          : await git.lenient('diff', '--no-color', '--', path);
+        const diff = parseHunks(raw);
+        const at = typeof args.hunk === 'number' ? args.hunk : 0;
+        const patch = patchFor(diff, at);
+        if (!patch) {
+          notify(ctx.app, { message: 'Nothing to stage there.' });
+          return;
+        }
+
+        const file = join(tmpdir(), `textide-hunk-${process.pid}-${diff.hunks.length}.patch`);
+        try {
+          await writeFile(file, patch);
+          await git('apply', '--cached', ...(reverse ? ['--reverse'] : []), '--unidiff-zero', file);
+          await refresh(ctx.app, git);
+          notify(ctx.app, {
+            tone: 'success',
+            message: reverse ? 'Hunk unstaged.' : 'Hunk staged.',
+          });
+        } catch (error) {
+          // A hunk that will not apply is the interesting case: the file moved
+          // under the diff, so say so rather than leaving a silent no-op.
+          notify(ctx.app, { tone: 'danger', message: `Could not apply: ${String(error)}` });
+        } finally {
+          await rm(file, { force: true });
+        }
       },
     },
     {

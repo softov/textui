@@ -1,6 +1,15 @@
 import type { Rect } from '../types/geometry.js';
 import type { Cell, CellBuffer } from '../types/cells.js';
 import { COLOR_DEFAULT, packColor, type PackedColor } from './color.js';
+
+/** One cell as it is stored: colours packed, nothing allocated to read it. */
+export interface PackedCell {
+  char: string;
+  fg: PackedColor;
+  bg: PackedColor;
+  attrs: number;
+  link: string | undefined;
+}
 import { graphemeWidth } from '../util/text.js';
 
 /** Internal cell flags, kept out of the public attrs bitfield. */
@@ -60,6 +69,26 @@ export class Buffer implements CellBuffer {
       attrs: this.attrs[i] as number,
       link: this.links[i],
       continuation: ((this.flags[i] as number) & FLAG_CONTINUATION) !== 0,
+    };
+  }
+
+  /**
+   * The same cell, as the numbers it is actually stored as.
+   *
+   * `get` is the friendly shape: it unpacks both colours into `Color` values,
+   * which is right for a test or a caller reasoning about colour and wrong for
+   * a loop over a region - packing them straight back is an allocation and a
+   * round trip per cell. This is what the renderer's inner loops use.
+   */
+  packedAt(x: number, y: number): PackedCell | undefined {
+    if (!this.inBounds(x, y)) return undefined;
+    const i = this.index(x, y);
+    return {
+      char: this.chars[i] as string,
+      fg: this.fg[i] as number,
+      bg: this.bg[i] as number,
+      attrs: this.attrs[i] as number,
+      link: this.links[i],
     };
   }
 

@@ -423,19 +423,27 @@ export function paintTree(
 function washRegion(buffer: Buffer, rect: Rect, color: PackedColor, strength: number): void {
   const amount = Math.max(0, Math.min(1, strength));
 
+  /*
+   * Straight at the cells, not through `get()`.
+   *
+   * `Buffer.get` builds a friendly object - unpacking both colours into `Color`
+   * values - and this immediately packs them back to compare and mix. That is
+   * an allocation and a round trip per cell, and a scrim covers a whole dialog
+   * area: an 80x30 modal is 2,400 objects per frame to answer a question the
+   * packed integers already answer. `get()` stays the public shape; the
+   * renderer's inner loop is not the place for it.
+   */
   for (let y = rect.y; y < rect.y + rect.height; y++) {
     for (let x = rect.x; x < rect.x + rect.width; x++) {
-      const cell = buffer.get(x, y);
-      if (!cell) continue;
+      const at = buffer.packedAt(x, y);
+      if (!at) continue;
 
-      const fg = packColor(cell.fg);
-      const bg = packColor(cell.bg);
       buffer.put(
-        x, y, cell.char,
-        fg === COLOR_DEFAULT ? fg : mix(fg, color, amount),
-        bg === COLOR_DEFAULT ? bg : mix(bg, color, amount),
-        fg === COLOR_DEFAULT || bg === COLOR_DEFAULT ? cell.attrs | ATTR_DIM : cell.attrs,
-        cell.link,
+        x, y, at.char,
+        at.fg === COLOR_DEFAULT ? at.fg : mix(at.fg, color, amount),
+        at.bg === COLOR_DEFAULT ? at.bg : mix(at.bg, color, amount),
+        at.fg === COLOR_DEFAULT || at.bg === COLOR_DEFAULT ? at.attrs | ATTR_DIM : at.attrs,
+        at.link,
       );
     }
   }

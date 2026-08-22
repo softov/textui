@@ -622,6 +622,15 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
      */
     if (event.ctrl && (key === 'c' || key === 'C')) return selected ? copy() : false;
     if (key === 'escape' && selected) { setAnchor(null); return true; }
+    /*
+     * And escape with nothing selected is how you leave.
+     *
+     * Tab is a character in an editor - see below - so the key that moves to
+     * the next control everywhere else cannot be the one that moves out of
+     * this one. Escape is free here: there is no selection to drop, and a
+     * dialog above this has its own layer and its own escape.
+     */
+    if (key === 'escape') { focus.move('next'); return true; }
 
     if (readonly) return false;
     // Undo before anything that edits, and before the application's own
@@ -646,15 +655,25 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     if (key === 'delete') { del(); return true; }
     if (key === 'enter') { insert('\n'); return true; }
     /*
-     * Tab is how you leave a control, and an editor that swallows it is an
-     * editor you cannot get out of without knowing a second key. With a
-     * selection it is indent, because a selection is a thing you made on
-     * purpose and escape drops it - the way out is still two keys, and it is
-     * the same two keys as everywhere else.
+     * Tab is a tab.
+     *
+     * It was the key that left the control, which is right for a list and
+     * wrong for the one control whose whole job is typing: an editor where the
+     * indent key moves focus is an editor you cannot indent in. Escape is the
+     * way out instead, above.
+     *
+     * With a selection it indents the lines it covers rather than replacing
+     * them, and shift is outdent either way - on the selection, or on the line
+     * the caret is on.
+     *
+     * A chord is not this: `ctrl+tab` is the application asking for the next
+     * file over the top of the editor, and a branch that read `tab` alone
+     * swallowed it.
      */
-    if (key === 'tab') {
-      if (!selected) return false;
-      shiftLines(event.shift === true);
+    if (key === 'tab' && !chorded(event)) {
+      if (event.shift === true) { shiftLines(true); return true; }
+      if (selected) { shiftLines(false); return true; }
+      insert(indent);
       return true;
     }
     /*

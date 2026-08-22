@@ -123,9 +123,54 @@ describe('the caret has a column', () => {
     await t.unmount();
   });
 
-  it('leaves tab alone, so focus can get out', async () => {
-    // A second focusable, because tab wrapping to the only control there is
-    // would pass whether or not the editor swallowed the key.
+});
+
+describe('tab is a tab', () => {
+  it('inserts an indent where the caret is', async () => {
+    const { t, read } = await editing('alpha\nbeta\n');
+    t.press('tab');
+    await settle(t);
+    // Not a focus move: the one control whose job is typing cannot lose the
+    // indent key to navigation.
+    expect(read()).toBe('  alpha\nbeta\n');
+    await t.unmount();
+  });
+
+  it('indents what is selected rather than replacing it', async () => {
+    const { t, read } = await editing('alpha\nbeta\n');
+    t.press('shift+down');
+    t.press('tab');
+    await settle(t);
+    expect(read()).toBe('  alpha\n  beta\n');
+    await t.unmount();
+  });
+
+  it('takes an indent back with shift, selection or no selection', async () => {
+    const { t, read } = await editing('    alpha\n    beta\n');
+    t.press('shift+tab');
+    await settle(t);
+    expect(read()).toBe('  alpha\n    beta\n');
+
+    t.press('shift+down');
+    t.press('shift+tab');
+    await settle(t);
+    expect(read()).toBe('alpha\n  beta\n');
+    await t.unmount();
+  });
+
+  it('leaves a chord alone, because that one is aimed past it', async () => {
+    const { t, read } = await editing('alpha\n');
+    t.press('ctrl+tab');
+    await settle(t);
+    // Whatever the application bound it to gets it; what must not happen is
+    // two spaces appearing in the file.
+    expect(read()).toBe('alpha\n');
+    await t.unmount();
+  });
+
+  it('and escape is the way out', async () => {
+    // A second focusable, because moving on with only one control there is
+    // would pass whether or not the editor let go of the keyboard.
     let value = 'ab\n';
     const t = await renderApp({
       width: 40, height: 8,
@@ -143,10 +188,10 @@ describe('the caret has a column', () => {
     t.tab(); t.flush();
     const inside = t.focused()?.id;
 
-    t.tab(); t.flush();
+    t.press('escape'); t.flush();
     await settle(t);
-    expect(value, 'tab must not type').toBe('ab\n');
-    expect(t.focused()?.id, 'tab must move on').not.toBe(inside);
+    expect(value, 'and it typed nothing on the way').toBe('ab\n');
+    expect(t.focused()?.id, 'escape must move on').not.toBe(inside);
     await t.unmount();
   });
 });

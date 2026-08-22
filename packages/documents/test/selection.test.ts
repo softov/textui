@@ -261,7 +261,7 @@ describe('indenting', () => {
     await t.unmount();
   });
 
-  it('still lets tab out of the editor when nothing is selected', async () => {
+  it('indents the caret line when nothing is selected', async () => {
     let value = 'ab\n';
     const t = await renderApp({
       width: 40, height: 8,
@@ -278,10 +278,11 @@ describe('indenting', () => {
     await settle(t);
     t.tab(); t.flush();
     const inside = t.focused()?.id;
-    t.tab(); t.flush();
+    t.press('tab'); t.flush();
     await settle(t);
-    expect(value).toBe('ab\n');
-    expect(t.focused()?.id).not.toBe(inside);
+    // Tab is a tab in here, second focusable or not. Escape is the way out.
+    expect(value).toBe('  ab\n');
+    expect(t.focused()?.id, 'and the keyboard stayed in the editor').toBe(inside);
     await t.unmount();
   });
 });

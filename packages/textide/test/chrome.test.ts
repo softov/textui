@@ -316,8 +316,10 @@ describe('the command palette', () => {
     expect(bar(), 'the bar spans the pane').toBeGreaterThan(3);
 
     // Leaving it and coming back is one press each way, because the pane
-    // contributes no stop of its own.
-    t.tab(); t.flush();
+    // contributes no stop of its own. Escape is the way out of an editor -
+    // tab is a tab in there - and shift+tab is the way back, because what it
+    // steps through is unchanged.
+    t.press('escape'); t.flush();
     expect(t.store.get('$/focus/scope'), 'one press leaves').not.toBe('pane.main');
     t.shiftTab(); t.flush();
     expect(t.store.get('$/focus/scope'), 'and one press returns').toBe('pane.main');

@@ -2,12 +2,40 @@
   "name": "@textui/testing",
   "version": "0.1.0",
   "description": "Headless testing harness for TextUI - semantic queries, input, resizing, time",
-  "type": "module",
+  "keywords": [
+    "terminal",
+    "tui",
+    "testing",
+    "test-harness",
+    "headless",
+    "vitest",
+    "snapshot"
+  ],
+  "homepage": "https://softov.github.io/textui/",
+  "bugs": {
+    "url": "https://github.com/softov/textui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softov/textui.git",
+    "directory": "packages/testing"
+  },
   "license": "MIT",
+  "author": "Softov <softov@brbyte.com>",
+  "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -15,8 +43,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@textui/core": "workspace:*",
-    "@textui/terminal": "workspace:*"
+    "@textui/core": "workspace:^",
+    "@textui/terminal": "workspace:^"
   },
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  }
 }

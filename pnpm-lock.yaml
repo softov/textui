@@ -100,10 +100,10 @@ importers:
   packages/cli:
     dependencies:
       '@textui/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@textui/terminal':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../terminal
 
   packages/core: {}
@@ -111,48 +111,48 @@ importers:
   packages/documents:
     dependencies:
       '@textui/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
     devDependencies:
       '@textui/terminal':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../terminal
       '@textui/testing':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../testing
 
   packages/terminal:
     dependencies:
       '@textui/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
 
   packages/testing:
     dependencies:
       '@textui/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@textui/terminal':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../terminal
 
   packages/textide:
     dependencies:
       '@textui/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@textui/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../documents
       '@textui/terminal':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../terminal
       '@textui/textide-git':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../textide-git
     devDependencies:
       '@textui/testing':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../testing
       esbuild:
         specifier: ^0.25.0
@@ -161,17 +161,17 @@ importers:
   packages/textide-git:
     dependencies:
       '@textui/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@textui/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../documents
     devDependencies:
       '@textui/terminal':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../terminal
       '@textui/testing':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../testing
 
   playground:

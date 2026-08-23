@@ -2,12 +2,40 @@
   "name": "@textui/textide-git",
   "version": "0.1.0",
   "description": "Git for textide: status, diff, stage, commit and branches, as a loadable extension",
-  "type": "module",
+  "keywords": [
+    "terminal",
+    "tui",
+    "git",
+    "diff",
+    "ide",
+    "extension",
+    "textide"
+  ],
+  "homepage": "https://softov.github.io/textui/",
+  "bugs": {
+    "url": "https://github.com/softov/textui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softov/textui.git",
+    "directory": "packages/textide-git"
+  },
   "license": "MIT",
+  "author": "Softov <softov@brbyte.com>",
+  "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -15,12 +43,14 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@textui/core": "workspace:*",
-    "@textui/documents": "workspace:*"
+    "@textui/core": "workspace:^",
+    "@textui/documents": "workspace:^"
   },
   "devDependencies": {
-    "@textui/testing": "workspace:*",
-    "@textui/terminal": "workspace:*"
+    "@textui/testing": "workspace:^",
+    "@textui/terminal": "workspace:^"
   },
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  }
 }

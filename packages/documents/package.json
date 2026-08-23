@@ -2,12 +2,40 @@
   "name": "@textui/documents",
   "version": "0.1.0",
   "description": "Document buffers, resource viewers and content adapters for TextUI",
-  "type": "module",
+  "keywords": [
+    "terminal",
+    "tui",
+    "editor",
+    "documents",
+    "text-buffer",
+    "syntax-highlighting",
+    "viewer"
+  ],
+  "homepage": "https://softov.github.io/textui/",
+  "bugs": {
+    "url": "https://github.com/softov/textui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softov/textui.git",
+    "directory": "packages/documents"
+  },
   "license": "MIT",
+  "author": "Softov <softov@brbyte.com>",
+  "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -15,11 +43,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@textui/core": "workspace:*"
+    "@textui/core": "workspace:^"
   },
   "devDependencies": {
-    "@textui/testing": "workspace:*",
-    "@textui/terminal": "workspace:*"
+    "@textui/testing": "workspace:^",
+    "@textui/terminal": "workspace:^"
   },
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  }
 }

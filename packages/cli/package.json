@@ -2,13 +2,46 @@
   "name": "@textui/cli",
   "version": "0.1.0",
   "description": "TextUI developer CLI - init, add, create, doctor - and primitives for building your own",
-  "type": "module",
+  "keywords": [
+    "terminal",
+    "tui",
+    "cli",
+    "scaffold",
+    "generator",
+    "init",
+    "component-registry"
+  ],
+  "homepage": "https://softov.github.io/textui/",
+  "bugs": {
+    "url": "https://github.com/softov/textui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softov/textui.git",
+    "directory": "packages/cli"
+  },
   "license": "MIT",
-  "files": ["dist", "README.md"],
-  "bin": { "textui": "./dist/bin.js" },
+  "author": "Softov <softov@brbyte.com>",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "textui": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./app": { "types": "./dist/app.d.ts", "import": "./dist/app.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./app": {
+      "types": "./dist/app.d.ts",
+      "import": "./dist/app.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -16,8 +49,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@textui/core": "workspace:*",
-    "@textui/terminal": "workspace:*"
+    "@textui/core": "workspace:^",
+    "@textui/terminal": "workspace:^"
   },
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  }
 }

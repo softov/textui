@@ -2,12 +2,42 @@
   "name": "@textui/textide",
   "version": "0.1.0",
   "description": "An IDE that runs in a terminal, built on TextUI",
-  "type": "module",
+  "keywords": [
+    "terminal",
+    "tui",
+    "ide",
+    "editor",
+    "text-editor",
+    "console",
+    "textui"
+  ],
+  "homepage": "https://softov.github.io/textui/",
+  "bugs": {
+    "url": "https://github.com/softov/textui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softov/textui.git",
+    "directory": "packages/textide"
+  },
   "license": "MIT",
-  "bin": { "textide": "./dist/main.js" },
-  "files": ["dist", "README.md"],
+  "author": "Softov <softov@brbyte.com>",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "textide": "./dist/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
@@ -17,14 +47,16 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@textui/core": "workspace:*",
-    "@textui/documents": "workspace:*",
-    "@textui/textide-git": "workspace:*",
-    "@textui/terminal": "workspace:*"
+    "@textui/core": "workspace:^",
+    "@textui/documents": "workspace:^",
+    "@textui/textide-git": "workspace:^",
+    "@textui/terminal": "workspace:^"
   },
   "devDependencies": {
-    "@textui/testing": "workspace:*",
+    "@textui/testing": "workspace:^",
     "esbuild": "^0.25.0"
   },
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  }
 }

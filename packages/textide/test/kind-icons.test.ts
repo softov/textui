@@ -2,8 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { renderApp } from '@textui/testing';
+import { render, renderApp } from '@textui/testing';
 import { loadWorkspace, registerTextide } from '../src/index.js';
+import { Tree, h } from '@textui/core';
 import { FULL_ICONS } from '../src/icons.js';
 
 /**
@@ -24,6 +25,8 @@ beforeAll(async () => {
   await writeFile(join(dir, 'main.ts'), 'export const a = 1;\n');
   await writeFile(join(dir, 'data.yaml'), 'a: 1\n');
   await writeFile(join(dir, 'LICENSE'), 'MIT\n');
+  await mkdir(join(dir, 'docs'));
+  await writeFile(join(dir, 'src', 'inner.ts'), 'const a = 1;\n');
 });
 
 afterAll(async () => {
@@ -122,6 +125,76 @@ describe('what the registry answers', () => {
     // caller's vocabulary, since which glyphs a terminal can draw is known
     // where the terminal is.
     expect(t.app.resources.appearanceOf({ kind: 'nothing.at.all' })).toEqual({});
+    await t.unmount();
+  });
+});
+
+/**
+ * Where a row starts.
+ *
+ * Everything at one depth begins in one column, whatever kind of thing it is.
+ * A file that starts one column right of the folder above it reads as being
+ * *inside* that folder, which is a lie the eye believes before it reads a
+ * single name - and it is what happened the moment files grew icons: the
+ * explorer puts the folder glyph in the twisty's place, so a file's icon
+ * landed in the column after it.
+ */
+describe.each(SIZES)('alignment at $width x $height', (size) => {
+  /** The column a row's first non-space character is in, inside the sidebar. */
+  function startOf(lines: string[], name: string): number {
+    const line = (lines.find((l) => l.includes(name)) ?? '').slice(0, 30);
+    // Past the frame's own border column.
+    return line.slice(1).search(/\S/);
+  }
+
+  it('starts every sibling in the same column, folder or file', async () => {
+    const t = await open(size);
+    const lines = t.lines();
+
+    const folder = startOf(lines, 'src');
+    expect(startOf(lines, 'docs'), 'two folders').toBe(folder);
+    for (const file of ['README.md', 'main.ts', 'data.yaml', 'LICENSE']) {
+      expect(startOf(lines, file), `${file} against a folder`).toBe(folder);
+    }
+    await t.unmount();
+  });
+
+  it('still indents what is actually inside a folder', async () => {
+    const t = await open(size);
+    t.focus(t.getByRole('tree').id);
+    // onto `src`, then open it
+    t.press('down');
+    t.press('right');
+    for (let i = 0; i < 8; i++) { await t.settle(); t.advance(50); t.flush(); }
+
+    const lines = t.lines();
+    expect(t.hasText('inner.ts'), 'the child is showing').toBe(true);
+    expect(startOf(lines, 'inner.ts'), 'one level in')
+      .toBeGreaterThan(startOf(lines, 'src'));
+    await t.unmount();
+  });
+});
+
+describe('a tree where something expandable also has an icon', () => {
+  it('reserves the second column on every row, including the blank ones', async () => {
+    // A chevron *and* a mark is a legitimate tree, and then two columns are
+    // needed - but they have to be there on every row, or the rows without an
+    // icon slide back left and the misalignment returns wearing a hat.
+    const t = await render(
+      h(Tree, {
+        nodes: [
+          { id: 'a', label: 'branch', icon: '*', hasChildren: true, children: [] },
+          { id: 'b', label: 'leaf' },
+        ],
+        autoFocus: true,
+      }),
+      { width: 30, height: 6 },
+    );
+    for (let i = 0; i < 4; i++) { await t.settle(); t.flush(); }
+
+    const at = (name: string): number =>
+      (t.lines().find((l) => l.includes(name)) ?? '').indexOf(name);
+    expect(at('leaf')).toBe(at('branch'));
     await t.unmount();
   });
 });

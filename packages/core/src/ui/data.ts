@@ -487,13 +487,37 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
         Math.max(0, Math.min(index - Math.floor(shown / 2), rows.length - shown)) + shown,
       );
 
+  /*
+   * One glyph column, and a second only when something needs both.
+   *
+   * A row that cannot expand has no twisty, so its icon goes in the twisty's
+   * place - otherwise a file sits one column right of a folder at the same
+   * depth and reads as being inside it. That was exactly the bug: an explorer
+   * that puts the folder glyph *in* the twisty (which is what `twistyClosed`
+   * is for) had its files pushed two columns clear of their siblings the
+   * moment they grew icons of their own.
+   *
+   * A second column appears only for a tree where something expandable also
+   * has an icon - a chevron *and* a folder mark - and then it is reserved on
+   * every row, including the ones that leave it blank, because a column that
+   * comes and go by row is the same misalignment wearing a different hat.
+   * Measured over every row rather than the visible ones, so scrolling cannot
+   * shift the layout under you.
+   */
+  const iconColumn = rows.some((r) => r.expandable && r.node.icon !== undefined);
+
   return h('box', { id: focus.id, role: 'tree', direction: 'column', ...rest },
     ...window.map((row) => {
       const active = row.node.id === currentId;
       const twisty = row.expandable
         ? (row.expanded ? (twistyOpen ?? theme.glyphs.chevronDown)
           : (twistyClosed ?? theme.glyphs.chevronRight))
-        : ' ';
+        : (iconColumn ? ' ' : row.node.icon ?? ' ');
+      // The marker carries the node's colour only when it *is* the node's
+      // icon; a twisty is structure and takes the row's own colour.
+      const markerTone = !row.expandable && !iconColumn && row.node.tone !== undefined
+        ? TONE[row.node.tone]
+        : undefined;
 
       return h('box', {
         key: row.node.id,
@@ -509,8 +533,16 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
           onSelect?.(row.node.id, row.node);
         },
       },
-        h('text', { content: ' '.repeat(row.depth * indent) + twisty }),
-        row.node.icon ? h('text', { content: row.node.icon, fg: row.node.tone ? TONE[row.node.tone] : undefined }) : null,
+        h('text', {
+          content: ' '.repeat(row.depth * indent) + twisty,
+          ...(markerTone !== undefined && !(active && focus.focused) ? { fg: markerTone } : {}),
+        }),
+        iconColumn
+          ? h('text', {
+              content: row.node.icon ?? ' ',
+              ...(row.node.tone !== undefined ? { fg: TONE[row.node.tone] } : {}),
+            })
+          : null,
         h('text', { content: row.node.label, flex: 1, truncate: 'end' }),
         row.node.meta ? h('text', { content: row.node.meta, fg: active ? undefined : 'muted' }) : null,
       );

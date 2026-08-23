@@ -1,5 +1,6 @@
 import {
-  Row, chorded, defineComponent, useCommand, useFocus, useInput, useRuntime, useState,
+  Row, argumentOf, chorded, defineComponent, useCommand, useFocus, useInput, useRuntime,
+  useState,
 } from '@textui/core';
 import type { KeyEvent, MenuItem, RenderOutput, TextUIApp } from '@textui/core';
 
@@ -55,17 +56,6 @@ export const MENUS: MenuSpec[] = [
 const DROPDOWN = 'menubar.dropdown';
 const DROPDOWN_PANEL = 'menubar.dropdown.panel';
 
-/** The choices an argument offers, whether it states them or computes them. */
-function choicesOf(command: { args?: readonly { name: string; choices?: unknown }[] }):
-  { name: string; choices: string[] } | null {
-  const arg = (command.args ?? []).find((a) => a.choices !== undefined);
-  if (!arg) return null;
-  const raw = typeof arg.choices === 'function'
-    ? (arg.choices as () => unknown[])()
-    : (arg.choices as unknown[]);
-  return { name: arg.name, choices: (raw ?? []).map(String) };
-}
-
 function itemsFor(app: TextUIApp, spec: MenuSpec): MenuItem[] {
   return spec.items.flatMap((id, i) => {
     if (id === null) return [];
@@ -81,8 +71,10 @@ function itemsFor(app: TextUIApp, spec: MenuSpec): MenuItem[] {
       // Undefined for everything that is not a switch, which is what keeps
       // the mark's column out of a menu that has none.
       checked: app.commands.isChecked(id),
-      // A command that will ask a question gets a chevron, as in the palette.
-      ...((command.args ?? []).some((a) => a.choices) ? { children: [] } : {}),
+      // A command that will ask a question gets a chevron, as in the palette -
+      // and it is the palette's own rule, so the chevron and the hand-off in
+      // `choose` cannot disagree about which commands those are.
+      ...(argumentOf(command) ? { children: [] } : {}),
     }];
   });
 }
@@ -171,7 +163,13 @@ export const MenuBar: (props: Record<string, never>) => RenderOutput =
       // A command that needs an answer goes to the palette, which is the one
       // place that already knows how to ask - and the one place that can
       // search the answer rather than making you scroll it.
-      if (command && choicesOf(command)) {
+      //
+      // Asked of the declaration, never by running the `choices` function.
+      // A function may be async - `panel.openWith` has to `stat` the resource
+      // before it knows what can open it - and the copy this used to keep
+      // called `.map` on the promise it got back, which is a type error
+      // reported against the keystroke that opened the menu.
+      if (command && argumentOf(command)) {
         void app?.execute('app.palette', { at: command.id }, 'menu');
         return;
       }

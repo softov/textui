@@ -525,7 +525,6 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   );
 });
 
-/** The first argument a command declares choices for, if any. */
 /**
  * The argument the palette should ask about, if there is one.
  *
@@ -533,8 +532,16 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
  * Only the first kind used to count, which meant a command declaring "I need a
  * title" ran with no title and did nothing - the one failure mode that looks
  * exactly like a broken key.
+ *
+ * Exported because "will this command ask something?" is a question other
+ * chrome has to answer too - a menu row wants a chevron and wants to hand off
+ * rather than run - and the menu bar had written its own version that
+ * *called* the `choices` function to find out. A function is allowed to be
+ * async, so that answer was sometimes a promise, and the copy went on to call
+ * `.map` on it. Whether a command will ask is a property of its declaration;
+ * nothing has to be resolved to know it.
  */
-function argumentOf(
+export function argumentOf(
   command: CommandDefinition,
   collected: Record<string, unknown> = {},
 ): ArgSpec | undefined {

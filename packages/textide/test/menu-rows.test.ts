@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
 import { loadWorkspace, registerTextide } from '../src/index.js';
+import { rowsFor } from '../src/chrome/menubar.js';
 
 /**
  * View > Open With, which is the one menu row whose choices are async.
@@ -50,52 +51,74 @@ async function open(size: { width: number; height: number }) {
   return { t, quiet };
 }
 
-describe.each(SIZES)('View > Open With at $width x $height', (size) => {
-  it('opens by keyboard with nothing selected, and says nothing about types', async () => {
-    const { t, quiet } = await open(size);
+/**
+ * A menu row whose command resolves its choices asynchronously.
+ *
+ * `panel.openWith` has to `stat` the resource before it can say what can open
+ * it. It is not in a menu any more - the View menu was reorganised and it
+ * lives in the palette and the file actions now - so the row is built here
+ * from an explicit spec, which is the thing that broke and the thing that
+ * would break again for the next command like it.
+ */
+describe('rowsFor, on a command with async choices', () => {
+  const SPEC = { id: 'test', label: 'Test', items: ['panel.openWith'] };
 
-    t.press('alt+v');
-    await quiet();
-    expect(t.hasText('Open With'), 'the row is there').toBe(true);
-
-    // First row of the View menu.
-    t.press('enter');
-    await quiet();
-
-    expect(t.errors(), 'no file open is a state, not a fault').toEqual([]);
+  it('builds the row without resolving anything', async () => {
+    const { t } = await open(SIZES[0]);
+    // The failure was here: the old code *called* the choices function to
+    // decide whether the command asks a question, then mapped the promise.
+    const rows = rowsFor(t.app, SPEC);
+    expect(rows.map((r) => r.item.label)).toEqual(['Open With…']);
+    // And it knows the row asks something, so it draws a chevron.
+    expect(rows[0]?.item.children).toEqual([]);
     await t.unmount();
   });
 
-  it('opens by mouse with nothing selected', async () => {
+  it.each([true, false])('runs without throwing, with a file open: %s', async (withFile) => {
+    const { t, quiet } = await open(SIZES[0]);
+    if (withFile) {
+      t.app.store.set('$/ui/editor/uri', `file://${join(dir, 'a.md')}`);
+      await quiet();
+    }
+
+    rowsFor(t.app, SPEC)[0]?.run(t.app);
+    await quiet();
+
+    expect(t.errors(), 'no file open is a state, not a fault').toEqual([]);
+    // A command with choices is asked in the palette, not in a submenu the
+    // menu built for itself.
+    expect(t.app.layers.entries().map((e) => e.id)).toContain('palette');
+    await t.unmount();
+  });
+});
+
+describe.each(SIZES)('a menu row by keyboard and by mouse at $width x $height', (size) => {
+  it('opens a View row by keyboard without a type error', async () => {
+    const { t, quiet } = await open(size);
+
+    t.press('alt+v');
+    await quiet();
+    expect(t.hasText('Command Palette'), 'the menu is open').toBe(true);
+
+    t.press('enter');
+    await quiet();
+    expect(t.errors()).toEqual([]);
+    await t.unmount();
+  });
+
+  it('opens a View row by mouse without a type error', async () => {
     const { t, quiet } = await open(size);
 
     t.press('alt+v');
     await quiet();
 
-    const row = t.lines().findIndex((line) => line.includes('Open With'));
+    const row = t.lines().findIndex((line) => line.includes('Theme'));
     expect(row, 'the row is drawn somewhere').toBeGreaterThan(-1);
-    const column = (t.lines()[row] as string).indexOf('Open With');
+    const column = (t.lines()[row] as string).indexOf('Theme');
     t.click(column + 1, row);
     await quiet();
 
     expect(t.errors()).toEqual([]);
-    await t.unmount();
-  });
-
-  it('still hands off to the palette when a file is open', async () => {
-    const { t, quiet } = await open(size);
-    t.app.store.set('$/ui/editor/uri', `file://${join(dir, 'a.md')}`);
-    await quiet();
-
-    t.press('alt+v');
-    await quiet();
-    t.press('enter');
-    await quiet();
-
-    expect(t.errors()).toEqual([]);
-    // The palette is where a command with choices gets asked - the menu does
-    // not build a submenu of its own.
-    expect(t.app.layers.entries().map((e) => e.id)).toContain('palette');
     await t.unmount();
   });
 });

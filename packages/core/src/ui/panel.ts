@@ -393,10 +393,19 @@ export const ResourcePanel = defineComponent<ResourcePanelProps>('ResourcePanel'
    *
    * Only on a *change*: a panel appearing on screen is not a reason to take
    * the keyboard off whatever the person was already using.
+   *
+   * And only for the *same resource*. This used to compare renderer ids and
+   * nothing else, so walking a tree from a markdown file to a JSON one was a
+   * swap - the renderer changed because the file did - and the keyboard left
+   * the tree in the middle of browsing it. A different view of one thing is a
+   * request; a different thing is just the next thing.
    */
-  const previous = useRef<string | null>(null);
-  const swapped = previous.current !== null && previous.current !== (chosen?.id ?? null);
-  if (chosen) previous.current = chosen.id;
+  const previous = useRef<{ uri: string | null; renderer: string | null } | null>(null);
+  const before = previous.current;
+  const swapped = before !== null
+    && before.uri === uri
+    && before.renderer !== (chosen?.id ?? null);
+  if (chosen) previous.current = { uri, renderer: chosen.id };
 
   // Or because a command asked outright, which is the same thing arriving a
   // frame earlier: "open this and edit it" writes the choice before this panel

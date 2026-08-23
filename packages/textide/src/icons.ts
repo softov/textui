@@ -46,11 +46,14 @@ export const FULL_ICONS = {
   // nothing - so an arrow spends the one cell that could carry both on the one
   // meaning that is already obvious from the row moving.
   //
-  // There is no folder glyph that is one cell wide and safe: the Unicode ones
-  // live outside the BMP and measure two. A box that has something in it and a
-  // box that has been opened is what fits.
-  folder: '⊞',
-  folderOpen: '⊟',
+  // U+1F5C0 and U+1F5C1, which are actual folders rather than a box standing
+  // in for one. They live outside the BMP - hence the override at the BMP
+  // tier - but they are one cell: East Asian Width Neutral, text presentation,
+  // no emoji variant unless something asks with VS16. `stringWidth` used to
+  // call them two, because `1F300..1F64F` was one blanket range, and that is
+  // what the note here used to say was a property of the glyphs.
+  folder: '🗀',
+  folderOpen: '🗁',
   file: '▤',
   markdown: '¶',
   code: '⌗',
@@ -61,6 +64,12 @@ export const FULL_ICONS = {
   revert: '↺',
   undo: '↶',
   redo: '↷',
+  // Not the scissors: U+2702 is a dingbat, and a dingbat is the thing a
+  // console font is most likely not to have. These are all Technical block.
+  cut: '⌧',
+  copy: '⧉',
+  paste: '⎘',
+  selectAll: '∀',
   close: '✕',
   edit: '✎',
   read: '◉',
@@ -171,6 +180,10 @@ export const ASCII_ICONS: IconSet = {
   revert: '<',
   undo: '[',
   redo: ']',
+  cut: 'X',
+  copy: 'C',
+  paste: 'V',
+  selectAll: 'A',
   close: 'x',
   edit: 'e',
   read: 'o',

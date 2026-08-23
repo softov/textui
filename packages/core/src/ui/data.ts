@@ -671,6 +671,14 @@ export interface CodeViewerProps extends BoxProps {
   /** Mark the caret line. Off for a plain excerpt. */
   showCaret?: boolean;
   tabWidth?: number;
+  /**
+   * Take the keyboard on mount.
+   *
+   * Wanted by a viewer that is the only thing in a dialog: a modal traps focus
+   * but does not hand it to anything, so a scrollable body nobody focused is a
+   * body nobody can scroll.
+   */
+  autoFocus?: boolean;
 }
 
 export interface CodeViewerPosition {
@@ -707,11 +715,11 @@ export const CodeViewer = defineComponent<CodeViewerProps>('CodeViewer', (props)
   const {
     content, lineNumbers = true, startLine = 1, visibleRows, highlight = [],
     tokens, language, kind, uri, line, onLineChange, onPosition,
-    scrollbar = true, showCaret = true, tabWidth = 4, disabled, ...rest
+    scrollbar = true, showCaret = true, tabWidth = 4, disabled, autoFocus, ...rest
   } = props;
 
   const theme = useTheme();
-  const focus = useFocus({ disabled });
+  const focus = useFocus({ disabled, ...(autoFocus ? { autoFocus } : {}) });
   const measured = useMeasure();
 
   const text = useMemo(() => expandTabs(content, tabWidth), [content, tabWidth]);

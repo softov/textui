@@ -5,10 +5,11 @@ import type {
 } from '@textui/core';
 import {
   downsample, findMatches, h, chorded, defineComponent, MARK_GLYPH, MARK_TONE, matchAt, mix,
-  packColor, ScrollThumb,
-  sliceColumns, stepMatch, stringWidth, unpackColor, useCapabilities, useClipboard, useEffect,
+  packColor, ScrollThumb, serviceKey,
+  sliceColumns, stepMatch, stringWidth, unpackColor, useCapabilities, useClipboard,
+  useEffect,
   useFind, useFocus, useHighlight, useInput, useLineMarks, useMeasure, useMemo, usePanelState,
-  usePanelStatus, useRef, useState, useStoreValue, useTheme, viewportRows,
+  usePanelStatus, useRef, useRuntime, useState, useStoreValue, useTheme, viewportRows,
 } from '@textui/core';
 import { useDocument } from '../use-document.js';
 import { EMPTY_HISTORY, record, redo, undo, type History, type Snapshot } from '../history.js';
@@ -199,6 +200,28 @@ export function horizontalWindow(options: {
   return Math.min(left, maxLeft);
 }
 
+/**
+ * What only the focused editor can do.
+ *
+ * Cut, copy and paste need the *selection*, and a selection is an anchor and a
+ * caret inside one mounted component - there is nothing in the store for a
+ * command to read. So the editor offers them while it has the keyboard, and a
+ * menu row or a palette entry asks for them by key rather than reaching in.
+ *
+ * While it has the keyboard, not merely while it is mounted: in a split, two
+ * editors are on screen and exactly one of them is what "copy" means.
+ */
+export interface EditActions {
+  cut(): boolean;
+  copy(): boolean;
+  paste(): boolean;
+  selectAll(): boolean;
+  /** Whether anything is selected, for a menu that greys out what would no-op. */
+  hasSelection(): boolean;
+}
+
+export const EditActionsKey = serviceKey<EditActions>('textui.documents.edit');
+
 /** What a marked line looks like. ASCII, so every terminal draws one cell. */
 /**
  * How much of the mark's colour the line itself gets.
@@ -341,6 +364,11 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
   const measured = useMeasure();
   const focus = useFocus({ autoFocus });
   const clipboard = useClipboard();
+  // `useRuntime().app()`, not `useApp()`: the latter throws when there is no
+  // application, and an editor has to mount in a static render and in a test
+  // harness that never built one. Everything below already treats it as
+  // optional.
+  const app = useRuntime().app();
 
   // With a document, the buffer is the document. Without one it is here, so a
   // standalone editor works without a caller wiring state back in - an editor
@@ -569,6 +597,49 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     return true;
   };
 
+  const pasteIn = (): boolean => {
+    if (readonly) return false;
+    const pasted = clipboard.read();
+    if (!pasted) return false;
+    insert(pasted);
+    return true;
+  };
+
+  const selectAll = (): boolean => {
+    const last = lines.length - 1;
+    setAnchor({ line: 0, column: 0 });
+    setCursor({ line: last, column: (lines[last] ?? '').length });
+    setGoal((lines[last] ?? '').length);
+    return true;
+  };
+
+  /*
+   * Offered while this editor has the keyboard.
+   *
+   * The closures are new on every render, so what goes into the registry is a
+   * stable object reading a ref - otherwise this would re-provide on every
+   * keystroke, and every re-provide is a disposal racing an insertion.
+   */
+  const latest = useRef<EditActions | null>(null);
+  latest.current = {
+    cut: cutOut,
+    copy,
+    paste: pasteIn,
+    selectAll,
+    hasSelection: () => selection !== null,
+  };
+  useEffect(() => {
+    if (!focus.focused || !app) return;
+    const offered = app.services.provide(EditActionsKey, {
+      cut: () => latest.current?.cut() ?? false,
+      copy: () => latest.current?.copy() ?? false,
+      paste: () => latest.current?.paste() ?? false,
+      selectAll: () => latest.current?.selectAll() ?? false,
+      hasSelection: () => latest.current?.hasSelection() ?? false,
+    });
+    return () => { offered.dispose(); };
+  }, [focus.focused, app]);
+
   const shiftLines = (out: boolean): void => {
     const from = selection ? selection.start.line : at.line;
     const to = selection ? selection.end.line : at.line;
@@ -728,13 +799,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     }
 
     // Select all, and copy, work on a file nobody may write.
-    if (event.ctrl && (key === 'a' || key === 'A')) {
-      const last = lines.length - 1;
-      setAnchor({ line: 0, column: 0 });
-      setCursor({ line: last, column: (lines[last] ?? '').length });
-      setGoal((lines[last] ?? '').length);
-      return true;
-    }
+    if (event.ctrl && (key === 'a' || key === 'A')) return selectAll();
     /*
      * ctrl+c is quit in a terminal application, and copy in an editor, and
      * both are right. It is copy only while something is selected, so the
@@ -770,12 +835,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     }
     if (event.ctrl && (key === 'y' || key === 'Y')) { stepForward(); return true; }
     if (event.ctrl && (key === 'x' || key === 'X')) return cutOut();
-    if (event.ctrl && (key === 'v' || key === 'V')) {
-      const pasted = clipboard.read();
-      if (!pasted) return false;
-      insert(pasted);
-      return true;
-    }
+    if (event.ctrl && (key === 'v' || key === 'V')) return pasteIn();
     // A bracketed paste arrives as one event carrying the whole text, which is
     // the only reason a hundred-line paste is one undo step and not a hundred.
     if (key === 'paste' && event.char) { insert(event.char); return true; }

@@ -46,10 +46,11 @@ async function open(size: Size) {
 }
 
 describe.each(SIZES.map((s) => [`${s.width}x${s.height}`, s] as const))('the chrome at %s', (_n, size) => {
-  it('puts File, View and Help in the titlebar', async () => {
+  it('puts File, Edit, View and Help in the titlebar', async () => {
     const t = await open(size);
     const bar = t.lines().slice(0, 3).join(' ');
     expect(bar).toContain('File');
+    expect(bar).toContain('Edit');
     expect(bar).toContain('View');
     expect(bar).toContain('Help');
     expect(bar).toContain('ctrl+p');
@@ -175,8 +176,10 @@ describe('the command palette', () => {
     it(`tab reaches the menu bar at ${size.width}x${size.height}`, async () => {
       const t = await open(size);
       const seen: string[] = [];
-      for (let i = 0; i < 4; i++) { t.tab(); t.flush(); seen.push(t.focused()?.id ?? 'none'); }
-      expect(seen.slice(0, 3)).toEqual(['menubar.file', 'menubar.view', 'menubar.help']);
+      for (let i = 0; i < 5; i++) { t.tab(); t.flush(); seen.push(t.focused()?.id ?? 'none'); }
+      expect(seen.slice(0, 4)).toEqual([
+        'menubar.file', 'menubar.edit', 'menubar.view', 'menubar.help',
+      ]);
       await t.unmount();
     });
 
@@ -185,7 +188,7 @@ describe('the command palette', () => {
       t.press('f10'); t.flush();
       expect(t.focused()?.id).toBe('menubar.file');
       t.press('right'); t.flush();
-      expect(t.focused()?.id).toBe('menubar.view');
+      expect(t.focused()?.id).toBe('menubar.edit');
       t.press('left'); t.flush();
       expect(t.focused()?.id).toBe('menubar.file');
       // Wrapping, so the bar has no dead end.
@@ -198,7 +201,8 @@ describe('the command palette', () => {
   it('enter opens the focused menu, and an arrow then walks the open one', async () => {
     const t = await open(SIZES[0]!);
     t.press('f10'); t.flush();
-    t.press('right'); t.flush();
+    // File, Edit, View - the third label along.
+    t.press('right'); t.press('right'); t.flush();
     t.press('enter');
     for (let i = 0; i < 4; i++) await t.settle();
     expect(t.hasText('Layout')).toBe(true);
@@ -379,19 +383,23 @@ describe('the command palette', () => {
     };
     const open_layers = (): number => t.app.layers.entries('floating').length;
 
-    expect(highlighted()).toBe('Open With…');
+    expect(highlighted()).toBe('Command Palette');
     expect(open_layers()).toBe(1);
 
     const seen: string[] = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       t.press('down');
       for (let j = 0; j < 2; j++) await t.settle();
       seen.push(highlighted());
       // The menu must still be the one menu that is open.
       expect(open_layers(), 'down must not reopen or close the dropdown').toBe(1);
     }
+    // The sidebar panels come off the surface registry, so this list grows
+    // when an extension mounts one - and the check says which you are looking
+    // at, which is half of what the list is for.
     expect(seen).toEqual([
-      'Theme', 'Layout', 'Sidebar Panel', 'Highlight Changed Lines', 'Command Palette',
+      'Theme', 'Layout', 'Sidebar Panel', '✓ Explorer', 'Extensions',
+      'Highlight Changed Lines',
     ]);
     await t.unmount();
   });
@@ -680,11 +688,11 @@ describe('where focus starts and how many stops there are', () => {
       if (seen.includes(id)) break;
       seen.push(id);
     }
-    // The three menus and the tree. Nothing is open, so `main` has no control
+    // The four menus and the tree. Nothing is open, so `main` has no control
     // in it - and the pane is a scope now rather than a stop of its own, so it
     // contributes nothing on its own account.
-    expect(seen).toHaveLength(4);
-    expect(seen.filter((id) => id.startsWith('menubar.'))).toHaveLength(3);
+    expect(seen).toHaveLength(5);
+    expect(seen.filter((id) => id.startsWith('menubar.'))).toHaveLength(4);
     expect(seen).toContain(explorer);
     expect(seen).not.toContain('pane.main');
 
@@ -778,9 +786,9 @@ describe('what is actually in the tab order', () => {
 
     expect(t.hasText('Title'), 'the document rendered').toBe(true);
 
-    // Three menus, the tree, and the document. Not the fences inside it.
+    // Four menus, the tree, and the document. Not the fences inside it.
     const stops = t.app.focus.order();
-    expect(stops).toHaveLength(5);
+    expect(stops).toHaveLength(6);
     expect(stops.filter((id) => t.app.focus.scopeOf(id) === 'pane.main')).toHaveLength(1);
 
     await t.unmount();
@@ -911,7 +919,10 @@ describe('the keyboard shortcuts', () => {
     t.press(chord);
     await quiet(t);
     expect(t.hasText('Keyboard Shortcuts')).toBe(true);
-    expect(t.hasText('Command Palette'), 'and lists what the keys run').toBe(true);
+    // The first section, not one halfway down: the sheet is longer than its
+    // window now and opens at the top, which is what the scrolling below is
+    // about.
+    expect(t.hasText('New File'), 'and lists what the keys run').toBe(true);
 
     t.press('escape');
     await quiet(t);
@@ -960,6 +971,33 @@ describe('the keyboard shortcuts', () => {
     expect(sheet).not.toContain('alt+5');
     // Two is still two, because both are worth knowing.
     expect(sheet).toContain('ctrl+p, ctrl+k');
+    await t.unmount();
+  });
+
+  /**
+   * A sheet longer than the window it is in.
+   *
+   * It fitted once, so nothing focused it - a modal traps focus but hands it
+   * to nothing, and the arrows went on reaching whatever had the keyboard
+   * before. Two thirds of the keys were then unreachable in the one place
+   * that exists to list them.
+   */
+  it.each([
+    { width: 96, height: 22 },
+    { width: 130, height: 34 },
+  ])('can be scrolled to the end at $width x $height', async (size) => {
+    const t = await open(size);
+    t.press('f1');
+    await quiet(t);
+    expect(t.hasText('New File'), 'opens at the top').toBe(true);
+
+    for (let i = 0; i < 40; i++) t.press('down');
+    await quiet(t);
+    expect(t.hasText('New File'), 'and moved off it').toBe(false);
+    expect(t.hasText('Keyboard Shortcuts'), 'the last section is reachable').toBe(true);
+
+    t.press('escape');
+    await quiet(t);
     await t.unmount();
   });
 

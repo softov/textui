@@ -23,6 +23,31 @@ describe('stringWidth', () => {
     expect(graphemeWidth('👩‍💻')).toBe(2);
   });
 
+  /**
+   * The pictograph blocks are mostly wide, and the exceptions are the useful
+   * ones.
+   *
+   * `1F300..1F64F` was one range, so U+1F5C0 FOLDER measured two. Unicode says
+   * East Asian Width Neutral and a terminal following wcwidth draws it in one,
+   * so every row containing it came out a column short - and the icon set had
+   * ruled out the only decent folder glyphs on the strength of it.
+   */
+  it('counts the neutral pictographs as one cell', () => {
+    expect(stringWidth('🗀'), 'U+1F5C0 FOLDER').toBe(1);
+    expect(stringWidth('🗁'), 'U+1F5C1 OPEN FOLDER').toBe(1);
+    expect(stringWidth('🗎'), 'U+1F5CE DOCUMENT').toBe(1);
+    expect(stringWidth('🖿'), 'U+1F5BF BLACK FOLDER').toBe(1);
+    // Still wide, and in the same block: the fix is a table, not a hole.
+    expect(stringWidth('🙂'), 'U+1F642 is wide').toBe(2);
+    expect(stringWidth('🎉'), 'U+1F389 is wide').toBe(2);
+  });
+
+  it('makes a neutral symbol wide when it is asked to be an emoji', () => {
+    // VS16 is the request. Without it these are text-presentation symbols,
+    // which is exactly why they are one cell.
+    expect(stringWidth('🗀\uFE0F')).toBe(2);
+  });
+
   it('ignores combining marks', () => {
     expect(stringWidth('é')).toBe(1);
   });

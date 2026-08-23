@@ -15,7 +15,17 @@ export class Services implements ServiceContainer {
 
   provide<T>(key: ServiceKey<T>, value: T): Disposable {
     this.values.set(key.id, value);
-    return toDisposable(() => this.values.delete(key.id));
+    return toDisposable(() => {
+      // Only if nothing has replaced it since.
+      //
+      // Two providers for one key overlap whenever one mounts before the other
+      // unmounts - which is the ordinary case for anything provided by the
+      // *focused* control, since focus arrives at the new one before it leaves
+      // the old. Deleting unconditionally took the live provider out along
+      // with the stale one, and left the key answering `undefined` while
+      // something was still very much providing it.
+      if (this.values.get(key.id) === value) this.values.delete(key.id);
+    });
   }
 
   provideLazy<T>(key: ServiceKey<T>, factory: () => T): Disposable {

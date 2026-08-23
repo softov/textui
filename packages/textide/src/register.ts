@@ -187,6 +187,10 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['ctrl+p', 'app.palette'],
     ['ctrl+k', 'app.palette'],
     ['ctrl+s', 'file.save'],
+    // Only where a keyboard protocol distinguishes it from `ctrl+s`; the
+    // File menu is the route that always works.
+    ['ctrl+shift+s', 'file.saveAs'],
+    ['ctrl+o', 'file.open'],
     ['ctrl+w', 'file.close'],
     /*
      * Find, and step through what it found.
@@ -221,6 +225,15 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     ['alt+s', 'file.save'],
     ['ctrl+z', 'edit.undo'],
     ['ctrl+y', 'edit.redo'],
+    /*
+     * Cut, copy and paste are the editor's own keys while it has focus - it
+     * is the only thing that knows where the caret should end up - and these
+     * are the same act from anywhere else, which is what the menu rows and
+     * the palette entries run.
+     */
+    ['ctrl+x', 'edit.cut'],
+    ['ctrl+v', 'edit.paste'],
+    ['ctrl+a', 'edit.selectAll'],
     ['ctrl+e', 'file.edit'],
     /*
      * Walking the strip, without going to it.
@@ -273,6 +286,7 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     // because the first is discoverable and the second is fast.
     ['f10', 'menu.focus'],
     ['alt+f', 'menu.file'],
+    ['alt+e', 'menu.edit'],
     ['alt+v', 'menu.view'],
     ['alt+h', 'menu.help'],
   ] as const) {

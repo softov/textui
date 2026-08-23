@@ -1,9 +1,13 @@
 import type {
   SurfaceName, CommandDefinition, CommandContext, TextUIApp, BindingPath, ThemeGlyphs,
 } from '@textui/core';
-import { FIND_QUERY, normalizeStroke, notify, prompt, setQuery, stepFind } from '@textui/core';
 import {
-  canRedoDocument, canUndoDocument, getDocument, isDocumentDirty, redoDocument,
+  FIND_QUERY, confirm, nameOf, normalizeStroke, notify, parentOf, pick, prompt, setQuery,
+  stepFind,
+} from '@textui/core';
+import { EditActionsKey, type EditActions } from '@textui/documents';
+import {
+  canRedoDocument, canUndoDocument, getDocument, isDocumentDirty, openDocument, redoDocument,
   revertDocument, saveDocument, undoDocument,
 } from '@textui/documents';
 import { MARK_LINES } from '@textui/documents';
@@ -14,7 +18,7 @@ import { WORKSPACE_PATH } from './workspace.js';
 import { ACTIVE_PATH } from './filesystem.js';
 import { iconsFor } from './icons.js';
 import {
-  EDITOR_LAYOUTS, EDITOR_URI, allTabs, closeTab, focusedIndex, layoutOf, otherGroup,
+  EDITOR_LAYOUTS, EDITOR_URI, allTabs, closeTab, focusedIndex, layoutOf, openTab, otherGroup,
   paneScope, readGroups, selectTab, setLayout, splitEditor, stepTab, tabFromPath,
   tabPath, unsplit, type EditorLayout,
 } from './tabs.js';
@@ -338,12 +342,131 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
       },
     },
 
+    /*
+     * Open a file that is not in the tree you are looking at.
+     *
+     * The explorer opens what it can see, which is the workspace. This is the
+     * other case - and it is only worth having now that there is a picker, so
+     * "open" does not mean "type an absolute path from memory".
+     */
+    {
+      id: 'file.open',
+      icon: Icon.go,
+      title: 'Open File',
+      category: 'File',
+      slots: ['palette'],
+      run: async (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const workspace = ctx.store.get<{ rootUri?: string }>(WORKSPACE_PATH);
+        const chosen = await pick(ctx.app, {
+          start: workspace?.rootUri ?? 'file:///',
+          wants: 'file',
+          title: 'open file',
+        });
+        if (chosen === null) return;
+        openTab(ctx.store, chosen);
+      },
+    },
+    /*
+     * Save it somewhere else, which is two questions and not one.
+     *
+     * A picker answers "which folder" by letting you look; nothing can answer
+     * "what shall it be called" except typing, because the file does not exist
+     * yet. So it is a pick and then a prompt, in that order - the order they
+     * are asked in a save dialog everywhere else.
+     */
+    {
+      id: 'file.saveAs',
+      icon: Icon.save,
+      title: 'Save As…',
+      category: 'File',
+      slots: ['palette'],
+      when: '$/ui/editor/uri',
+      run: async (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const uri = openUri(ctx);
+        if (!uri) return;
+        const workspace = ctx.store.get<{ rootUri?: string }>(WORKSPACE_PATH);
+        const folder = await pick(ctx.app, {
+          start: parentOf(uri) ?? workspace?.rootUri ?? 'file:///',
+          wants: 'directory',
+          title: 'save in',
+        });
+        if (folder === null) return;
+
+        const name = await prompt(ctx.app.layers, {
+          title: 'Save As',
+          message: 'A name for it',
+          initialValue: nameOf(uri),
+        });
+        if (name === null || name.trim() === '') return;
+
+        const target = `${folder.replace(/\/$/, '')}/${encodeURIComponent(name.trim())}`;
+        if (await ctx.app.resources.stat(target)) {
+          const ok = await confirm(ctx.app.layers, {
+            title: 'Save As',
+            message: `${name.trim()} is already there. Replace it?`,
+            confirmLabel: 'Replace',
+            tone: 'danger',
+          });
+          if (!ok) return;
+        }
+
+        const doc = getDocument(ctx.store, uri);
+        await ctx.app.resources.write(target, doc?.content ?? '');
+        // Open the copy, because "save as" leaves you working on the new file
+        // - staying on the old one is how you make a second set of edits to
+        // the file you were trying to stop editing.
+        await openDocument(ctx.app, target);
+        openTab(ctx.store, target);
+        notify(ctx.app, { tone: 'success', message: `Saved as ${name.trim()}.` });
+      },
+    },
+
     // --- Edit --------------------------------------------------------------
     //
     // The editor takes ctrl+z itself while it has focus, because only it knows
     // where the caret should end up. These are the same step, reachable from
     // the palette and from anywhere else in the application - the buffer is
     // what remembers, so both arrive at the same place.
+    /*
+     * Cut, copy and paste, asked of whoever has the keyboard.
+     *
+     * Unlike undo, these cannot be done to the buffer from out here: they need
+     * the *selection*, and a selection is an anchor and a caret inside one
+     * mounted editor. So the editor offers them as a service while it is
+     * focused and these ask for them by key - which is also what makes them
+     * right in a split, where two editors are on screen and exactly one of
+     * them is what "copy" means.
+     *
+     * They stay registered with no editor focused, and say so rather than
+     * disappearing: a menu whose rows come and go is a menu you cannot learn.
+     */
+    ...([
+      { id: 'edit.cut', title: 'Cut', icon: Icon.cut, act: (a: EditActions) => a.cut(),
+        empty: 'Nothing to cut.' },
+      { id: 'edit.copy', title: 'Copy', icon: Icon.copy, act: (a: EditActions) => a.copy(),
+        empty: 'Nothing to copy.' },
+      { id: 'edit.paste', title: 'Paste', icon: Icon.paste, act: (a: EditActions) => a.paste(),
+        empty: 'Nothing to paste.' },
+      { id: 'edit.selectAll', title: 'Select All', icon: Icon.selectAll,
+        act: (a: EditActions) => a.selectAll(), empty: 'Nothing to select.' },
+    ].map(({ id, title, icon, act, empty }) => ({
+      id,
+      icon,
+      title,
+      category: 'Edit',
+      slots: ['palette' as const],
+      when: '$/ui/editor/uri',
+      run: (_args: Record<string, unknown>, ctx: CommandContext) => {
+        const actions = ctx.app.services.get(EditActionsKey);
+        if (!actions) {
+          // The honest message. "Nothing to copy" would be wrong when there is
+          // plenty to copy and the keyboard is simply somewhere else.
+          notify(ctx.app, { message: 'Put the caret in the editor first.' });
+          return;
+        }
+        if (!act(actions)) notify(ctx.app, { message: empty });
+      },
+    }))),
     {
       id: 'edit.undo',
       icon: Icon.undo,
@@ -783,6 +906,17 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
               content: shortcutSheet(ctx.app),
               lineNumbers: false,
               height: 16,
+              /*
+               * Focused, or the sheet cannot be scrolled.
+               *
+               * A modal traps focus but hands it to nothing, so the arrows
+               * went on reaching whatever had the keyboard before - the
+               * explorer, usually - and the sheet sat at the top of itself.
+               * It fitted once, which is why nobody noticed; it does not any
+               * more, and two thirds of the keys were unreachable in the one
+               * place that exists to list them.
+               */
+              autoFocus: true,
             },
           },
         });
@@ -817,8 +951,18 @@ export function textideCommands(app: TextUIApp): CommandDefinition[] {
 export function shortcutSheet(app: TextUIApp): string {
   const groups = new Map<string, Map<string, string[]>>();
 
+  /*
+   * Every command, not only the ones available right now.
+   *
+   * `commands.get` honours the `when` clause, so a key bound to something
+   * gated - which is most of the editing keys - resolved to nothing and the
+   * sheet printed the raw id under "Other". A reference sheet is read to find
+   * out what a key does, not to find out whether it would work this second.
+   */
+  const titles = new Map(app.commands.list().map((c) => [c.id, c]));
+
   for (const binding of app.keybindings.list()) {
-    const command = app.commands.get(binding.commandId);
+    const command = titles.get(binding.commandId);
     const category = command?.category ?? 'Other';
     // The binding's own title first: a key that carries arguments runs one
     // invocation, so `ctrl+b` is "Toggle Sidebar" while the command it runs is

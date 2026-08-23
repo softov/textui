@@ -82,9 +82,44 @@ function isWide(cp: number): boolean {
     (cp >= 0xfe30 && cp <= 0xfe6f) ||
     (cp >= 0xff00 && cp <= 0xff60) ||
     (cp >= 0xffe0 && cp <= 0xffe6) ||
-    (cp >= 0x1f300 && cp <= 0x1f64f) ||
-    (cp >= 0x1f900 && cp <= 0x1f9ff) ||
-    (cp >= 0x1fa70 && cp <= 0x1faff) ||
+    // The pictograph blocks are *mostly* wide, and the exceptions matter.
+    // `1F300..1F64F` as one range called U+1F5C0 FOLDER two cells; Unicode
+    // says East Asian Width Neutral, and a terminal following wcwidth draws
+    // it in one. Those blocks are full of such symbols - the whole
+    // `1F5A5..1F5FA` run of them - and a glyph measured as two and drawn as
+    // one leaves the rest of the row shifted by a column.
+    //
+    // Generated from EastAsianWidth (Unicode 15.1), W and F only. A symbol
+    // that takes emoji presentation is handled by the VS16 rule below, which
+    // is the thing that actually makes one of these wide when it is wide.
+    (cp >= 0x1f300 && cp <= 0x1f320) ||
+    (cp >= 0x1f32d && cp <= 0x1f335) ||
+    (cp >= 0x1f337 && cp <= 0x1f37c) ||
+    (cp >= 0x1f37e && cp <= 0x1f393) ||
+    (cp >= 0x1f3a0 && cp <= 0x1f3ca) ||
+    (cp >= 0x1f3cf && cp <= 0x1f3d3) ||
+    (cp >= 0x1f3e0 && cp <= 0x1f3f0) ||
+    cp === 0x1f3f4 ||
+    (cp >= 0x1f3f8 && cp <= 0x1f43e) ||
+    cp === 0x1f440 ||
+    (cp >= 0x1f442 && cp <= 0x1f4fc) ||
+    (cp >= 0x1f4ff && cp <= 0x1f53d) ||
+    (cp >= 0x1f54b && cp <= 0x1f54e) ||
+    (cp >= 0x1f550 && cp <= 0x1f567) ||
+    cp === 0x1f57a ||
+    (cp >= 0x1f595 && cp <= 0x1f596) ||
+    cp === 0x1f5a4 ||
+    (cp >= 0x1f5fb && cp <= 0x1f64f) ||
+    (cp >= 0x1f90c && cp <= 0x1f93a) ||
+    (cp >= 0x1f93c && cp <= 0x1f945) ||
+    (cp >= 0x1f947 && cp <= 0x1f9ff) ||
+    (cp >= 0x1fa70 && cp <= 0x1fa7c) ||
+    (cp >= 0x1fa80 && cp <= 0x1fa88) ||
+    (cp >= 0x1fa90 && cp <= 0x1fabd) ||
+    (cp >= 0x1fabf && cp <= 0x1fac5) ||
+    (cp >= 0x1face && cp <= 0x1fadb) ||
+    (cp >= 0x1fae0 && cp <= 0x1fae8) ||
+    (cp >= 0x1faf0 && cp <= 0x1faf8) ||
     (cp >= 0x20000 && cp <= 0x3fffd)
   );
 }

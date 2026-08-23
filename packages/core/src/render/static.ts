@@ -22,7 +22,6 @@ import { createAnimation } from '../core/animation.js';
 import { createI18n } from '../core/i18n.js';
 import { createThemes } from '../themes/registry.js';
 import { PRIMITIVES } from '../ui/primitives.js';
-import { CATALOG } from '../ui/index.js';
 import { FULL_CAPABILITIES } from '../types/capabilities.js';
 import { ZERO_EDGES } from '../types/geometry.js';
 
@@ -40,10 +39,18 @@ export interface StaticRenderOptions {
   height?: number | 'auto';
   theme?: string;
   themes?: ThemeDefinition[];
-  /** Extra components, on top of the catalog. */
+  /**
+   * Components to register by name.
+   *
+   * Only nodes addressed by name need this. A screen written in JSX carries
+   * its components with it - `<Card/>` compiles to a node holding the
+   * imported function, and the runtime uses that in preference to any
+   * registry - so this is for screens authored as data: JSON, a template
+   * renderer, anything naming a component in a string.
+   *
+   * Pass `CATALOG` for the shipped set.
+   */
   components?: ComponentDefinition[];
-  /** Register the shipped catalog. On by default. */
-  builtins?: boolean;
   capabilities?: CapabilityOverrides;
   locale?: string;
   /** Seed the store before rendering. */
@@ -89,7 +96,14 @@ export function createStaticRuntime(options: StaticRenderOptions = {}): {
   const i18n = createI18n(options.locale ?? 'en');
   const themes = createThemes(options.themes);
 
-  components.registerMany(options.builtins === false ? PRIMITIVES : CATALOG);
+  // The four primitives, and nothing else by default.
+  //
+  // This registered the whole catalog until it didn't: some eighty entries a
+  // screen made of `box` and `text` never looked at, and that JSX never
+  // needed either, since an imported component travels on its own node.
+  // Naming a component in data is the case a registry is for, and that case
+  // asks for it through `components`.
+  components.registerMany(PRIMITIVES);
   if (options.components) components.registerMany(options.components);
 
   const capabilities: TerminalCapabilities = {

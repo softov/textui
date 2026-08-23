@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { render, renderToString } from '../src/render/static.js';
 import { h, defineComponent, toSerializable } from '../src/jsx/factory.js';
 import { Box, Text, Canvas } from '../src/ui/primitives.js';
+import { Badge } from '../src/ui/display.js';
+import { CATALOG } from '../src/ui/index.js';
 import type { ComponentNode } from '../src/types/graph.js';
 import { stringWidth } from '../src/util/text.js';
 
@@ -393,6 +395,27 @@ describe('auto height', () => {
 // A Capitalized tag resolves to the value in scope, and these values are the
 // primitive's own string - so the two spellings are not two paths that agree,
 // they are one path. The test is that nothing sits between them.
+// An imported component travels on its own node: `<Badge/>` compiles to a
+// node carrying the function, and `findFunction` takes that in preference to
+// looking the name up. So JSX needs no registry, and the registry is for the
+// case JSX cannot cover - a component named by a string in data.
+describe('what has to be registered', () => {
+  for (const width of [24, 60]) {
+    it(`renders an imported component with an empty registry at ${width} columns`, () => {
+      expect(renderToString(h(Badge, { label: 'ok' }), { width })).toContain('ok');
+    });
+  }
+
+  it('renders the miss when the same component is named in data', () => {
+    expect(renderToString({ component: 'Badge', label: 'ok' }, { width: 24 })).toBe('<Badge>');
+  });
+
+  it('renders it once the catalog is passed', () => {
+    const out = renderToString({ component: 'Badge', label: 'ok' }, { width: 24, components: CATALOG });
+    expect(out).toContain('ok');
+  });
+});
+
 describe('Capitalized primitives', () => {
   it('are the strings, so the node is identical', () => {
     expect(Box).toBe('box');

@@ -304,6 +304,8 @@ export const themeCommand: CliCommand = {
     cli.write(`${renderToString(themePreview(), {
       theme: name,
       width: Number(args.options.width),
+      // The preview is written as data, so its components come by name.
+      components: CATALOG,
     })}\n`);
     return 0;
   },

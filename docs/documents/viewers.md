@@ -56,3 +56,31 @@ work without an application registering anything:
   renderer: { kind: 'function', render: MarkdownViewer },
 }
 ```
+
+## What a kind looks like
+
+An icon and a tone can be declared on a kind, or on a renderer that opens it:
+
+<!-- docs:nocheck -->
+```ts
+{ id: 'file.markdown', title: 'Markdown', extends: 'file.text', icon: '¶', tone: 'info' }
+```
+
+`app.resources.appearanceOf({ kind })` answers with whichever spoke: the
+highest-priority **renderer** for the kind first, because the thing that knows
+what a markdown file is is the thing that opens markdown files - so a viewer an
+extension brought names and colours its own rows, and the explorer never learns
+what it opened. Then the kind itself, walking up `extends`, since
+`file.markdown` inheriting Text's glyph beats inheriting nothing.
+
+A **tone**, not a colour: a kind says `info` and the theme decides what that
+looks like. A kind carrying `#d19a66` is a kind that looks wrong in half the
+themes.
+
+It answers `{}` when nobody has said, rather than a default - what an
+undescribed thing looks like is the caller's vocabulary, because which glyphs a
+terminal can draw is known where the terminal is. `ResourceExplorer` takes
+`fileIcon` for exactly that row, the way it already takes `folderIcons`.
+
+A decoration outranks both. "This file has changed" is news; "this is a
+markdown file" is not, and the two would otherwise compete for one cell.

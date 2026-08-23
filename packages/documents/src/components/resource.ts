@@ -238,6 +238,15 @@ export interface ResourceExplorerProps extends BoxProps {
    * terminal.
    */
   folderIcons?: { folder: string; folderOpen: string };
+  /**
+   * What a file looks like when nothing has said otherwise.
+   *
+   * The registry answers for a kind somebody has described - a markdown viewer
+   * names and colours markdown - and this is the row underneath: a file whose
+   * kind nobody has claimed still deserves to look like a file rather than
+   * like nothing. Passed in for the same reason `folderIcons` is.
+   */
+  fileIcon?: string;
   /** Claim focus on mount, so an application has somewhere to start. */
   autoFocus?: boolean;
 }
@@ -257,7 +266,8 @@ export interface ResourceExplorerProps extends BoxProps {
 export const ResourceExplorer = defineComponent<ResourceExplorerProps>('ResourceExplorer', (props) => {
   const runtime = useRuntime();
   const {
-    root, onOpen, onSelect, selectedUri, visibleRows, folderIcons, autoFocus, ...rest
+    root, onOpen, onSelect, selectedUri, visibleRows, folderIcons, fileIcon,
+    autoFocus, ...rest
   } = props;
   const app = runtime.app();
 
@@ -301,6 +311,18 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
     const kids = children[resource.uri];
     const container = resource.capabilities.includes('list');
     const mark = decorationFor(resource.uri);
+    /*
+     * What this kind of thing looks like, asked of the registry.
+     *
+     * The renderer that opens a markdown file is the thing that knows what a
+     * markdown file is, so it names and colours its own kind - and an
+     * extension that brings a viewer brings its icon with it, without this
+     * component learning what it opened.
+     *
+     * Not for a container: `Tree` draws the twisty for anything expandable,
+     * and a second glyph beside it is how a folder ends up wearing two.
+     */
+    const look = container || !app ? {} : app.resources.appearanceOf(resource);
     const size = resource.metadata.size !== undefined
       ? formatSize(resource.metadata.size)
       : undefined;
@@ -315,8 +337,14 @@ export const ResourceExplorer = defineComponent<ResourceExplorerProps>('Resource
       // A mark wins the column: that a file is modified is worth more than how
       // many bytes it is, and the size is still one keystroke away.
       ...(mark?.badge !== undefined ? { meta: mark.badge } : size !== undefined ? { meta: size } : {}),
-      ...(mark?.tone !== undefined ? { tone: mark.tone } : {}),
-      ...(mark?.icon !== undefined ? { icon: mark.icon } : {}),
+      // A decoration outranks a kind for both: "this file has changed" is news
+      // and "this is a markdown file" is not, and the two would otherwise be
+      // saying different things in the same two cells.
+      ...(mark?.tone !== undefined ? { tone: mark.tone }
+        : look.tone !== undefined ? { tone: look.tone } : {}),
+      ...(mark?.icon !== undefined ? { icon: mark.icon }
+        : look.icon !== undefined ? { icon: look.icon }
+        : !container && fileIcon !== undefined ? { icon: fileIcon } : {}),
     };
   };
 

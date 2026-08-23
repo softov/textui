@@ -159,8 +159,12 @@ describe.each(SIZES.map((s) => [label(s), s] as const))('the screen at %s', (_na
 
     // The tree starts immediately inside the frame. A second, empty region
     // reserved by the shell would push it right and leave a gutter.
+    //
+    // Seven, not six: a row carries its kind's icon now, and markdown has one.
+    // What this is watching for is a whole region's worth of dead columns, not
+    // a cell.
     const row = t.lines().find((l) => l.includes('README.md'));
-    expect(row?.indexOf('README.md')).toBeLessThan(6);
+    expect(row?.indexOf('README.md')).toBeLessThan(8);
 
     await t.unmount();
   });

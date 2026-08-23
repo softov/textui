@@ -2,6 +2,7 @@ import type { Disposable } from './disposable.js';
 import type { ComponentNode } from './graph.js';
 import type { WhenClause } from './when.js';
 import type { CommandHandler } from './command.js';
+import type { SemanticVariant } from './style.js';
 
 /**
  * A resource is anything addressable that a viewer, an editor or an action can
@@ -15,6 +16,14 @@ export interface ResourceKind {
   id: string;
   title: string;
   icon?: string;
+  /**
+   * What colour the icon is, as a role rather than a colour.
+   *
+   * Named the way every other tone in the library is, so a kind picks
+   * "informational" and the theme decides what that looks like - a kind
+   * carrying `#d19a66` would be a kind that looks wrong in half the themes.
+   */
+  tone?: SemanticVariant;
   /** MIME types this kind claims. */
   mimeTypes?: string[];
   /** Filename globs this kind claims. */
@@ -81,6 +90,8 @@ export interface ResourceViewerDefinition {
   /** Component name; receives `{ resource, content }`. */
   component: string;
   icon?: string;
+  /** As on a kind. A renderer that declares one speaks for what it opens. */
+  tone?: SemanticVariant;
   priority?: number;
   when?: WhenClause;
   /** Accept anything no specific viewer claims. */
@@ -140,6 +151,11 @@ export interface ResourceRegistry {
   editorsFor(kind: string): ResourceEditorDefinition[];
   /** Every renderer for this kind - editors, viewers and openers - best first. */
   renderersFor(kind: string): ResourceRendererDefinition[];
+  /**
+   * The icon and tone for a resource: the renderer that opens it, then the
+   * kind and whatever it extends. Empty when nobody has said.
+   */
+  appearanceOf(resource: { kind: string }): { icon?: string; tone?: SemanticVariant };
   actionsFor(kind: string, slot?: string): ResourceActionDefinition[];
 
   /** The node that displays this resource, viewer chosen by the registry. */
@@ -160,6 +176,8 @@ export interface ResourceRendererDefinition {
   kinds: string[];
   component: string;
   icon?: string;
+  /** As on a kind. A renderer that declares one speaks for what it opens. */
+  tone?: SemanticVariant;
   priority?: number;
   when?: WhenClause;
   /** True when this renderer can write the resource back. */

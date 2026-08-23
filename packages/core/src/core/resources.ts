@@ -9,6 +9,7 @@ import type { WhenEngine } from '../types/when.js';
 import type { Disposable } from '../types/disposable.js';
 import { toDisposable } from '../util/disposable.js';
 import { nameOf } from './syntax.js';
+import type { SemanticVariant } from '../types/style.js';
 
 function schemeOf(uri: ResourceURI): string {
   const i = uri.indexOf(':');
@@ -248,6 +249,47 @@ export class Resources implements ResourceRegistry {
    * is what lets `file.markdown` list an editor, a rendered view and plain
    * text together and lets the panel pick between them.
    */
+  /**
+   * What a resource looks like in a list.
+   *
+   * Asked of the *renderer* first, because the thing that knows what a
+   * markdown file is is the thing that opens markdown files - so a viewer an
+   * extension brought names and colours its own kind without anything here
+   * learning what it is. Then the kind, walking up `extends`, since
+   * `file.markdown` inheriting Text's icon is better than inheriting nothing.
+   *
+   * Answers nothing rather than a default: what a nameless file looks like is
+   * the caller's vocabulary, because which glyphs a terminal can draw is known
+   * where the terminal is and not here.
+   */
+  appearanceOf(resource: { kind: string }): { icon?: string; tone?: SemanticVariant } {
+    for (const renderer of this.renderersFor(resource.kind)) {
+      if (renderer.icon !== undefined || renderer.tone !== undefined) {
+        return {
+          ...(renderer.icon !== undefined ? { icon: renderer.icon } : {}),
+          ...(renderer.tone !== undefined ? { tone: renderer.tone } : {}),
+        };
+      }
+    }
+
+    const byId = new Map(this.kinds().map((k) => [k.id, k]));
+    // Bounded by the number of kinds: a cycle in `extends` is a bad
+    // registration and must not be an infinite loop in a list row.
+    const seen = new Set<string>();
+    let kind = byId.get(resource.kind);
+    while (kind && !seen.has(kind.id)) {
+      seen.add(kind.id);
+      if (kind.icon !== undefined || kind.tone !== undefined) {
+        return {
+          ...(kind.icon !== undefined ? { icon: kind.icon } : {}),
+          ...(kind.tone !== undefined ? { tone: kind.tone } : {}),
+        };
+      }
+      kind = kind.extends === undefined ? undefined : byId.get(kind.extends);
+    }
+    return {};
+  }
+
   renderersFor(kind: string): ResourceRendererDefinition[] {
     const seen = new Set<string>();
     const out: ResourceRendererDefinition[] = [];

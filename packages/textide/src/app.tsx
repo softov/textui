@@ -72,6 +72,10 @@ export const Explorer: (props: Record<string, never>) => RenderOutput =
           // Which marks mean folder is textide's vocabulary, not the explorer's:
           // the tier a terminal can draw is known here and nowhere else.
           folderIcons={{ folder: Icon.folder, folderOpen: Icon.folderOpen }}
+          // What a file looks like when its kind has said nothing. The kinds
+          // that *have* said - markdown, code, data - come off the registry,
+          // so a viewer an extension brought names its own rows.
+          fileIcon={Icon.file}
           // Somewhere to start. An application that boots with nothing focused
           // sends the first arrow key to whatever happens to be first in the tab
           // order, which here is the menu bar.

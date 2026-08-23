@@ -51,6 +51,7 @@ export function registerTextide(app: TextUIApp, options: RegisterOptions): Dispo
     readonly: workspace.readonly === true,
     hidden: workspace.hidden === true,
     ...(workspace.exclude ? { exclude: workspace.exclude } : {}),
+    icons: iconsFor(app.capabilities.unicode),
   })));
   bag.add(app.registerAdapter(jsonAdapter()));
   // An extension is a thing you open, so it is a resource and it opens through

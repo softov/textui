@@ -6,6 +6,7 @@ import type {
   BindingPath,
 } from '@textui/core';
 import { confirm, notify, prompt } from '@textui/core';
+import type { IconSet } from './icons.js';
 
 /**
  * The filesystem, as an adapter.
@@ -63,6 +64,14 @@ export interface FilesystemOptions {
   exclude?: string[];
   /** Where the application publishes the selected resource. */
   activePath?: BindingPath;
+  /**
+   * What each kind looks like, at a tier this terminal can draw.
+   *
+   * Passed in rather than picked here for the reason `folderIcons` is: which
+   * glyphs are available is known where the terminal is. A kind declaring `¶`
+   * outright would be a kind that draws a box on a console font.
+   */
+  icons?: Partial<IconSet>;
 }
 
 const DEFAULT_EXCLUDE = ['node_modules', '.git', 'dist', '.dev'];
@@ -206,6 +215,7 @@ export function filesystemAdapter(options: FilesystemOptions = {}): ResourceAdap
     targetOf(args, ctx, activePath);
 
   const writable = options.readonly !== true;
+  const Icon = options.icons ?? {};
 
   return {
     id: 'textide.filesystem',
@@ -215,7 +225,19 @@ export function filesystemAdapter(options: FilesystemOptions = {}): ResourceAdap
     providers: [createFilesystemProvider(options)],
 
     kinds: [
-      { id: 'file', title: 'File' },
+      /*
+       * What each kind looks like, declared where the kind is.
+       *
+       * A tone rather than a colour: a kind says "informational" and the
+       * theme decides what that is, so a kind carrying a hex value would be a
+       * kind that looks wrong in half the themes. `file` has no tone at all -
+       * the row it describes is the ordinary case, and an explorer where
+       * every line is coloured says nothing by colouring one.
+       *
+       * `extends` carries this: `file.markdown` inherits Text's glyph if it
+       * declares none, which is why only the kinds that differ say anything.
+       */
+      { id: 'file', title: 'File', ...(Icon.file !== undefined ? { icon: Icon.file } : {}) },
       {
         id: 'directory',
         title: 'Directory',
@@ -224,17 +246,33 @@ export function filesystemAdapter(options: FilesystemOptions = {}): ResourceAdap
         detect: (_uri, meta) => meta.directory === true,
       },
       { id: 'file.text', title: 'Text', extends: 'file', extensions: ['*.txt', '*.log'] },
-      { id: 'file.markdown', title: 'Markdown', extends: 'file.text', extensions: ['*.md', '*.mdx'] },
+      {
+        id: 'file.markdown',
+        title: 'Markdown',
+        extends: 'file.text',
+        ...(Icon.markdown !== undefined ? { icon: Icon.markdown } : {}),
+        tone: 'info',
+        extensions: ['*.md', '*.mdx'],
+      },
       {
         id: 'file.code',
         title: 'Code',
         extends: 'file.text',
+        ...(Icon.code !== undefined ? { icon: Icon.code } : {}),
+        tone: 'success',
         extensions: [
           '*.ts', '*.tsx', '*.js', '*.jsx', '*.mjs', '*.cjs',
           '*.c', '*.h', '*.go', '*.rs', '*.py', '*.sh', '*.css', '*.html',
         ],
       },
-      { id: 'file.data', title: 'Data', extends: 'file', extensions: ['*.yaml', '*.yml', '*.toml', '*.ini'] },
+      {
+        id: 'file.data',
+        title: 'Data',
+        extends: 'file',
+        ...(Icon.data !== undefined ? { icon: Icon.data } : {}),
+        tone: 'warning',
+        extensions: ['*.yaml', '*.yml', '*.toml', '*.ini'],
+      },
     ],
 
     // The editor is a resource editor like any other: the registry decides

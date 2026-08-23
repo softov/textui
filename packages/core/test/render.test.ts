@@ -355,6 +355,38 @@ describe('auto height', () => {
     expect(result.buffer.height).toBe(2);
     result.dispose();
   });
+
+  // Auto height measures, then lays out again inside what it measured. A
+  // margin is space the box needs that nothing paints in, so measuring to the
+  // painted bottom edge reported a height the second pass could not honour -
+  // it took the margin out of the box, and the box lost rows off the bottom.
+  // At 40 columns this drew one row of a three-row box.
+  describe('counts a margin the content needs but does not paint in', () => {
+    for (const width of [40, 72]) {
+      it(`keeps the whole box at ${width} columns`, () => {
+        const node = {
+          component: 'box', margin: 2, border: 'single',
+          children: [{ component: 'text', content: 'This is a box with margin' }],
+        } satisfies ComponentNode;
+
+        const lines = renderToString(node, { width }).split('\n');
+        expect(lines).toHaveLength(7);
+        expect(lines[2]?.trimEnd()).toMatch(/^ {2}\u250c\u2500+\u2510$/);
+        expect(lines[3]).toContain('This is a box with margin');
+        expect(lines[4]?.trimEnd()).toMatch(/^ {2}\u2514\u2500+\u2518$/);
+      });
+    }
+
+    it('counts an asymmetric margin per side', () => {
+      const lines = renderToString({
+        component: 'box', margin: [1, 3], border: 'single',
+        children: [{ component: 'text', content: 'x' }],
+      } satisfies ComponentNode, { width: 40 }).split('\n');
+
+      expect(lines).toHaveLength(5);
+      expect(lines[1]?.startsWith('   \u250c')).toBe(true);
+    });
+  });
 });
 
 describe('wide characters', () => {

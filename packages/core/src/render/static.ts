@@ -6,7 +6,7 @@ import type { Instance } from '../runtime/instance.js';
 import type { Runtime } from '../runtime/runtime.js';
 import type { LayoutBox } from './layout.js';
 import { Buffer } from './buffer.js';
-import { layout } from './layout.js';
+import { layout, resolveEdges } from './layout.js';
 import { buildBoxes, paintTree, type PaintEnv } from '../runtime/paint.js';
 import { collectEffects, disposeTree, renderTree } from '../runtime/reconcile.js';
 import { flushMeasures } from '../runtime/hooks.js';
@@ -250,7 +250,13 @@ function contentHeight(box: LayoutBox): number {
   let bottom = 0;
   const walk = (b: LayoutBox): void => {
     if (b.rect.width > 0 && b.rect.height > 0) {
-      bottom = Math.max(bottom, b.rect.y + b.rect.height);
+      // Plus the margin below it, which is space the box needs even though
+      // nothing paints there. Measuring to the bottom edge alone reports a
+      // height the layout cannot reproduce: laid out again inside it, the
+      // margin has to come out of the box, and the box loses the rows.
+      // `<box margin={2} border="single">` measured 5 and then drew one row
+      // of a three-row box.
+      bottom = Math.max(bottom, b.rect.y + b.rect.height + resolveEdges(b.style.margin).bottom);
     }
     for (const child of b.children) walk(child);
   };

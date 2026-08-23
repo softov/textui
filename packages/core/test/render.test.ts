@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, renderToString } from '../src/render/static.js';
 import { h, defineComponent, toSerializable } from '../src/jsx/factory.js';
+import { Box, Text, Canvas } from '../src/ui/primitives.js';
 import type { ComponentNode } from '../src/types/graph.js';
 import { stringWidth } from '../src/util/text.js';
 
@@ -387,6 +388,27 @@ describe('auto height', () => {
       expect(lines[1]?.startsWith('   \u250c')).toBe(true);
     });
   });
+});
+
+// A Capitalized tag resolves to the value in scope, and these values are the
+// primitive's own string - so the two spellings are not two paths that agree,
+// they are one path. The test is that nothing sits between them.
+describe('Capitalized primitives', () => {
+  it('are the strings, so the node is identical', () => {
+    expect(Box).toBe('box');
+    expect(Text).toBe('text');
+    expect(Canvas).toBe('canvas');
+    expect(h(Box, { margin: 2 })).toEqual(h('box', { margin: 2 }));
+  });
+
+  for (const width of [30, 64]) {
+    it(`renders the same as lowercase at ${width} columns`, () => {
+      const upper = h(Box, { border: 'single' }, h(Text, { content: 'hello' }));
+      const lower = h('box', { border: 'single' }, h('text', { content: 'hello' }));
+      expect(renderToString(upper, { width })).toBe(renderToString(lower, { width }));
+      expect(renderToString(upper, { width })).toContain('hello');
+    });
+  }
 });
 
 describe('wide characters', () => {

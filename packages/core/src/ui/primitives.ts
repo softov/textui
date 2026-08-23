@@ -11,6 +11,29 @@ import type { HostComponent } from '../types/render.js';
  * is why these carry no `paint` of their own.
  */
 
+/**
+ * The primitives under Capitalized names, for JSX.
+ *
+ * These are the strings, not wrappers around them. JSX resolves a Capitalized
+ * tag to the value in scope, and a value whose type is a string literal is an
+ * intrinsic - so `<Box margin={2}/>` compiles to `h('box', { margin: 2 })`,
+ * the identical node. No function to call, no extra depth in the tree, and
+ * `BoxProps` still checks the props: `<Box notAProp/>` is the same error
+ * `<box notAProp/>` is.
+ *
+ * They exist so a screen can be written in one case. Every other component is
+ * Capitalized already - it has to be, that is how JSX tells a registry lookup
+ * from a host tag - and the four primitives being the exception meant mixing
+ * `<Row>` and `<box>` in one file. The lowercase names remain what the node
+ * actually holds, and stay the spelling for a screen written as data.
+ *
+ * There is no `Spacer` here: the catalog already exports one, a component that
+ * wraps this primitive and adds `size`.
+ */
+export const Box = 'box' as const;
+export const Text = 'text' as const;
+export const Canvas = 'canvas' as const;
+
 const box: HostComponent = { name: 'box', container: true };
 const text: HostComponent = { name: 'text', leaf: true };
 const canvas: HostComponent = { name: 'canvas', leaf: true };

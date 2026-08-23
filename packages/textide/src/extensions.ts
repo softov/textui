@@ -5,6 +5,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { Disposable, Manifest, ManifestSource, TextUIApp } from '@textui/core';
 import { confirm, createBag, notify, pick, prompt } from '@textui/core';
 import type { Workspace } from './workspace.js';
+import { scaffoldExtension } from './scaffold.js';
+import { openTab } from './tabs.js';
 
 /**
  * Extensions.
@@ -387,6 +389,56 @@ export async function loadExtensions(
       if (id === null) return;  // `loadOne` already said what went wrong.
       const name = records.get(id)?.source.displayName ?? id;
       notify(ctx.app, { tone: 'success', message: `${name} loaded, and remembered.` });
+    },
+  }));
+
+  /*
+   * And the answer to "point it at what?".
+   *
+   * Until this existed the loader worked and there was nothing loadable:
+   * textide-git is bundled and loads itself, so the one extension in existence
+   * was the one you could not learn from, and "Add Extension" was a question
+   * with no answer.
+   *
+   * What it writes runs. It contributes a panel you can see, it is short
+   * enough to read in one sitting, and it is loaded and opened straight away -
+   * so the loop from "I want an extension" to "there is one on screen and the
+   * source is in front of me" is one command.
+   */
+  bag.add(app.commands.register({
+    id: 'extensions.new',
+    title: 'New Extension',
+    category: 'Extensions',
+    slots: ['palette'],
+    args: [{ name: 'name', type: 'string' }],
+    run: async (args, ctx) => {
+      const given = typeof args.name === 'string' ? args.name : null;
+      const name = given ?? await prompt(ctx.app.layers, {
+        title: 'New Extension',
+        message: 'A name. It becomes the file, the panel and the source id.',
+        placeholder: 'Word Count',
+      });
+      if (name === null || name.trim() === '') return;
+
+      let written;
+      try {
+        written = await scaffoldExtension(workspace.root, name);
+      } catch (err) {
+        // The common one is "that file is already there", and overwriting it
+        // would eat the extension somebody was halfway through writing.
+        notify(ctx.app, { tone: 'danger', message: String((err as Error).message) });
+        return;
+      }
+
+      const id = await handle.install(written.specifier);
+      // Open it either way. A scaffold that failed to load is exactly when you
+      // want to be looking at the source.
+      openTab(ctx.store, pathToFileURL(written.path).href);
+      if (id === null) return;
+      notify(ctx.app, {
+        tone: 'success',
+        message: `${written.specifier} written, loaded, and remembered.`,
+      });
     },
   }));
 

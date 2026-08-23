@@ -78,8 +78,16 @@ export const ExtensionsPanel: (props: Record<string, never>) => RenderOutput =
           <text content="Nothing loaded." fg="muted" />
           {/* How to fill it, because an empty panel that does not say is a
               dead end - and the buttons are the same commands the palette
-              runs. Both routes, because a specifier is either a package name
-              or a path and only one of those is typed from memory. */}
+              runs.
+
+              "New" is first. An empty list usually means nobody has written
+              one yet, and the other two rows ask you to name something you do
+              not have. */}
+          <Button
+            label="New"
+            variant="outline"
+            onPress={() => { void runtime.execute('extensions.new'); }}
+          />
           <Button
             label="Add"
             variant="outline"

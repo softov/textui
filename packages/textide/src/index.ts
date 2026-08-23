@@ -22,6 +22,9 @@ export { textideCommands, paletteOrder, layoutCommands, EDITOR_URI, CATEGORIES, 
 export {
   loadExtensions, relativeSpecifier, resolveSpecifier, EXTENSIONS_PATH, ASKED_PATH,
 } from './extensions.js';
+export {
+  extensionSource, scaffoldExtension, slugOf, EXTENSION_DIR,
+} from './scaffold.js';
 export type {
   ExtensionContext, ExtensionModule, ExtensionState,
   Extensions, LoadedExtension, LoadOptions, Contributed,

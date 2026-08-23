@@ -118,7 +118,7 @@ describe('loading', () => {
     expect(extensions.list()).toEqual([]);
     const added = t.app.commands.list().map((c) => c.id).filter((id) => !before.includes(id));
     expect(added.sort()).toEqual(['extensions.disable', 'extensions.install', 'extensions.installFile',
-      'extensions.remove']);
+      'extensions.new', 'extensions.remove']);
 
     extensions.dispose();
     expect(t.app.commands.list().map((c) => c.id).sort()).toEqual([...before].sort());

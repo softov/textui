@@ -332,12 +332,39 @@ describe('driving it', () => {
     const panel = (): string[] => t.lines().map((line) => line.slice(70)).filter((l) => l.trim() !== '');
     expect(panel().some((l) => l.includes('Project'))).toBe(true);
 
-    for (let i = 0; i < 3; i++) t.press('down');
-    for (let i = 0; i < 4; i++) await t.settle();
+    // Down until it stops moving, rather than a fixed number of presses.
+    // Three used to be enough and then the title started taking two rows -
+    // correctly, it is a wrapping text beside a badge and the last word was
+    // being dropped - which left the assertion one press short of what it
+    // meant. What it means is "the top leaves", so it presses until the panel
+    // is done scrolling and then asks.
+    let before = '';
+    for (let n = 0; n < 20 && panel().join('\n') !== before; n++) {
+      before = panel().join('\n');
+      t.press('down');
+      for (let i = 0; i < 4; i++) await t.settle();
+    }
 
     // A panel with more in it than fits and no way to scroll is a panel with a
     // hidden bottom half: the top has to actually leave.
     expect(panel().some((l) => l.includes('Project  Advisor'))).toBe(false);
+    await t.unmount();
+  });
+
+  it('keeps the whole title when it wraps beside the badge', async () => {
+    // The title is a wrapping text with a rigid badge next to it, and in a
+    // 26-cell panel "Fix authentication bug" does not fit on one row. It was
+    // *measured* against the whole row and laid out in what the badge left, so
+    // it came out one row tall and "bug" was simply gone from the screen.
+    const t = await open({ width: 100, height: 16 });
+    t.app.store.set('$/todo/ui/selected', 't1');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    const panel = (): string[] => t.lines().map((line) => line.slice(70)).filter((l) => l.trim() !== '');
+    const rows = panel();
+    const at = rows.findIndex((l) => l.includes('Fix authentication'));
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(rows[at + 1]).toContain('bug');
     await t.unmount();
   });
 

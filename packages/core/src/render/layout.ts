@@ -252,6 +252,53 @@ export function measureBox(box: LayoutBox, availW: number, availH: number): Size
       crosses.push(column ? m.width + edgeH(cm) : m.height + edgeV(cm));
     }
 
+    // What a flexible child in a row will *actually* be given.
+    //
+    // Every child above was measured against the full inner width, which is
+    // only the width it gets when it is the only one there. In a row beside a
+    // rigid sibling it will be narrower - and a child whose height depends on
+    // its width, which is any wrapping text, then reports a height for a width
+    // it never has. `Alert` is `row(icon, column(flex: 1)(text wrap: 'word'))`,
+    // so a message one cell too long to fit measured as one row, was laid out
+    // two rows tall, and lost its last word off the bottom.
+    //
+    // `room` is what the flexible children share: the width left after the
+    // rigid ones and the gaps. That is their final size whichever way the
+    // distribution went - if there was space over they grow into all of it, and
+    // if there was not they are the ones that give way first (see `layoutLine`)
+    // - so it is the width to measure their height at.
+    //
+    // Rows only. The mirror case in a column would be a child whose *width*
+    // depends on its height, and nothing measures that way round.
+    if (!column && count > 1) {
+      let totalFlex = 0;
+      let rigidMain = 0;
+      let index = 0;
+      for (const child of box.children) {
+        if (isAbsolute(child) || isHidden(child)) continue;
+        const flex = Math.max(0, child.style.flex ?? 0);
+        if (flex > 0) totalFlex += flex;
+        else rigidMain += mains[index] as number;
+        index++;
+      }
+
+      if (totalFlex > 0) {
+        const room = Math.max(0, innerAvailW - rigidMain - gaps.main * (count - 1));
+        index = 0;
+        for (const child of box.children) {
+          if (isAbsolute(child) || isHidden(child)) continue;
+          const flex = Math.max(0, child.style.flex ?? 0);
+          if (flex > 0) {
+            const cm = resolveEdges(child.style.margin);
+            const share = Math.max(0, Math.floor((room * flex) / totalFlex) - edgeH(cm));
+            const m = measureBox(child, share, innerAvailH);
+            crosses[index] = m.height + edgeV(cm);
+          }
+          index++;
+        }
+      }
+    }
+
     let main = 0;
     let cross = 0;
     if (isWrapping(box) && count > 1) {

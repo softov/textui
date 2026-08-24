@@ -482,3 +482,74 @@ describe('a fixed size is a promise to the children', () => {
     expect(measureBox(root, 40, 10)).toEqual({ width: 7, height: 2 });
   });
 });
+
+/**
+ * A run of text that reflows: as wide as it is given, as tall as it needs.
+ *
+ * The height depends on the width, which is the only reason the measure order
+ * matters at all. A leaf with a fixed size cannot tell you it was measured
+ * against the wrong width.
+ */
+function paragraph(style: Style, cells: number): LayoutBox {
+  return {
+    ...box(style),
+    measure: (availW: number) => ({
+      width: Math.min(cells, availW),
+      height: availW > 0 ? Math.ceil(cells / availW) : 0,
+    }),
+  };
+}
+
+describe('measuring a row', () => {
+  it('measures a flexible child at the width its siblings leave it', () => {
+    // The shape every `Alert`, list row and status line is: something rigid
+    // beside something that reflows. 40 cells of text in a 40-cell row is one
+    // line *if* it gets all 40 - and it never does, because the icon and the
+    // gap are in front of it.
+    const icon = leaf({}, 1, 1);
+    const text = paragraph({ flex: 1 }, 40);
+    const row = box({ direction: 'row', gap: 1 }, [icon, text]);
+
+    // 40 - 1 - 1 = 38, so two rows. Measured against the full 40 it fitted on
+    // one, was laid out on two, and the second was drawn outside its parent.
+    expect(measureBox(row, 40, 100).height).toBe(2);
+  });
+
+  it('agrees with the height the same row is actually laid out to', () => {
+    // The property that was broken, stated directly: a box measures itself and
+    // then is laid out, and a component that sizes from the measurement only
+    // works if the two say the same thing.
+    const make = (): LayoutBox => box({ direction: 'row', gap: 1 }, [
+      leaf({}, 1, 1),
+      paragraph({ flex: 1 }, 40),
+    ]);
+
+    const measured = measureBox(make(), 40, 100).height;
+
+    const laid = make();
+    layout(laid, { x: 0, y: 0, width: 40, height: measured });
+    const text = laid.children[1] as LayoutBox;
+    expect(text.rect.height).toBe(measured);
+  });
+
+  it('splits what is left between two flexible children', () => {
+    const a = paragraph({ flex: 1 }, 20);
+    const b = paragraph({ flex: 1 }, 20);
+    const row = box({ direction: 'row' }, [a, b]);
+    // Ten cells each, so each is two rows of ten - not one row of twenty.
+    expect(measureBox(row, 20, 100).height).toBe(2);
+  });
+
+  it('leaves a row of rigid children alone', () => {
+    const row = box({ direction: 'row', gap: 1 }, [leaf({}, 5, 3), leaf({}, 5, 1)]);
+    // Nothing flexes, so nothing is re-measured and the tallest child wins.
+    expect(measureBox(row, 40, 100)).toEqual({ width: 11, height: 3 });
+  });
+
+  it('leaves a lone flexible child alone', () => {
+    const row = box({ direction: 'row' }, [paragraph({ flex: 1 }, 40)]);
+    // One child with the whole width really does get the whole width, and
+    // re-measuring it would be re-measuring it against the same number.
+    expect(measureBox(row, 40, 100).height).toBe(1);
+  });
+});

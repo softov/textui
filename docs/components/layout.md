@@ -31,3 +31,35 @@ Two rules, and they differ by axis because terminals do:
 `shrink` overrides both, in either direction. Nothing is ever placed outside its
 container: a child that cannot fit is clipped to what remains, so a component
 measuring itself always sees a size the terminal actually has.
+
+A flexible child of a **row** is measured against the width its rigid siblings
+leave it, not against the whole row. That matters for anything whose height
+depends on its width, which is any wrapping text: an icon-and-message row
+measured against the full width reports one line, is laid out two lines tall,
+and loses the second off the bottom of whatever holds it.
+
+## A row that wraps
+
+`flexWrap="wrap"` puts as many children on a line as fit and starts another.
+Useful where the column count is a function of the terminal rather than a
+decision: three cards on a wide screen, two on a laptop, one in a narrow pane,
+with no breakpoints to keep in step.
+
+<!-- docs:nocheck -->
+```tsx
+<Row flexWrap="wrap" gap={1} align="start" overflowY="scroll">
+  {cards.map((card) => <Panel key={card.id} width={40} flex={1} title={card.title} />)}
+</Row>
+```
+
+Two things about that `width`. It is what **breaks the line** - a wrapping row
+splits on each child's stated width and falls back to measuring the content
+when there is none, which for a panel of text is neither stable nor
+predictable. And it is what the child's own contents are measured against, so
+text inside wraps at the width it will be drawn at. `flex` then shares out
+what is left over on each line.
+
+The scroll container is the row itself: a wrapping row overflows *across* its
+main axis, having already fitted everything along it, so the axis that runs off
+the screen is the other one. [`examples/showcase`](https://github.com/softov/textui/tree/main/examples/showcase)
+is this layout and nothing else.

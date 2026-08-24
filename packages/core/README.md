@@ -1,5 +1,8 @@
 # @textui/core
 
+[![npm](https://img.shields.io/npm/v/@textui/core?label=%40textui%2Fcore)](https://www.npmjs.com/package/@textui/core)
+[![license](https://img.shields.io/npm/l/@textui/core)](https://github.com/softov/textui/blob/main/LICENSE)
+
 The runtime: a reactive store, typed registries, a cell-diffing renderer, hooks,
 and the four host primitives. Everything else in TextUI sits on this.
 

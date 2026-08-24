@@ -1,5 +1,8 @@
 # @textui/widgets
 
+[![npm](https://img.shields.io/npm/v/@textui/widgets?label=%40textui%2Fwidgets)](https://www.npmjs.com/package/@textui/widgets)
+[![license](https://img.shields.io/npm/l/@textui/widgets)](https://github.com/softov/textui/blob/main/LICENSE)
+
 The component catalog: eighty-seven components built out of the four primitives
 in [`@textui/core`](https://www.npmjs.com/package/@textui/core).
 

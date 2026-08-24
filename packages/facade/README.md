@@ -1,5 +1,8 @@
 # @textui/kit
 
+[![npm](https://img.shields.io/npm/v/@textui/kit?label=%40textui%2Fkit)](https://www.npmjs.com/package/@textui/kit)
+[![license](https://img.shields.io/npm/l/@textui/kit)](https://github.com/softov/textui/blob/main/LICENSE)
+
 Build a terminal UI in TypeScript. One install, one import.
 
 ```bash

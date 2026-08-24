@@ -176,14 +176,14 @@ npx @textui/cli doctor
 
 All six published packages use the same version and depend only on each other.
 
-| Package | What it is | Source |
-| --- | --- | --- |
-| [`@textui/kit`](https://www.npmjs.com/package/@textui/kit) | One install: the runtime, a terminal and `render`. **Start here.** | [`packages/facade`](packages/facade) |
-| [`@textui/core`](https://www.npmjs.com/package/@textui/core) | The runtime: store, registries, renderer, hooks and the four host primitives | [`packages/core`](packages/core) |
-| [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) | Component catalog: layout, display, controls, data, overlays and charts | [`packages/widgets`](packages/widgets) |
-| [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) | Terminal adapters, capability detection, ANSI writing and input decoding | [`packages/terminal`](packages/terminal) |
-| [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) | Headless harness: semantic queries, input, resizing and time | [`packages/testing`](packages/testing) |
-| [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) | `textui init / add / create / doctor`, and primitives for your own CLI | [`packages/cli`](packages/cli) |
+| Package | Version | What it is | Source |
+| --- | --- | --- | --- |
+| [`@textui/kit`](https://www.npmjs.com/package/@textui/kit) | [![npm](https://img.shields.io/npm/v/@textui/kit)](https://www.npmjs.com/package/@textui/kit) | One install: the runtime, a terminal and `render`. **Start here.** | [`packages/facade`](packages/facade) |
+| [`@textui/core`](https://www.npmjs.com/package/@textui/core) | [![npm](https://img.shields.io/npm/v/@textui/core)](https://www.npmjs.com/package/@textui/core) | The runtime: store, registries, renderer, hooks and the four host primitives | [`packages/core`](packages/core) |
+| [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) | [![npm](https://img.shields.io/npm/v/@textui/widgets)](https://www.npmjs.com/package/@textui/widgets) | Component catalog: layout, display, controls, data, overlays and charts | [`packages/widgets`](packages/widgets) |
+| [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) | [![npm](https://img.shields.io/npm/v/@textui/terminal)](https://www.npmjs.com/package/@textui/terminal) | Terminal adapters, capability detection, ANSI writing and input decoding | [`packages/terminal`](packages/terminal) |
+| [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) | [![npm](https://img.shields.io/npm/v/@textui/testing)](https://www.npmjs.com/package/@textui/testing) | Headless harness: semantic queries, input, resizing and time | [`packages/testing`](packages/testing) |
+| [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) | [![npm](https://img.shields.io/npm/v/@textui/cli)](https://www.npmjs.com/package/@textui/cli) | `textui init / add / create / doctor`, and primitives for your own CLI | [`packages/cli`](packages/cli) |
 
 ### Also in the repository
 

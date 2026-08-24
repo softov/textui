@@ -36,6 +36,25 @@ which no terminal can tell from `enter`), and hands back every key it does not
 want. Passing `onSubmit` is what makes
 enter mean "done"; without it, enter is a newline like any other key.
 
+## Where a `Select` puts its list
+
+Three places, one control. `mode="inline"` is the default: the options open
+inside the same border and everything under them moves down - honest about the
+space it takes, and the only one that cannot be clipped.
+
+`mode="floating"` puts the list on the floating layer, anchored under the
+control, so nothing below it moves. That is what a form wants: a row of
+controls that does not jump as each one is opened and shut.
+
+`mode="modal"` centres it over a scrim, for a list long enough or a choice
+consequential enough that the rest of the screen is a distraction.
+
+The keys are the same in all three, because the control keeps the keyboard in
+all three - the layer is somewhere to *draw* the list, not somewhere the focus
+goes. Arrow keys, enter and escape are answered by the same handler whichever
+mode it is in, and the floating panel is drawn to the control's own width so
+the two line up.
+
 It also settles the question a single-letter keybinding raises. The focused
 node is offered a key **before** any keybinding, so while a text field has the
 keyboard, `q` is a letter - which is what lets an application with a composer

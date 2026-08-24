@@ -36,61 +36,45 @@ await waitUntilExit();
 
 > Status: pre-1.0. The surface is still moving.
 
+## Where to go
+
+| | |
+| --- | --- |
+| **Install it** | [`@textui/kit` on npm](https://www.npmjs.com/package/@textui/kit) - and the [five other packages](#packages) |
+| **Learn it** | [the documentation site](https://softov.github.io/textui/), or [`docs/`](docs/README.md) as plain markdown |
+| **Start writing** | [Getting started](docs/getting-started.md) - from nothing to a running application |
+| **See it first** | [what it looks like](#a-quick-taste), in seven themes |
+| **Work on TextUI itself** | [`DEVELOPER.md`](DEVELOPER.md) |
+
+Everything below is the short version of those.
+
 ## Installing
 
 One package is enough to have something on screen. The rest are additive, and
-nothing pulls in a third-party dependency.
+none of them pull in a third-party dependency.
 
-```bash
-npm install @textui/kit          # pnpm add @textui/kit
-```
+| You want | Install | |
+| --- | --- | --- |
+| Something on screen | `npm install @textui/kit` | the runtime, a terminal, and `render` |
+| `Panel`, `Table`, charts, forms | `npm install @textui/widgets` | register it with `onBoot` |
+| A project set up for you | `npx @textui/cli init` | nothing to install |
+| The runtime without a terminal | `npm install @textui/core @textui/terminal` | what the test harness uses |
 
-`@textui/kit` is the runtime, a terminal to put it on, and `render`. `Box`,
-`Text`, the hooks and `render` all come from here, and the example above needs
-nothing else.
+Every line works the same with `pnpm add`, and `pnpm dlx` in place of `npx`.
 
-**For the component catalog** - `Panel`, `Table`, `Row`, `Column`, charts,
-overlays, forms - add `@textui/widgets`. Its components are resolved by name at
-mount time, so they have to be registered before they can render:
+Two things worth knowing before the first run:
 
-```bash
-npm install @textui/kit @textui/widgets    # pnpm add @textui/kit @textui/widgets
-```
-
-```tsx
-import { render } from '@textui/kit';
-import { registerBuiltins } from '@textui/widgets';
-
-const { waitUntilExit } = render(<Dashboard />, { onBoot: registerBuiltins });
-await waitUntilExit();
-```
-
-Forget `onBoot` and the components are missing registrations rather than
-missing imports - the screen renders, and says so where they should have been.
-
-**For a project set up for you**, and for components copied into your source
-rather than imported, use the CLI. It needs no install:
-
-```bash
-npx @textui/cli init             # pnpm dlx @textui/cli init
-npx @textui/cli doctor           # what this terminal can actually do
-```
-
-`doctor` is the one to run first when something renders wrong - it reports the
-unicode level, colour depth and keyboard protocol actually detected.
-
-**Working against the pieces directly** - `@textui/core` and `@textui/terminal`
-- is the same thing with a longer name. `@textui/kit` re-exports both and adds
-`render`; there is nothing in them it hides. Take them separately when you want
-the runtime without a terminal attached, which is what the test harness and the
-static renderer do:
-
-```bash
-npm install @textui/core @textui/terminal  # pnpm add @textui/core @textui/terminal
-```
+- **Widgets are registered, not imported.** `@textui/widgets` components resolve
+  by name at mount time, so `render(<Dashboard />, { onBoot: registerBuiltins })`
+  is what makes them exist. Forget `onBoot` and nothing throws - the screen
+  renders and says where the components should have been.
+- **`npx @textui/cli doctor`** is the first thing to run when something renders
+  wrong. It reports the unicode level, colour depth and keyboard protocol
+  actually detected, which is usually the answer.
 
 Node >= 22, and TypeScript wants `"jsx": "react-jsx"` with
-`"jsxImportSource": "@textui/kit"` - see [getting started](docs/getting-started.md).
+`"jsxImportSource": "@textui/kit"`.
+[Getting started](docs/getting-started.md) walks through all of it.
 
 ## The one idea
 
@@ -134,9 +118,11 @@ Also in the repository, not yet published:
 
 ## Documentation
 
-Published at **<https://softov.github.io/textui/>**, and readable in [`docs/`](docs/README.md) as plain markdown.
+The whole of it is at **<https://softov.github.io/textui/>**, and the same pages
+are in [`docs/`](docs/README.md) as plain markdown if you would rather read them
+here.
 
-Start here:
+The four that answer the most:
 
 | Document | What it answers |
 | --- | --- |

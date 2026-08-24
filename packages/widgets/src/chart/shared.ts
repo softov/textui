@@ -53,7 +53,9 @@ export const VerticalBars = defineComponent<{
   data: { label: string; value: number; tone?: SemanticVariant }[];
   max: number;
   height: number;
-}>('VerticalBars', ({ data, max, height, ...rest }) => {
+  /** Cells across, per bar. One is a hairline; two or three read as bars. */
+  columnWidth?: number;
+}>('VerticalBars', ({ data, max, height, columnWidth = 1, ...rest }) => {
   const theme = useTheme();
   const blocks = theme.glyphs.blocks;
 
@@ -78,12 +80,21 @@ export const VerticalBars = defineComponent<{
         ...columns.map((col, i) =>
           h('text', {
             key: i,
-            content: col.cells[height - 1 - row] as string,
+            // The glyph repeated, not a wider glyph: a column is one cell of
+            // vertical resolution and `columnWidth` of horizontal, so widening
+            // it must not change how the value is drawn.
+            content: (col.cells[height - 1 - row] as string).repeat(columnWidth),
             fg: TONE[col.item.tone ?? 'accent'],
           })))),
     h('box', { direction: 'row', gap: 1 },
       ...data.map((item, i) =>
-        h('text', { key: i, content: item.label.slice(0, 1), fg: 'subtle' }))),
+        // As much of the label as the bar is wide, padded so the next one
+        // starts over its own bar rather than sliding left under a short name.
+        h('text', {
+          key: i,
+          content: item.label.slice(0, columnWidth).padEnd(columnWidth),
+          fg: 'subtle',
+        }))),
   );
 });
 

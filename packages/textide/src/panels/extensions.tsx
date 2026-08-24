@@ -1,10 +1,13 @@
-import {
-  Button, Column, List, Row, ScrollView, defineComponent, useRuntime, useStoreValue,
-} from '@textui/core';
 import type {
-  RenderOutput, Resource, ResourceKind, ResourceProvider, ResourceViewerDefinition,
+  RenderOutput,
+  Resource,
+  ResourceKind,
+  ResourceProvider,
+  ResourceViewerDefinition,
   SemanticVariant,
 } from '@textui/core';
+import { defineComponent, useRuntime, useStoreValue } from '@textui/core';
+import { Button, Column, List, Row, ScrollView } from '@textui/widgets';
 import { EXTENSIONS_PATH, type LoadedExtension } from '../extensions.js';
 
 /**

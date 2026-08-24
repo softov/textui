@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { defineComponent, h, useCommand, useFocus, useFocusScope, useState } from '@textui/core';
-import { prompt } from '@textui/core';
 import type { TextUIApp } from '@textui/core';
+import { defineComponent, h, useCommand, useFocus, useFocusScope, useState } from '@textui/core';
+import { prompt } from '@textui/widgets';
 import { render, renderApp } from '../src/index.js';
 
 function promptDialog(app: TextUIApp) {

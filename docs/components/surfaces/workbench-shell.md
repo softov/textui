@@ -10,7 +10,8 @@ grand_parent: Components
 Rail, sidebar, main, panel, aside and status - the IDE arrangement.
 
 ```tsx
-import { createApp, registerBuiltins } from '@textui/core';
+import { createApp } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal } from '@textui/terminal';
 
 const app = createApp({

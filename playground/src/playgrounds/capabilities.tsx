@@ -1,7 +1,15 @@
+import { useCapabilities, useRuntime, useSize } from '@textui/core';
 import {
-  Badge, Column, Grid, KeyValue, Panel, Progress, Row, Sparkline, StatusDot,
-  useCapabilities, useRuntime, useSize,
-} from '@textui/core';
+  Badge,
+  Column,
+  Grid,
+  KeyValue,
+  Panel,
+  Progress,
+  Row,
+  Sparkline,
+  StatusDot,
+} from '@textui/widgets';
 
 /**
  * Capabilities.

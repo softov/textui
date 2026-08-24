@@ -10,7 +10,7 @@ grand_parent: Components
 A short name for something, in one of the semantic tones.
 
 ```tsx
-import { Label } from '@textui/core';
+import { Label } from '@textui/widgets';
 
 <Label content="CPU" tone="muted" />
 ```

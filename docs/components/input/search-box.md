@@ -10,7 +10,7 @@ grand_parent: Components
 A text input with a search glyph and a result count.
 
 ```tsx
-import { SearchBox } from '@textui/core';
+import { SearchBox } from '@textui/widgets';
 
 <SearchBox value="" count={12} onChange={(value) => console.log(value)} />
 ```

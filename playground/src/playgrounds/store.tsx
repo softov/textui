@@ -1,7 +1,5 @@
-import {
-  Button, Column, KeyValue, Panel, Row, TextInput,
-  useCollection, useStore, useStoreValue, useState,
-} from '@textui/core';
+import { useCollection, useStore, useStoreValue, useState } from '@textui/core';
+import { Button, Column, KeyValue, Panel, Row, TextInput } from '@textui/widgets';
 
 /**
  * The store.

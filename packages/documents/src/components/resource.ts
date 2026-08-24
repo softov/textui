@@ -1,16 +1,41 @@
-import type { ComponentDefinition } from '@textui/core';
-import type { BoxProps } from '@textui/core';
-import type { Resource, ResourceViewerDefinition } from '@textui/core';
-import { h, defineComponent } from '@textui/core';
-import {
-  chorded, useFocus, useInput, useMeasure, useMemo, usePanelState, useRuntime,
-  useState, useTheme, useEffect,
+import type {
+  RenderOutput,
+  ComponentDefinition,
+  BoxProps,
+  Resource,
+  ResourceViewerDefinition,
 } from '@textui/core';
+import {
+  h,
+  defineComponent,
+  chorded,
+  useFocus,
+  useInput,
+  useMeasure,
+  useMemo,
+  useRuntime,
+  useState,
+  useTheme,
+  useEffect,
+  layoutMarkdown,
+} from '@textui/core';
+import {
+  usePanelState,
+  Tree,
+  CodeViewer,
+  MarkdownView,
+  ResourcePanel,
+  useDecorations,
+  type TreeNode,
+  EmptyState,
+  ErrorState,
+  KeyValue,
+  Spinner,
+  Breadcrumb,
+  Menu,
+  viewportRows,
+} from '@textui/widgets';
 import { useDocument } from '../use-document.js';
-import { Tree, CodeViewer, MarkdownView, ResourcePanel, layoutMarkdown, useDecorations, type TreeNode } from '@textui/core';
-import { EmptyState, ErrorState, KeyValue, Spinner } from '@textui/core';
-import { Breadcrumb, Menu } from '@textui/core';
-import { viewportRows } from '@textui/core';
 
 /**
  * Resource components.
@@ -26,7 +51,7 @@ export interface TextViewerProps extends BoxProps {
   content?: string;
 }
 
-export const TextViewer = defineComponent<TextViewerProps>('TextViewer', (props) => {
+export const TextViewer: (props: TextViewerProps) => RenderOutput = defineComponent<TextViewerProps>('TextViewer', (props) => {
   const theme = useTheme();
   const { resource, uri, content, ...rest } = props;
   const target = content === undefined ? (uri ?? resource?.uri ?? null) : null;
@@ -61,7 +86,7 @@ export type MarkdownViewerProps = TextViewerProps;
  * The formatting is deliberately small - see `layoutMarkdown` below, which is
  * where the document becomes a flat list of rows this only has to window.
  */
-export const MarkdownViewer = defineComponent<MarkdownViewerProps>('MarkdownViewer', (props) => {
+export const MarkdownViewer: (props: MarkdownViewerProps) => RenderOutput = defineComponent<MarkdownViewerProps>('MarkdownViewer', (props) => {
   const theme = useTheme();
   const { resource, uri, content, ...rest } = props;
   const doc = useDocument(content === undefined ? (uri ?? resource?.uri ?? null) : null);
@@ -157,7 +182,7 @@ export interface FallbackViewerProps extends BoxProps {
 }
 
 /** What an unknown kind gets: its metadata, honestly labelled. */
-export const FallbackViewer = defineComponent<FallbackViewerProps>('FallbackViewer', (props) => {
+export const FallbackViewer: (props: FallbackViewerProps) => RenderOutput = defineComponent<FallbackViewerProps>('FallbackViewer', (props) => {
   const { resource, uri: _uri, ...rest } = props;
   if (!resource) return h(EmptyState, { title: 'Nothing selected', ...rest });
 
@@ -204,7 +229,7 @@ export interface ResourceViewProps extends BoxProps {
  * kind nothing is registered for, which is a documents concern - core has no
  * opinion about what an unrenderable file should look like.
  */
-export const ResourceView = defineComponent<ResourceViewProps>('ResourceView', (props) => {
+export const ResourceView: (props: ResourceViewProps) => RenderOutput = defineComponent<ResourceViewProps>('ResourceView', (props) => {
   const { uri, id, viewerId, mode, viewerProps, autoFocus, ...rest } = props;
 
   return h(ResourcePanel, {
@@ -263,7 +288,7 @@ export interface ResourceExplorerProps extends BoxProps {
  * Children load lazily on expand, because a provider may be a network and a
  * tree that eagerly walks one is a tree that hangs.
  */
-export const ResourceExplorer = defineComponent<ResourceExplorerProps>('ResourceExplorer', (props) => {
+export const ResourceExplorer: (props: ResourceExplorerProps) => RenderOutput = defineComponent<ResourceExplorerProps>('ResourceExplorer', (props) => {
   const runtime = useRuntime();
   const {
     root, onOpen, onSelect, selectedUri, visibleRows, folderIcons, fileIcon,
@@ -403,7 +428,7 @@ export interface ResourceActionsProps extends BoxProps {
 }
 
 /** The actions registered for this kind. An "Open with…" for behaviour. */
-export const ResourceActions = defineComponent<ResourceActionsProps>('ResourceActions', (props) => {
+export const ResourceActions: (props: ResourceActionsProps) => RenderOutput = defineComponent<ResourceActionsProps>('ResourceActions', (props) => {
   const runtime = useRuntime();
   const { resource, slot = 'context', onRun, ...rest } = props;
   const app = runtime.app();
@@ -435,7 +460,7 @@ export interface ResourceOpenWithProps extends BoxProps {
   onChoose?(viewer: ResourceViewerDefinition): void;
 }
 
-export const ResourceOpenWith = defineComponent<ResourceOpenWithProps>('ResourceOpenWith', (props) => {
+export const ResourceOpenWith: (props: ResourceOpenWithProps) => RenderOutput = defineComponent<ResourceOpenWithProps>('ResourceOpenWith', (props) => {
   const runtime = useRuntime();
   const { resource, onChoose, ...rest } = props;
   const app = runtime.app();
@@ -461,7 +486,7 @@ export interface ResourceBreadcrumbProps extends BoxProps {
   onSelect?(uri: string): void;
 }
 
-export const ResourceBreadcrumb = defineComponent<ResourceBreadcrumbProps>('ResourceBreadcrumb', (props) => {
+export const ResourceBreadcrumb: (props: ResourceBreadcrumbProps) => RenderOutput = defineComponent<ResourceBreadcrumbProps>('ResourceBreadcrumb', (props) => {
   const { uri, root, onSelect, ...rest } = props;
   if (!uri) return null;
 

@@ -1,7 +1,7 @@
-import {
-  BUILTIN_LAYOUTS, CATALOG, MountView, SurfaceArea, createBag, defineComponent,
-} from '@textui/core';
-import type { Disposable, LayoutProps, Mount, RenderOutput, TextUIApp } from '@textui/core';
+import type { Disposable, Mount, RenderOutput, TextUIApp } from '@textui/core';
+import { createBag, defineComponent } from '@textui/core';
+import type { LayoutProps } from '@textui/widgets';
+import { BUILTIN_LAYOUTS, CATALOG, MountView, SurfaceArea } from '@textui/widgets';
 import { Inspector, Nav, Region, Status, Toolbar } from './panels.js';
 
 /**

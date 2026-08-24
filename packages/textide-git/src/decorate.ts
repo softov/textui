@@ -1,4 +1,4 @@
-import type { ResourceDecoration } from '@textui/core';
+import type { ResourceDecoration } from '@textui/widgets';
 import type { Change, Status } from './git.js';
 import { codeOf, toneOf } from './changes.js';
 

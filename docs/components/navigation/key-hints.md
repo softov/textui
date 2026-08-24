@@ -10,7 +10,7 @@ grand_parent: Components
 The keys available right now, along one line.
 
 ```tsx
-import { KeyHints } from '@textui/core';
+import { KeyHints } from '@textui/widgets';
 
 <KeyHints hints={[{ keys: 'q', label: 'quit' }, { keys: 'r', label: 'refresh' }]} />
 ```

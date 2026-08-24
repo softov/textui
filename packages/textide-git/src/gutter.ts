@@ -1,4 +1,4 @@
-import type { LineMarks } from '@textui/core';
+import type { LineMarks } from '@textui/widgets';
 import type { Git, Status } from './git.js';
 
 /**

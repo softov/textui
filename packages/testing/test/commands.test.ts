@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp, render } from '../src/index.js';
-import { h, defineComponent, useState, filterCommands } from '@textui/core';
+import { h, defineComponent, useState } from '@textui/core';
+import { filterCommands } from '@textui/widgets';
 
 describe('commands', () => {
   it('runs a registered command', async () => {

@@ -1,10 +1,14 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { BoxProps } from '../jsx/intrinsics.js';
-import type { SemanticVariant } from '../types/style.js';
-import { h, defineComponent } from '../jsx/factory.js';
+import type { ComponentDefinition, BoxProps, SemanticVariant } from '@textui/core';
 import {
-  createContext, useCallback, useContext, useMemo, useState, useTheme,
-} from '../runtime/hooks.js';
+  h,
+  defineComponent,
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  useTheme,
+} from '@textui/core';
 import { Button } from './control.js';
 
 /**

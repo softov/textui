@@ -10,7 +10,7 @@ grand_parent: Components
 A list of commands, with shortcuts and submenus.
 
 ```tsx
-import { Menu } from '@textui/core';
+import { Menu } from '@textui/widgets';
 
 <Menu
   items={[

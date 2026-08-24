@@ -10,7 +10,7 @@ grand_parent: Components
 A modal panel with a title and a row of actions.
 
 ```tsx
-import { Dialog } from '@textui/core';
+import { Dialog } from '@textui/widgets';
 
 <Dialog
   title="Delete namespace?"

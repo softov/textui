@@ -10,7 +10,7 @@ grand_parent: Components
 Renders a single mount's target.
 
 ```tsx
-import { MountView } from '@textui/core';
+import { MountView } from '@textui/widgets';
 import type { Mount } from '@textui/core';
 
 declare const mount: Mount;

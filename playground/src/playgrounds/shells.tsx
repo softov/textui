@@ -1,6 +1,5 @@
-import {
-  Column, KeyValue, List, Panel, Row, useRuntime, useState,
-} from '@textui/core';
+import { useRuntime, useState } from '@textui/core';
+import { Column, KeyValue, List, Panel, Row } from '@textui/widgets';
 
 /**
  * Shells and themes.

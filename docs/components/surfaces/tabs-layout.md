@@ -10,7 +10,7 @@ grand_parent: Components
 Arranges a surface's mounts as tabs.
 
 ```tsx
-import { BUILTIN_LAYOUTS } from '@textui/core';
+import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const tabs = BUILTIN_LAYOUTS.find((layout) => layout.name === 'tabs');
 ```

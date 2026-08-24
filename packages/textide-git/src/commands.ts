@@ -2,7 +2,7 @@ import { rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { BindingPath, CommandContext, CommandDefinition, TextUIApp } from '@textui/core';
-import { confirm, notify, prompt } from '@textui/core';
+import { confirm, notify, prompt } from '@textui/widgets';
 import { closeDocument } from '@textui/documents';
 import { readBranches, type Git, type Status } from './git.js';
 import { safeStatus } from './provider.js';

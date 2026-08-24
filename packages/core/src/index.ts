@@ -54,9 +54,16 @@ export {
 } from './core/syntax.js';
 export { createManifests, Manifests } from './core/manifest.js';
 
-// Themes and the component catalog
+// Themes
 export * from './themes/index.js';
-export * from './ui/index.js';
+
+// The host primitives.
+//
+// Not the catalog - that is `@textui/widgets`. These four are what the layout
+// engine and the painter actually reason about, so they belong to the runtime
+// that reasons about them. `Box`, `Text` and `Canvas` are the Capitalized
+// spellings, and they are the strings themselves.
+export { PRIMITIVES, Box, Text, Canvas } from './ui/primitives.js';
 
 // Adapters
 export * from './adapters/index.js';

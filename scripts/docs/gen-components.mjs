@@ -46,7 +46,7 @@ function declaredInSource() {
   return names;
 }
 
-const core = await import('../../packages/core/dist/ui/index.js');
+const core = await import('../../packages/widgets/dist/index.js');
 const docs = await import('../../packages/documents/dist/index.js');
 const { interfaces, byFile, components, aliases } = JSON.parse(
   readFileSync(at('scripts/docs/props.json'), 'utf8'),

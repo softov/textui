@@ -10,7 +10,7 @@ grand_parent: Components
 Markdown laid out into the width it was given. Does not scroll.
 
 ```tsx
-import { MarkdownView } from '@textui/core';
+import { MarkdownView } from '@textui/widgets';
 
 <MarkdownView content={'# Title\n\nSome **bold** text.\n'} />
 ```

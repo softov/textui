@@ -10,7 +10,7 @@ grand_parent: Components
 A titled region. Bordered or airy, whichever the theme asks for.
 
 ```tsx
-import { Panel } from '@textui/core';
+import { Panel } from '@textui/widgets';
 
 <Panel title="Services" meta="12" padding={1}>
   <text content="api" />

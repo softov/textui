@@ -10,7 +10,7 @@ grand_parent: Components
 One or more series on a braille grid, with axes.
 
 ```tsx
-import { LineChart } from '@textui/core';
+import { LineChart } from '@textui/widgets';
 
 <LineChart
   series={[{ label: 'p95', values: [12, 18, 15, 22, 19] }]}

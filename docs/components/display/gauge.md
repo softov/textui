@@ -10,7 +10,7 @@ grand_parent: Components
 One value against a range, with thresholds.
 
 ```tsx
-import { Gauge } from '@textui/core';
+import { Gauge } from '@textui/widgets';
 
 <Gauge
   value={82}

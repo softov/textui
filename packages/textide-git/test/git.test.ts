@@ -5,7 +5,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
-import { decorationsPath, lineMarksFor, registerBuiltins } from '@textui/core';
+import { decorationsPath, lineMarksFor, registerBuiltins } from '@textui/widgets';
 import { registerDocuments } from '@textui/documents';
 import {
   classify, codeOf, createGit, decorationsOf, diffPath, diffUri, parseStatus, readDiff,

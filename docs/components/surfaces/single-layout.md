@@ -10,7 +10,7 @@ grand_parent: Components
 Shows one mount and ignores the rest.
 
 ```tsx
-import { BUILTIN_LAYOUTS } from '@textui/core';
+import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 console.log(BUILTIN_LAYOUTS.map((layout) => layout.name));
 ```

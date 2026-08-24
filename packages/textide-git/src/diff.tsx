@@ -1,11 +1,29 @@
-import {
-  HORIZONTAL_STEP, ScrollThumb, chorded, defineComponent, h, sliceColumns, stringWidth,
-  useFocus, useInput, useMeasure, usePanelState, usePanelStatus, useRuntime, useStoreValue,
-  viewportRows,
-} from '@textui/core';
 import type {
-  BindingPath, BoxProps, ComponentDefinition, RenderOutput, StyleColor,
+  BindingPath,
+  BoxProps,
+  ComponentDefinition,
+  RenderOutput,
+  StyleColor,
 } from '@textui/core';
+import {
+  chorded,
+  defineComponent,
+  h,
+  sliceColumns,
+  stringWidth,
+  useFocus,
+  useInput,
+  useMeasure,
+  useRuntime,
+  useStoreValue,
+} from '@textui/core';
+import {
+  HORIZONTAL_STEP,
+  ScrollThumb,
+  usePanelState,
+  usePanelStatus,
+  viewportRows,
+} from '@textui/widgets';
 import { useDocument } from '@textui/documents';
 import { parseHunks } from './hunks.js';
 import { diffPath } from './provider.js';

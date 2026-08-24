@@ -1,5 +1,12 @@
-import { Row, useRuntime, useStoreSubtree, useStoreValue, useTheme, defineComponent } from '@textui/core';
 import type { RenderOutput } from '@textui/core';
+import {
+  useRuntime,
+  useStoreSubtree,
+  useStoreValue,
+  useTheme,
+  defineComponent,
+} from '@textui/core';
+import { Row } from '@textui/widgets';
 import { DOCUMENTS_ROOT, isDocumentDirty } from '@textui/documents';
 import type { Workspace } from '../workspace.js';
 import { WORKSPACE_PATH } from '../workspace.js';

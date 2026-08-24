@@ -10,7 +10,7 @@ grand_parent: Components
 A single line of text, with a real terminal cursor.
 
 ```tsx
-import { TextInput } from '@textui/core';
+import { TextInput } from '@textui/widgets';
 
 <TextInput label="Name" value="" onChange={(value) => console.log(value)} />
 ```
@@ -31,6 +31,7 @@ import { TextInput } from '@textui/core';
 | `autoFocus` | `boolean` |  |  |
 | `search` | `boolean` |  | Draw a search glyph before the field. |
 | `focusId` | `string` |  | A stable focus id, so a command can send the reader here by name. Without one a control's id is derived from its instance, which nothing outside the render can know - so "focus the filter" has nothing to name and the key that would do it cannot be written. |
+| `onEdge` | `(edge: 'start' \| 'end') => void` |  | The caret tried to leave the field. A single-line input answers `left` and `right` itself right up to the ends, so a caller that wants those keys past the ends cannot have them from a key handler - the field takes the key and reports nothing. This is how it reports: the palette drills into a command's choices on `right`, and the path picker goes up a folder on `left`. `TextArea` has had this from the start; the two controls disagreeing is what left both of those keys silently doing nothing. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

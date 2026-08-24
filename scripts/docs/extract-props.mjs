@@ -1,4 +1,4 @@
-// Pull component prop interfaces out of @textui/core's source with the
+// Pull component prop interfaces out of the packages' sources with the
 // TypeScript compiler API.
 //
 // Prop tables in the docs are generated from this rather than typed by hand:
@@ -9,11 +9,15 @@ import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { ROOT, at } from './root.mjs';
 
-const UI_DIR = at('packages/core/src/ui');
+const UI_DIR = at('packages/widgets/src');
+const CORE_UI_DIR = at('packages/core/src/ui');
 const JSX_DIR = at('packages/core/src/jsx');
 
 const files = [
   ...readdirSync(UI_DIR).filter((f) => f.endsWith('.ts')).map((f) => join(UI_DIR, f)),
+  // Screen and the four primitives stayed in core, with the runtime that
+  // paints them.
+  ...readdirSync(CORE_UI_DIR).filter((f) => f.endsWith('.ts')).map((f) => join(CORE_UI_DIR, f)),
   join(JSX_DIR, 'intrinsics.ts'),
   ...readdirSync(at('packages/core/src/types'))
     .filter((f) => f.endsWith('.ts'))

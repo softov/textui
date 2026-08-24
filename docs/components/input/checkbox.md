@@ -10,7 +10,7 @@ grand_parent: Components
 An independent on/off, with a third indeterminate state.
 
 ```tsx
-import { Checkbox } from '@textui/core';
+import { Checkbox } from '@textui/widgets';
 
 <Checkbox label="Notify on failure" checked onChange={(checked) => console.log(checked)} />
 ```

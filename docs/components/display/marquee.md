@@ -10,7 +10,7 @@ grand_parent: Components
 Text too long for its box, read by sliding it while it has the cursor.
 
 ```tsx
-import { Marquee } from '@textui/core';
+import { Marquee } from '@textui/widgets';
 
 <Marquee content="a service name far too long for the column it is in" active />
 ```

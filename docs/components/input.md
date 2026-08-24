@@ -6,7 +6,7 @@ has_children: true
 ---
 
 <!-- docs:setup
-import { fieldValidators, useForm, validators } from '@textui/core';
+import { fieldValidators, useForm, validators } from '@textui/widgets';
 declare const save: (values: Record<string, unknown>) => void;
 -->
 

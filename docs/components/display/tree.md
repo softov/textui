@@ -10,7 +10,7 @@ grand_parent: Components
 Rows that nest, expand and collapse.
 
 ```tsx
-import { Tree } from '@textui/core';
+import { Tree } from '@textui/widgets';
 
 <Tree
   nodes={[

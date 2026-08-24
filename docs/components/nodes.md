@@ -17,7 +17,7 @@ exactly this, so the two lines below are the same value:
 
 ```tsx
 import type { ComponentNode } from '@textui/core';
-import { Row } from '@textui/core';
+import { Row } from '@textui/widgets';
 
 const fromJsx = <Row gap={1} />;
 const fromData: ComponentNode = { component: 'Row', gap: 1 };

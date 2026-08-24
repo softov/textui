@@ -1,10 +1,19 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { ShellDefinition } from '../types/shell.js';
-import type { SurfaceName } from '../types/surface.js';
-import type { BindingPath } from '../types/graph.js';
-import type { BoxProps } from '../jsx/intrinsics.js';
-import { h, defineComponent } from '../jsx/factory.js';
-import { useRuntime, useSize, useStoreSubtree, useStoreValue, useTheme } from '../runtime/hooks.js';
+import type {
+  ComponentDefinition,
+  ShellDefinition,
+  SurfaceName,
+  BindingPath,
+  BoxProps,
+} from '@textui/core';
+import {
+  h,
+  defineComponent,
+  useRuntime,
+  useSize,
+  useStoreSubtree,
+  useStoreValue,
+  useTheme,
+} from '@textui/core';
 import { SurfaceArea } from './surface.js';
 import { ToastHost } from './overlay.js';
 

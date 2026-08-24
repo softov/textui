@@ -1,8 +1,15 @@
-import {
-  ScrollThumb, chorded, defineComponent, h, sliceColumns, useFocus, useInput, useMeasure,
-  useState, viewportRows,
-} from '@textui/core';
 import type { BoxProps, ComponentDefinition, RenderOutput } from '@textui/core';
+import {
+  chorded,
+  defineComponent,
+  h,
+  sliceColumns,
+  useFocus,
+  useInput,
+  useMeasure,
+  useState,
+} from '@textui/core';
+import { ScrollThumb, viewportRows } from '@textui/widgets';
 import { useDocument } from '@textui/documents';
 import { parseBlame, parseLog, authorWidth } from './history.js';
 

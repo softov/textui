@@ -1,8 +1,15 @@
-import {
-  Button, Checkbox, Column, MarkdownView, Panel, RadioGroup, Row, TextInput,
-  defineComponent, useFocusScope, useInput, useStore, useTheme,
-} from '@textui/core';
 import type { BindingPath, BoxProps, RenderOutput } from '@textui/core';
+import { defineComponent, useFocusScope, useInput, useStore, useTheme } from '@textui/core';
+import {
+  Button,
+  Checkbox,
+  Column,
+  MarkdownView,
+  Panel,
+  RadioGroup,
+  Row,
+  TextInput,
+} from '@textui/widgets';
 import type { Answer, PendingInput, Question } from '../ahp/types.js';
 
 /**

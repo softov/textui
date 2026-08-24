@@ -10,7 +10,7 @@ grand_parent: Components
 One of several views, chosen from a row of labels.
 
 ```tsx
-import { Tabs } from '@textui/core';
+import { Tabs } from '@textui/widgets';
 
 <Tabs
   items={[

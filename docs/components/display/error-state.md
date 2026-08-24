@@ -10,7 +10,7 @@ grand_parent: Components
 Something threw, and here is what and whether to retry.
 
 ```tsx
-import { ErrorState } from '@textui/core';
+import { ErrorState } from '@textui/widgets';
 
 <ErrorState error={new Error('connection refused')} onRetry={() => {}} />
 ```

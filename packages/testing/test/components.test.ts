@@ -1,6 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, renderApp } from '../src/index.js';
-import { h, Button, Column, Marquee, Row, Field, Form, Progress, ScrollView, Select, TextArea, TextInput, defineComponent, useState, useForm, fieldValidators, validators } from '@textui/core';
+import { h, defineComponent, useState } from '@textui/core';
+import {
+  Button,
+  Column,
+  Marquee,
+  Row,
+  Field,
+  Form,
+  Progress,
+  ScrollView,
+  Select,
+  TextArea,
+  TextInput,
+  useForm,
+  fieldValidators,
+  validators,
+} from '@textui/widgets';
 
 const ROWS = [
   { id: 'api', name: 'api-gateway', status: 'up', cpu: '12.4', mem: '310' },

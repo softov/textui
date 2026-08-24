@@ -50,7 +50,8 @@
   },
   "dependencies": {
     "@textui/core": "workspace:^",
-    "@textui/terminal": "workspace:^"
+    "@textui/terminal": "workspace:^",
+    "@textui/widgets": "workspace:^"
   },
   "publishConfig": {
     "access": "public"

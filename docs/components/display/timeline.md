@@ -10,7 +10,7 @@ grand_parent: Components
 Events in order, each with a time, a title and an optional note.
 
 ```tsx
-import { Timeline } from '@textui/core';
+import { Timeline } from '@textui/widgets';
 
 <Timeline
   items={[

@@ -10,7 +10,7 @@ grand_parent: Components
 A titled group of fields.
 
 ```tsx
-import { FormSection } from '@textui/core';
+import { FormSection } from '@textui/widgets';
 
 <FormSection title="Notifications" description="Where alerts are sent.">
   <text content="fields go here" />

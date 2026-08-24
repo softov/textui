@@ -10,7 +10,7 @@ grand_parent: Components
 A message worth a row of its own, in one of four tones.
 
 ```tsx
-import { Alert } from '@textui/core';
+import { Alert } from '@textui/widgets';
 
 <Alert tone="warning" title="Degraded" message="Two of six workers are not responding." />
 ```

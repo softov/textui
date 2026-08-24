@@ -10,7 +10,7 @@ grand_parent: Components
 A column whose spacing comes from the theme.
 
 ```tsx
-import { Stack } from '@textui/core';
+import { Stack } from '@textui/widgets';
 
 <Stack spacing="md">
   <text content="one" />

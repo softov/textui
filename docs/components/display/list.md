@@ -10,7 +10,7 @@ grand_parent: Components
 Fixed-height rows with a selection and a keyboard.
 
 ```tsx
-import { List } from '@textui/core';
+import { List } from '@textui/widgets';
 
 <List
   items={[

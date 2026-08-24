@@ -1,6 +1,5 @@
-import {
-  BUILTIN_SHELLS, BUILTIN_THEMES, createApp, registerBuiltins, renderToString, WRITER_KEY,
-} from '@textui/core';
+import { BUILTIN_THEMES, createApp, renderToString, WRITER_KEY } from '@textui/core';
+import { BUILTIN_SHELLS, registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal, createWriter } from '@textui/terminal';
 import { readFileSync } from 'node:fs';
 import { TILE_PATH, tileFrom } from './tile.js';

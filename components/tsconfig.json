@@ -6,7 +6,17 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["ui/**/*", "templates/**/*"]
+  "include": [
+    "ui/**/*",
+    "templates/**/*"
+  ],
+  "references": [
+    {
+      "path": "../packages/widgets"
+    }
+  ]
 }

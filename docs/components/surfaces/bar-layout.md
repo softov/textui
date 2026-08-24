@@ -10,7 +10,7 @@ grand_parent: Components
 Mounts along a single row.
 
 ```tsx
-import { BUILTIN_LAYOUTS } from '@textui/core';
+import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const bar = BUILTIN_LAYOUTS.find((layout) => layout.name === 'bar');
 ```

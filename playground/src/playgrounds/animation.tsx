@@ -1,7 +1,5 @@
-import {
-  Button, Column, Gauge, Panel, Progress, Row, Sparkline, Spinner,
-  useFrame, useRuntime, useState, useTicker, useTween,
-} from '@textui/core';
+import { useFrame, useRuntime, useState, useTicker, useTween } from '@textui/core';
+import { Button, Column, Gauge, Panel, Progress, Row, Sparkline, Spinner } from '@textui/widgets';
 
 /**
  * Animation.

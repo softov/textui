@@ -10,7 +10,7 @@ grand_parent: Components
 The submit and cancel row, already laid out.
 
 ```tsx
-import { FormActions } from '@textui/core';
+import { FormActions } from '@textui/widgets';
 
 <FormActions submitLabel="Save" onCancel={() => {}} />
 ```

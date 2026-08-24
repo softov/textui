@@ -10,7 +10,7 @@ grand_parent: Components
 A label, a control, a hint and whatever error the form has for it.
 
 ```tsx
-import { Field, TextInput } from '@textui/core';
+import { Field, TextInput } from '@textui/widgets';
 
 <Field name="email" label="Email" hint="We only use this for alerts" required>
   <TextInput value="" onChange={() => {}} />

@@ -10,7 +10,7 @@ grand_parent: Components
 A distribution, bucketed from raw values.
 
 ```tsx
-import { Histogram } from '@textui/core';
+import { Histogram } from '@textui/widgets';
 
 <Histogram values={[2, 3, 3, 4, 7, 8, 8, 9]} buckets={8} />
 ```

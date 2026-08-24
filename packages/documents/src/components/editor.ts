@@ -1,16 +1,52 @@
-import type { BoxProps } from '@textui/core';
 import type {
-  Color, ColorDepth, ComponentDefinition, LineMark, RenderOutput, ResolvedTheme, StyleColor,
+  BoxProps,
+  Color,
+  ColorDepth,
+  ComponentDefinition,
+  RenderOutput,
+  ResolvedTheme,
+  StyleColor,
   SyntaxToken,
 } from '@textui/core';
 import {
-  downsample, findMatches, h, chorded, defineComponent, MARK_GLYPH, MARK_TONE, matchAt, mix,
-  packColor, ScrollThumb, serviceKey,
-  sliceColumns, stepMatch, stringWidth, unpackColor, useCapabilities, useClipboard,
+  downsample,
+  h,
+  chorded,
+  defineComponent,
+  mix,
+  packColor,
+  serviceKey,
+  sliceColumns,
+  stringWidth,
+  unpackColor,
+  useCapabilities,
+  useClipboard,
   useEffect,
-  useFind, useFocus, useHighlight, useInput, useLineMarks, useMeasure, useMemo, usePanelState,
-  usePanelStatus, useRef, useRuntime, useState, useStoreValue, useTheme, viewportRows,
+  useFocus,
+  useHighlight,
+  useInput,
+  useMeasure,
+  useMemo,
+  useRef,
+  useRuntime,
+  useState,
+  useStoreValue,
+  useTheme,
 } from '@textui/core';
+import type { LineMark } from '@textui/widgets';
+import {
+  findMatches,
+  MARK_GLYPH,
+  MARK_TONE,
+  matchAt,
+  ScrollThumb,
+  stepMatch,
+  useFind,
+  useLineMarks,
+  usePanelState,
+  usePanelStatus,
+  viewportRows,
+} from '@textui/widgets';
 import { useDocument } from '../use-document.js';
 import { EMPTY_HISTORY, record, redo, undo, type History, type Snapshot } from '../history.js';
 

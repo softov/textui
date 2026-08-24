@@ -44,7 +44,8 @@
   },
   "dependencies": {
     "@textui/core": "workspace:^",
-    "@textui/documents": "workspace:^"
+    "@textui/documents": "workspace:^",
+    "@textui/widgets": "workspace:^"
   },
   "devDependencies": {
     "@textui/testing": "workspace:^",

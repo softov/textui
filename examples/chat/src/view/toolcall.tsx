@@ -1,5 +1,6 @@
-import { Badge, Column, MarkdownView, Row, defineComponent, useTheme } from '@textui/core';
 import type { BoxProps, RenderOutput, SemanticVariant } from '@textui/core';
+import { defineComponent, useTheme } from '@textui/core';
+import { Badge, Column, MarkdownView, Row } from '@textui/widgets';
 import type { ToolCall } from '../ahp/types.js';
 
 /**

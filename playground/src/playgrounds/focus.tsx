@@ -1,7 +1,5 @@
-import {
-  Button, Checkbox, Column, KeyValue, Panel, Row, TextInput,
-  useFocus, useRuntime, useState,
-} from '@textui/core';
+import { useFocus, useRuntime, useState } from '@textui/core';
+import { Button, Checkbox, Column, KeyValue, Panel, Row, TextInput } from '@textui/widgets';
 
 /**
  * Focus.

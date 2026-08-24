@@ -1,5 +1,6 @@
-import { Row, defineComponent, useFocus, useInput, useTheme } from '@textui/core';
 import type { BoxProps, RenderOutput } from '@textui/core';
+import { defineComponent, useFocus, useInput, useTheme } from '@textui/core';
+import { Row } from '@textui/widgets';
 
 /**
  * The composer's control row: what this message will be sent as.

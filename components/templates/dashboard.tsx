@@ -1,7 +1,5 @@
-import {
-  Column, KeyHints, Panel, Row, StatusDot, defineComponent,
-  useStoreValue, useTicker, useState,
-} from '@textui/core';
+import { defineComponent, useStoreValue, useTicker, useState } from '@textui/core';
+import { Column, KeyHints, Panel, Row, StatusDot } from '@textui/widgets';
 import { ServiceTable, type Service } from '../ui/service-table.js';
 import { MetricCard } from '../ui/metric-card.js';
 

@@ -1,9 +1,36 @@
+import { useState } from '@textui/core';
 import {
-  Alert, Badge, Breadcrumb, Button, Card, Checkbox, Column, Divider, Feed, Grid,
-  Heading, KeyValue, Label, List, MarkdownView, Menu, Panel, Progress, RadioGroup,
-  Row, ScrollView, Select, Slider, Spinner, StatusDot, Switch, Tabs,
-  TextInput, Timeline, Wizard, useState,
-} from '@textui/core';
+  Alert,
+  Badge,
+  Breadcrumb,
+  Button,
+  Card,
+  Checkbox,
+  Column,
+  Divider,
+  Feed,
+  Grid,
+  Heading,
+  KeyValue,
+  Label,
+  List,
+  MarkdownView,
+  Menu,
+  Panel,
+  Progress,
+  RadioGroup,
+  Row,
+  ScrollView,
+  Select,
+  Slider,
+  Spinner,
+  StatusDot,
+  Switch,
+  Tabs,
+  TextInput,
+  Timeline,
+  Wizard,
+} from '@textui/widgets';
 import { EVENTS } from '../data.js';
 
 /**

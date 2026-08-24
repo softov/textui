@@ -1,8 +1,24 @@
+import type { BoxProps, RenderOutput } from '@textui/core';
 import {
-  Badge, Column, EmptyState, KeyValue, List, Panel, Row, ScrollView, Timeline,
-  defineComponent, useApp, useEffect, useStoreSubtree, useStoreValue, useTheme,
+  defineComponent,
+  useApp,
+  useEffect,
+  useStoreSubtree,
+  useStoreValue,
+  useTheme,
 } from '@textui/core';
-import type { BoxProps, ListItem, RenderOutput } from '@textui/core';
+import type { ListItem } from '@textui/widgets';
+import {
+  Badge,
+  Column,
+  EmptyState,
+  KeyValue,
+  List,
+  Panel,
+  Row,
+  ScrollView,
+  Timeline,
+} from '@textui/widgets';
 import {
   DEFAULT_VIEW, PROJECTS, STATUSES, TASKS, VIEW, getProject, getTask, navCounts,
   projects, setView, tasksIn, toggleTask,

@@ -10,7 +10,7 @@ grand_parent: Components
 Nothing here, and what to do about it.
 
 ```tsx
-import { EmptyState } from '@textui/core';
+import { EmptyState } from '@textui/widgets';
 
 <EmptyState
   title="No services"

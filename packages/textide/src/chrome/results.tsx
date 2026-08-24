@@ -1,7 +1,6 @@
-import {
-  Column, List, Row, defineComponent, panelViewPath, useRuntime, useStoreValue,
-} from '@textui/core';
 import type { RenderOutput } from '@textui/core';
+import { defineComponent, useRuntime, useStoreValue } from '@textui/core';
+import { Column, List, Row, panelViewPath } from '@textui/widgets';
 import { EDITOR_URI, openTab, paneScope } from '../tabs.js';
 import { SEARCH_RESULTS, SEARCH_SELECTED, SEARCH_STATE, byFile, summarise } from '../search.js';
 import type { Hit, SearchState } from '../search.js';

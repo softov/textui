@@ -10,7 +10,7 @@ grand_parent: Components
 Work in progress, with no measurable amount of it.
 
 ```tsx
-import { Spinner } from '@textui/core';
+import { Spinner } from '@textui/widgets';
 
 <Spinner label="Connecting" />
 ```

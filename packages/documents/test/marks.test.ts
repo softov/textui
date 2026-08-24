@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { registerBuiltins, setLineMarks } from '@textui/core';
 import type { Resource, ResourceProvider } from '@textui/core';
+import { registerBuiltins, setLineMarks } from '@textui/widgets';
 import { renderApp } from '@textui/testing';
 import { openDocument, registerDocuments } from '../src/index.js';
 

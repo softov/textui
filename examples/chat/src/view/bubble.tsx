@@ -1,7 +1,6 @@
-import {
-  Column, MarkdownView, Row, defineComponent, useFrame, useTheme,
-} from '@textui/core';
 import type { BoxProps, RenderOutput, SemanticVariant, StyleColor } from '@textui/core';
+import { defineComponent, useFrame, useTheme } from '@textui/core';
+import { Column, MarkdownView, Row } from '@textui/widgets';
 
 /**
  * One thing said, and the two ways it is still being said.

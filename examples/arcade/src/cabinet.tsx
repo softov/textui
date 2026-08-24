@@ -1,10 +1,25 @@
+import type { PaintSurface, RenderContext, RenderOutput } from '@textui/core';
 import {
-  Badge, Column, KeyHints, List, Panel, Row,
-  defineComponent, useApp, useCapabilities, useEffect, useExecute, useFocus,
-  useInput, useMeasure, useMemo, useRef, useScreen, useState, useStore,
-  useStoreSubtree, useStoreValue, useTheme, useTicker,
+  defineComponent,
+  useApp,
+  useCapabilities,
+  useEffect,
+  useExecute,
+  useFocus,
+  useInput,
+  useMeasure,
+  useMemo,
+  useRef,
+  useScreen,
+  useState,
+  useStore,
+  useStoreSubtree,
+  useStoreValue,
+  useTheme,
+  useTicker,
 } from '@textui/core';
-import type { ListItem, PaintSurface, RenderContext, RenderOutput } from '@textui/core';
+import type { ListItem } from '@textui/widgets';
+import { Badge, Column, KeyHints, List, Panel, Row } from '@textui/widgets';
 import { SCORE_WIDTH, createPainter, createRng, roomFor } from './engine.js';
 import type { Game, GameKey } from './engine.js';
 import { glyphsFor } from './glyphs.js';

@@ -10,7 +10,7 @@ grand_parent: Components
 Where you are, and every level you can go back to.
 
 ```tsx
-import { Breadcrumb } from '@textui/core';
+import { Breadcrumb } from '@textui/widgets';
 
 <Breadcrumb
   items={[

@@ -18,7 +18,8 @@ Node ≥ 22. There are no other dependencies.
 ## The smallest thing that runs
 
 ```tsx
-import { createApp, registerBuiltins, WRITER_KEY } from '@textui/core';
+import { createApp, WRITER_KEY } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal, createWriter } from '@textui/terminal';
 
 const terminal = createNodeTerminal();
@@ -52,7 +53,8 @@ Point the compiler at the runtime:
 Then `<Row gap={1}/>` produces `{ component: 'Row', gap: 1 }`. Lowercase names are host primitives - `box`, `text`, `canvas`, `spacer` - and capitalised names are components you import, which is what gives them prop types.
 
 ```tsx
-import { Column, Panel, Row, Table, useStoreValue } from '@textui/core';
+import { useStoreValue } from '@textui/core';
+import { Column, Panel, Row, Table } from '@textui/widgets';
 
 function Services() {
   const services = useStoreValue<Service[]>('$/services/list', []) ?? [];
@@ -79,7 +81,8 @@ function Services() {
 A `root` node fills the terminal. To get chrome - a header, a sidebar, tabs, a status bar - mount into surfaces and let a shell arrange them:
 
 <!-- docs:local
-import { createApp, KeyHints, registerBuiltins } from '@textui/core';
+import { createApp } from '@textui/core';
+import { KeyHints, registerBuiltins } from '@textui/widgets';
 import type { RenderOutput } from '@textui/core';
 import { createNodeTerminal } from '@textui/terminal';
 declare const terminal: ReturnType<typeof createNodeTerminal>;
@@ -107,7 +110,7 @@ Switch `shell` to `'console'` or `'paper'` and the same mounts render as a dense
 ## Commands, not handlers
 
 <!-- docs:local
-import { registerBuiltins } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import type { TextUIApp } from '@textui/core';
 -->
 

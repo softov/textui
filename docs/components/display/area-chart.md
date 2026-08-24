@@ -10,7 +10,7 @@ grand_parent: Components
 A line chart with the area under it filled.
 
 ```tsx
-import { AreaChart } from '@textui/core';
+import { AreaChart } from '@textui/widgets';
 
 <AreaChart series={[{ label: 'requests', values: [4, 9, 6, 12, 11] }]} />
 ```

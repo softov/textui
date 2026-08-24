@@ -10,7 +10,7 @@ grand_parent: Components
 A short label attached to whatever it wraps.
 
 ```tsx
-import { Tooltip } from '@textui/core';
+import { Tooltip } from '@textui/widgets';
 
 <Tooltip text="Restarts every worker">
   <text content="Restart all" />

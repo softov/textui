@@ -10,7 +10,7 @@ grand_parent: Components
 Puts its children on a named layer, optionally trapping focus.
 
 ```tsx
-import { LayerScope } from '@textui/core';
+import { LayerScope } from '@textui/widgets';
 
 <LayerScope scopeId="inspector" trap>
   <text content="focus cannot leave this subtree" />

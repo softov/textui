@@ -1,6 +1,5 @@
-import {
-  Center, Column, Divider, Grid, Panel, Row, ScrollView, Splitter, useSize,
-} from '@textui/core';
+import { useSize } from '@textui/core';
+import { Center, Column, Divider, Grid, Panel, Row, ScrollView, Splitter } from '@textui/widgets';
 
 /**
  * Layout.

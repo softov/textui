@@ -1,5 +1,6 @@
-import { LogViewer, Panel, defineComponent, useStream, type BoxProps } from '@textui/core';
 import type { StreamSource } from '@textui/core';
+import { defineComponent, useStream, type BoxProps } from '@textui/core';
+import { LogViewer, Panel } from '@textui/widgets';
 
 /**
  * A log tail wired to a stream.

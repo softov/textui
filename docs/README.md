@@ -15,7 +15,8 @@ A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is
 one way to write them.
 
 ```tsx
-import { createApp, registerBuiltins } from '@textui/core';
+import { createApp } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal } from '@textui/terminal';
 
 const app = createApp({

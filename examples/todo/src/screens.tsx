@@ -1,9 +1,23 @@
+import type { RenderOutput } from '@textui/core';
+import { defineComponent, useApp, useScreen, useStoreSubtree, useStoreValue } from '@textui/core';
+import type { ListItem } from '@textui/widgets';
 import {
-  Badge, Column, EmptyState, Field, Form, FormActions, KeyValue, List, Panel,
-  Row, SearchBox, Select, Switch, TextInput,
-  defineComponent, useApp, useForm, useScreen, useStoreSubtree, useStoreValue,
-} from '@textui/core';
-import type { ListItem, RenderOutput } from '@textui/core';
+  Badge,
+  Column,
+  EmptyState,
+  Field,
+  Form,
+  FormActions,
+  KeyValue,
+  List,
+  Panel,
+  Row,
+  SearchBox,
+  Select,
+  Switch,
+  TextInput,
+  useForm,
+} from '@textui/widgets';
 import { TaskDetail, TaskList } from './components.js';
 import {
   DEFAULT_VIEW, PROJECTS, QUERY, SETTINGS, TASKS, VIEW, getProject, getTask, now,

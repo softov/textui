@@ -5,7 +5,8 @@ nav_order: 5
 ---
 
 <!-- docs:setup
-import { CodeViewer, useHighlight } from '@textui/core';
+import { useHighlight } from '@textui/core';
+import { CodeViewer } from '@textui/widgets';
 import { jsonHighlighter } from '@textui/documents';
 import type { Resource, SyntaxSpan } from '@textui/core';
 declare const app: import('@textui/core').TextUIApp;

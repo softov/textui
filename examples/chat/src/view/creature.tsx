@@ -1,5 +1,6 @@
-import { Column, defineComponent, useMemo } from '@textui/core';
 import type { BoxProps, RenderOutput, SemanticVariant } from '@textui/core';
+import { defineComponent, useMemo } from '@textui/core';
+import { Column } from '@textui/widgets';
 
 /**
  * A small drawn thing, above the invitation to say something.

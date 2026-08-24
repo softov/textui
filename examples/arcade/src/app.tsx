@@ -1,5 +1,6 @@
-import { confirm, createBag, registerBuiltins } from '@textui/core';
 import type { CommandDefinition, Disposable, TextUIApp } from '@textui/core';
+import { createBag } from '@textui/core';
+import { confirm, registerBuiltins } from '@textui/widgets';
 import { CabinetScreen, GameStage, PlayScreen } from './cabinet.js';
 import { GAMES, gameById } from './games/index.js';
 import { GENERATION, PAUSED, SELECTED, newRun } from './data.js';

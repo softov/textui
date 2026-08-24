@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import {
-  defineComponent, h, useState, useStore, useStoreValue, notify,
-} from '@textui/core';
 import type { TextUIApp, Resource, ResourceProvider } from '@textui/core';
+import { defineComponent, h, useState, useStore, useStoreValue } from '@textui/core';
+import { notify } from '@textui/widgets';
 import { render, renderApp } from '@textui/testing';
 import {
   jsonAdapter, openDocument, getDocument, isDocumentDirty, saveDocument,

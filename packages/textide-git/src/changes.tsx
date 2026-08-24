@@ -1,7 +1,7 @@
-import {
-  Column, List, Row, defineComponent, useRuntime, useStoreValue,
-} from '@textui/core';
-import type { BindingPath, RenderOutput, StatusSegment } from '@textui/core';
+import type { BindingPath, RenderOutput } from '@textui/core';
+import { defineComponent, useRuntime, useStoreValue } from '@textui/core';
+import type { StatusSegment } from '@textui/widgets';
+import { Column, List, Row } from '@textui/widgets';
 import type { Change, Status } from './git.js';
 
 /**

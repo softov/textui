@@ -1,12 +1,25 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { BoxProps, TextProps } from '../jsx/intrinsics.js';
-import type { SemanticVariant, StyleColor, SurfaceVariant } from '../types/style.js';
-import { h, defineComponent } from '../jsx/factory.js';
-import { ON_TONE, TONE as TONE_COLOR } from './tone.js';
+import type {
+  ComponentDefinition,
+  BoxProps,
+  TextProps,
+  SemanticVariant,
+  StyleColor,
+  SurfaceVariant,
+} from '@textui/core';
 import {
-  useEffect, useFrame, useMeasure, useRef, useRuntime, useState, useTheme, useTicker,
-} from '../runtime/hooks.js';
-import { stringWidth } from '../util/text.js';
+  h,
+  defineComponent,
+  useEffect,
+  useFrame,
+  useMeasure,
+  useRef,
+  useRuntime,
+  useState,
+  useTheme,
+  useTicker,
+  stringWidth,
+} from '@textui/core';
+import { ON_TONE, TONE as TONE_COLOR } from './tone.js';
 
 /**
  * Display components.

@@ -10,7 +10,7 @@ grand_parent: Components
 A boolean that takes effect as soon as it moves.
 
 ```tsx
-import { Switch } from '@textui/core';
+import { Switch } from '@textui/widgets';
 
 <Switch label="Follow tail" value onChange={(value) => console.log(value)} />
 ```

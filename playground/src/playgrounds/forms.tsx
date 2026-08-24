@@ -1,8 +1,21 @@
 import {
-  Column, Field, Form, FormActions, FormSection, KeyValue, Panel, Row,
-  RadioGroup, Slider, Switch, TextArea, TextInput,
-  fieldValidators, useForm, validators,
-} from '@textui/core';
+  Column,
+  Field,
+  Form,
+  FormActions,
+  FormSection,
+  KeyValue,
+  Panel,
+  Row,
+  RadioGroup,
+  Slider,
+  Switch,
+  TextArea,
+  TextInput,
+  fieldValidators,
+  useForm,
+  validators,
+} from '@textui/widgets';
 
 /**
  * Forms.

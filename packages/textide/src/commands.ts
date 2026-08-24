@@ -1,10 +1,22 @@
 import type {
-  SurfaceName, CommandDefinition, CommandContext, TextUIApp, BindingPath, ThemeGlyphs,
+  SurfaceName,
+  CommandDefinition,
+  CommandContext,
+  TextUIApp,
+  BindingPath,
+  ThemeGlyphs,
 } from '@textui/core';
+import { nameOf, normalizeStroke } from '@textui/core';
 import {
-  FIND_QUERY, confirm, nameOf, normalizeStroke, notify, parentOf, pick, prompt, setQuery,
+  FIND_QUERY,
+  confirm,
+  notify,
+  parentOf,
+  pick,
+  prompt,
+  setQuery,
   stepFind,
-} from '@textui/core';
+} from '@textui/widgets';
 import { EditActionsKey, type EditActions } from '@textui/documents';
 import {
   canRedoDocument, canUndoDocument, getDocument, isDocumentDirty, openDocument, redoDocument,

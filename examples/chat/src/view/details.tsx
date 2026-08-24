@@ -1,7 +1,13 @@
-import {
-  Column, Row, defineComponent, useClipboard, useFocus, useInput, useState, useTheme,
-} from '@textui/core';
 import type { BoxProps, RenderOutput, SemanticVariant } from '@textui/core';
+import {
+  defineComponent,
+  useClipboard,
+  useFocus,
+  useInput,
+  useState,
+  useTheme,
+} from '@textui/core';
+import { Column, Row } from '@textui/widgets';
 
 /**
  * A property list you can walk, and take a value out of.

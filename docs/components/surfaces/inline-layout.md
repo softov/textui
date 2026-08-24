@@ -10,7 +10,7 @@ grand_parent: Components
 Mounts rendered one after another with no chrome at all.
 
 ```tsx
-import { BUILTIN_LAYOUTS } from '@textui/core';
+import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const inline = BUILTIN_LAYOUTS.find((layout) => layout.name === 'inline');
 ```

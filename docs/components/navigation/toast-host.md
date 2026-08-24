@@ -10,7 +10,7 @@ grand_parent: Components
 Where toasts stack, and the layer they live on.
 
 ```tsx
-import { ToastHost } from '@textui/core';
+import { ToastHost } from '@textui/widgets';
 
 <ToastHost anchor="bottom-right" />
 ```

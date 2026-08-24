@@ -1,12 +1,14 @@
-import type { SyntaxSpan } from '@textui/core';
-import type { ResourceAdapter } from '@textui/core';
-import type { CommandContext } from '@textui/core';
-import type { TextUIApp } from '@textui/core';
-import type { BindingPath } from '@textui/core';
+import type {
+  SyntaxSpan,
+  ResourceAdapter,
+  CommandContext,
+  TextUIApp,
+  BindingPath,
+} from '@textui/core';
 import { spanHighlighter } from '@textui/core';
+import { notify } from '@textui/widgets';
 import { getDocument, openDocument, setDocumentContent } from '../documents.js';
 import { JSON_COMPONENTS } from '../components/json.js';
-import { notify } from '@textui/core';
 
 /**
  * The JSON adapter.

@@ -1,5 +1,6 @@
 import type { BindingPath, Disposable, Manifest, TextUIApp } from '@textui/core';
-import { clearDecorations, clearLineMarks, createBag, setDecorations, setLineMarks } from '@textui/core';
+import { createBag } from '@textui/core';
+import { clearDecorations, clearLineMarks, setDecorations, setLineMarks } from '@textui/widgets';
 import { createGit, type Git } from './git.js';
 import { GIT_KINDS, GIT_VIEWERS, createGitProvider, safeStatus } from './provider.js';
 import { DIFF_COMPONENTS } from './diff.js';

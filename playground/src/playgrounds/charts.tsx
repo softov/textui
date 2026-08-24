@@ -1,7 +1,17 @@
+import { useStoreValue } from '@textui/core';
 import {
-  AreaChart, BarChart, Column, Gauge, Grid, Heatmap, Histogram, LineChart,
-  Panel, Row, Sparkline, useStoreValue,
-} from '@textui/core';
+  AreaChart,
+  BarChart,
+  Column,
+  Gauge,
+  Grid,
+  Heatmap,
+  Histogram,
+  LineChart,
+  Panel,
+  Row,
+  Sparkline,
+} from '@textui/widgets';
 import { wave } from '../data.js';
 
 /**

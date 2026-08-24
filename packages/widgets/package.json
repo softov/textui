@@ -1,0 +1,52 @@
+{
+  "name": "@textui/widgets",
+  "version": "0.1.0",
+  "description": "The TextUI component catalog - layout, display, controls, data, overlays and charts",
+  "keywords": [
+    "terminal",
+    "tui",
+    "components",
+    "widgets",
+    "jsx",
+    "ui",
+    "catalog",
+    "text-ui"
+  ],
+  "homepage": "https://softov.github.io/textui/",
+  "bugs": {
+    "url": "https://github.com/softov/textui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softov/textui.git",
+    "directory": "packages/widgets"
+  },
+  "license": "MIT",
+  "author": "Softov <softov@brbyte.com>",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

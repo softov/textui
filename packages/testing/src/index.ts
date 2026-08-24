@@ -1,10 +1,18 @@
 import type {
-  CapabilityOverrides, ComponentDefinition, ComponentNode, Disposable, InspectorNode,
-  KeyEvent, TextUIApp, ReactiveStore, SemanticRole, ThemeDefinition,
+  CapabilityOverrides,
+  ComponentDefinition,
+  ComponentNode,
+  Disposable,
+  InspectorNode,
+  KeyEvent,
+  TextUIApp,
+  ReactiveStore,
+  SemanticRole,
+  ThemeDefinition,
 } from '@textui/core';
-import { WRITER_KEY, createApp, strokeOf, splitStroke, type App } from '@textui/core';
+import { WRITER_KEY, createApp, strokeOf, splitStroke, type App, createBag } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createVirtualTerminal, createWriter, type VirtualTerminalAdapter } from '@textui/terminal';
-import { createBag, registerBuiltins } from '@textui/core';
 
 /**
  * The testing harness.

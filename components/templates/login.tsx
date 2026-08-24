@@ -1,7 +1,17 @@
+import { defineComponent } from '@textui/core';
 import {
-  Alert, Button, Center, Column, Field, Form, Panel, TextInput,
-  defineComponent, fieldValidators, useForm, validators,
-} from '@textui/core';
+  Alert,
+  Button,
+  Center,
+  Column,
+  Field,
+  Form,
+  Panel,
+  TextInput,
+  fieldValidators,
+  useForm,
+  validators,
+} from '@textui/widgets';
 
 /**
  * A sign-in screen.

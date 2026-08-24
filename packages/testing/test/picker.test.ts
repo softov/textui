@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { pick, parentOf, registerBuiltins } from '@textui/core';
 import type { Resource, ResourceProvider } from '@textui/core';
+import { pick, parentOf, registerBuiltins } from '@textui/widgets';
 import { renderApp } from '@textui/testing';
 
 /**

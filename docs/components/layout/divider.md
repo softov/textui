@@ -10,7 +10,7 @@ grand_parent: Components
 A rule, optionally labelled.
 
 ```tsx
-import { Divider } from '@textui/core';
+import { Divider } from '@textui/widgets';
 
 <Divider label="Danger zone" />
 ```

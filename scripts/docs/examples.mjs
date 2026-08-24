@@ -103,9 +103,39 @@ container is shorter and does not need a node per space.`,
 
   // ---- layout -------------------------------------------------------------
 
+  PathPicker: {
+    summary: 'Pick a file or a folder by walking to it.',
+    setup: `declare const open: (uri: string) => void;
+declare const close: () => void;`,
+    example: `import { PathPicker } from '@textui/widgets';
+
+<PathPicker
+  start="file:///home/you/project"
+  wants="file"
+  title="Open a file"
+  onPick={(uri) => open(uri)}
+  onCancel={() => close()}
+/>`,
+    notes: `The picker walks the **resource registry**, never the filesystem, so it browses
+whatever is mounted rather than \`file:\` alone - the first thing anyone wants to
+pick off a remote is a file.
+
+Typing filters the visible rows. \`enter\` on a folder goes into it, and \`left\`
+at the start of the filter goes back up: the field answers arrow keys itself, so
+it hands the edges back through \`onEdge\` rather than swallowing them.
+
+\`wants: 'directory'\` adds a "Use this folder" row, because when the answer is
+the place you are standing there is no child to press enter on.
+
+Most callers want [\`pick()\`](../../platform/layers.md) instead, which opens this
+in a layer and returns a promise.`,
+    seeAlso: `- [Menu](menu.md) - the list this is built on
+- [CommandPalette](command-palette.md) - the same filter-and-choose shape, over commands`,
+  },
+
   Row: {
     summary: 'A horizontal flex container.',
-    example: `import { Row } from '@textui/core';
+    example: `import { Row } from '@textui/widgets';
 
 <Row gap={1} padding={1}>
   <text content="name" />
@@ -126,7 +156,7 @@ outside the container.`,
 
   Column: {
     summary: 'A vertical flex container.',
-    example: `import { Column } from '@textui/core';
+    example: `import { Column } from '@textui/widgets';
 
 <Column gap={1} flex={1}>
   <text content="one" />
@@ -145,7 +175,7 @@ is how a header, a body and a status bar divide a screen.`,
 
   Center: {
     summary: 'Centres its children on one axis or both.',
-    example: `import { Center } from '@textui/core';
+    example: `import { Center } from '@textui/widgets';
 
 <Center flex={1}>
   <text content="nothing selected" fg="muted" />
@@ -161,7 +191,7 @@ does nothing at all.`,
 
   Grid: {
     summary: 'Equal-width columns that wrap into rows.',
-    example: `import { Grid } from '@textui/core';
+    example: `import { Grid } from '@textui/widgets';
 
 <Grid columns={3} gap={1}>
   <text content="one" />
@@ -181,7 +211,7 @@ Every column is the same width. For columns that are not, use a
 
   Panel: {
     summary: 'A titled region. Bordered or airy, whichever the theme asks for.',
-    example: `import { Panel } from '@textui/core';
+    example: `import { Panel } from '@textui/widgets';
 
 <Panel title="Services" meta="12" padding={1}>
   <text content="api" />
@@ -205,7 +235,7 @@ itself as the errored or the active one without repainting its contents.`,
 
   Divider: {
     summary: 'A rule, optionally labelled.',
-    example: `import { Divider } from '@textui/core';
+    example: `import { Divider } from '@textui/widgets';
 
 <Divider label="Danger zone" />`,
     notes: `\`direction\` is \`'horizontal'\` by default; \`'vertical'\` draws a column rule
@@ -220,7 +250,7 @@ that for you.
 
   Spacer: {
     summary: 'Empty space, greedy by default.',
-    example: `import { Row, Spacer } from '@textui/core';
+    example: `import { Row, Spacer } from '@textui/widgets';
 
 <Row>
   <text content="left" />
@@ -241,7 +271,7 @@ knowing when reading a graph, where \`{ component: 'Spacer' }\` and
 
   Stack: {
     summary: 'A column whose spacing comes from the theme.',
-    example: `import { Stack } from '@textui/core';
+    example: `import { Stack } from '@textui/widgets';
 
 <Stack spacing="md">
   <text content="one" />
@@ -260,7 +290,7 @@ number is load-bearing and must not move.`,
 
   ScrollView: {
     summary: 'A scrolling viewport, with keyboard and wheel support.',
-    example: `import { ScrollView } from '@textui/core';
+    example: `import { ScrollView } from '@textui/widgets';
 
 <ScrollView flex={1}>
   <text content="a document taller than the space it was given" wrap="word" />
@@ -282,7 +312,7 @@ inside the component, which is what lets a screen restore where the reader was.`
 
   Splitter: {
     summary: 'Two panes with a divider between them.',
-    example: `import { Splitter } from '@textui/core';
+    example: `import { Splitter } from '@textui/widgets';
 
 <Splitter direction="row" size="30%">
   <text content="sidebar" />
@@ -304,7 +334,7 @@ is drawn.`,
 
   Heading: {
     summary: 'A section heading, sized and toned by the theme.',
-    example: `import { Heading } from '@textui/core';
+    example: `import { Heading } from '@textui/widgets';
 
 <Heading content="Services" level={1} />`,
     notes: `Three levels. What each one looks like is the theme's business - bold, a
@@ -319,7 +349,7 @@ so the difference between \`1\` and \`3\` is weight and colour rather than heigh
 
   Label: {
     summary: 'A short name for something, in one of the semantic tones.',
-    example: `import { Label } from '@textui/core';
+    example: `import { Label } from '@textui/widgets';
 
 <Label content="CPU" tone="muted" />`,
     notes: `Use it for the name of a value rather than for prose. \`tone\` is the semantic
@@ -334,7 +364,7 @@ takes and which names a node for the test harness and for accessibility.`,
 
   Badge: {
     summary: 'A short inline tag - a count, a state, a version.',
-    example: `import { Badge } from '@textui/core';
+    example: `import { Badge } from '@textui/widgets';
 
 <Badge label="running" tone="success" />`,
     notes: `A badge is inline and stays one row, which is why its \`outline\` variant is
@@ -350,7 +380,7 @@ learn two.`,
 
   StatusDot: {
     summary: 'The shared status vocabulary: a glyph and a colour, never only a colour.',
-    example: `import { StatusDot } from '@textui/core';
+    example: `import { StatusDot } from '@textui/widgets';
 
 <StatusDot status="degraded" label="billing-worker" />`,
     notes: `Five states, and they are fixed: \`up\`, \`down\`, \`degraded\`, \`unknown\`,
@@ -367,7 +397,7 @@ the glyph has to carry the meaning on its own.`,
 
   Card: {
     summary: 'A titled block with no frame, for grouping without drawing a box.',
-    example: `import { Card } from '@textui/core';
+    example: `import { Card } from '@textui/widgets';
 
 <Card title="billing-worker" subtitle="eu-west-1" footer="updated 2m ago">
   <text content="42 jobs queued" />
@@ -382,7 +412,7 @@ resize or scroll - and a card when several of them sit in a
 
   KeyValue: {
     summary: 'Label and value pairs, aligned into one or more columns.',
-    example: `import { KeyValue } from '@textui/core';
+    example: `import { KeyValue } from '@textui/widgets';
 
 <KeyValue
   columns={2}
@@ -402,7 +432,7 @@ thing that has gone wrong.`,
 
   Timeline: {
     summary: 'Events in order, each with a time, a title and an optional note.',
-    example: `import { Timeline } from '@textui/core';
+    example: `import { Timeline } from '@textui/widgets';
 
 <Timeline
   items={[
@@ -424,7 +454,7 @@ that worked.`,
 
   Alert: {
     summary: 'A message worth a row of its own, in one of four tones.',
-    example: `import { Alert } from '@textui/core';
+    example: `import { Alert } from '@textui/widgets';
 
 <Alert tone="warning" title="Degraded" message="Two of six workers are not responding." />`,
     notes: `Four tones only - \`info\`, \`success\`, \`warning\`, \`danger\` - rather than the
@@ -439,7 +469,7 @@ are laid out below both, for an alert that needs an action in it.`,
 
   Progress: {
     summary: 'A bar with its numbers stated.',
-    example: `import { Progress } from '@textui/core';
+    example: `import { Progress } from '@textui/widgets';
 
 <Progress label="Uploading" value={42} total={100} />`,
     notes: `\`total\` defaults to \`1\`, so a fraction works without arithmetic:
@@ -457,7 +487,7 @@ yet.`,
 
   Spinner: {
     summary: 'Work in progress, with no measurable amount of it.',
-    example: `import { Spinner } from '@textui/core';
+    example: `import { Spinner } from '@textui/widgets';
 
 <Spinner label="Connecting" />`,
     notes: `Use it only when the duration is genuinely unknown. Anything with a numerator
@@ -472,7 +502,7 @@ terminal cannot draw them.`,
 
   Skeleton: {
     summary: 'The shape of content that has not arrived yet.',
-    example: `import { Skeleton } from '@textui/core';
+    example: `import { Skeleton } from '@textui/widgets';
 
 <Skeleton lines={3} widths={[100, 80, 60]} />`,
     notes: `\`widths\` are percentages, and varying them is the whole trick: three identical
@@ -487,7 +517,7 @@ one frame.`,
 
   EmptyState: {
     summary: 'Nothing here, and what to do about it.',
-    example: `import { EmptyState } from '@textui/core';
+    example: `import { EmptyState } from '@textui/widgets';
 
 <EmptyState
   title="No services"
@@ -506,7 +536,7 @@ whole pane.`,
 
   ErrorState: {
     summary: 'Something threw, and here is what and whether to retry.',
-    example: `import { ErrorState } from '@textui/core';
+    example: `import { ErrorState } from '@textui/widgets';
 
 <ErrorState error={new Error('connection refused')} onRetry={() => {}} />`,
     notes: `\`error\` is \`unknown\` on purpose: what a \`catch\` gives you is not always an
@@ -527,7 +557,7 @@ This is also what a component boundary renders when a subtree throws - see
 
   List: {
     summary: 'Fixed-height rows with a selection and a keyboard.',
-    example: `import { List } from '@textui/core';
+    example: `import { List } from '@textui/widgets';
 
 <List
   items={[
@@ -555,7 +585,7 @@ given none of those it renders everything and grows. See
 
   Table: {
     summary: 'Columns with headers, responsive by dropping the least important.',
-    example: `import { Table } from '@textui/core';
+    example: `import { Table } from '@textui/widgets';
 
 <Table
   columns={[
@@ -584,7 +614,7 @@ the rows carrying presentation.`,
 
   Tree: {
     summary: 'Rows that nest, expand and collapse.',
-    example: `import { Tree } from '@textui/core';
+    example: `import { Tree } from '@textui/widgets';
 
 <Tree
   nodes={[
@@ -606,7 +636,7 @@ runs out of width three levels down.`,
 
   Pagination: {
     summary: 'Page N of M, with the keys to move between them.',
-    example: `import { Pagination } from '@textui/core';
+    example: `import { Pagination } from '@textui/widgets';
 
 <Pagination page={2} pageCount={9} total={412} onChange={(page) => console.log(page)} />`,
     notes: `\`page\` is 1-based. \`total\` is the row count rather than the page count, and
@@ -621,7 +651,7 @@ to be and something else fetches it.`,
 
   LogViewer: {
     summary: 'Lines arriving continuously, with a tail that stops when you scroll.',
-    example: `import { LogViewer } from '@textui/core';
+    example: `import { LogViewer } from '@textui/widgets';
 
 <LogViewer
   lines={[
@@ -643,7 +673,7 @@ off when the lines already carry their own.`,
 
   CodeViewer: {
     summary: 'A viewport over source, highlighted by the registry and scrolled by lines.',
-    example: `import { CodeViewer } from '@textui/core';
+    example: `import { CodeViewer } from '@textui/widgets';
 
 <CodeViewer content={'const x = 1;\\nconst y = 2;\\n'} language="ts" flex={1} />`,
     notes: `A viewport, not a column of lines: it renders the rows it was laid out into,
@@ -663,7 +693,7 @@ column together for a status bar.`,
 
   MarkdownView: {
     summary: 'Markdown laid out into the width it was given. Does not scroll.',
-    example: `import { MarkdownView } from '@textui/core';
+    example: `import { MarkdownView } from '@textui/widgets';
 
 <MarkdownView content={'# Title\\n\\nSome **bold** text.\\n'} />`,
     notes: `It deliberately owns no viewport. A document viewer scrolls; a message inside a
@@ -683,7 +713,7 @@ an agent wrote for a person those are meaning rather than markup.`,
 
   Feed: {
     summary: 'Entries whose height is whatever their text wrapped to, with a cursor and a tail.',
-    example: `import { Feed } from '@textui/core';
+    example: `import { Feed } from '@textui/widgets';
 
 <Feed flex={1} follow>
   <text content="a first entry" wrap="word" />
@@ -711,7 +741,7 @@ it is the only answer that is not a guess.`,
 
   Sparkline: {
     summary: 'A trend in one row, drawn with eight block levels.',
-    example: `import { Sparkline } from '@textui/core';
+    example: `import { Sparkline } from '@textui/widgets';
 
 <Sparkline values={[3, 5, 4, 8, 6, 9]} showValue />`,
     notes: `One row, so it fits in a table cell or beside a label. A cell has one level of
@@ -726,7 +756,7 @@ shape with no scale is decoration.`,
 
   BarChart: {
     summary: 'Labelled bars, horizontal or vertical.',
-    example: `import { BarChart } from '@textui/core';
+    example: `import { BarChart } from '@textui/widgets';
 
 <BarChart
   data={[
@@ -746,7 +776,7 @@ means nothing.`,
 
   LineChart: {
     summary: 'One or more series on a braille grid, with axes.',
-    example: `import { LineChart } from '@textui/core';
+    example: `import { LineChart } from '@textui/widgets';
 
 <LineChart
   series={[{ label: 'p95', values: [12, 18, 15, 22, 19] }]}
@@ -766,7 +796,7 @@ side by side.`,
 
   AreaChart: {
     summary: 'A line chart with the area under it filled.',
-    example: `import { AreaChart } from '@textui/core';
+    example: `import { AreaChart } from '@textui/widgets';
 
 <AreaChart series={[{ label: 'requests', values: [4, 9, 6, 12, 11] }]} />`,
     notes: `Identical to [\`LineChart\`](line-chart.md) but with \`area\` on - it takes the
@@ -781,7 +811,7 @@ number.`,
 
   Histogram: {
     summary: 'A distribution, bucketed from raw values.',
-    example: `import { Histogram } from '@textui/core';
+    example: `import { Histogram } from '@textui/widgets';
 
 <Histogram values={[2, 3, 3, 4, 7, 8, 8, 9]} buckets={8} />`,
     notes: `Give it the raw values, not counts - the bucketing is the component's job, and
@@ -795,7 +825,7 @@ more than that cannot be drawn.`,
 
   Gauge: {
     summary: 'One value against a range, with thresholds.',
-    example: `import { Gauge } from '@textui/core';
+    example: `import { Gauge } from '@textui/widgets';
 
 <Gauge
   value={82}
@@ -814,7 +844,7 @@ and 100.`,
 
   Heatmap: {
     summary: 'A grid of values, coloured by intensity.',
-    example: `import { Heatmap } from '@textui/core';
+    example: `import { Heatmap } from '@textui/widgets';
 
 <Heatmap
   data={[[1, 4, 9], [3, 3, 2]]}
@@ -836,7 +866,7 @@ varies glyph as well as colour.`,
 
   Checkbox: {
     summary: 'An independent on/off, with a third indeterminate state.',
-    example: `import { Checkbox } from '@textui/core';
+    example: `import { Checkbox } from '@textui/widgets';
 
 <Checkbox label="Notify on failure" checked onChange={(checked) => console.log(checked)} />`,
     notes: `Space toggles it. \`indeterminate\` is the "some of the children" state for a
@@ -854,7 +884,7 @@ takes effect immediately rather than on submit it reads better as a
 
   Switch: {
     summary: 'A boolean that takes effect as soon as it moves.',
-    example: `import { Switch } from '@textui/core';
+    example: `import { Switch } from '@textui/widgets';
 
 <Switch label="Follow tail" value onChange={(value) => console.log(value)} />`,
     notes: `The difference from [\`Checkbox\`](checkbox.md) is a promise to the reader, not
@@ -870,7 +900,7 @@ states have names of their own.`,
 
   RadioGroup: {
     summary: 'Exactly one of several options.',
-    example: `import { RadioGroup } from '@textui/core';
+    example: `import { RadioGroup } from '@textui/widgets';
 
 <RadioGroup
   label="Theme"
@@ -893,7 +923,7 @@ checkboxes cannot.
 
   Slider: {
     summary: 'A number in a range, moved with the arrow keys.',
-    example: `import { Slider } from '@textui/core';
+    example: `import { Slider } from '@textui/widgets';
 
 <Slider label="Volume" value={40} onChange={(value) => console.log(value)} />`,
     notes: `Left and right move by \`step\`. \`format\` renders the number beside the track,
@@ -909,7 +939,7 @@ slider is not.`,
 
   TextInput: {
     summary: 'A single line of text, with a real terminal cursor.',
-    example: `import { TextInput } from '@textui/core';
+    example: `import { TextInput } from '@textui/widgets';
 
 <TextInput label="Name" value="" onChange={(value) => console.log(value)} />`,
     notes: `It publishes a **real cursor position** when the terminal has a cursor, so the
@@ -930,7 +960,7 @@ instance, which nothing outside the render can know - so a command meaning
 
   TextArea: {
     summary: 'A paragraph: grows to what has been typed, then scrolls.',
-    example: `import { TextArea } from '@textui/core';
+    example: `import { TextArea } from '@textui/widgets';
 
 <TextArea value="" onChange={(value) => console.log(value)} maxRows={6} />`,
     notes: `A newline is \`alt+enter\` or \`ctrl+j\` - **never \`shift+enter\`**, which most
@@ -951,7 +981,7 @@ which is how a composer inside a list hands focus back.`,
 
   Select: {
     summary: 'One of several, collapsed into a row until opened.',
-    example: `import { Select } from '@textui/core';
+    example: `import { Select } from '@textui/widgets';
 
 <Select
   label="Region"
@@ -974,7 +1004,7 @@ command. \`visibleRows\` caps the panel and the rest scrolls.`,
 
   SearchBox: {
     summary: 'A text input with a search glyph and a result count.',
-    example: `import { SearchBox } from '@textui/core';
+    example: `import { SearchBox } from '@textui/widgets';
 
 <SearchBox value="" count={12} onChange={(value) => console.log(value)} />`,
     notes: `Everything [\`TextInput\`](text-input.md) takes except \`search\`, which is
@@ -993,7 +1023,7 @@ screen's business.`,
   Form: {
     summary: 'The context a set of fields share - values, errors and submission.',
     setup: `declare const save: (values: unknown) => void;`,
-    example: `import { Field, Form, TextInput, useForm } from '@textui/core';
+    example: `import { Field, Form, TextInput, useForm } from '@textui/widgets';
 
 export function Profile() {
   const form = useForm({
@@ -1024,7 +1054,7 @@ touched, or after a submit attempt.`,
 
   Field: {
     summary: 'A label, a control, a hint and whatever error the form has for it.',
-    example: `import { Field, TextInput } from '@textui/core';
+    example: `import { Field, TextInput } from '@textui/widgets';
 
 <Field name="email" label="Email" hint="We only use this for alerts" required>
   <TextInput value="" onChange={() => {}} />
@@ -1042,7 +1072,7 @@ terminal wants.`,
 
   FormSection: {
     summary: 'A titled group of fields.',
-    example: `import { FormSection } from '@textui/core';
+    example: `import { FormSection } from '@textui/widgets';
 
 <FormSection title="Notifications" description="Where alerts are sent.">
   <text content="fields go here" />
@@ -1058,7 +1088,7 @@ about six fields it adds a heading to something that did not need one.`,
 
   FormActions: {
     summary: 'The submit and cancel row, already laid out.',
-    example: `import { FormActions } from '@textui/core';
+    example: `import { FormActions } from '@textui/widgets';
 
 <FormActions submitLabel="Save" onCancel={() => {}} />`,
     notes: `Inside a [\`Form\`](form.md) it wires itself to the form's submit and disables
@@ -1074,7 +1104,7 @@ settings screen where saving an unedited form is a pointless write.`,
 
   DangerZone: {
     summary: 'A destructive action, fenced off and optionally typed to confirm.',
-    example: `import { DangerZone } from '@textui/core';
+    example: `import { DangerZone } from '@textui/widgets';
 
 <DangerZone
   description="Deletes the namespace and everything in it."
@@ -1096,7 +1126,7 @@ keystroke from happening.`,
 
   Tabs: {
     summary: 'One of several views, chosen from a row of labels.',
-    example: `import { Tabs } from '@textui/core';
+    example: `import { Tabs } from '@textui/widgets';
 
 <Tabs
   items={[
@@ -1122,7 +1152,7 @@ they were not already on.`,
 
   Breadcrumb: {
     summary: 'Where you are, and every level you can go back to.',
-    example: `import { Breadcrumb } from '@textui/core';
+    example: `import { Breadcrumb } from '@textui/widgets';
 
 <Breadcrumb
   items={[
@@ -1142,7 +1172,7 @@ others.`,
 
   Menu: {
     summary: 'A list of commands, with shortcuts and submenus.',
-    example: `import { Menu } from '@textui/core';
+    example: `import { Menu } from '@textui/widgets';
 
 <Menu
   items={[
@@ -1167,7 +1197,7 @@ help pane rather than a menu.`,
 
   StatusBar: {
     summary: 'The bottom line: segments at the left, segments at the right.',
-    example: `import { StatusBar } from '@textui/core';
+    example: `import { StatusBar } from '@textui/widgets';
 
 <StatusBar
   leading={[{ id: 'branch', label: 'main' }]}
@@ -1184,7 +1214,7 @@ without the bar changing colour.`,
 
   Toolbar: {
     summary: 'Actions along a row, with optional shortcuts.',
-    example: `import { Toolbar } from '@textui/core';
+    example: `import { Toolbar } from '@textui/widgets';
 
 <Toolbar
   items={[
@@ -1204,7 +1234,7 @@ palette and a chord without a second implementation.`,
 
   KeyHints: {
     summary: 'The keys available right now, along one line.',
-    example: `import { KeyHints } from '@textui/core';
+    example: `import { KeyHints } from '@textui/widgets';
 
 <KeyHints hints={[{ keys: 'q', label: 'quit' }, { keys: 'r', label: 'refresh' }]} />`,
     notes: `A terminal UI has no menus to discover, so this is usually the only place a
@@ -1219,7 +1249,7 @@ rather than from a literal, which keeps the line honest as the screen changes.`,
 
   Wizard: {
     summary: 'Numbered steps, with the ones behind you marked done.',
-    example: `import { Wizard } from '@textui/core';
+    example: `import { Wizard } from '@textui/widgets';
 
 <Wizard
   steps={[
@@ -1243,7 +1273,7 @@ better once there are more than about four steps.`,
 
   Dialog: {
     summary: 'A modal panel with a title and a row of actions.',
-    example: `import { Dialog } from '@textui/core';
+    example: `import { Dialog } from '@textui/widgets';
 
 <Dialog
   title="Delete namespace?"
@@ -1269,7 +1299,7 @@ height.`,
 
   PromptDialog: {
     summary: 'A dialog that asks for one string.',
-    example: `import { PromptDialog } from '@textui/core';
+    example: `import { PromptDialog } from '@textui/widgets';
 
 <PromptDialog
   title="Rename"
@@ -1289,7 +1319,7 @@ is what calling code actually wants.`,
 
   Tooltip: {
     summary: 'A short label attached to whatever it wraps.',
-    example: `import { Tooltip } from '@textui/core';
+    example: `import { Tooltip } from '@textui/widgets';
 
 <Tooltip text="Restarts every worker">
   <text content="Restart all" />
@@ -1306,7 +1336,7 @@ answer.`,
 
   Toast: {
     summary: 'A message that arrives and leaves on its own.',
-    example: `import { Toast } from '@textui/core';
+    example: `import { Toast } from '@textui/widgets';
 
 <Toast tone="success" message="Deployed to eu-west-1" />`,
     notes: `The message itself. Placement, stacking and expiry belong to
@@ -1320,7 +1350,7 @@ Never put anything in a toast that the reader must act on - it will be gone.`,
 
   ToastHost: {
     summary: 'Where toasts stack, and the layer they live on.',
-    example: `import { ToastHost } from '@textui/core';
+    example: `import { ToastHost } from '@textui/widgets';
 
 <ToastHost anchor="bottom-right" />`,
     notes: `Mount one, once, near the root - or let a [shell](../surfaces/plain-shell.md)
@@ -1335,7 +1365,7 @@ everything except debug. \`anchor\` decides the corner.`,
 
   LayerScope: {
     summary: 'Puts its children on a named layer, optionally trapping focus.',
-    example: `import { LayerScope } from '@textui/core';
+    example: `import { LayerScope } from '@textui/widgets';
 
 <LayerScope scopeId="inspector" trap>
   <text content="focus cannot leave this subtree" />
@@ -1353,7 +1383,7 @@ dismissal and ordering but focus still moves through as usual.`,
 
   CommandPalette: {
     summary: 'Search the command registry and run what you find.',
-    example: `import { CommandPalette } from '@textui/core';
+    example: `import { CommandPalette } from '@textui/widgets';
 
 <CommandPalette placeholder="Run a command" onClose={() => {}} />`,
     notes: `It searches the **command registry**, not a list you pass it. Anything
@@ -1374,7 +1404,7 @@ implementation and three ways in.
 
   SurfaceArea: {
     summary: 'Renders one named surface wherever it is placed.',
-    example: `import { SurfaceArea } from '@textui/core';
+    example: `import { SurfaceArea } from '@textui/widgets';
 
 <SurfaceArea surface="main" />`,
     notes: `A surface is a named region that mounts are opened into. \`SurfaceArea\` is
@@ -1399,7 +1429,7 @@ renders when nothing is mounted.`,
 
   MountView: {
     summary: "Renders a single mount's target.",
-    example: `import { MountView } from '@textui/core';
+    example: `import { MountView } from '@textui/widgets';
 import type { Mount } from '@textui/core';
 
 declare const mount: Mount;
@@ -1416,7 +1446,7 @@ You need it when writing a layout of your own, and almost never otherwise.`,
 
   SingleLayout: {
     summary: 'Shows one mount and ignores the rest.',
-    example: `import { BUILTIN_LAYOUTS } from '@textui/core';
+    example: `import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 console.log(BUILTIN_LAYOUTS.map((layout) => layout.name));`,
     notes: `A layout is not mounted directly - it is registered, and a surface names it.
@@ -1432,7 +1462,7 @@ strip of tabs to say so.`,
 
   TabsLayout: {
     summary: "Arranges a surface's mounts as tabs.",
-    example: `import { BUILTIN_LAYOUTS } from '@textui/core';
+    example: `import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const tabs = BUILTIN_LAYOUTS.find((layout) => layout.name === 'tabs');`,
     notes: `One mount visible, a strip naming the others. Each tab's label comes from the
@@ -1447,7 +1477,7 @@ are mounts and their set changes at runtime.`,
 
   StackLayout: {
     summary: 'Stacks every mount in the surface, one after another.',
-    example: `import { BUILTIN_LAYOUTS } from '@textui/core';
+    example: `import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const stack = BUILTIN_LAYOUTS.find((layout) => layout.name === 'stack');`,
     notes: `All mounts visible, in order, down the surface. What a sidebar of collapsible
@@ -1459,7 +1489,7 @@ harmlessly.`,
 
   SplitLayout: {
     summary: 'Two mounts, side by side, with a divider.',
-    example: `import { BUILTIN_LAYOUTS } from '@textui/core';
+    example: `import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const split = BUILTIN_LAYOUTS.find((layout) => layout.name === 'split');`,
     notes: `The surface-level [\`Splitter\`](../layout/splitter.md). Where the divide sits
@@ -1473,7 +1503,7 @@ More than two mounts and the extras are stacked into the second pane.`,
 
   BarLayout: {
     summary: 'Mounts along a single row.',
-    example: `import { BUILTIN_LAYOUTS } from '@textui/core';
+    example: `import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const bar = BUILTIN_LAYOUTS.find((layout) => layout.name === 'bar');`,
     notes: `One row, mounts laid left to right, ordered by each mount's \`order\`. What the
@@ -1487,7 +1517,7 @@ that becomes two rows moves everything above it.`,
 
   RailLayout: {
     summary: 'A narrow vertical strip of mounts, usually icons.',
-    example: `import { BUILTIN_LAYOUTS } from '@textui/core';
+    example: `import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const rail = BUILTIN_LAYOUTS.find((layout) => layout.name === 'rail');`,
     notes: `The activity strip down the left of a workbench. Each mount contributes an
@@ -1501,7 +1531,7 @@ that wiring is the application's - the rail reports, it does not route.`,
 
   InlineLayout: {
     summary: 'Mounts rendered one after another with no chrome at all.',
-    example: `import { BUILTIN_LAYOUTS } from '@textui/core';
+    example: `import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const inline = BUILTIN_LAYOUTS.find((layout) => layout.name === 'inline');`,
     notes: `No tabs, no divider, no frame - the mounts and nothing else. For a surface
@@ -1513,7 +1543,8 @@ frame around a thing already framed.`,
 
   PlainShell: {
     summary: 'Header, main, status. The smallest arrangement that is still a shell.',
-    example: `import { createApp, registerBuiltins } from '@textui/core';
+    example: `import { createApp } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal } from '@textui/terminal';
 
 const app = createApp({
@@ -1534,7 +1565,8 @@ seems to vanish.`,
 
   ConsoleShell: {
     summary: 'A dense, bordered frame for a monitoring screen.',
-    example: `import { createApp, registerBuiltins } from '@textui/core';
+    example: `import { createApp } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal } from '@textui/terminal';
 
 const app = createApp({
@@ -1553,7 +1585,8 @@ not change; only the frame does.`,
 
   PaperShell: {
     summary: 'An airy, mostly borderless frame for something read rather than watched.',
-    example: `import { createApp, registerBuiltins } from '@textui/core';
+    example: `import { createApp } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal } from '@textui/terminal';
 
 const app = createApp({
@@ -1573,7 +1606,8 @@ rather than into a rule.`,
 
   WorkbenchShell: {
     summary: 'Rail, sidebar, main, panel, aside and status - the IDE arrangement.',
-    example: `import { createApp, registerBuiltins } from '@textui/core';
+    example: `import { createApp } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal } from '@textui/terminal';
 
 const app = createApp({
@@ -1760,7 +1794,7 @@ and saving are the buffer's - see [Document buffers](../../documents/buffers.md)
 
   Marquee: {
     summary: 'Text too long for its box, read by sliding it while it has the cursor.',
-    example: `import { Marquee } from '@textui/core';
+    example: `import { Marquee } from '@textui/widgets';
 
 <Marquee content="a service name far too long for the column it is in" active />`,
     notes: `Only ever a last resort for text that genuinely cannot fit. It moves, and
@@ -1781,7 +1815,7 @@ path visible and never moves.`,
 
   ResourcePanel: {
     summary: 'A place a resource is shown, by whichever renderer is registered for it.',
-    example: `import { ResourcePanel } from '@textui/core';
+    example: `import { ResourcePanel } from '@textui/widgets';
 
 <ResourcePanel uri="file:///srv/api/main.ts" />`,
     notes: `The panel is the *place*; what fills it is decided by the resource registry.

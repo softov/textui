@@ -1,7 +1,5 @@
-import {
-  Button, Column, KeyHints, Panel, Row, confirm, notify, prompt,
-  useCommand, useExecute, useRuntime, useState, useTheme,
-} from '@textui/core';
+import { useCommand, useExecute, useRuntime, useState, useTheme } from '@textui/core';
+import { Button, Column, KeyHints, Panel, Row, confirm, notify, prompt } from '@textui/widgets';
 
 /**
  * Overlays.

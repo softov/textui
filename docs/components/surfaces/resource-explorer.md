@@ -26,6 +26,7 @@ import { ResourceExplorer } from '@textui/documents';
 | `selectedUri` | `string` |  |  |
 | `visibleRows` | `number` |  |  |
 | `folderIcons` | `{ folder: string; folderOpen: string }` |  | What a folder looks like, open and shut. The tree draws a chevron by default, which says whether a row is expanded and nothing about what kind of row it is. An application with its own icon vocabulary - textide has one - says which marks mean folder here, rather than this file growing an opinion about glyphs it cannot pick for every terminal. |
+| `fileIcon` | `string` |  | What a file looks like when nothing has said otherwise. The registry answers for a kind somebody has described - a markdown viewer names and colours markdown - and this is the row underneath: a file whose kind nobody has claimed still deserves to look like a file rather than like nothing. Passed in for the same reason `folderIcons` is. |
 | `autoFocus` | `boolean` |  | Claim focus on mount, so an application has somewhere to start. |
 
 Plus everything on [`BoxProps`](../base-props.md).

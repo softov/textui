@@ -10,7 +10,7 @@ grand_parent: Components
 A grid of values, coloured by intensity.
 
 ```tsx
-import { Heatmap } from '@textui/core';
+import { Heatmap } from '@textui/widgets';
 
 <Heatmap
   data={[[1, 4, 9], [3, 3, 2]]}

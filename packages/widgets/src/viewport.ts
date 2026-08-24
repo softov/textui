@@ -1,5 +1,4 @@
-import type { Rect } from '../types/geometry.js';
-import type { Dimension } from '../types/style.js';
+import type { Rect, Dimension } from '@textui/core';
 
 /**
  * How many rows a scrolling component should draw.

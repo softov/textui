@@ -1,16 +1,29 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { BoxProps } from '../jsx/intrinsics.js';
-import type { BindingPath, ComponentNode } from '../types/graph.js';
-import type { Resource, ResourceRendererDefinition } from '../types/resource.js';
-import type { CommandContext, CommandDefinition } from '../types/command.js';
-import type { ReactiveStore } from '../types/store.js';
-import type { TextUIApp } from '../types/app.js';
-import { h, defineComponent } from '../jsx/factory.js';
+import type {
+  ComponentDefinition,
+  BoxProps,
+  BindingPath,
+  ComponentNode,
+  Resource,
+  ResourceRendererDefinition,
+  CommandContext,
+  CommandDefinition,
+  ReactiveStore,
+  TextUIApp,
+} from '@textui/core';
 import {
-  createContext, useContext, useEffect, useFocusScope, useRef, useRuntime, useState,
-  useStoreValue, useTask,
-} from '../runtime/hooks.js';
-import { escapeSegment } from '../util/paths.js';
+  h,
+  defineComponent,
+  createContext,
+  useContext,
+  useEffect,
+  useFocusScope,
+  useRef,
+  useRuntime,
+  useState,
+  useStoreValue,
+  useTask,
+  escapeSegment,
+} from '@textui/core';
 import { EmptyState, ErrorState, Spinner } from './display.js';
 
 /**

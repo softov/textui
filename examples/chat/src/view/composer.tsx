@@ -1,5 +1,7 @@
-import { Column, Divider, List, TextArea, defineComponent, useTheme } from '@textui/core';
-import type { BoxProps, ListItem, RenderOutput } from '@textui/core';
+import type { BoxProps, RenderOutput } from '@textui/core';
+import { defineComponent, useTheme } from '@textui/core';
+import type { ListItem } from '@textui/widgets';
+import { Column, Divider, List, TextArea } from '@textui/widgets';
 import { ComposerBar } from './controls.js';
 import type { ComposerOption } from './controls.js';
 

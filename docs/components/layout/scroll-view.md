@@ -10,7 +10,7 @@ grand_parent: Components
 A scrolling viewport, with keyboard and wheel support.
 
 ```tsx
-import { ScrollView } from '@textui/core';
+import { ScrollView } from '@textui/widgets';
 
 <ScrollView flex={1}>
   <text content="a document taller than the space it was given" wrap="word" />

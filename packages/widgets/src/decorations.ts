@@ -1,8 +1,5 @@
-import type { BindingPath } from '../types/graph.js';
-import type { ReactiveStore } from '../types/store.js';
-import type { SemanticVariant, StyleColor } from '../types/style.js';
-import { useStoreSubtree, useRuntime } from '../runtime/hooks.js';
-import { escapeSegment } from '../util/paths.js';
+import type { BindingPath, ReactiveStore, SemanticVariant, StyleColor } from '@textui/core';
+import { useStoreSubtree, useRuntime, escapeSegment } from '@textui/core';
 
 /**
  * Marks on resources.

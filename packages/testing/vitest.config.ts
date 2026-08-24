@@ -6,6 +6,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@textui/core': resolve(__dirname, '../core/src/index.ts'),
+      '@textui/widgets': resolve(__dirname, '../widgets/src/index.ts'),
       '@textui/terminal': resolve(__dirname, '../terminal/src/index.ts'),
     },
   },

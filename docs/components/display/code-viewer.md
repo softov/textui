@@ -10,7 +10,7 @@ grand_parent: Components
 A viewport over source, highlighted by the registry and scrolled by lines.
 
 ```tsx
-import { CodeViewer } from '@textui/core';
+import { CodeViewer } from '@textui/widgets';
 
 <CodeViewer content={'const x = 1;\nconst y = 2;\n'} language="ts" flex={1} />
 ```
@@ -35,6 +35,7 @@ import { CodeViewer } from '@textui/core';
 | `scrollbar` | `boolean` | `true` | Draw a scrollbar when the content is taller than the view. |
 | `showCaret` | `boolean` | `true` | Mark the caret line. Off for a plain excerpt. |
 | `tabWidth` | `number` | `4` |  |
+| `autoFocus` | `boolean` |  | Take the keyboard on mount. Wanted by a viewer that is the only thing in a dialog: a modal traps focus but does not hand it to anything, so a scrollable body nobody focused is a body nobody can scroll. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

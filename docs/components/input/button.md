@@ -16,7 +16,7 @@ declare const app: import('@textui/core').TextUIApp;
 A focusable action. Enter and space run it.
 
 ```tsx
-import { Button } from '@textui/core';
+import { Button } from '@textui/widgets';
 
 <Button label="Save" tone="primary" variant="solid" onPress={save} />
 ```
@@ -25,7 +25,7 @@ import { Button } from '@textui/core';
 `danger` button can be `solid`, `outline`, `ghost` or `link`:
 
 ```tsx
-import { Button, Row } from '@textui/core';
+import { Button, Row } from '@textui/widgets';
 
 export function Actions() {
   return (
@@ -146,7 +146,7 @@ user might also reach from a keybinding or the palette should be a command, so
 the three cannot drift apart:
 
 ```tsx
-import { Button } from '@textui/core';
+import { Button } from '@textui/widgets';
 
 app.commands.register({
   id: 'file.save',
@@ -226,7 +226,7 @@ filled buttons read as heavier than the row above it.
 So a dialog's OK and Cancel sit on the same line whichever way round they are:
 
 ```tsx
-import { Button, Row } from '@textui/core';
+import { Button, Row } from '@textui/widgets';
 
 export function DialogActions({ onOk, onCancel }: { onOk(): void; onCancel(): void }) {
   return (

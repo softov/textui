@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { render, renderApp } from '../src/index.js';
 import type { ComponentDefinition, Resource, ResourceProvider, TextUIApp } from '@textui/core';
+import { defineComponent, h, useFocus, useInput, useStoreValue } from '@textui/core';
 import {
-  PANEL_PATH, ResourcePanel, defaultRenderer, defineComponent, h, kindRendererPath, panelPath,
-  panelStatusPath, panelViewPath, useFocus, useInput, useStoreValue, usePanelState,
+  PANEL_PATH,
+  ResourcePanel,
+  defaultRenderer,
+  kindRendererPath,
+  panelPath,
+  panelStatusPath,
+  panelViewPath,
+  usePanelState,
   usePanelStatus,
-} from '@textui/core';
+} from '@textui/widgets';
 
 /**
  * Panels.

@@ -1,5 +1,5 @@
 import type { CommandDefinition, TextUIApp } from '@textui/core';
-import { confirm } from '@textui/core';
+import { confirm } from '@textui/widgets';
 import { openDocuments } from '@textui/documents';
 
 /**

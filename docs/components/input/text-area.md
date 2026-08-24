@@ -10,7 +10,7 @@ grand_parent: Components
 A paragraph: grows to what has been typed, then scrolls.
 
 ```tsx
-import { TextArea } from '@textui/core';
+import { TextArea } from '@textui/widgets';
 
 <TextArea value="" onChange={(value) => console.log(value)} maxRows={6} />
 ```

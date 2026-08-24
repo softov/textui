@@ -1,20 +1,31 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { BoxProps } from '../jsx/intrinsics.js';
-import type { SemanticVariant } from '../types/style.js';
-import type { LayerEntry, LayerPosition } from '../types/layer.js';
-import type { ComponentNode } from '../types/graph.js';
-import type { RenderOutput } from '../types/render.js';
-import type { ArgChoice, ArgSpec, CommandDefinition } from '../types/command.js';
-import type { TextUIApp } from '../types/app.js';
-import type { Disposable } from '../types/disposable.js';
-import type { ResolvedTheme } from '../types/theme.js';
-import { h, defineComponent } from '../jsx/factory.js';
+import type {
+  ComponentDefinition,
+  BoxProps,
+  SemanticVariant,
+  LayerEntry,
+  LayerPosition,
+  ComponentNode,
+  RenderOutput,
+  ArgChoice,
+  ArgSpec,
+  CommandDefinition,
+  TextUIApp,
+  Disposable,
+  ResolvedTheme,
+} from '@textui/core';
 import {
-  useEffect, useFocusScope, useInput, useRuntime, useState, useTheme,
-} from '../runtime/hooks.js';
+  h,
+  defineComponent,
+  useEffect,
+  useFocusScope,
+  useInput,
+  useRuntime,
+  useState,
+  useTheme,
+  nameOf,
+} from '@textui/core';
 import { Button, TextInput } from './control.js';
 import { Menu, type MenuItem } from './navigation.js';
-import { nameOf } from '../core/syntax.js';
 
 /**
  * Overlays.

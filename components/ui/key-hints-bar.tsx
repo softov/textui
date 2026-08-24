@@ -1,4 +1,5 @@
-import { KeyHints, defineComponent, useRuntime, type BoxProps } from '@textui/core';
+import { defineComponent, useRuntime, type BoxProps } from '@textui/core';
+import { KeyHints } from '@textui/widgets';
 
 /**
  * The footer line, built from the command registry rather than a hand-kept

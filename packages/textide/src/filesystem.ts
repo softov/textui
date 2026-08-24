@@ -2,10 +2,14 @@ import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/p
 import { basename, dirname, extname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type {
-  Resource, ResourceAdapter, ResourceCapability, ResourceProvider, CommandContext,
+  Resource,
+  ResourceAdapter,
+  ResourceCapability,
+  ResourceProvider,
+  CommandContext,
   BindingPath,
 } from '@textui/core';
-import { confirm, notify, prompt } from '@textui/core';
+import { confirm, notify, prompt } from '@textui/widgets';
 import type { IconSet } from './icons.js';
 
 /**

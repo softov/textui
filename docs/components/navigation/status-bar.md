@@ -10,7 +10,7 @@ grand_parent: Components
 The bottom line: segments at the left, segments at the right.
 
 ```tsx
-import { StatusBar } from '@textui/core';
+import { StatusBar } from '@textui/widgets';
 
 <StatusBar
   leading={[{ id: 'branch', label: 'main' }]}

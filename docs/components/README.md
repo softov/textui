@@ -36,7 +36,7 @@ without a hook.
 
 <!-- props:start -->
 
-96 components. Every one has a page.
+97 components. Every one has a page.
 
 ### The four primitives
 
@@ -153,6 +153,7 @@ without a hook.
 | --- | --- |
 | [`Dialog`](navigation/dialog.md) | Modal box with actions; traps focus and restores it. |
 | [`PromptDialog`](navigation/prompt-dialog.md) | One-field dialog behind the `prompt` helper. |
+| [`PathPicker`](navigation/path-picker.md) | Walk the resource tree and pick a file or a folder. |
 | [`Tooltip`](navigation/tooltip.md) | Small anchored hint. |
 | [`Toast`](navigation/toast.md) | Transient notification. |
 | [`ToastHost`](navigation/toast-host.md) | Where toasts stack. |

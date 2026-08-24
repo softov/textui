@@ -1,7 +1,5 @@
-import {
-  Button, Column, KeyHints, List, Panel, Row, useCommand, useRuntime,
-  useState, useStoreValue,
-} from '@textui/core';
+import { useCommand, useRuntime, useState, useStoreValue } from '@textui/core';
+import { Button, Column, KeyHints, List, Panel, Row } from '@textui/widgets';
 
 /**
  * Commands and keybindings.

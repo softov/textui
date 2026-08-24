@@ -6,7 +6,7 @@ has_children: true
 ---
 
 <!-- docs:setup
-import { confirm } from '@textui/core';
+import { confirm } from '@textui/widgets';
 declare const app: import('@textui/core').TextUIApp;
 -->
 

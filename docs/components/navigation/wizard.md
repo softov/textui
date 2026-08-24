@@ -10,7 +10,7 @@ grand_parent: Components
 Numbered steps, with the ones behind you marked done.
 
 ```tsx
-import { Wizard } from '@textui/core';
+import { Wizard } from '@textui/widgets';
 
 <Wizard
   steps={[

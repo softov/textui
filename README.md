@@ -3,7 +3,8 @@
 A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is one way to write them.
 
 ```tsx
-import { createApp, registerBuiltins } from '@textui/core';
+import { createApp } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal } from '@textui/terminal';
 
 const app = createApp({
@@ -50,7 +51,8 @@ body. Worth doing before it is worth claiming.
 
 | Package | What it is |
 | --- | --- |
-| [`@textui/core`](packages/core) | The runtime: store, registries, renderer, hooks, component catalog |
+| [`@textui/core`](packages/core) | The runtime: store, registries, renderer, hooks, the four host primitives |
+| [`@textui/widgets`](packages/widgets) | The component catalog: layout, display, controls, data, overlays, charts |
 | [`@textui/terminal`](packages/terminal) | Terminal adapters, capability detection, ANSI writing, input decoding |
 | [`@textui/testing`](packages/testing) | Headless harness: semantic queries, input, resizing, time |
 | [`@textui/cli`](packages/cli) | `textui init / add / create / doctor`, and primitives for your own CLI |

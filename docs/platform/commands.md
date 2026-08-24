@@ -5,7 +5,8 @@ nav_order: 1
 ---
 
 <!-- docs:setup
-import { notify, useCommand } from '@textui/core';
+import { useCommand } from '@textui/core';
+import { notify } from '@textui/widgets';
 import type { SemanticVariant } from '@textui/core';
 declare const app: import('@textui/core').TextUIApp;
 declare const restart: (id: string) => Promise<void>;

@@ -1,5 +1,6 @@
 import type { Disposable, EventPath, TextUIApp } from '@textui/core';
-import { createBag, notify, registerBuiltins } from '@textui/core';
+import { createBag } from '@textui/core';
+import { notify, registerBuiltins } from '@textui/widgets';
 import { jsonAdapter, registerDocuments } from '@textui/documents';
 import { filesystemAdapter } from './filesystem.js';
 import { seedWorkspace, type Workspace } from './workspace.js';

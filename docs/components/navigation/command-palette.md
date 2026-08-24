@@ -10,7 +10,7 @@ grand_parent: Components
 Search the command registry and run what you find.
 
 ```tsx
-import { CommandPalette } from '@textui/core';
+import { CommandPalette } from '@textui/widgets';
 
 <CommandPalette placeholder="Run a command" onClose={() => {}} />
 ```

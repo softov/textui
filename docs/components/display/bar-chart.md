@@ -10,7 +10,7 @@ grand_parent: Components
 Labelled bars, horizontal or vertical.
 
 ```tsx
-import { BarChart } from '@textui/core';
+import { BarChart } from '@textui/widgets';
 
 <BarChart
   data={[

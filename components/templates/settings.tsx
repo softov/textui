@@ -1,7 +1,17 @@
+import { defineComponent, useRuntime, useState } from '@textui/core';
 import {
-  Column, DangerZone, Field, Form, FormSection, Panel, Select, Slider, Switch,
-  TextInput, defineComponent, useForm, useRuntime, useState,
-} from '@textui/core';
+  Column,
+  DangerZone,
+  Field,
+  Form,
+  FormSection,
+  Panel,
+  Select,
+  Slider,
+  Switch,
+  TextInput,
+  useForm,
+} from '@textui/widgets';
 
 /**
  * A settings screen.

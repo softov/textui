@@ -10,7 +10,7 @@ grand_parent: Components
 A trend in one row, drawn with eight block levels.
 
 ```tsx
-import { Sparkline } from '@textui/core';
+import { Sparkline } from '@textui/widgets';
 
 <Sparkline values={[3, 5, 4, 8, 6, 9]} showValue />
 ```

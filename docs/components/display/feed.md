@@ -10,7 +10,7 @@ grand_parent: Components
 Entries whose height is whatever their text wrapped to, with a cursor and a tail.
 
 ```tsx
-import { Feed } from '@textui/core';
+import { Feed } from '@textui/widgets';
 
 <Feed flex={1} follow>
   <text content="a first entry" wrap="word" />

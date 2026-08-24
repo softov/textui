@@ -10,7 +10,7 @@ grand_parent: Components
 A number in a range, moved with the arrow keys.
 
 ```tsx
-import { Slider } from '@textui/core';
+import { Slider } from '@textui/widgets';
 
 <Slider label="Volume" value={40} onChange={(value) => console.log(value)} />
 ```

@@ -1,7 +1,5 @@
-import {
-  AreaChart, Column, Gauge, Grid, Heatmap, Panel, Row, Timeline,
-  defineComponent, useStoreValue,
-} from '@textui/core';
+import { defineComponent, useStoreValue } from '@textui/core';
+import { AreaChart, Column, Gauge, Grid, Heatmap, Panel, Row, Timeline } from '@textui/widgets';
 import { ServiceTable, type Service } from '../ui/service-table.js';
 
 /**

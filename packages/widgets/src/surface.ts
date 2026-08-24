@@ -1,9 +1,13 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { BoxProps } from '../jsx/intrinsics.js';
-import type { Mount, SurfaceName, SurfaceState } from '../types/surface.js';
-import type { ComponentNode, BindingPath } from '../types/graph.js';
-import { h, defineComponent } from '../jsx/factory.js';
-import { useRuntime, useStoreSubtree, useTheme } from '../runtime/hooks.js';
+import type {
+  ComponentDefinition,
+  BoxProps,
+  Mount,
+  SurfaceName,
+  SurfaceState,
+  ComponentNode,
+  BindingPath,
+} from '@textui/core';
+import { h, defineComponent, useRuntime, useStoreSubtree, useTheme } from '@textui/core';
 import { Tabs } from './navigation.js';
 import { EmptyState } from './display.js';
 

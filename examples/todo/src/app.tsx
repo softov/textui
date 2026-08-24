@@ -1,8 +1,6 @@
-import {
-  KeyHints, Row, confirm, createBag, defineComponent, registerBuiltins, useApp,
-  useStoreSubtree, useTheme,
-} from '@textui/core';
 import type { BoxProps, CommandDefinition, Disposable, TextUIApp } from '@textui/core';
+import { createBag, defineComponent, useApp, useStoreSubtree, useTheme } from '@textui/core';
+import { KeyHints, Row, confirm, registerBuiltins } from '@textui/widgets';
 import { Nav, TaskDetail, TaskList } from './components.js';
 import {
   EditTaskPage, ProjectListPage, ProjectPage, SearchPage, SettingsPage,

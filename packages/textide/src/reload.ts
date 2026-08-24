@@ -1,4 +1,5 @@
-import type { BindingPath, Disposable, StatusSegment, TextUIApp } from '@textui/core';
+import type { BindingPath, Disposable, TextUIApp } from '@textui/core';
+import type { StatusSegment } from '@textui/widgets';
 
 /**
  * Hot reload.

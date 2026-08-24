@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { h, notify } from '@textui/core';
 import type { Color } from '@textui/core';
+import { h } from '@textui/core';
+import { notify } from '@textui/widgets';
 import { render, renderApp } from '../src/index.js';
 import type { Harness } from '../src/index.js';
 

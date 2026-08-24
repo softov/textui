@@ -1,8 +1,7 @@
-import {
-  Column, KeyHints, Panel, Row, defineComponent, useRuntime, useState,
-} from '@textui/core';
-import { ResourceExplorer, ResourceView } from '@textui/documents';
 import type { Resource } from '@textui/core';
+import { defineComponent, useRuntime, useState } from '@textui/core';
+import { Column, KeyHints, Panel, Row } from '@textui/widgets';
+import { ResourceExplorer, ResourceView } from '@textui/documents';
 
 /**
  * A resource explorer.

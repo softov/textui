@@ -10,7 +10,7 @@ grand_parent: Components
 Page N of M, with the keys to move between them.
 
 ```tsx
-import { Pagination } from '@textui/core';
+import { Pagination } from '@textui/widgets';
 
 <Pagination page={2} pageCount={9} total={412} onChange={(page) => console.log(page)} />
 ```

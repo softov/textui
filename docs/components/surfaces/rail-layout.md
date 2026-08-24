@@ -10,7 +10,7 @@ grand_parent: Components
 A narrow vertical strip of mounts, usually icons.
 
 ```tsx
-import { BUILTIN_LAYOUTS } from '@textui/core';
+import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const rail = BUILTIN_LAYOUTS.find((layout) => layout.name === 'rail');
 ```

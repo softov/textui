@@ -2,7 +2,8 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { detectCapabilities, describeEnvironment } from '@textui/terminal';
-import { BUILTIN_THEMES, CATALOG, renderToString } from '@textui/core';
+import { BUILTIN_THEMES, renderToString } from '@textui/core';
+import { CATALOG } from '@textui/widgets';
 import type { CliCommand } from './app.js';
 import { CliError, promptConfirm } from './app.js';
 import {

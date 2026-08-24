@@ -10,7 +10,7 @@ grand_parent: Components
 Stacks every mount in the surface, one after another.
 
 ```tsx
-import { BUILTIN_LAYOUTS } from '@textui/core';
+import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const stack = BUILTIN_LAYOUTS.find((layout) => layout.name === 'stack');
 ```

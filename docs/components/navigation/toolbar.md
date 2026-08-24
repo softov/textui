@@ -10,7 +10,7 @@ grand_parent: Components
 Actions along a row, with optional shortcuts.
 
 ```tsx
-import { Toolbar } from '@textui/core';
+import { Toolbar } from '@textui/widgets';
 
 <Toolbar
   items={[

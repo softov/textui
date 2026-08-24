@@ -1,5 +1,7 @@
-import { StatusBar, defineComponent, useInterval, useState, useStoreValue } from '@textui/core';
-import type { RenderOutput, StatusSegment } from '@textui/core';
+import type { RenderOutput } from '@textui/core';
+import { defineComponent, useInterval, useState, useStoreValue } from '@textui/core';
+import type { StatusSegment } from '@textui/widgets';
+import { StatusBar } from '@textui/widgets';
 import type { Workspace } from '../workspace.js';
 import { WORKSPACE_PATH } from '../workspace.js';
 

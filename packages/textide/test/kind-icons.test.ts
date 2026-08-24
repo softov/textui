@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { render, renderApp } from '@textui/testing';
 import { loadWorkspace, registerTextide } from '../src/index.js';
-import { Tree, h } from '@textui/core';
+import { h } from '@textui/core';
+import { Tree } from '@textui/widgets';
 import { FULL_ICONS } from '../src/icons.js';
 
 /**

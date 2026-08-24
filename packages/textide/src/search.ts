@@ -1,5 +1,5 @@
 import type { BindingPath, Resource, TextUIApp } from '@textui/core';
-import { findMatches, type FindQuery } from '@textui/core';
+import { findMatches, type FindQuery } from '@textui/widgets';
 
 /**
  * Searching the workspace.

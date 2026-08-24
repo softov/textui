@@ -10,7 +10,7 @@ grand_parent: Components
 A place a resource is shown, by whichever renderer is registered for it.
 
 ```tsx
-import { ResourcePanel } from '@textui/core';
+import { ResourcePanel } from '@textui/widgets';
 
 <ResourcePanel uri="file:///srv/api/main.ts" />
 ```

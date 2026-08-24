@@ -1,5 +1,6 @@
-import { Column, EmptyState, Row, defineComponent, useTheme } from '@textui/core';
 import type { BoxProps, RenderOutput } from '@textui/core';
+import { defineComponent, useTheme } from '@textui/core';
+import { Column, EmptyState, Row } from '@textui/widgets';
 import type { Changeset } from '../ahp/types.js';
 
 /**

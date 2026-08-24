@@ -1,5 +1,6 @@
-import { Badge, KeyValue, List, Row, defineComponent, useApp, useStoreValue } from '@textui/core';
 import type { BoxProps, RenderOutput } from '@textui/core';
+import { defineComponent, useApp, useStoreValue } from '@textui/core';
+import { Badge, KeyValue, List, Row } from '@textui/widgets';
 
 /**
  * The things that get mounted.

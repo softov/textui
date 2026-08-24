@@ -10,7 +10,7 @@ grand_parent: Components
 A section heading, sized and toned by the theme.
 
 ```tsx
-import { Heading } from '@textui/core';
+import { Heading } from '@textui/widgets';
 
 <Heading content="Services" level={1} />
 ```

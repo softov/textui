@@ -10,7 +10,7 @@ grand_parent: Components
 A vertical flex container.
 
 ```tsx
-import { Column } from '@textui/core';
+import { Column } from '@textui/widgets';
 
 <Column gap={1} flex={1}>
   <text content="one" />

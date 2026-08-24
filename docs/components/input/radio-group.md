@@ -10,7 +10,7 @@ grand_parent: Components
 Exactly one of several options.
 
 ```tsx
-import { RadioGroup } from '@textui/core';
+import { RadioGroup } from '@textui/widgets';
 
 <RadioGroup
   label="Theme"

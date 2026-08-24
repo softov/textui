@@ -1,5 +1,7 @@
-import { Badge, List, Row, defineComponent, useTheme } from '@textui/core';
-import type { BoxProps, ListItem, RenderOutput, SemanticVariant } from '@textui/core';
+import type { BoxProps, RenderOutput, SemanticVariant } from '@textui/core';
+import { defineComponent, useTheme } from '@textui/core';
+import type { ListItem } from '@textui/widgets';
+import { Badge, List, Row } from '@textui/widgets';
 import type { SessionSummary } from '../ahp/types.js';
 import { decodeStatus } from '../ahp/status.js';
 import { workspaceName } from '../state.js';

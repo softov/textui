@@ -10,7 +10,7 @@ grand_parent: Components
 A message that arrives and leaves on its own.
 
 ```tsx
-import { Toast } from '@textui/core';
+import { Toast } from '@textui/widgets';
 
 <Toast tone="success" message="Deployed to eu-west-1" />
 ```

@@ -1,8 +1,5 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { TextUIApp } from '../types/app.js';
-import type { Disposable } from '../types/disposable.js';
-import { createBag } from '../util/disposable.js';
-import { PRIMITIVES } from './primitives.js';
+import type { ComponentDefinition, TextUIApp, Disposable } from '@textui/core';
+import { createBag, PRIMITIVES } from '@textui/core';
 import { LAYOUT_COMPONENTS } from './layout.js';
 import { DISPLAY_COMPONENTS } from './display.js';
 import { CONTROL_COMPONENTS } from './control.js';
@@ -15,7 +12,6 @@ import { SURFACE_COMPONENTS, BUILTIN_LAYOUTS } from './surface.js';
 import { SHELL_COMPONENTS, BUILTIN_SHELLS } from './shells.js';
 import { PANEL_COMPONENTS, panelCommands } from './panel.js';
 
-export * from './primitives.js';
 export * from './layout.js';
 export * from './display.js';
 export * from './control.js';

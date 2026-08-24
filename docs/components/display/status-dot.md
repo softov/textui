@@ -10,7 +10,7 @@ grand_parent: Components
 The shared status vocabulary: a glyph and a colour, never only a colour.
 
 ```tsx
-import { StatusDot } from '@textui/core';
+import { StatusDot } from '@textui/widgets';
 
 <StatusDot status="degraded" label="billing-worker" />
 ```

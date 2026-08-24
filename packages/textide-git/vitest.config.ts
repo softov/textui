@@ -9,6 +9,7 @@ export default defineConfig({
       '@textui/core/jsx-runtime': resolve(__dirname, '../core/src/jsx/jsx-runtime.ts'),
       '@textui/core/jsx-dev-runtime': resolve(__dirname, '../core/src/jsx/jsx-dev-runtime.ts'),
       '@textui/core': resolve(__dirname, '../core/src/index.ts'),
+      '@textui/widgets': resolve(__dirname, '../widgets/src/index.ts'),
       '@textui/terminal': resolve(__dirname, '../terminal/src/index.ts'),
       '@textui/documents': resolve(__dirname, '../documents/src/index.ts'),
       '@textui/testing': resolve(__dirname, '../testing/src/index.ts'),

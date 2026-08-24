@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { defineComponent, findMatches, h, matchAt, stepMatch, useEffect, useRuntime, useStoreValue } from '@textui/core';
+import { defineComponent, h, useEffect, useRuntime, useStoreValue } from '@textui/core';
+import { findMatches, matchAt, stepMatch } from '@textui/widgets';
 import { render } from '../src/index.js';
 
 /**

@@ -1,4 +1,4 @@
-import type { SemanticVariant, StyleColor } from '../types/style.js';
+import type { SemanticVariant, StyleColor } from '@textui/core';
 
 /**
  * The two halves of a tone.

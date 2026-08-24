@@ -1,8 +1,14 @@
+import type { RenderOutput, Resource } from '@textui/core';
 import {
-  Column, Row, Tabs, defineComponent, panelRendererPath, panelStatusPath,
-  useCapabilities, useEffect, useRuntime, useStoreSubtree, useStoreValue,
+  defineComponent,
+  useCapabilities,
+  useEffect,
+  useRuntime,
+  useStoreSubtree,
+  useStoreValue,
 } from '@textui/core';
-import type { PanelRenderer, RenderOutput, Resource } from '@textui/core';
+import type { PanelRenderer } from '@textui/widgets';
+import { Column, Row, Tabs, panelRendererPath, panelStatusPath } from '@textui/widgets';
 import { DOCUMENTS_ROOT, ResourceExplorer, ResourceView, isDocumentDirty } from '@textui/documents';
 import { ACTIVE_PATH } from './filesystem.js';
 import { WORKSPACE_PATH, type Workspace } from './workspace.js';

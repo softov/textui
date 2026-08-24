@@ -10,7 +10,7 @@ grand_parent: Components
 Columns with headers, responsive by dropping the least important.
 
 ```tsx
-import { Table } from '@textui/core';
+import { Table } from '@textui/widgets';
 
 <Table
   columns={[

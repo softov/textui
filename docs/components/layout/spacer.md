@@ -10,7 +10,7 @@ grand_parent: Components
 Empty space, greedy by default.
 
 ```tsx
-import { Row, Spacer } from '@textui/core';
+import { Row, Spacer } from '@textui/widgets';
 
 <Row>
   <text content="left" />

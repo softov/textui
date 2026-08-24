@@ -14,7 +14,7 @@ declare const save: (values: unknown) => void;
 The context a set of fields share - values, errors and submission.
 
 ```tsx
-import { Field, Form, TextInput, useForm } from '@textui/core';
+import { Field, Form, TextInput, useForm } from '@textui/widgets';
 
 export function Profile() {
   const form = useForm({

@@ -1,8 +1,15 @@
+import type { KeyEvent, RenderOutput, TextUIApp } from '@textui/core';
 import {
-  Row, argumentOf, chorded, defineComponent, useCommand, useFocus, useInput, useRuntime,
+  chorded,
+  defineComponent,
+  useCommand,
+  useFocus,
+  useInput,
+  useRuntime,
   useState,
 } from '@textui/core';
-import type { KeyEvent, MenuItem, RenderOutput, TextUIApp } from '@textui/core';
+import type { MenuItem } from '@textui/widgets';
+import { Row, argumentOf } from '@textui/widgets';
 
 /**
  * The menu bar.

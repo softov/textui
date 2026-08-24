@@ -10,7 +10,8 @@ grand_parent: Components
 A dense, bordered frame for a monitoring screen.
 
 ```tsx
-import { createApp, registerBuiltins } from '@textui/core';
+import { createApp } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { createNodeTerminal } from '@textui/terminal';
 
 const app = createApp({

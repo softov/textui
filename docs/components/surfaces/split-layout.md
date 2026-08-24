@@ -10,7 +10,7 @@ grand_parent: Components
 Two mounts, side by side, with a divider.
 
 ```tsx
-import { BUILTIN_LAYOUTS } from '@textui/core';
+import { BUILTIN_LAYOUTS } from '@textui/widgets';
 
 const split = BUILTIN_LAYOUTS.find((layout) => layout.name === 'split');
 ```

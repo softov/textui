@@ -1,5 +1,6 @@
-import { Feed, Row, defineComponent, useTheme } from '@textui/core';
 import type { BoxProps, RenderOutput } from '@textui/core';
+import { defineComponent, useTheme } from '@textui/core';
+import { Feed, Row } from '@textui/widgets';
 import type { Block } from '../blocks.js';
 import { ChatBubble, Gutter, ReasoningBlock, StreamingText } from './bubble.js';
 import { ToolCallRow } from './toolcall.js';

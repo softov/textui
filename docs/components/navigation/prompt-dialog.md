@@ -10,7 +10,7 @@ grand_parent: Components
 A dialog that asks for one string.
 
 ```tsx
-import { PromptDialog } from '@textui/core';
+import { PromptDialog } from '@textui/widgets';
 
 <PromptDialog
   title="Rename"

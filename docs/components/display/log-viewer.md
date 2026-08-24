@@ -10,7 +10,7 @@ grand_parent: Components
 Lines arriving continuously, with a tail that stops when you scroll.
 
 ```tsx
-import { LogViewer } from '@textui/core';
+import { LogViewer } from '@textui/widgets';
 
 <LogViewer
   lines={[

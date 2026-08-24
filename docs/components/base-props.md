@@ -15,7 +15,7 @@ Every node accepts these, whatever component it names. A component page lists
 what that component adds; this is the set underneath all of them.
 
 ```tsx
-import { Panel } from '@textui/core';
+import { Panel } from '@textui/widgets';
 
 <Panel
   title="Services"

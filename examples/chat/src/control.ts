@@ -1,5 +1,12 @@
-import { confirm, createBag, serviceKey } from '@textui/core';
-import type { ArgChoices, CommandDefinition, Disposable, ServiceKey, TextUIApp } from '@textui/core';
+import type {
+  ArgChoices,
+  CommandDefinition,
+  Disposable,
+  ServiceKey,
+  TextUIApp,
+} from '@textui/core';
+import { createBag, serviceKey } from '@textui/core';
+import { confirm } from '@textui/widgets';
 import type { HostConnection } from './ahp/connection.js';
 import type { Agent, Answer, SessionConfig, SessionDetail, SessionUri, Turn } from './ahp/types.js';
 import { SessionFlag } from './ahp/types.js';

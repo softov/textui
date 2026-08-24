@@ -10,7 +10,7 @@ grand_parent: Components
 Centres its children on one axis or both.
 
 ```tsx
-import { Center } from '@textui/core';
+import { Center } from '@textui/widgets';
 
 <Center flex={1}>
   <text content="nothing selected" fg="muted" />

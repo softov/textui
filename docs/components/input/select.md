@@ -10,7 +10,7 @@ grand_parent: Components
 One of several, collapsed into a row until opened.
 
 ```tsx
-import { Select } from '@textui/core';
+import { Select } from '@textui/widgets';
 
 <Select
   label="Region"

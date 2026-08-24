@@ -1,6 +1,5 @@
-import {
-  Column, LogViewer, Panel, Row, SearchBox, Table, Tree, useStoreValue, useState,
-} from '@textui/core';
+import { useStoreValue, useState } from '@textui/core';
+import { Column, LogViewer, Panel, Row, SearchBox, Table, Tree } from '@textui/widgets';
 import type { LogLine, Service } from '../data.js';
 
 /**

@@ -10,7 +10,7 @@ grand_parent: Components
 Renders one named surface wherever it is placed.
 
 ```tsx
-import { SurfaceArea } from '@textui/core';
+import { SurfaceArea } from '@textui/widgets';
 
 <SurfaceArea surface="main" />
 ```

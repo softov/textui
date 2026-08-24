@@ -10,7 +10,7 @@ grand_parent: Components
 Equal-width columns that wrap into rows.
 
 ```tsx
-import { Grid } from '@textui/core';
+import { Grid } from '@textui/widgets';
 
 <Grid columns={3} gap={1}>
   <text content="one" />

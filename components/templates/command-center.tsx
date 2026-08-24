@@ -1,7 +1,5 @@
-import {
-  Breadcrumb, Column, List, Panel, Row, StatusBar, Tabs, defineComponent,
-  useRuntime, useState, useStoreValue,
-} from '@textui/core';
+import { defineComponent, useRuntime, useState, useStoreValue } from '@textui/core';
+import { Breadcrumb, Column, List, Panel, Row, StatusBar, Tabs } from '@textui/widgets';
 import { ServiceTable, type Service } from '../ui/service-table.js';
 
 /**

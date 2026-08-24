@@ -1,7 +1,5 @@
-import {
-  Column, KeyHints, LogViewer, Row, SearchBox, Select, defineComponent,
-  useStoreValue, useState,
-} from '@textui/core';
+import { defineComponent, useStoreValue, useState } from '@textui/core';
+import { Column, KeyHints, LogViewer, Row, SearchBox, Select } from '@textui/widgets';
 
 /**
  * A full-screen log viewer.

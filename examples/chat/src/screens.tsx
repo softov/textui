@@ -1,9 +1,19 @@
-import {
-  Badge, Column, EmptyState, Panel, RadioGroup, Row, SearchBox,
-  defineComponent, useApp, useCapabilities, useEffect, useFocusScope,
-  useRequiredService, useSize, useState, useStore, useStoreSubtree, useStoreValue, useTheme,
-} from '@textui/core';
 import type { BindingPath, RenderOutput, SemanticVariant } from '@textui/core';
+import {
+  defineComponent,
+  useApp,
+  useCapabilities,
+  useEffect,
+  useFocusScope,
+  useRequiredService,
+  useSize,
+  useState,
+  useStore,
+  useStoreSubtree,
+  useStoreValue,
+  useTheme,
+} from '@textui/core';
+import { Badge, Column, EmptyState, Panel, RadioGroup, Row, SearchBox } from '@textui/widgets';
 import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE, settingCommand } from './control.js';
 import {
   ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, FOCUS, HISTORY, HOST, INPUT, MODEL, OPEN,

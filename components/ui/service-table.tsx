@@ -1,4 +1,5 @@
-import { Table, defineComponent, type BoxProps } from '@textui/core';
+import { defineComponent, type BoxProps } from '@textui/core';
+import { Table } from '@textui/widgets';
 import type { Status } from './status-dot.js';
 
 /**

@@ -1,6 +1,5 @@
-import {
-  Column, KeyValue, Panel, Row, Table, useRuntime, useState, useTicker,
-} from '@textui/core';
+import { useRuntime, useState, useTicker } from '@textui/core';
+import { Column, KeyValue, Panel, Row, Table } from '@textui/widgets';
 
 /**
  * Stress.

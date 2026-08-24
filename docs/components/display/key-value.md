@@ -10,7 +10,7 @@ grand_parent: Components
 Label and value pairs, aligned into one or more columns.
 
 ```tsx
-import { KeyValue } from '@textui/core';
+import { KeyValue } from '@textui/widgets';
 
 <KeyValue
   columns={2}

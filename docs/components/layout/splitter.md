@@ -10,7 +10,7 @@ grand_parent: Components
 Two panes with a divider between them.
 
 ```tsx
-import { Splitter } from '@textui/core';
+import { Splitter } from '@textui/widgets';
 
 <Splitter direction="row" size="30%">
   <text content="sidebar" />

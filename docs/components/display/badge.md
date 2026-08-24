@@ -10,7 +10,7 @@ grand_parent: Components
 A short inline tag - a count, a state, a version.
 
 ```tsx
-import { Badge } from '@textui/core';
+import { Badge } from '@textui/widgets';
 
 <Badge label="running" tone="success" />
 ```

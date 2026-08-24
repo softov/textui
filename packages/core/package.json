@@ -1,7 +1,7 @@
 {
   "name": "@textui/core",
   "version": "0.1.0",
-  "description": "Graph-mounted terminal UI runtime - store, registries, renderer, components",
+  "description": "Graph-mounted terminal UI runtime - store, registries, renderer, host primitives",
   "keywords": [
     "terminal",
     "tui",
@@ -50,10 +50,6 @@
     "./jsx-dev-runtime": {
       "types": "./dist/jsx/jsx-dev-runtime.d.ts",
       "import": "./dist/jsx/jsx-dev-runtime.js"
-    },
-    "./ui": {
-      "types": "./dist/ui/index.d.ts",
-      "import": "./dist/ui/index.js"
     },
     "./themes": {
       "types": "./dist/themes/index.d.ts",

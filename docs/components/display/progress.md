@@ -10,7 +10,7 @@ grand_parent: Components
 A bar with its numbers stated.
 
 ```tsx
-import { Progress } from '@textui/core';
+import { Progress } from '@textui/widgets';
 
 <Progress label="Uploading" value={42} total={100} />
 ```

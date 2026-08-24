@@ -10,7 +10,7 @@ grand_parent: Components
 The shape of content that has not arrived yet.
 
 ```tsx
-import { Skeleton } from '@textui/core';
+import { Skeleton } from '@textui/widgets';
 
 <Skeleton lines={3} widths={[100, 80, 60]} />
 ```

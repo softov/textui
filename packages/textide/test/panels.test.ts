@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
-import { panelViewPath } from '@textui/core';
+import { panelViewPath } from '@textui/widgets';
 import { loadWorkspace, registerTextide } from '../src/index.js';
 import { EDITOR_URI, openTab } from '../src/tabs.js';
 

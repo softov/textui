@@ -10,7 +10,7 @@ grand_parent: Components
 A horizontal flex container.
 
 ```tsx
-import { Row } from '@textui/core';
+import { Row } from '@textui/widgets';
 
 <Row gap={1} padding={1}>
   <text content="name" />

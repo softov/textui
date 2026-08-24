@@ -1,21 +1,39 @@
-import type { ComponentDefinition } from '../types/component-registry.js';
-import type { BoxProps } from '../jsx/intrinsics.js';
-import type { RenderOutput } from '../types/render.js';
-import type { SemanticVariant, StyleColor } from '../types/style.js';
-import type { MarkdownRow, MarkdownRun } from '../types/markdown.js';
-import type { SyntaxToken } from '../types/syntax.js';
-import type { ResolvedTheme } from '../types/theme.js';
-import { h, defineComponent } from '../jsx/factory.js';
+import type {
+  ComponentDefinition,
+  BoxProps,
+  RenderOutput,
+  SemanticVariant,
+  StyleColor,
+  MarkdownRow,
+  MarkdownRun,
+  SyntaxToken,
+  ResolvedTheme,
+} from '@textui/core';
+import {
+  h,
+  defineComponent,
+  chorded,
+  useEffect,
+  useFocus,
+  useHighlight,
+  useInput,
+  useMeasure,
+  useMemo,
+  useRef,
+  useScrollExtent,
+  useState,
+  useTheme,
+  expandTabs,
+  fitTo,
+  repeatToWidth,
+  sliceColumns,
+  stringWidth,
+  layoutMarkdown,
+  nameOf,
+} from '@textui/core';
 import { MARK_GLYPH, MARK_TONE, useLineMarks, type LineMark } from './decorations.js';
 import { TONE } from './tone.js';
-import {
-  chorded, useEffect, useFocus, useHighlight, useInput, useMeasure, useMemo, useRef,
-  useScrollExtent, useState, useTheme,
-} from '../runtime/hooks.js';
 import { usePanelState, usePanelStatus } from './panel.js';
-import { expandTabs, fitTo, repeatToWidth, sliceColumns, stringWidth } from '../util/text.js';
-import { layoutMarkdown } from '../util/markdown.js';
-import { nameOf } from '../core/syntax.js';
 import { sizedByLayout, viewportRows } from './viewport.js';
 import { EmptyState } from './display.js';
 

@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
-import { DECORATIONS_ROOT } from '@textui/core';
+import { DECORATIONS_ROOT } from '@textui/widgets';
 import { loadExtensions, loadWorkspace, registerTextide } from '../src/index.js';
 
 /**

@@ -10,7 +10,7 @@ grand_parent: Components
 A destructive action, fenced off and optionally typed to confirm.
 
 ```tsx
-import { DangerZone } from '@textui/core';
+import { DangerZone } from '@textui/widgets';
 
 <DangerZone
   description="Deletes the namespace and everything in it."

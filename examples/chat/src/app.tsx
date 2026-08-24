@@ -1,8 +1,13 @@
-import {
-  KeyHints, Row, createBag, defineComponent, registerBuiltins, useApp, useCapabilities,
-  useTheme, useStoreValue,
-} from '@textui/core';
 import type { BoxProps, Disposable, TextUIApp } from '@textui/core';
+import {
+  createBag,
+  defineComponent,
+  useApp,
+  useCapabilities,
+  useTheme,
+  useStoreValue,
+} from '@textui/core';
+import { KeyHints, Row, registerBuiltins } from '@textui/widgets';
 import { CONTROLLER, createController } from './control.js';
 import { fakeHost } from './ahp/fake.js';
 import type { HostConnection } from './ahp/connection.js';

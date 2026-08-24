@@ -1,6 +1,5 @@
-import type { BindingPath } from '../types/graph.js';
-import type { ReactiveStore } from '../types/store.js';
-import { useStoreValue } from '../runtime/hooks.js';
+import type { BindingPath, ReactiveStore } from '@textui/core';
+import { useStoreValue } from '@textui/core';
 
 /**
  * Finding things in text.

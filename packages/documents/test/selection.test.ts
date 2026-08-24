@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { CLIPBOARD_PATH, registerBuiltins } from '@textui/core';
 import type { CommandContext } from '@textui/core';
+import { CLIPBOARD_PATH } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { renderApp } from '@textui/testing';
 import { registerDocuments } from '../src/index.js';
 

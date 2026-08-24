@@ -3,8 +3,25 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*"],
-  "references": [{ "path": "../core" }, { "path": "../terminal" }, { "path": "../documents" }]
+  "include": [
+    "src/**/*"
+  ],
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../widgets"
+    },
+    {
+      "path": "../terminal"
+    },
+    {
+      "path": "../documents"
+    }
+  ]
 }

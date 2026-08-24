@@ -10,7 +10,7 @@ grand_parent: Components
 A titled block with no frame, for grouping without drawing a box.
 
 ```tsx
-import { Card } from '@textui/core';
+import { Card } from '@textui/widgets';
 
 <Card title="billing-worker" subtitle="eu-west-1" footer="updated 2m ago">
   <text content="42 jobs queued" />

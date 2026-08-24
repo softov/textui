@@ -1,7 +1,19 @@
+import { defineComponent, useState } from '@textui/core';
 import {
-  Button, Column, Field, Form, Panel, RadioGroup, Row, Switch, TextInput,
-  Wizard, defineComponent, fieldValidators, useForm, useState, validators,
-} from '@textui/core';
+  Button,
+  Column,
+  Field,
+  Form,
+  Panel,
+  RadioGroup,
+  Row,
+  Switch,
+  TextInput,
+  Wizard,
+  fieldValidators,
+  useForm,
+  validators,
+} from '@textui/widgets';
 
 /**
  * A setup flow.

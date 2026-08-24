@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { h, registerBuiltins } from '@textui/core';
 import type { Resource, ResourceProvider } from '@textui/core';
+import { h } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 import { render, renderApp } from '@textui/testing';
 import {
   CodeEditor, canUndoDocument, getDocument, registerDocuments, revertDocument,

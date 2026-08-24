@@ -1,0 +1,55 @@
+{
+  "name": "textui",
+  "version": "0.1.0",
+  "description": "Build a terminal UI in TypeScript. The runtime, a terminal to put it on, and render.",
+  "keywords": [
+    "terminal",
+    "tui",
+    "cli",
+    "jsx",
+    "ui",
+    "console",
+    "text-ui",
+    "ink-alternative",
+    "no-dependencies"
+  ],
+  "homepage": "https://softov.github.io/textui/",
+  "bugs": {
+    "url": "https://github.com/softov/textui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softov/textui.git",
+    "directory": "packages/facade"
+  },
+  "license": "MIT",
+  "author": "Softov <softov@brbyte.com>",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:^",
+    "@textui/terminal": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -368,6 +368,24 @@ export class App implements TextUIApp {
     this.terminal.dispose();
   }
 
+  /**
+   * Swap the root node for another.
+   *
+   * Two paths, because there are two ways a root reaches the screen. With a
+   * shell registered it is a mount like any other and the surface registry
+   * owns it; with no shell at all - which is every application built out of
+   * primitives and nothing else - `rootNode` wraps `options.root` directly and
+   * the registry is never consulted. Setting one and not the other works in
+   * exactly half of the programs that can exist.
+   */
+  setRoot(node: ComponentNode): void {
+    this.options = { ...this.options, root: node };
+    if (this.shells.get(this.shellId)) {
+      this.surfaces.open({ surface: 'main', key: ROOT_KEY, target: node });
+    }
+    this.requestRender(true);
+  }
+
   // ---------------------------------------------------------------- frames
 
   private requestRender(force = false): void {

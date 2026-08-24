@@ -142,6 +142,15 @@ importers:
         specifier: workspace:^
         version: link:../testing
 
+  packages/facade:
+    dependencies:
+      '@textui/core':
+        specifier: workspace:^
+        version: link:../core
+      '@textui/terminal':
+        specifier: workspace:^
+        version: link:../terminal
+
   packages/terminal:
     dependencies:
       '@textui/core':

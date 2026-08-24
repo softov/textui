@@ -61,6 +61,9 @@ export interface TextUIApp extends Disposable {
   setCapabilityOverrides(overrides: CapabilityOverrides): void;
 
   /** Acquire the terminal and start the render loop. */
+  /** Swap the root node for another one, and redraw. */
+  setRoot(node: ComponentNode): void;
+
   start(): Promise<void>;
   /** Release exactly what was acquired, then stop. */
   stop(): Promise<void>;

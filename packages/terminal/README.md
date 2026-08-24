@@ -39,6 +39,30 @@ Under the kitty protocol, `ctrl+shift+f` is a distinct stroke from `ctrl+f`.
 Without it the terminal sends the same byte for both, and no amount of decoding
 recovers the difference.
 
+## A frame you can keep
+
+The screen is the output, so the next redraw destroys the frame that was wrong.
+Two functions write one out instead - both from the buffer the runtime last
+painted, neither needing a tty.
+
+`captureBuffer` gives a frame a terminal can replay: every cell in order, no
+cursor control, so it can go in a file or an issue. `colors: false` strips the
+colour, which is the copy a diff can read.
+
+`bufferToSvg` gives one a repository page can show, because an `.ans` file is
+only a screenshot on a terminal:
+
+```ts
+const svg = bufferToSvg(app.buffer(), {
+  background: app.theme.colors.canvas,
+  foreground: app.theme.colors.text,
+});
+```
+
+Self-contained - no font, no stylesheet, no script, nothing fetched - which is
+what survives GitHub's image proxy. And it is text, so a committed screenshot
+diffs and CI can check it instead of somebody re-taking it.
+
 ## What it needs from a stream
 
 `TerminalInput` and `TerminalOutput`, which say what the adapter uses rather

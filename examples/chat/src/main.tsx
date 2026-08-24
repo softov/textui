@@ -1,7 +1,8 @@
 import { WRITER_KEY, createApp } from '@textui/core';
 import type { CapabilityOverrides, UnicodeLevel } from '@textui/core';
+import { writeFile } from 'node:fs/promises';
 import {
-  captureBuffer, createNodeTerminal, createVirtualTerminal, createWriter,
+  bufferToSvg, captureBuffer, createNodeTerminal, createVirtualTerminal, createWriter,
 } from '@textui/terminal';
 import { registerChat } from './app.js';
 import { CONTROLLER } from './control.js';
@@ -31,6 +32,15 @@ interface Options {
   settled: boolean;
   /** Or exactly this many scripted words, for a still of a turn mid-flight. */
   pump?: number;
+  /**
+   * Write the still as an SVG here instead of ANSI on stdout.
+   *
+   * The form a still can be *looked at* in - a README, the docs, a pull
+   * request. An `.ans` file is only a screenshot on a terminal, so the places
+   * that most want to show what this looks like are the ones that cannot
+   * replay one.
+   */
+  svg?: string;
   screen: string;
   session?: string;
   theme: string;
@@ -76,6 +86,7 @@ function parse(argv: string[]): Options {
       case '--tick': options.tick = Number(argv[++i]); break;
       case '--settled': options.settled = true; break;
       case '--pump': options.pump = Number(argv[++i]); break;
+      case '--svg': options.svg = String(argv[++i]); break;
       case '--say': options.say = String(argv[++i]); break;
       case '--approve': options.approve = true; break;
       case '--answer': options.answer = true; break;
@@ -176,7 +187,22 @@ async function still(options: Options): Promise<void> {
 
   for (let i = 0; i < 12; i++) await new Promise((r) => setTimeout(r, 4));
   app.flush();
-  process.stdout.write(`${captureBuffer(app.buffer(), terminal.capabilities())}\n`);
+
+  if (options.svg !== undefined) {
+    // The theme's own two colours, not the exporter's defaults: a cell left at
+    // the terminal default means "whatever the emulator is set to", and the
+    // honest answer for a picture of *this* application is the background it
+    // was drawn against.
+    const theme = app.theme;
+    await writeFile(options.svg, `${bufferToSvg(app.buffer(), {
+      background: theme.colors.canvas,
+      foreground: theme.colors.text,
+      title: `chat - ${options.screen}`,
+    })}\n`, 'utf8');
+    process.stderr.write(`${options.svg}\n`);
+  } else {
+    process.stdout.write(`${captureBuffer(app.buffer(), terminal.capabilities())}\n`);
+  }
   await app.stop();
 }
 

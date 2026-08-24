@@ -1,0 +1,17 @@
+{
+  "name": "@textui/example-chatunix",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A chat room over a unix socket or a port. No build step.",
+  "scripts": {
+    "start": "node index.ts",
+    "start:bun": "bun index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "textui": "workspace:*",
+    "@textui/widgets": "workspace:*"
+  }
+}

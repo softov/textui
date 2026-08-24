@@ -18,6 +18,7 @@ by default since 23.6.
 |---|---|
 | [`hello`](hello) | The smallest thing that runs |
 | [`counter`](counter) | `useKeymap`, `useState` and a timer you can pause - in `h` and in JSX |
+| [`chatunix`](chatunix) | A chat room over a socket or a port. Two processes, really talking |
 
 ## Can they use JSX?
 

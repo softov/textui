@@ -133,10 +133,17 @@ export function isComponentNode(v: unknown): v is ComponentNode {
 }
 
 export function isDataBinding(v: unknown): v is DataBinding {
+  // Exactly one key, because that is what the type says: `{ path }`. Testing
+  // only that `path` is present made a binding out of anything that happens to
+  // carry one - `{ kind: 'unix', path: '/tmp/room' }` is a socket address, and
+  // it was resolved against the store and thrown as a PathError instead. The
+  // shape is far too common to claim loosely: a route, a file entry, a config
+  // section. The old guard listed `component` and `template` as exceptions,
+  // which was this same problem met twice and patched twice.
   return (
     typeof v === 'object' && v !== null &&
-    'path' in v && typeof (v as DataBinding).path === 'string' &&
-    !('component' in v) && !('template' in v)
+    typeof (v as DataBinding).path === 'string' &&
+    Object.keys(v).length === 1
   );
 }
 

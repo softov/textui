@@ -1,10 +1,12 @@
 import {
   Alert, AreaChart, Badge, BarChart, Breadcrumb, Button, Checkbox, CodeViewer,
   Column, EmptyState, Gauge, Heading, KeyValue, Label, List, Pagination,
-  Panel, Progress, Row, Select, Skeleton, Slider, Sparkline, Spinner, StatusDot,
-  Switch, Tabs, TextArea, TextInput, Timeline, Toolbar, Tree,
+  Heatmap, MarkdownView, Panel, Progress, Row, Select, Skeleton, Slider, Sparkline,
+  Spinner, StatusDot,
+  Switch, Table, Tabs, TextArea, TextInput, Timeline, Toolbar, Tree,
+  type PanelProps,
 } from '@textui/widgets';
-import type { BoxProps, RenderOutput } from '@textui/core';
+import { Spacer, useTheme, type BoxProps, type EdgeSpec, type RenderOutput } from '@textui/core';
 
 /**
  * The panels, and the data they are made of.
@@ -25,7 +27,9 @@ export interface Showpiece {
   id: string;
   title: string;
   /** What it is for, under the title. Kept short - it shares a line. */
-  subtitle: string;
+  subtitle?: string;
+  rightTitle?: string;
+  footer?: string;
   render(): RenderOutput;
 }
 
@@ -113,17 +117,25 @@ export const PANELS: Showpiece[] = [
         <Row gap={1}>
           <Badge label="live" tone="success" />
           <Badge label="canary" tone="warning" />
-          <Badge label="failing" tone="danger" />
+          <Badge label="failing" tone="danger" icon="!" />
           <Badge label="4.2.1" tone="info" />
         </Row>
-        <Column>
+        <Row gap={1}>
           <StatusDot status="up" label="api" />
           <StatusDot status="degraded" label="search" />
           <StatusDot status="down" label="mailer" />
           <StatusDot status="pending" label="worker" />
-        </Column>
+        </Row>
         <Row gap={1}>
           <Spinner label="draining" />
+        </Row>
+        <Row gap={1}>
+          <Heading level={3}>A heading and labels</Heading>
+        </Row>
+        <Row gap={1}>
+          <Label tone="muted">muted</Label>
+          <Label tone="accent">accent</Label>
+          <Label tone="danger">danger</Label>
         </Row>
       </Column>
     ),
@@ -137,10 +149,10 @@ export const PANELS: Showpiece[] = [
         {/* `total` is 1 by default, so a percentage has to say so - without it
             72 is "72 out of 1", which clamps to full. `Gauge` is the other way
             round and reads 0-100 already. */}
-        <Progress value={72} total={100} label="upload" showValue />
-        <Progress value={31} total={100} label="index" tone="warning" showValue />
-        <Gauge value={86} label="disk" thresholds={[{ at: 80, tone: 'danger' }]} />
-        <Gauge value={12} label="quota" />
+        <Progress spacer value={72} total={100} label="upload" showValue />
+        <Progress spacer value={31} total={100} label="index" tone="warning" showValue />
+        <Gauge spacer value={86} label="disk" thresholds={[{ at: 80, tone: 'danger' }]} />
+        <Gauge spacer value={12} label="quota" />
       </Column>
     ),
   },
@@ -150,10 +162,13 @@ export const PANELS: Showpiece[] = [
     subtitle: 'a series in one row, or in a block',
     render: () => (
       <Column gap={1}>
-        <Sparkline values={CPU} label="cpu" showValue />
-        <Sparkline values={NET} label="net" tone="info" showValue />
+        <Row>
+          <Sparkline values={CPU} label="cpu" tone="warning" showValue />
+          <Spacer />
+          <Sparkline values={NET} label="net" tone="info" showValue />
+        </Row>
         <AreaChart
-          series={[{ values: CPU, label: 'cpu' }, { values: NET, label: 'net', tone: 'info' }]}
+          series={[{ values: CPU, label: 'cpu', tone: 'warning' }, { values: NET, label: 'net', tone: 'info' }]}
           chartHeight={5}
           axis
         />
@@ -165,14 +180,27 @@ export const PANELS: Showpiece[] = [
     title: 'Bars',
     subtitle: 'a value per label, sorted as given',
     render: () => (
-      <BarChart
-        data={[
-          { label: '2xx', value: 8421, tone: 'success' },
-          { label: '3xx', value: 1180, tone: 'info' },
-          { label: '4xx', value: 412, tone: 'warning' },
-          { label: '5xx', value: 37, tone: 'danger' },
-        ]}
-      />
+      <Row>
+        <BarChart
+          data={[
+            { label: '2xx', value: 8421, tone: 'success' },
+            { label: '3xx', value: 1180, tone: 'info' },
+            { label: '4xx', value: 412, tone: 'warning' },
+            { label: '5xx', value: 37, tone: 'danger' },
+          ]}
+        />
+        <Spacer />
+        <BarChart
+          orientation="vertical"
+          height={6}
+          barWidth={2}
+          data={[
+            { label: 'Aa', value: 22, tone: 'success' },
+            { label: 'Bb', value: 7, tone: 'info' },
+            { label: 'Cc', value: 1, tone: 'danger' },
+          ]}
+        />
+      </Row>
     ),
   },
   {
@@ -195,6 +223,7 @@ export const PANELS: Showpiece[] = [
     id: 'list',
     title: 'A list',
     subtitle: 'rows, with a description and a meta',
+    rightTitle: '(4) items',
     render: () => (
       <List
         focusable={false}
@@ -211,6 +240,7 @@ export const PANELS: Showpiece[] = [
     id: 'tree',
     title: 'A tree',
     subtitle: 'nested, and open where it is open',
+    footer: 'a footer too, if you want one',
     render: () => (
       <Tree
         focusable={false}
@@ -258,6 +288,34 @@ export const PANELS: Showpiece[] = [
     ),
   },
   {
+    id: 'table',
+    title: 'A table',
+    subtitle: 'columns that drop by priority',
+    render: () => (
+      <Table
+        focusable={false}
+        responsive
+        columns={[
+          { key: 'name', header: 'Service', flex: true, priority: 3 },
+          { key: 'region', header: 'Region', priority: 1 },
+          { key: 'p99', header: 'p99', align: 'right', priority: 2 },
+          {
+            key: 'state',
+            header: 'State',
+            priority: 3,
+            tone: (value) =>
+              value === 'down' ? 'danger' : value === 'degraded' ? 'warning' : 'success',
+          },
+        ]}
+        rows={[
+          { id: '1', name: 'checkout', region: 'eu-west-1', p99: '120ms', state: 'live' },
+          { id: '2', name: 'search', region: 'eu-west-1', p99: '480ms', state: 'degraded' },
+          { id: '3', name: 'mailer', region: 'us-east-1', p99: '—', state: 'down' },
+        ]}
+      />
+    ),
+  },
+  {
     id: 'code',
     title: 'Source',
     subtitle: 'highlighted, with a gutter',
@@ -286,6 +344,39 @@ export const PANELS: Showpiece[] = [
     ),
   },
   {
+    id: 'grid',
+    title: 'A heatmap',
+    subtitle: 'a value per cell, one ramp',
+    render: () => (
+      <Heatmap
+        data={[
+          [1, 3, 6, 9, 7, 4],
+          [2, 5, 8, 9, 6, 3],
+          [0, 2, 4, 7, 5, 2],
+        ]}
+        rowLabels={['api', 'web', 'job']}
+        columnLabels={['m', 't', 'w', 't', 'f', 's']}
+      />
+    ),
+  },
+  {
+    id: 'prose',
+    title: 'Markdown',
+    subtitle: 'headings, emphasis, a rule, a list',
+    render: () => (
+      <MarkdownView
+        content={[
+          '## Rollout',
+          '',
+          'Canaries go **first**, then the rest at `50%`.',
+          '',
+          '- watch the error rate',
+          '- stop on a spike',
+        ].join('\n')}
+      />
+    ),
+  },
+  {
     id: 'chrome',
     title: 'Chrome',
     subtitle: 'the rows an application frames with',
@@ -299,14 +390,6 @@ export const PANELS: Showpiece[] = [
           ]}
         />
         <Pagination page={3} pageCount={9} />
-        <Row gap={1}>
-          <Heading level={3}>A heading</Heading>
-        </Row>
-        <Row gap={1}>
-          <Label tone="muted">muted</Label>
-          <Label tone="accent">accent</Label>
-          <Label tone="danger">danger</Label>
-        </Row>
       </Column>
     ),
   },
@@ -335,8 +418,26 @@ export interface PieceProps extends BoxProps {
  * convention: the panel says what it wants and the grid gets the last word.
  */
 export function Piece({ piece, ...rest }: PieceProps): RenderOutput {
+  const theme = useTheme();
+  const style: PanelProps = ['paper', 'paper-dark'].includes(theme.id) ? {
+    // bg: 'surfaceAlt',
+    padding: {
+      top: 1,
+      right: 1,
+      bottom: 1,
+      left: 1,
+    }
+  } : {
+    // bg: 'surfaceAlt',
+    padding: {
+      top: 1,
+      right: 1,
+      bottom: 0,
+      left: 1,
+    }
+  };
   return (
-    <Panel title={piece.title} subtitle={piece.subtitle} flex={1} {...rest}>
+    <Panel {...style} title={piece.title} subtitle={piece.subtitle} rightTitle={piece.rightTitle} footer={piece.footer} flex={1} {...rest}>
       {piece.render()}
     </Panel>
   );

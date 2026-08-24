@@ -1,6 +1,6 @@
 # @textui/terminal
 
-What [`@textui/core`](../core) needs to reach an actual terminal: adapters,
+What [`@textui/core`](https://github.com/softov/textui/tree/main/packages/core) needs to reach an actual terminal: adapters,
 capability detection, ANSI writing and input decoding.
 
 ```bash

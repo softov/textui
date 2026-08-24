@@ -2,6 +2,10 @@
 
 A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is one way to write them.
 
+```bash
+npm install textui @textui/widgets
+```
+
 ```tsx
 import { render } from 'textui';
 import { registerBuiltins } from '@textui/widgets';
@@ -18,28 +22,16 @@ await waitUntilExit();
 
 Everything else follows from that: one reactive store addressed by paths, typed registries for components, commands, themes, shells and resources, and a renderer that diffs cells rather than redrawing frames.
 
-## Why TypeScript, and how close it is to needing no build
+## No dependencies
 
-Types are stripped rather than compiled now. Node has erased them since 22.6
-behind a flag, and by default since 23.6 - so a `.ts` file with no non-erasable
-syntax in it is a file Node runs. Nothing transpiles it; the annotations are
-skipped the way a comment is.
+Nothing is installed alongside it. `@textui/core` has an empty `dependencies`,
+and the packages above it depend only on each other - so what you audit is what
+you get, and the tree does not grow behind your back.
 
-That is the direction this library is aimed at. It has **no dependencies**, so
-the only thing between the source and a `node` invocation is the syntax it uses
-- and most of the syntax is already fine. Types, interfaces, generics,
-`satisfies`, `as`, `import type`: all erasable, all stripped.
-
-**What is not, here:** eleven parameter properties (`constructor(private x: T)`)
-across ten files. That form declares a field *and* assigns it, so there is
-runtime behaviour inside a type annotation and stripping cannot be correct.
-Enums and value-carrying namespaces are the other two, and this codebase has
-neither.
-
-`"erasableSyntaxOnly": true` in the tsconfig makes the compiler refuse the
-non-erasable forms, so the constraint is enforced rather than remembered. The
-eleven are a mechanical change - the field written out and assigned in the
-body. Worth doing before it is worth claiming.
+That also keeps the source close to running unbuilt: Node has erased types by
+default since 23.6, and most of this codebase is already erasable syntax. The
+full argument, and what is still in the way, is in
+[`DEVELOPER.md`](DEVELOPER.md).
 
 ## Packages
 
@@ -51,6 +43,14 @@ body. Worth doing before it is worth claiming.
 | [`@textui/terminal`](packages/terminal) | Terminal adapters, capability detection, ANSI writing, input decoding |
 | [`@textui/testing`](packages/testing) | Headless harness: semantic queries, input, resizing, time |
 | [`@textui/cli`](packages/cli) | `textui init / add / create / doctor`, and primitives for your own CLI |
+
+Also in the repository, not yet published:
+
+| Package | What it is |
+| --- | --- |
+| [`@textui/documents`](packages/documents) | Document buffers, resource viewers and content adapters |
+| [`@textui/textide`](packages/textide) | An IDE that runs in a terminal, built on TextUI |
+| [`@textui/textide-git`](packages/textide-git) | Git for textide, as a loadable extension |
 | [`components/`](components) | The source-copy registry - components you own, not import |
 | [`playground/`](playground) | The showcase, fourteen focused playgrounds, and a filesystem explorer |
 
@@ -122,37 +122,10 @@ Here's what TextUI actually looks like and what it can do.
   <img src="./media/print-theme-mono.svg" alt="Terminal UI Mono" />
 </p>
 
-Now let's break down how it's built.
+## Developing
 
-## Development
-
-```bash
-pnpm install
-pnpm build          # every package
-pnpm typecheck      # every workspace
-pnpm test           # every suite
-pnpm dev --list     # the playgrounds
-pnpm dev gallery    # open one
-```
-
-The docs site is Jekyll, and needs no Ruby on your machine - it builds in a
-container:
-
-```bash
-scripts/docs-serve.sh           # live, with reload, at localhost:4000/textui/
-scripts/docs-serve.sh --build   # build once, into docs/_site
-scripts/docs-preview.py         # serve what was built, at localhost:8000/textui/
-scripts/docs-preview.py --host 0.0.0.0   # ...and reachable from the network
-node scripts/check-docs.mjs     # the nav tree, links and titles
-```
-
-`docs-preview.py` exists because the site is built with `baseurl: /textui`, so every link in it is absolute at `/textui/...`. A plain `python -m http.server` over `docs/_site` 404s on all of it; this one mounts the site under the prefix the pages actually ask for.
-
-Node ≥ 22, pnpm 10.
-
-## The acceptance test
-
-The three layouts this project started from - a dense bordered console, an airy borderless report, and a workbench frame - are one architecture with three registrations. `playground/test/playgrounds.test.tsx` mounts the same component under all of them, and under six themes, at three terminal widths, with and without Unicode and colour. If a shell ever needs a component the others cannot use, the boundary is in the wrong place.
+Working on TextUI rather than with it - building, testing, the playgrounds, the
+docs site and how a release is cut - is in [`DEVELOPER.md`](DEVELOPER.md).
 
 ## License
 

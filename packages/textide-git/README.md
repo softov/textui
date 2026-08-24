@@ -1,6 +1,6 @@
 # @textui/textide-git
 
-Git for [textide](../textide): the branch you are on, what has changed, diffs
+Git for [textide](https://github.com/softov/textui/tree/main/packages/textide): the branch you are on, what has changed, diffs
 you can open as tabs, staging, commits and branch switching.
 
 It is a **loadable extension**, not part of the editor. Nothing in textide

@@ -116,6 +116,50 @@ describe('everything on one screen', () => {
     await t.unmount();
   });
 
+  it('scrolls, and says how far down it is', async () => {
+    // The footer offered "↑ ↓ scroll" over a row with `overflowY` on it, which
+    // scrolls nothing: a box that overflows is not a viewport - somebody has
+    // to own the offset, take the keys and draw the bar. At this size most of
+    // the grid is below the fold and none of it could be reached.
+    const t = await renderApp({
+      width: 139,
+      height: 35,
+      onBoot: (app) => { registerShowcase(app, { wrap: 40 }); },
+    });
+    for (let i = 0; i < 8; i++) await t.settle();
+
+    // The rightmost column is the scrollbar: a thumb over a track, and where
+    // the thumb is is the answer to "how far down am I".
+    const bar = (): string => t.lines().map((line) => line.slice(-1)).join('');
+    const first = t.lines()[3];
+    expect(bar()).toContain('█');
+    expect(bar().indexOf('█')).toBe(1);
+
+    t.press('pagedown');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.lines()[3]).not.toBe(first);
+    expect(bar().indexOf('█')).toBeGreaterThan(1);
+
+    t.press('home');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.lines()[3]).toBe(first);
+    await t.unmount();
+  });
+
+  it('draws no scrollbar over a grid that fits', async () => {
+    // A bar on a viewport with nothing to scroll is a lie about there being
+    // more, which is worse than no bar - and it was drawn unconditionally.
+    const t = await renderApp({
+      width: 139,
+      height: 60,
+      onBoot: (app) => { registerShowcase(app, { wrap: 40, only: 'controls' }); },
+    });
+    for (let i = 0; i < 8; i++) await t.settle();
+
+    expect(t.lines().map((line) => line.slice(-1)).join('')).not.toContain('█');
+    await t.unmount();
+  });
+
   it('cycles the theme, from the key and from the command', async () => {
     const t = await open(132);
     const first = t.app.theme.id;

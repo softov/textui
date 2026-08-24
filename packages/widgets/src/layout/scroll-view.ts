@@ -9,13 +9,13 @@ import {
   useScrollExtent,
   useState,
 } from '@textui/core';
-import { Scrollbar } from './shared.js';
+import { ScrollThumb } from '../data/scroll-thumb.js';
 
 export interface ScrollViewProps extends BoxProps {
   /** Controlled offset. Omit to let the view manage its own. */
   offset?: number;
   onScroll?(offset: number): void;
-  /** Draw a scrollbar track on the right when the content overflows. */
+  /** Draw a scrollbar on the right when the content overflows. */
   scrollbar?: boolean;
   /**
    * A tab stop, so the keys that scroll it can reach it.
@@ -92,6 +92,24 @@ export const ScrollView = defineComponent<ScrollViewProps>('ScrollView', (props)
     },
   },
     h('box', { flex: 1, direction: 'column', scrollTop: Math.min(top, limit), overflow: 'scroll' }, children),
-    scrollbar ? h(Scrollbar, { offset: top }) : null,
+    // `ScrollThumb`, which is what every other viewport in the library draws -
+    // its own comment says so: "two components drawing their own would drift".
+    // This one drew a different thing, a one-cell column filled with a border
+    // glyph, that took the offset as a prop and ignored it. So it said nothing
+    // about where you were or how much there was, and against a bordered child
+    // it was indistinguishable from another border. A scrollbar that cannot be
+    // told from a frame is not a scrollbar.
+    //
+    // And only when there is something to scroll. `limit` is zero when it all
+    // fits, which is exactly when a bar is a lie - the prop has always been
+    // documented that way and was drawn unconditionally.
+    scrollbar && limit > 0
+      ? h(ScrollThumb, {
+          total: extent?.height ?? measured.height,
+          rows: measured.height,
+          offset: Math.min(top, limit),
+          focused: focus.focused,
+        })
+      : null,
   );
 });

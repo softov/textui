@@ -24,7 +24,7 @@ import { ScrollView } from '@textui/widgets';
 | --- | --- | --- | --- |
 | `offset` | `number` |  | Controlled offset. Omit to let the view manage its own. |
 | `onScroll` | `(offset: number) => void` |  |  |
-| `scrollbar` | `boolean` | `true` | Draw a scrollbar track on the right when the content overflows. |
+| `scrollbar` | `boolean` | `true` | Draw a scrollbar on the right when the content overflows. |
 | `focusable` | `boolean` | `true` | A tab stop, so the keys that scroll it can reach it. On by default: a viewport had the arrow handlers all along and registered nothing, so unless the caller happened to make it focusable itself the only way to scroll was the wheel - which is to say, on a keyboard, not at all. Turn it off for a view that scrolls inside something already focused. |
 | `autoFocus` | `boolean` |  |  |
 

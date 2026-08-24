@@ -1,6 +1,6 @@
 import type { RenderOutput, TextUIApp } from '@textui/core';
 import { defineComponent, useSize, useTheme } from '@textui/core';
-import { Column, KeyHints, Row, StatusBar, registerBuiltins } from '@textui/widgets';
+import { Column, KeyHints, Row, ScrollView, StatusBar, registerBuiltins } from '@textui/widgets';
 import { PANELS, Piece } from './panels.js';
 
 /**
@@ -46,6 +46,12 @@ export const Showcase: (props: ShowcaseOptions) => RenderOutput =
     const size = useSize();
     const shown = only === undefined ? PANELS : PANELS.filter((p) => p.id === only);
 
+    const grid = (
+      <Row flexWrap="wrap" gap={1} padding={1} align="start">
+        {shown.map((piece) => <Piece key={piece.id} piece={piece} width={wrap} />)}
+      </Row>
+    );
+
     return (
       <Column {...(fit === true ? {} : { height: '100%' as const })}>
         <StatusBar
@@ -60,25 +66,26 @@ export const Showcase: (props: ShowcaseOptions) => RenderOutput =
         />
 
         {/*
-          The scroll container is the row, not a wrapper around it. A wrapping
-          row overflows across rather than along - it has already fitted every
-          panel on the main axis - so the axis that can run off the screen is
-          the vertical one, and that is the one to let scroll.
+          `overflowY` on the row itself was scrolling nothing and drawing
+          nothing. A box that overflows is not a viewport: somebody has to own
+          the offset, take the keys that change it and draw the bar that says
+          how far down you are, and that somebody is `ScrollView`. It is a tab
+          stop, so the arrows reach it, and `autoFocus` puts them there first -
+          in a screen that is mostly for looking at, scrolling is the thing you
+          want the arrows to do before anything else.
+
+          The row goes *inside* it. A wrapping row overflows across rather than
+          along - it has already fitted every panel on the main axis - so the
+          axis that runs off the screen is the vertical one, which is the one
+          the viewport scrolls.
         */}
-        <Row
-          flexWrap="wrap"
-          gap={1}
-          padding={1}
-          align="start"
-          {...(fit === true ? {} : { flex: 1, overflowY: 'scroll' as const })}
-        >
-          {shown.map((piece) => <Piece key={piece.id} piece={piece} width={wrap} />)}
-        </Row>
+        {fit === true ? grid : <ScrollView flex={1} autoFocus>{grid}</ScrollView>}
 
         <KeyHints
           hints={[
-            { keys: 'tab', label: 'next control' },
             { keys: '↑ ↓', label: 'scroll' },
+            { keys: 'pgup pgdn', label: 'faster' },
+            { keys: 'tab', label: 'next control' },
             { keys: 't', label: 'theme' },
             { keys: 'ctrl+c', label: 'quit' },
           ]}

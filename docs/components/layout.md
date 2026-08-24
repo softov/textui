@@ -47,9 +47,11 @@ with no breakpoints to keep in step.
 
 <!-- docs:nocheck -->
 ```tsx
-<Row flexWrap="wrap" gap={1} align="start" overflowY="scroll">
-  {cards.map((card) => <Panel key={card.id} width={40} flex={1} title={card.title} />)}
-</Row>
+<ScrollView flex={1}>
+  <Row flexWrap="wrap" gap={1} align="start">
+    {cards.map((card) => <Panel key={card.id} width={40} flex={1} title={card.title} />)}
+  </Row>
+</ScrollView>
 ```
 
 Two things about that `width`. It is what **breaks the line** - a wrapping row
@@ -59,7 +61,11 @@ predictable. And it is what the child's own contents are measured against, so
 text inside wraps at the width it will be drawn at. `flex` then shares out
 what is left over on each line.
 
-The scroll container is the row itself: a wrapping row overflows *across* its
-main axis, having already fitted everything along it, so the axis that runs off
-the screen is the other one. [`examples/showcase`](https://github.com/softov/textui/tree/main/examples/showcase)
+The viewport goes **around** the row, not on it. `overflowY` on the row itself
+scrolls nothing: a box that overflows is not a viewport - somebody has to own
+the offset, take the keys that change it and draw the bar that says how far
+down you are, and that is what `ScrollView` is. Which axis it scrolls follows
+from the wrapping: a wrapping row overflows *across* its main axis, having
+already fitted everything along it, so the one that runs off the screen is the
+other one. [`examples/showcase`](https://github.com/softov/textui/tree/main/examples/showcase)
 is this layout and nothing else.

@@ -28,8 +28,8 @@ console.log('App exited');
 
 ## What this package is
 
-The runtime ([`@textui/core`](https://github.com/softov/textui/tree/main/packages/core)), a terminal to put it on
-([`@textui/terminal`](https://github.com/softov/textui/tree/main/packages/terminal)), and `render`. Every other name here is
+The runtime ([`@textui/core`](https://www.npmjs.com/package/@textui/core)), a terminal to put it on
+([`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal)), and `render`. Every other name here is
 re-exported from those two - importing from them directly is the same thing
 with a longer name.
 
@@ -91,3 +91,11 @@ of its own. Node 22+ and Bun.
 ## Documentation
 
 <https://softov.github.io/textui/>
+
+<!-- family -->
+
+---
+
+Part of **[TextUI](https://github.com/softov/textui)** - [documentation](https://softov.github.io/textui/) - [getting started](https://softov.github.io/textui/getting-started.html)
+
+**`@textui/kit`** one install · [`@textui/core`](https://www.npmjs.com/package/@textui/core) the runtime · [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) the catalog · [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) adapters and input · [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) the harness · [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) the CLI

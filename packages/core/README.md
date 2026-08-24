@@ -30,7 +30,7 @@ are the strings themselves, so `<Box/>` and `<box/>` produce the identical node.
 
 The four primitives - `box`, `text`, `canvas`, `spacer` - are here because the
 layout engine and the painter are the things that reason about them. The
-eighty-seven components built out of them are [`@textui/widgets`](https://github.com/softov/textui/tree/main/packages/widgets),
+eighty-seven components built out of them are [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets),
 a separate package that depends on this one.
 
 That split is not tidiness. An imported component travels on its own node, so a
@@ -65,3 +65,11 @@ browser against a virtual terminal.
 ## Documentation
 
 <https://softov.github.io/textui/>
+
+<!-- family -->
+
+---
+
+Part of **[TextUI](https://github.com/softov/textui)** - [documentation](https://softov.github.io/textui/) - [getting started](https://softov.github.io/textui/getting-started.html)
+
+[`@textui/kit`](https://www.npmjs.com/package/@textui/kit) one install · **`@textui/core`** the runtime · [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) the catalog · [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) adapters and input · [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) the harness · [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) the CLI

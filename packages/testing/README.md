@@ -56,9 +56,17 @@ for (const size of [{ width: 100, height: 30 }, { width: 60, height: 18 }]) {
 
 ## Runtime
 
-Depends on `@textui/core` and `@textui/terminal`. No `node:` imports - it runs
+Depends on [`@textui/core`](https://www.npmjs.com/package/@textui/core) and [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal). No `node:` imports - it runs
 on the virtual terminal, so there is no tty to have. Node 22+ and Bun.
 
 ## Documentation
 
 <https://softov.github.io/textui/>
+
+<!-- family -->
+
+---
+
+Part of **[TextUI](https://github.com/softov/textui)** - [documentation](https://softov.github.io/textui/) - [getting started](https://softov.github.io/textui/getting-started.html)
+
+[`@textui/kit`](https://www.npmjs.com/package/@textui/kit) one install · [`@textui/core`](https://www.npmjs.com/package/@textui/core) the runtime · [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) the catalog · [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) adapters and input · **`@textui/testing`** the harness · [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) the CLI

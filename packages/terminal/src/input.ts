@@ -174,7 +174,24 @@ export class InputDecoder {
       this.carry = this.carry.slice(char.length);
       const named = CTRL_NAMES[cp];
       if (named) {
-        this.emit(key(named, { raw: char, ctrl: cp === 0x00 }));
+        /*
+         * 0x0a is `ctrl+enter`; 0x0d is enter.
+         *
+         * Both were named `enter` with no modifier, which made them the same
+         * key - and that is what a composer sees when it offers "enter sends,
+         * ctrl+enter is a newline" and the newline never comes. In raw mode
+         * the Return key sends CR: the kernel's CR-to-NL translation is off,
+         * so a bare LF is not Return, it is ctrl+Return (or ctrl+j, which is
+         * the same byte and therefore the same key - there is no encoding in
+         * which those two differ).
+         *
+         * Pasted newlines do not come through here: a bracketed paste is
+         * buffered whole by `stepPaste` and emitted as a paste event.
+         *
+         * 0x00 keeps its ctrl for the same reason it always had it: that byte
+         * really is ctrl+space.
+         */
+        this.emit(key(named, { raw: char, ctrl: cp === 0x00 || cp === 0x0a }));
       } else {
         // 0x01..0x1a are ctrl+a .. ctrl+z
         const letter = String.fromCharCode(cp + 96);
@@ -277,6 +294,30 @@ export class InputDecoder {
     }
 
     if (final === '~') {
+      /*
+       * xterm's `modifyOtherKeys`: CSI 27 ; modifiers ; codepoint ~
+       *
+       * The *other* way a terminal can say `ctrl+enter`, and the one that was
+       * going straight in the bin: 27 is not in `CSI_NUMBERS`, so
+       * `CSI 27;5;13~` matched nothing, fell through every branch and the key
+       * did nothing at all - not "arrived as plain enter", nothing.
+       *
+       * It carries the same information as the kitty form with the parameters
+       * the other way round, so it decodes through the same rules. Terminals
+       * that will not do the kitty protocol often do this one, which makes it
+       * the difference between `ctrl+enter` existing and not.
+       */
+      if (params[0] === 27 && params[2] !== undefined) {
+        const cp = params[2];
+        const char = cp >= 0x20 ? String.fromCodePoint(cp) : undefined;
+        this.emit(key(CTRL_NAMES[cp] ?? char ?? String(cp), {
+          ...modifiers(params[1]),
+          char,
+          raw,
+        }));
+        return raw.length;
+      }
+
       const name = CSI_NUMBERS[params[0] ?? 0];
       if (name) this.emit(key(name, { ...modifiers(params[1]), raw }));
       return raw.length;

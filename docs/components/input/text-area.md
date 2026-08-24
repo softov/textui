@@ -22,7 +22,7 @@ import { TextArea } from '@textui/widgets';
 | --- | --- | --- | --- |
 | `value` | `string` | **required** |  |
 | `onChange` | `(value: string) => void` | **required** |  |
-| `onSubmit` | `(value: string) => void` |  | Enter. A newline is `alt+enter` or `ctrl+j`, because in every place a multi-line field is worth having, enter already means "done". Left off, enter inserts a newline like every other key does. |
+| `onSubmit` | `(value: string) => void` |  | Enter. A newline is `ctrl+enter`, which is the one people reach for, with `alt+enter` as the one that cannot fail. A terminal has three ways to say `ctrl+enter` and `@textui/terminal` decodes all three: the kitty protocol's `CSI 13;5u`, xterm's `modifyOtherKeys` `CSI 27;5;13~`, and a bare LF - which is what most terminals send, and which is *not* the Return key, because in raw mode Return sends CR. `shift+enter` is not offered. There is no encoding in which it differs from enter, so a field that claimed it would be claiming a key that cannot arrive. Left off, enter inserts a newline like every other key does. |
 | `onCancel` | `() => void` |  | Escape, when there is nothing inside the field to cancel. |
 | `onOverflow` | `(direction: -1 \| 1) => void` |  | Up at the top, down at the bottom: for walking a history. |
 | `onEdge` | `(edge: 'start' \| 'end') => void` |  | Left at the very start, right at the very end. The horizontal pair of `onOverflow`, and separate from it because they mean different things: up and down walk a history, and left off the front of the field is "I am done here" - which is how a composer hands the reader back to what is beside it without them reaching for escape. |
@@ -39,9 +39,16 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `textbox`.
 
-A newline is `alt+enter` or `ctrl+j` - **never `shift+enter`**, which most
-terminals cannot tell apart from plain `enter`. Passing `onSubmit` is what
-makes enter mean "done"; without it enter is a newline like any other key.
+A newline is `ctrl+enter`, with `alt+enter` as the one that cannot fail -
+**never `shift+enter`**, which no terminal can tell apart from plain `enter`.
+Passing `onSubmit` is what makes enter mean "done"; without it enter is a
+newline like any other key.
+
+`ctrl+enter` is three different byte sequences depending on the terminal, and
+`@textui/terminal` decodes all of them: the kitty protocol's `CSI 13;5u`,
+xterm's `modifyOtherKeys` `CSI 27;5;13~`, and a bare LF. The last is the
+common one, and it is not the Return key: in raw mode Return sends CR, so LF
+reaching an application is `ctrl+Return`.
 
 It also settles the question a single-letter keybinding raises. The focused
 node is offered a key *before* any keybinding, so while a text field has the

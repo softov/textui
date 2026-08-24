@@ -15,13 +15,18 @@ export interface TextAreaProps extends BoxProps {
   value: string;
   onChange(value: string): void;
   /**
-   * Enter. A newline is `alt+enter`, because in every place a multi-line field
-   * is worth having, enter already means "done".
+   * Enter. A newline is `ctrl+enter`, which is the one people reach for, with
+   * `alt+enter` as the one that cannot fail.
    *
-   * `ctrl+enter` works too, wherever the terminal can say it. Most cannot:
-   * without the kitty keyboard protocol ctrl+enter arrives as the same byte as
-   * enter, and so does `shift+enter` - which is why neither can be the one you
-   * document. Alt is an escape prefix and survives everywhere.
+   * A terminal has three ways to say `ctrl+enter` and `@textui/terminal`
+   * decodes all three: the kitty protocol's `CSI 13;5u`, xterm's
+   * `modifyOtherKeys` `CSI 27;5;13~`, and a bare LF - which is what most
+   * terminals send, and which is *not* the Return key, because in raw mode
+   * Return sends CR.
+   *
+   * `shift+enter` is not offered. There is no encoding in which it differs
+   * from enter, so a field that claimed it would be claiming a key that
+   * cannot arrive.
    *
    * Left off, enter inserts a newline like every other key does.
    */
@@ -173,6 +178,10 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
         default: break;
       }
 
+      // ctrl+j, for the one case where it is a key of its own: with the kitty
+      // protocol on it arrives as `CSI 106;5u` and is named `j`. Without it
+      // ctrl+j is 0x0a, the same byte as ctrl+enter, and the case above has
+      // already taken it - there is no encoding in which those two differ.
       if (event.name === 'j' && event.ctrl) { insert('\n'); return true; }
 
       if (event.char && !event.ctrl && !event.alt && !event.meta) {

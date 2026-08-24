@@ -195,8 +195,8 @@ happens to be reading it is not a quit key.
 | On the composer | |
 |---|---|
 | `enter` | send - or, with nothing open, create the session and send |
-| `ctrl+enter` | a newline — where the terminal can say it (see below) |
-| `alt+enter`, `ctrl+j` | a newline, everywhere. Not `shift+enter`: no terminal can tell it from `enter` |
+| `ctrl+enter` | a newline |
+| `alt+enter`, `ctrl+j` | a newline, for a terminal that will not say the above. Not `shift+enter`: no terminal can tell it from `enter` |
 | `tab` | into the control row: harness, model, permissions, workspace, send |
 | `enter` on a chip | the panel of what it offers, above the chip |
 | `←` at the front of the field | out of the composer - the catalogue, or the transcript |
@@ -236,25 +236,33 @@ A question is not a confirmation, and the hint row says so: offering "a
 approve" over an elicitation is the same mistake as rendering one as the other,
 made in the row that exists to explain it.
 
-### `ctrl+enter`, and why a key can be missing
+### `ctrl+enter`, and the three ways a terminal says it
 
-Enter sends and `ctrl+enter` makes a newline - which a terminal has to be
-*able to say*. In the legacy encoding both are one byte, `0x0d`, so they are
-not two keys: they are one key pressed with a modifier nothing transmits.
+Enter sends and `ctrl+enter` makes a newline. There are **three** encodings for
+that key, and no terminal sends more than one of them:
 
-The [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)
-is what separates them, and asking for it is one sequence at startup
-(`CSI > 1 u`). Then `ctrl+enter` arrives as `CSI 13;5u`, escape as `CSI 27u`,
-and `ctrl+i` stops being tab. `@textui/terminal` asks for it wherever the
-terminal advertises support - kitty, WezTerm, ghostty and **VS Code**, whose
-terminal is xterm.js and has had the protocol since 6.1 with
-`terminal.integrated.enableKittyKeyboardProtocol` on by default. Inside tmux or
-screen it is not asked for, because the multiplexer is the terminal then and
-rewrites what reaches it.
+| | |
+|---|---|
+| `CSI 13;5u` | the [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/), asked for with `CSI > 1 u` at startup |
+| `CSI 27;5;13~` | xterm's `modifyOtherKeys` |
+| `0x0a` | a bare LF, and the most common of the three |
 
-The footer names whichever key this terminal can actually deliver: `ctrl+enter`
-where the protocol is on, `alt+enter` where it is not. A hint that names a key
-which does nothing is worse than no hint.
+The last one is why this section used to say something false. It claimed enter
+and `ctrl+enter` were both `0x0d` and that only the kitty protocol could
+separate them. `0x0d` is CR and `0x0a` is LF, and in raw mode those are not the
+same key: the kernel's CR-to-NL translation is off, so Return sends CR and an
+LF arriving at an application is `ctrl+Return`. The decoder named both `enter`
+with no modifier, so the newline was unreachable in every terminal that does
+not speak the kitty protocol - which, with `enableKittyKeyboardProtocol` off,
+includes VS Code.
+
+`@textui/terminal` now decodes all three, so the footer names `ctrl+enter`
+unconditionally rather than checking a capability that only ever described one
+of them. `alt+enter` stays for a terminal that sends plain CR for both, which
+nothing can recover.
+
+`shift+enter` is in none of the three and is offered nowhere: there is no
+encoding in which it differs from enter.
 
 ## What this needed that the catalog does not have
 

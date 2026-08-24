@@ -267,9 +267,10 @@ describe('the composer', () => {
     const before = (m.t.store.get<Turn[]>(TURNS) ?? []).length;
     m.t.focus('chat.composer');
     m.t.type('first line');
-    // The bytes a terminal sends *with the keyboard protocol on*. Without it
-    // both keys are 0x0d and there is nothing here to tell apart - which is
-    // why the capability is what decides whether the footer names this key.
+    // The kitty protocol's encoding. Two others say the same key - a bare LF
+    // and xterm's `CSI 27;5;13~` - and the test below feeds those, because for
+    // a long time this one passed while the key did nothing in a real
+    // terminal: it was the only encoding the decoder could read.
     m.t.feed('\u001b[13;5u');
     m.t.type('second');
     for (let i = 0; i < 4; i++) await m.t.settle();
@@ -278,6 +279,25 @@ describe('the composer', () => {
     // And nothing was sent: this is the key that is *not* send.
     expect((m.t.store.get<Turn[]>(TURNS) ?? []).length).toBe(before);
     await m.t.unmount();
+  });
+
+  it('makes a newline of ctrl+enter in the two encodings that are not kitty', async () => {
+    // A bare LF and xterm's `modifyOtherKeys`. Both used to fail, in different
+    // ways: LF was named plain `enter` and sent the message, and `CSI 27;5;13~`
+    // matched no branch at all and did nothing.
+    for (const bytes of ['\n', '\u001b[27;5;13~']) {
+      const m = await idle();
+      const before = (m.t.store.get<Turn[]>(TURNS) ?? []).length;
+      m.t.focus('chat.composer');
+      m.t.type('one');
+      m.t.feed(bytes);
+      m.t.type('two');
+      for (let i = 0; i < 4; i++) await m.t.settle();
+
+      expect(m.t.store.get<string>('$/chat/ui/draft')).toBe('one\ntwo');
+      expect((m.t.store.get<Turn[]>(TURNS) ?? []).length).toBe(before);
+      await m.t.unmount();
+    }
   });
 
   it('sends on enter, from bytes rather than a synthesised event', async () => {

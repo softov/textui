@@ -3,7 +3,6 @@ import {
   createBag,
   defineComponent,
   useApp,
-  useCapabilities,
   useTheme,
   useStoreValue,
 } from '@textui/core';
@@ -83,14 +82,16 @@ const Header = defineComponent<Record<string, never>>('ChatHeader', () => {
 const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
   const theme = useTheme();
   /**
-   * Which key makes a newline, on *this* terminal.
+   * Which key makes a newline.
    *
-   * `ctrl+enter` is the one people reach for, and it only exists where the
-   * keyboard protocol is on: without it a terminal sends 0x0d for both, so
-   * enter and ctrl+enter are the same key and naming it would be advertising
-   * something that cannot happen. `alt+enter` works either way.
+   * `ctrl+enter`, and no longer conditionally. This used to be gated on the
+   * kitty protocol on the belief that it was the only encoding able to express
+   * the key - "without it a terminal sends 0x0d for both". That is not true:
+   * most terminals send a bare LF, xterm sends `CSI 27;5;13~`, and the
+   * decoder reads all three. The gate was hiding a key that worked, and
+   * naming `alt+enter` instead sent people to the fallback.
    */
-  const newline = useCapabilities().kittyKeyboard ? 'ctrl+enter' : 'alt+enter';
+  const newline = 'ctrl+enter';
   const waiting = useStoreValue<{ kind: string } | null>(INPUT, null);
   const arrows = `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown}`;
   // Which keys exist is a property of where you are, not of what is open: a

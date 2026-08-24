@@ -29,9 +29,10 @@ without drawing it inside the field, for a form or a dialog that already shows
 it.
 
 `TextArea` is the one that is a paragraph: it grows to what has been typed,
-then stops and scrolls, takes a newline that is not a submit (`alt+enter` or
-`ctrl+j` - never `shift+enter`, which most terminals cannot tell from `enter`),
-and hands back every key it does not want. Passing `onSubmit` is what makes
+then stops and scrolls, takes a newline that is not a submit (`ctrl+enter`, or
+`alt+enter` where a terminal will not say the first - never `shift+enter`,
+which no terminal can tell from `enter`), and hands back every key it does not
+want. Passing `onSubmit` is what makes
 enter mean "done"; without it, enter is a newline like any other key.
 
 It also settles the question a single-letter keybinding raises. The focused

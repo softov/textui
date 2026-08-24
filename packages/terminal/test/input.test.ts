@@ -265,3 +265,55 @@ describe('alt and a named key', () => {
     expect(keys(c.events)[0]).toMatchObject({ name: 'space', alt: true, ctrl: true });
   });
 });
+
+describe('ctrl+enter, in every encoding a terminal has for it', () => {
+  it('tells a bare LF from a CR', () => {
+    // The legacy encoding, and the one the composer actually met: enter is CR
+    // and ctrl+enter is LF. Both were `enter` with no modifier, so they were
+    // one key and the newline was unreachable.
+    const c = collect();
+    c.feed('\r');
+    c.feed('\n');
+    expect(keys(c.events)).toMatchObject([
+      { name: 'enter', ctrl: false },
+      { name: 'enter', ctrl: true },
+    ]);
+  });
+
+  it('decodes xterm modifyOtherKeys', () => {
+    // CSI 27 ; mod ; codepoint ~ - what a terminal that will not do the kitty
+    // protocol sends instead. 27 is not a `CSI_NUMBERS` entry, so this used to
+    // match nothing and emit nothing at all: the key was not misread, it was
+    // dropped.
+    const c = collect();
+    c.feed(`${ESC}[27;5;13~`);
+    c.feed(`${ESC}[27;3;13~`);
+    c.feed(`${ESC}[27;1;13~`);
+    expect(keys(c.events)).toMatchObject([
+      { name: 'enter', ctrl: true },
+      { name: 'enter', alt: true },
+      { name: 'enter', ctrl: false, alt: false },
+    ]);
+  });
+
+  it('leaves the keys that share the tilde form alone', () => {
+    // The new branch is keyed on 27 and must not shadow the numbered keys
+    // that also end in `~`.
+    const c = collect();
+    c.feed(`${ESC}[3~`);
+    c.feed(`${ESC}[5;5~`);
+    expect(keys(c.events)).toMatchObject([
+      { name: 'delete' },
+      { name: 'pageup', ctrl: true },
+    ]);
+  });
+
+  it('still reads a paste that contains newlines as a paste', () => {
+    // The LF rule is in `stepPlain`, and pasted text never goes through it -
+    // otherwise pasting two lines would fire two ctrl+enters.
+    const c = collect();
+    c.feed(`${ESC}[200~one\ntwo${ESC}[201~`);
+    expect(c.events).toMatchObject([{ type: 'paste', text: 'one\ntwo' }]);
+    expect(keys(c.events)).toHaveLength(0);
+  });
+});

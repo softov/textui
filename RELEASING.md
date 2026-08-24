@@ -80,6 +80,20 @@ without argument.
 
 [npm-bootstrap]: https://github.com/npm/cli/issues/8544
 
+## The `registry-url` trap
+
+`actions/setup-node` writes `_authToken=${NODE_AUTH_TOKEN}` into an `.npmrc`
+whenever it is given a `registry-url`. With no token to substitute, that line
+becomes an *empty credential* rather than no credential - and npm reads any
+`_authToken` line as "auth is configured", so it never performs the OIDC
+exchange and fails as `ENEEDAUTH` or a 404 ([setup-node#1551][sn1551]).
+
+The failure looks like a permissions problem and is not one, which is why
+`release.yml` sets no `registry-url` and `scripts/check-no-npm-auth.mjs` runs
+before the publish. npmjs.org is the default registry regardless.
+
+[sn1551]: https://github.com/actions/setup-node/issues/1551
+
 ## Cutting one
 
 1. Land everything. `main` green.
@@ -126,3 +140,6 @@ unless given `--force`.
 - **`scripts/release-publish.mjs`** - refuses a set at mixed versions, refuses
   a dependency cycle, and refuses to publish anything still carrying a
   `workspace:` range.
+- **`scripts/check-no-npm-auth.mjs`** - refuses to publish while any npm
+  credential is configured, because a credential is what stops the OIDC
+  exchange happening at all. Runs in the release workflow, before the publish.

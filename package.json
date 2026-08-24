@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check:exports": "node scripts/check-exports.mjs",
+    "check:npm-auth": "node scripts/check-no-npm-auth.mjs",
     "check:version": "node scripts/check-version.mjs",
     "release:dry": "node scripts/release-publish.mjs --dry-run",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo playground/.dev examples/*/.dev packages/textide/.dev",

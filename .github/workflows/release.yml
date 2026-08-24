@@ -24,11 +24,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
+
+      # Deliberately no `registry-url`. It makes setup-node write
+      # `_authToken=${NODE_AUTH_TOKEN}` into an .npmrc, and with no token to
+      # substitute that line becomes an empty credential rather than no
+      # credential. npm reads it as "auth is already configured", skips the
+      # OIDC exchange entirely and fails with ENEEDAUTH or a 404 - see
+      # actions/setup-node#1551. The default registry is npmjs.org anyway.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       # Trusted publishing needs npm >= 11.5.1, which is newer than the npm
       # bundled with any Node 22.
@@ -36,6 +42,12 @@ jobs:
         run: |
           npm install -g npm@latest
           npm --version
+
+      # Belt and braces: if anything upstream reintroduces an auth line, the
+      # OIDC exchange is silently skipped and the failure looks like a
+      # permissions problem rather than a configuration one.
+      - name: Refuse a stale credential
+        run: node scripts/check-no-npm-auth.mjs
 
       - run: pnpm install --frozen-lockfile
 

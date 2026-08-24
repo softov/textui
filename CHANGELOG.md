@@ -19,6 +19,15 @@ And `pnpm publish` has no OIDC support, while `npm publish` cannot read
 `workspace:^`; `scripts/release-publish.mjs` resolves the ranges and publishes
 each package from its own directory in dependency order.
 
+### The OIDC exchange only happens with no credential configured
+
+`actions/setup-node` writes `_authToken=${NODE_AUTH_TOKEN}` into an `.npmrc`
+whenever it is given a `registry-url`. With nothing to substitute, that is an
+empty credential rather than no credential, and npm treats any `_authToken`
+line as auth already being configured - so it never asks GitHub for a token.
+The release workflow no longer sets `registry-url`, and
+`scripts/check-no-npm-auth.mjs` fails the run if a credential appears anyway.
+
 ### The facade is `@textui/kit`, not `textui`
 
 npm refused the unscoped name: "Package name too similar to existing package

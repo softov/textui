@@ -1,4 +1,5 @@
 import { stringWidth } from '@textui/core';
+import type { TerminalInput, TerminalOutput } from '@textui/terminal';
 
 /**
  * CLI application primitives.
@@ -377,8 +378,8 @@ export interface PromptOptions {
   /** Hide what is typed. */
   mask?: boolean;
   validate?(value: string): string | null;
-  input?: NodeJS.ReadStream;
-  output?: NodeJS.WriteStream;
+  input?: TerminalInput;
+  output?: TerminalOutput;
 }
 
 /**
@@ -412,7 +413,7 @@ export async function promptLine(options: PromptOptions): Promise<string> {
 
 export async function promptConfirm(
   message: string,
-  options: { default?: boolean; input?: NodeJS.ReadStream; output?: NodeJS.WriteStream } = {},
+  options: { default?: boolean; input?: TerminalInput; output?: TerminalOutput } = {},
 ): Promise<boolean> {
   const fallback = options.default ?? false;
   const answer = await promptLine({
@@ -427,7 +428,7 @@ export async function promptConfirm(
 export async function promptSelect(
   message: string,
   choices: { value: string; label: string }[],
-  options: { input?: NodeJS.ReadStream; output?: NodeJS.WriteStream } = {},
+  options: { input?: TerminalInput; output?: TerminalOutput } = {},
 ): Promise<string> {
   const output = options.output ?? process.stdout;
   output.write(`${message}\n`);
@@ -450,7 +451,7 @@ const CTRL_C = String.fromCharCode(3);
 const BACKSPACE = String.fromCharCode(8);
 const DEL = String.fromCharCode(127);
 
-function readLine(input: NodeJS.ReadStream, maskTo?: NodeJS.WriteStream): Promise<string> {
+function readLine(input: TerminalInput, maskTo?: TerminalOutput): Promise<string> {
   return new Promise((resolve) => {
     let buffer = '';
     const wasRaw = input.isRaw;

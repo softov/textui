@@ -10,6 +10,6 @@ export type { DetectionInput } from './capabilities.js';
 export { InputDecoder, createDecoder } from './input.js';
 export type { DecoderOptions } from './input.js';
 export { NodeTerminalAdapter, createNodeTerminal } from './node.js';
-export type { NodeAdapterOptions } from './node.js';
+export type { NodeAdapterOptions, TerminalInput, TerminalOutput, TerminalSignal } from './node.js';
 export { VirtualTerminalAdapter, createVirtualTerminal } from './virtual.js';
 export type { VirtualAdapterOptions } from './virtual.js';

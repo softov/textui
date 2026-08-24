@@ -39,6 +39,16 @@ Under the kitty protocol, `ctrl+shift+f` is a distinct stroke from `ctrl+f`.
 Without it the terminal sends the same byte for both, and no amount of decoding
 recovers the difference.
 
+## What it needs from a stream
+
+`TerminalInput` and `TerminalOutput`, which say what the adapter uses rather
+than which stream it is - `setRawMode`, `columns`, `write`, and half a dozen
+more. `process.stdin` and `process.stdout` satisfy them, so nothing changes for
+a caller, and so do the streams of runtimes that are not node.
+
+That is also why the published types name no Node interfaces: a package with no
+dependencies should not need `@types/node` installed to compile.
+
 ## Runtime
 
 No dependencies beyond `@textui/core`. Uses `process` for stdio and signals, and

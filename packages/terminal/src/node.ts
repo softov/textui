@@ -19,9 +19,48 @@ import { createDecoder, type InputDecoder } from './input.js';
  * release also runs on exit and on a fatal signal, not only on a tidy stop.
  */
 
+/**
+ * What this adapter needs from a stream, rather than which stream it is.
+ *
+ * `process.stdin` and `process.stdout` satisfy these, so nothing changes for
+ * a caller - but the published types stop naming Node's stream interfaces,
+ * which come from a package this one does not depend on. It compiled here
+ * only because those types happened to be installed at the root; a consumer
+ * without them got `Cannot find namespace` out of a package that advertises
+ * no dependencies.
+ *
+ * Saying it structurally also makes the requirement legible - "something with
+ * `setRawMode` and `columns`" is a contract, where "Node's stream" is a shrug
+ * - and makes it true of the runtimes whose streams are not Node's. Bun and
+ * Deno satisfy these by shape rather than by luck.
+ */
+export interface TerminalInput {
+  isTTY?: boolean;
+  /** True while the terminal is delivering keys rather than lines. */
+  isRaw?: boolean;
+  setRawMode?(raw: boolean): void;
+  setEncoding(encoding: 'utf8'): void;
+  on(event: 'data', listener: (chunk: string) => void): void;
+  off(event: 'data', listener: (chunk: string) => void): void;
+  pause(): void;
+  resume(): void;
+}
+
+export interface TerminalOutput {
+  isTTY?: boolean;
+  columns?: number;
+  rows?: number;
+  write(data: string): void;
+  on(event: 'resize', listener: () => void): void;
+  off(event: 'resize', listener: () => void): void;
+}
+
+/** The three this adapter installs handlers for. */
+export type TerminalSignal = 'SIGINT' | 'SIGTERM' | 'SIGHUP';
+
 export interface NodeAdapterOptions {
-  stdin?: NodeJS.ReadStream;
-  stdout?: NodeJS.WriteStream;
+  stdin?: TerminalInput;
+  stdout?: TerminalOutput;
   env?: Record<string, string | undefined>;
   capabilities?: CapabilityOverrides;
   /** Install exit and signal handlers that release the terminal. */
@@ -38,8 +77,8 @@ const NOTHING_ACQUIRED: AcquiredState = {
 export class NodeTerminalAdapter implements TerminalAdapter {
   readonly id = 'node';
 
-  private stdin: NodeJS.ReadStream;
-  private stdout: NodeJS.WriteStream;
+  private stdin: TerminalInput;
+  private stdout: TerminalOutput;
   private env: Record<string, string | undefined>;
   private overrides: CapabilityOverrides;
 
@@ -59,7 +98,7 @@ export class NodeTerminalAdapter implements TerminalAdapter {
     for (const fn of [...this.resizeListeners]) fn(size);
   };
   private exitHandler: (() => void) | null = null;
-  private signalHandler: ((signal: NodeJS.Signals) => void) | null = null;
+  private signalHandler: ((signal: TerminalSignal) => void) | null = null;
 
   constructor(private options: NodeAdapterOptions = {}) {
     this.stdin = options.stdin ?? process.stdin;
@@ -256,7 +295,7 @@ export class NodeTerminalAdapter implements TerminalAdapter {
     this.exitHandler = () => this.release();
     process.on('exit', this.exitHandler);
 
-    this.signalHandler = (signal: NodeJS.Signals) => {
+    this.signalHandler = (signal: TerminalSignal) => {
       this.release();
       process.exit(signal === 'SIGINT' ? 130 : 143);
     };

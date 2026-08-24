@@ -1,5 +1,8 @@
 # @textui/terminal
 
+[![npm](https://img.shields.io/npm/v/@textui/terminal?label=%40textui%2Fterminal)](https://www.npmjs.com/package/@textui/terminal)
+[![license](https://img.shields.io/npm/l/@textui/terminal)](https://github.com/softov/textui/blob/main/LICENSE)
+
 What [`@textui/core`](https://www.npmjs.com/package/@textui/core) needs to reach an actual terminal: adapters,
 capability detection, ANSI writing and input decoding.
 

@@ -1,5 +1,8 @@
 # @textui/testing
 
+[![npm](https://img.shields.io/npm/v/@textui/testing?label=%40textui%2Ftesting)](https://www.npmjs.com/package/@textui/testing)
+[![license](https://img.shields.io/npm/l/@textui/testing)](https://github.com/softov/textui/blob/main/LICENSE)
+
 A headless harness for TextUI applications. No terminal, no timers, no
 snapshots of a screen nobody looked at.
 

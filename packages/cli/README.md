@@ -1,5 +1,8 @@
 # @textui/cli
 
+[![npm](https://img.shields.io/npm/v/@textui/cli?label=%40textui%2Fcli)](https://www.npmjs.com/package/@textui/cli)
+[![license](https://img.shields.io/npm/l/@textui/cli)](https://github.com/softov/textui/blob/main/LICENSE)
+
 `textui` - set a project up, copy components into it, and find out what the
 terminal in front of you can actually do.
 

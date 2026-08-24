@@ -14,6 +14,7 @@ JSON-RPC notifications, one per line.
 | | |
 |---|---|
 | `enter` | Send |
+| `alt+enter` | Newline - the field is a `TextArea`, so a message can be a paragraph |
 | `pageup` / `pagedown` | Show more or fewer lines |
 | `ctrl+c` | Leave |
 

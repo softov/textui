@@ -15,7 +15,7 @@
 // TypeScript agree, and it is allowed because nothing here emits.
 
 import { h, render, useEffect, useKeymap, useState } from 'textui';
-import { TextInput } from '@textui/widgets';
+import { TextArea } from '@textui/widgets';
 import { describeAddress, joinRoom, parseAddress, type Message } from './room.ts';
 
 const flag = (name: string): string | undefined => {
@@ -91,14 +91,23 @@ const Chat = () => {
             h('text', { content: m.text }),
           ))),
     ),
-    h(TextInput, {
+    // `TextArea`, not `TextInput`: a message is a paragraph often enough that
+    // one line is the wrong shape, and the field already knows that enter
+    // means send while `alt+enter` means a newline - which is what every chat
+    // does and what nobody wants to reimplement.
+    h(TextArea, {
       value: draft,
       onChange: setDraft,
       onSubmit: send,
+      maxRows: 5,
       placeholder: `say something as ${name}`,
       autoFocus: true,
+      border: 'single',
     }),
-    h('text', { dim: true, content: 'enter  send      pageup / pagedown  taller or shorter      ctrl+c  leave' }),
+    h('text', {
+      dim: true,
+      content: 'enter  send      alt+enter  newline      pageup / pagedown  resize      ctrl+c  leave',
+    }),
   );
 };
 

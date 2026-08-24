@@ -11,6 +11,7 @@
   "dependencies": {
     "@textui/cli": "workspace:*",
     "@textui/core": "workspace:*",
+    "@textui/kit": "workspace:*",
     "@textui/documents": "workspace:*",
     "@textui/terminal": "workspace:*",
     "@textui/textide": "workspace:*",

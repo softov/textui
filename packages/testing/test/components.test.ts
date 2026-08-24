@@ -794,6 +794,44 @@ describe('TextArea', () => {
     await t.unmount();
   });
 
+  it('moves up by row, so a wrapped line is not one keypress tall', async () => {
+    // One logical line, three rows of it on screen. `up` used to test
+    // `caretLine === 0` and hand the key straight to the caller, so pressing
+    // up in a wrapped paragraph left the field instead of moving inside it -
+    // and in the chat composer that meant "the last thing you sent" replaced
+    // what was being typed.
+    const left: number[] = [];
+    const t = await renderApp({
+      width: 30,
+      height: 10,
+      root: h(function Host() {
+        const [value, setValue] = useState('the quick brown fox jumps over the lazy dog and keeps running');
+        return h(TextArea, {
+          value,
+          onChange: setValue,
+          onOverflow: (direction: -1 | 1) => left.push(direction),
+          focusId: 'field',
+          autoFocus: true,
+        });
+      }, {}),
+    });
+    await t.settle();
+    t.focus('field');
+
+    expect(t.getByRole('textbox').rect?.height).toBe(3);
+
+    t.press('up');
+    await t.settle();
+    expect(left).toEqual([]);
+
+    // Two more reach the first row; only the third has nowhere left to go.
+    t.press('up');
+    t.press('up');
+    await t.settle();
+    expect(left).toEqual([-1]);
+    await t.unmount();
+  });
+
   it('gives enter to the caller and keeps alt+enter for itself', async () => {
     const sent: string[] = [];
     const t = await renderApp({

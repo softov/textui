@@ -28,8 +28,9 @@ the caret in view. `hideLabel` keeps the label as the field's accessible name
 without drawing it inside the field, for a form or a dialog that already shows
 it.
 
-`TextArea` is the one that is a paragraph: it grows to what has been typed,
-then stops and scrolls, takes a newline that is not a submit (`ctrl+enter`, or
+`TextArea` is the one that is a paragraph: it soft-wraps, grows to what has
+been typed, then stops and scrolls, takes a newline that is not a submit
+(`ctrl+enter`, or
 `alt+enter` where a terminal will not say the first - never `shift+enter`,
 which no terminal can tell from `enter`), and hands back every key it does not
 want. Passing `onSubmit` is what makes

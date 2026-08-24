@@ -3,9 +3,11 @@ import {
   defineComponent,
   graphemes,
   h,
+  stringWidth,
   useEffect,
   useFocus,
   useInput,
+  useMeasure,
   useState,
   useTheme,
   useTicker,
@@ -59,6 +61,17 @@ export interface TextAreaProps extends BoxProps {
    */
   caretTone?: SemanticVariant;
   /**
+   * What the caret looks like. An underline under the character it is on by
+   * default; `block` fills the cell instead.
+   *
+   * Both **mark a cell rather than occupying one**. The caret used to be a
+   * glyph pushed in between the text before it and the text after, so every
+   * character to its right sat one column off from where it would be once the
+   * caret moved on, and the row was a cell wider than its own text. On a
+   * wrapped row that extra cell is the one that does not fit.
+   */
+  caretStyle?: 'underline' | 'block';
+  /**
    * Blink the caret while the field has the keyboard. On by default.
    *
    * Driven by the animation ticker, so it stops with every other animation -
@@ -72,9 +85,14 @@ export interface TextAreaProps extends BoxProps {
  * A field that is a paragraph.
  *
  * `TextInput` is one line, and a message, a note or a commit body is not. It
- * grows to what has been typed and then scrolls, keeps the caret visible, and
- * hands back every key it does not want - which is what lets the thing behind
- * it keep its own shortcuts while this has the keyboard.
+ * soft-wraps, grows to what has been typed and then scrolls, keeps the caret
+ * visible, and hands back every key it does not want - which is what lets the
+ * thing behind it keep its own shortcuts while this has the keyboard.
+ *
+ * Wrapping means a line is not a row: `maxRows` is a budget of rows, up and
+ * down move by row, and the inherited `wrap` prop picks how a line breaks.
+ * Any of its `truncate-*` values asks for one row per line instead, with an
+ * ellipsis where the text was cut.
  *
  * It takes a printable character before any keybinding sees it, because that
  * is what typing is. That single fact is why an application with one of these
@@ -84,7 +102,8 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
   const theme = useTheme();
   const {
     value, onChange, onSubmit, onCancel, onOverflow, onEdge, placeholder, maxRows = 6,
-    maxLength, autoFocus, focusId, disabled, caretTone, blink = true, ...rest
+    maxLength, autoFocus, focusId, disabled, caretTone, blink = true, wrap = 'word',
+    caretStyle = 'underline', ...rest
   } = props;
 
   const focus = useFocus({
@@ -100,6 +119,17 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
   useTicker(() => setLit((on) => !on), { fps: 2, enabled: blink && focus.focused });
   useEffect(() => { setLit(true); }, [focus.focused]);
 
+  /**
+   * The caret, as a style laid over one cell.
+   *
+   * `inverse` for a block rather than a background colour, because it swaps
+   * whatever the cell already had - a caret over selected or coloured text
+   * stays legible instead of painting the theme's cursor colour over it.
+   */
+  const mark = caretStyle === 'block'
+    ? { inverse: true, fg: caretTone ?? 'cursor' }
+    : { underline: true, fg: caretTone ?? 'cursor' };
+
   const chars = graphemes(value);
   const position = Math.min(caret, chars.length);
   const before = chars.slice(0, position).join('');
@@ -107,11 +137,66 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
   const caretLine = before.split('\n').length - 1;
   const caretColumn = graphemes(before.split('\n').pop() ?? '').length;
 
-  const rows = Math.min(maxRows, Math.max(1, lines.length));
-  const first = Math.max(0, Math.min(caretLine - rows + 1, lines.length - rows));
+  /*
+   * Visual rows, which are not logical lines.
+   *
+   * Every row was drawn with `truncate: 'end'`, so a line wider than the field
+   * came out as its first few words and an ellipsis - text that had been typed
+   * and could not be read back. This is the component the docs call "the one
+   * that is a paragraph", and a paragraph wraps.
+   *
+   * So one line can occupy several rows, and everything below counts rows
+   * rather than lines: `maxRows`, the scroll offset, up and down. The
+   * inherited `wrap` prop chooses how, and any of the `truncate-*` values ask
+   * for the old single-row-per-line behaviour back.
+   *
+   * The width is the layout's, so it arrives a frame late. Until it does it is
+   * 0 and nothing wraps, which is precisely the behaviour above - and the pass
+   * that `useMeasure` schedules draws the wrapped version.
+   */
+  const width = useMeasure().width;
+  const mode = width > 0 && (wrap === 'word' || wrap === 'char') ? wrap : 'none';
+
+  const visual: { line: number; start: number; cells: string[] }[] = [];
+  lines.forEach((line, index) => {
+    const cells = graphemes(line);
+    const starts = mode === 'none' ? [0] : breakColumns(cells, width, mode);
+    starts.forEach((start, i) => {
+      visual.push({ line: index, start, cells: cells.slice(start, starts[i + 1] ?? cells.length) });
+    });
+
+    // A caret at the end of a row that is already full has no cell of its own
+    // to mark and no room for a spare one, so it belongs on a new empty row -
+    // which is where the next character was going to land anyway.
+    if (mode !== 'none' && index === caretLine && caretColumn === cells.length) {
+      const last = visual[visual.length - 1];
+      if (last && rowWidth(last.cells) >= width) {
+        visual.push({ line: index, start: cells.length, cells: [] });
+      }
+    }
+  });
+
+  // The *last* row starting at or before the caret. With the caret exactly on
+  // a break that is the row it begins, not the one it just filled - which is
+  // where the caret goes when a word has just been pushed onto a new row.
+  let caretRow = 0;
+  visual.forEach((row, i) => {
+    if (row.line === caretLine && row.start <= caretColumn) caretRow = i;
+  });
+
+  const rows = Math.min(maxRows, Math.max(1, visual.length));
+  const first = Math.max(0, Math.min(caretRow - rows + 1, visual.length - rows));
 
   const lineStart = (index: number): number =>
     lines.slice(0, index).reduce((n, line) => n + graphemes(line).length + 1, 0);
+
+  /** The caret's column within its own row, carried onto another row. */
+  const rowCaret = (index: number): number => {
+    const row = visual[index];
+    if (!row) return position;
+    const column = Math.min(caretColumn - (visual[caretRow]?.start ?? 0), row.cells.length);
+    return lineStart(row.line) + row.start + column;
+  };
 
   const replace = (next: string, at: number): void => {
     const capped = maxLength !== undefined ? next.slice(0, maxLength) : next;
@@ -142,18 +227,19 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
         case 'home': setCaret(lineStart(caretLine)); return true;
         case 'end': setCaret(lineStart(caretLine) + graphemes(lines[caretLine] ?? '').length); return true;
 
+        // By *row*, not by line. In a wrapped paragraph moving by line jumps
+        // the whole paragraph, and what is above the caret on the screen is
+        // the row above it.
         case 'up': {
           // At the top there is nowhere to go inside the field, so the caller
           // gets the key - which is where "the last thing you sent" comes from.
-          if (caretLine === 0) { onOverflow?.(-1); return true; }
-          const target = caretLine - 1;
-          setCaret(lineStart(target) + Math.min(caretColumn, graphemes(lines[target] ?? '').length));
+          if (caretRow === 0) { onOverflow?.(-1); return true; }
+          setCaret(rowCaret(caretRow - 1));
           return true;
         }
         case 'down': {
-          if (caretLine === lines.length - 1) { onOverflow?.(1); return true; }
-          const target = caretLine + 1;
-          setCaret(lineStart(target) + Math.min(caretColumn, graphemes(lines[target] ?? '').length));
+          if (caretRow === visual.length - 1) { onOverflow?.(1); return true; }
+          setCaret(rowCaret(caretRow + 1));
           return true;
         }
 
@@ -193,7 +279,7 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
     { focusId: focus.id, enabled: !disabled },
   );
 
-  const shown = lines.slice(first, first + rows);
+  const shown = visual.slice(first, first + rows);
 
   // The row count fixes the *content*, on an inner box, and the outer one
   // sizes to it.
@@ -214,21 +300,93 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
       // The placeholder stays while the field is focused and empty: it is the
       // only thing on screen saying what enter will do, and hiding it when the
       // caret arrives hides it exactly when it is read.
-      ? h('box', { direction: 'row' },
-          focus.focused
-            ? h('text', { content: lit ? theme.glyphs.caret : ' ', fg: caretTone ?? 'cursor' })
-            : null,
-          h('text', { content: placeholder ?? '', fg: 'subtle', flex: 1, truncate: 'end' }))
-      : shown.map((line, i) => {
+      ? (() => {
+        // The caret sits on the placeholder's first cell rather than in front
+        // of it: a caret that pushed the placeholder along moved the one piece
+        // of text on the screen every time the field was focused.
+        const hint = graphemes(placeholder ?? '');
+        const head = hint.length > 0 ? (hint[0] as string) : ' ';
+        return h('box', { direction: 'row' },
+          h('text', {
+            content: head,
+            // The placeholder keeps its own colour and only takes the mark:
+            // recolouring it would make the first letter of the hint the one
+            // bright thing in an empty field.
+            ...(focus.focused && lit ? { ...mark, fg: 'subtle' as const } : { fg: 'subtle' as const }),
+          }),
+          h('text', { content: hint.slice(1).join(''), fg: 'subtle', flex: 1, truncate: 'end' }));
+      })()
+      : shown.map((row, i) => {
         const index = first + i;
-        if (index !== caretLine || !focus.focused) {
-          return h('text', { key: index, content: line === '' ? ' ' : line, wrap: 'none', truncate: 'end' });
+        const text = row.cells.join('');
+        if (index !== caretRow || !focus.focused) {
+          return h('text', { key: index, content: text === '' ? ' ' : text, wrap: 'none', truncate: 'end' });
         }
-        const cells = graphemes(line);
+        // The caret's column inside this row. The row has already been broken
+        // to the width it will be drawn at, so the split lands where it looks.
+        //
+        // Three parts, and the middle one is the cell the caret is *on* - not
+        // an extra cell between them. Past the last character there is nothing
+        // to mark, so a space stands in; that is the one case where the caret
+        // adds a column, and it adds it at the end where nothing moves.
+        const at = caretColumn - row.start;
         return h('box', { key: index, direction: 'row' },
-          h('text', { content: cells.slice(0, caretColumn).join('') }),
-          h('text', { content: lit ? theme.glyphs.caret : ' ', fg: caretTone ?? 'cursor' }),
-          h('text', { content: cells.slice(caretColumn).join(''), flex: 1, truncate: 'end' }));
+          h('text', { content: row.cells.slice(0, at).join('') }),
+          h('text', { content: row.cells[at] ?? ' ', ...(lit ? mark : {}) }),
+          h('text', { content: row.cells.slice(at + 1).join(''), flex: 1, truncate: 'end' }));
       }),
   ));
 });
+
+/**
+ * Where a line breaks, as columns into its own grapheme array.
+ *
+ * One entry per visual row and always starting at 0, which is what makes a
+ * wrapped row addressable: a caret is a character offset, so a wrap that only
+ * returned strings could not say which offset a row begins at. `wrapText` in
+ * core returns strings and trims each one, and both of those lose the mapping.
+ *
+ * Nothing is trimmed here for the same reason. A trailing space is a character
+ * somebody typed and can delete, so the row it sits on has to contain it -
+ * otherwise the caret drifts one cell from the text for the rest of the line.
+ *
+ * Cells rather than characters throughout: a wide glyph is two columns.
+ */
+function breakColumns(cells: string[], width: number, mode: 'word' | 'char'): number[] {
+  if (width <= 0 || cells.length === 0) return [0];
+
+  const starts = [0];
+  let start = 0;
+  let used = 0;
+  // The last space on the row so far, and -1 once a break has consumed it.
+  let space = -1;
+
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i] as string;
+    const cellWidth = stringWidth(cell);
+
+    if (used + cellWidth > width && i > start) {
+      // Break after the last space, or mid-word when the row has none - a word
+      // longer than the field has to break somewhere, and `space > start`
+      // rather than `>=` keeps a row that begins with a space from being one.
+      const at = mode === 'word' && space > start ? space + 1 : i;
+      starts.push(at);
+      start = at;
+      space = -1;
+      used = 0;
+      for (let j = at; j < i; j++) used += stringWidth(cells[j] as string);
+    }
+
+    if (/\s/.test(cell)) space = i;
+    used += cellWidth;
+  }
+
+  return starts;
+}
+
+/** A row's width in cells, which is not its length in characters. */
+function rowWidth(cells: string[]): number {
+  let width = 0;
+  for (const cell of cells) width += stringWidth(cell);
+  return width;
+}

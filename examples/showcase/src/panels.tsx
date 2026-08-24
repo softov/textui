@@ -6,7 +6,7 @@ import {
   Switch, Table, Tabs, TextArea, TextInput, Timeline, Toolbar, Tree,
   type PanelProps,
 } from '@textui/widgets';
-import { Spacer, useTheme, type BoxProps, type EdgeSpec, type RenderOutput } from '@textui/core';
+import { Spacer, useTheme, type BoxProps, type RenderOutput } from '@textui/core';
 
 /**
  * The panels, and the data they are made of.

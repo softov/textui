@@ -9,7 +9,6 @@ import {
   useInput,
   useMeasure,
   useState,
-  useTheme,
   useTicker,
 } from '@textui/core';
 
@@ -99,7 +98,6 @@ export interface TextAreaProps extends BoxProps {
  * cannot have single-letter global commands, and why it does not need to.
  */
 export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
-  const theme = useTheme();
   const {
     value, onChange, onSubmit, onCancel, onOverflow, onEdge, placeholder, maxRows = 6,
     maxLength, autoFocus, focusId, disabled, caretTone, blink = true, wrap = 'word',

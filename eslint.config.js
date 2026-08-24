@@ -24,6 +24,11 @@ export default tseslint.config(
       // the `declare const app: import('...')` preamble is written for `tsc`,
       // which is the only tool that should have an opinion about them.
       'scripts/docs/snippets/src/**',
+      // The sandbox. Everything in it but the manifest is gitignored, so
+      // whatever is there is one person's throwaway and CI never sees it -
+      // linting it means the repo's lint passes or fails on a file that is not
+      // in the repo.
+      'scratch/*.ts', 'scratch/*.tsx',
     ],
   },
 

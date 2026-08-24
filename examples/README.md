@@ -63,3 +63,4 @@ pnpm example todo        # or arcade, chat, surfaces
 | [`arcade`](arcade) | Frame loops, canvas painting, input timing |
 | [`chat`](chat) | `Feed`, `TextArea`, markdown, and a fake host |
 | [`surfaces`](surfaces) | An application with no shell, arranging its own chrome |
+| [`showcase`](showcase) | The catalog on one screen, as a row that wraps. Writes its own screenshot |

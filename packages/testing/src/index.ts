@@ -161,7 +161,9 @@ export async function render(
 }
 
 /** Mount an application rather than a bare node. */
-export async function renderApp(options: RenderOptions = {}): Promise<Harness> {
+export async function renderApp(
+  options: RenderOptions & { root?: ComponentNode } = {},
+): Promise<Harness> {
   return mount(options);
 }
 

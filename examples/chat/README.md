@@ -263,9 +263,9 @@ Writing it turned up three things that were missing, and they are **now in
 
 | In core | Why it was not a composition |
 |---|---|
-| [`Feed`](../../packages/core/src/ui/data.ts) | `List` is fixed-height rows with a selection; `ScrollView` is a viewport that knows nothing about its contents. A conversation needs both at once: entries whose height is whatever the text wrapped to, a cursor that moves between them, and a tail it follows until the reader scrolls away. Heights are **measured and reported upward**, because what a paragraph wraps to is the layout's decision. Nothing about it is chat - a transcript, an activity stream, results with snippets and a diff whose files expand are the same component. |
-| [`TextArea`](../../packages/core/src/ui/control.ts) | `TextInput` is one line. A message is a paragraph with a path in it: it has to grow, take a newline that is not a send, walk a history, and hand back the keys it does not want. |
-| [`MarkdownView`](../../packages/core/src/ui/data.ts) + [`layoutMarkdown`](../../packages/core/src/util/markdown.ts) | Everything a host writes for a person is markdown. There was already a renderer inside `@textui/documents`, and it threw the emphasis away - correct for a README viewer, wrong for prose where **bold** is meaning. The layout is now one pure function in core with styled runs; `MarkdownView` paints it, and `MarkdownViewer` in `documents` windows the same rows and gained emphasis, inline code and links by doing so. |
+| [`Feed`](../../packages/widgets/src/data/feed.ts) | `List` is fixed-height rows with a selection; `ScrollView` is a viewport that knows nothing about its contents. A conversation needs both at once: entries whose height is whatever the text wrapped to, a cursor that moves between them, and a tail it follows until the reader scrolls away. Heights are **measured and reported upward**, because what a paragraph wraps to is the layout's decision. Nothing about it is chat - a transcript, an activity stream, results with snippets and a diff whose files expand are the same component. |
+| [`TextArea`](../../packages/widgets/src/control/text-area.ts) | `TextInput` is one line. A message is a paragraph with a path in it: it has to grow, take a newline that is not a send, walk a history, and hand back the keys it does not want. |
+| [`MarkdownView`](../../packages/widgets/src/data/markdown-view.ts) + [`layoutMarkdown`](../../packages/core/src/util/markdown.ts) | Everything a host writes for a person is markdown. There was already a renderer inside `@textui/documents`, and it threw the emphasis away - correct for a README viewer, wrong for prose where **bold** is meaning. The layout is now one pure function in core with styled runs; `MarkdownView` paints it, and `MarkdownViewer` in `documents` windows the same rows and gained emphasis, inline code and links by doing so. |
 
 `TextInput` and `TextArea` also take a `focusId` now, which is what lets `/`
 mean "focus the filter": without one, a control's id comes from its instance
@@ -372,6 +372,6 @@ action the application has in one list; then
 to read in a sitting because the viewport underneath it moved into the catalog.
 
 The measure-report-scroll loop itself is in
-[`Feed`](../../packages/core/src/ui/data.ts) - that is where to look for "how
+[`Feed`](../../packages/widgets/src/data/feed.ts) - that is where to look for "how
 tall did that turn out to be", which is the question anything with entries of
 mixed height has to answer.

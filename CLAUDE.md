@@ -2,7 +2,7 @@
 
 TextUI is a terminal UI runtime. A screen is data - a graph of component nodes resolved through late-binding registries - and JSX is a way of writing that data, not a different thing from it.
 
-Read [`README.md`](README.md), then [`docs/`](docs/index.md): the architecture, the vocabulary, and the rules a consumer has to follow.
+Read [`README.md`](README.md), then [`docs/`](docs/README.md): the architecture, the vocabulary, and the rules a consumer has to follow.
 
 The docs are a Jekyll site published to GitHub Pages. There is no Ruby on this
 machine and there is not going to be - `scripts/docs-serve.sh` runs it in a

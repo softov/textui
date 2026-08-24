@@ -61,7 +61,7 @@ body. Worth doing before it is worth claiming.
 
 ## Documentation
 
-Published at **<https://softov.github.io/textui/>**, and readable in [`docs/`](docs/index.md) as plain markdown.
+Published at **<https://softov.github.io/textui/>**, and readable in [`docs/`](docs/README.md) as plain markdown.
 
 Start here:
 
@@ -76,14 +76,14 @@ Then by subsystem:
 
 | Section | What it covers |
 | --- | --- |
-| [Store](docs/store/index.md) | Paths, scopes, computed, collections, providers, events |
-| [Components](docs/components/index.md) | The catalog, how to write one, and the templates |
-| [Themes](docs/themes/index.md) | Tokens, glyphs, borders, capability downgrade, syntax |
-| [Platform](docs/platform/index.md) | Commands, keybindings, focus, layers, screens, extension points |
-| [Terminal](docs/terminal/index.md) | Adapters, capabilities, managed and embedded sessions |
-| [Documents](docs/documents/index.md) | Resource kinds, providers, viewers, editors, buffers |
-| [CLI](docs/cli/index.md) | The developer CLI and the registry model |
-| [Testing](docs/testing/index.md) | The harness, and what to assert |
+| [Store](docs/store/README.md) | Paths, scopes, computed, collections, providers, events |
+| [Components](docs/components/README.md) | The catalog, how to write one, and the templates |
+| [Themes](docs/themes/README.md) | Tokens, glyphs, borders, capability downgrade, syntax |
+| [Platform](docs/platform/README.md) | Commands, keybindings, focus, layers, screens, extension points |
+| [Terminal](docs/terminal/README.md) | Adapters, capabilities, managed and embedded sessions |
+| [Documents](docs/documents/README.md) | Resource kinds, providers, viewers, editors, buffers |
+| [CLI](docs/cli/README.md) | The developer CLI and the registry model |
+| [Testing](docs/testing.md) | The harness, and what to assert |
 
 ## Development
 

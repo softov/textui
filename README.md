@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@textui/kit?label=%40textui%2Fkit)](https://www.npmjs.com/package/@textui/kit)
 [![node](https://img.shields.io/node/v/@textui/kit)](https://nodejs.org)
-[![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)](#no-dependencies)
+[![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)](#zero-dependencies)
 [![license](https://img.shields.io/npm/l/@textui/kit)](LICENSE)
 
 A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is one way to write them.
@@ -16,8 +16,10 @@ import { Box, Text, render, useInput, useState } from '@textui/kit';
 
 function Counter() {
   const [count, setCount] = useState(0);
+
   useInput((e) => {
     if (e.name !== '+') return false;
+
     setCount((c) => c + 1);
     return true;
   });
@@ -34,95 +36,196 @@ const { waitUntilExit } = render(<Counter />);
 await waitUntilExit();
 ```
 
-> Status: pre-1.0. The surface is still moving.
+> **Status:** pre-1.0. The surface is still moving.
 
-## Where to go
+## A quick taste
 
-| | |
-| --- | --- |
-| **Install it** | [`@textui/kit` on npm](https://www.npmjs.com/package/@textui/kit) - and the [five other packages](#packages) |
-| **Learn it** | [the documentation site](https://softov.github.io/textui/), or [`docs/`](docs/README.md) as plain markdown |
-| **Start writing** | [Getting started](docs/getting-started.md) - from nothing to a running application |
-| **See it first** | [what it looks like](#a-quick-taste), in seven themes |
-| **Work on TextUI itself** | [`DEVELOPER.md`](DEVELOPER.md) |
+*Let's cut to the chase, shall we?*
 
-Everything below is the short version of those.
+<p align="center">
+  <img src="./media/print-theme-dark.svg" alt="TextUI dark theme" />
+</p>
 
-## Installing
+TextUI can go from a small interactive prompt to a full-screen terminal application.
 
-One package is enough to have something on screen. The rest are additive, and
-none of them pull in a third-party dependency.
-
-| You want | Install | |
-| --- | --- | --- |
-| Something on screen | `npm install @textui/kit` | the runtime, a terminal, and `render` |
-| `Panel`, `Table`, charts, forms | `npm install @textui/widgets` | register it with `onBoot` |
-| A project set up for you | `npx @textui/cli init` | nothing to install |
-| The runtime without a terminal | `npm install @textui/core @textui/terminal` | what the test harness uses |
-
-Every line works the same with `pnpm add`, and `pnpm dlx` in place of `npx`.
-
-Two things worth knowing before the first run:
-
-- **Widgets are registered, not imported.** `@textui/widgets` components resolve
-  by name at mount time, so `render(<Dashboard />, { onBoot: registerBuiltins })`
-  is what makes them exist. Forget `onBoot` and nothing throws - the screen
-  renders and says where the components should have been.
-- **`npx @textui/cli doctor`** is the first thing to run when something renders
-  wrong. It reports the unicode level, colour depth and keyboard protocol
-  actually detected, which is usually the answer.
-
-Node >= 22, and TypeScript wants `"jsx": "react-jsx"` with
-`"jsxImportSource": "@textui/kit"`.
-[Getting started](docs/getting-started.md) walks through all of it.
+&rarr; **[Get started](docs/getting-started.md)**
+&rarr; **[Read the documentation](https://softov.github.io/textui/)**
 
 ## The one idea
 
-**JSX compiles to data.** `<Row gap={1}/>` and `{ component: 'Row', gap: 1 }` are the same value, and the runtime mounts either. A screen can be written in TypeScript, loaded from JSON, generated, edited or sent over a wire without the runtime changing - and components are resolved by name at mount time, so what renders is a registration rather than an import.
+**JSX compiles to data.**
+
+```tsx
+<Row gap={1}>
+  <Text>Hello</Text>
+</Row>
+```
+
+and:
+
+```ts
+{
+  component: 'Row',
+  gap: 1,
+  children: [
+    { component: 'Text', children: ['Hello'] }
+  ]
+}
+```
+
+describe the same screen.
+
+A screen can be written in TypeScript, loaded from JSON, generated, edited or sent over a wire without the runtime changing.
 
 Everything else follows from that: one reactive store addressed by paths, typed registries for components, commands, themes, shells and resources, and a renderer that diffs cells rather than redrawing frames.
 
-## No dependencies
+## Start with `@textui/kit`
 
-Nothing is installed alongside it. `@textui/core` has an empty `dependencies`,
-and the packages above it depend only on each other - so what you audit is what
-you get, and the tree does not grow behind your back.
+One package is enough to have something on screen:
 
-That also keeps the source close to running unbuilt: Node has erased types by
-default since 23.6, and most of this codebase is already erasable syntax. The
-full argument, and what is still in the way, is in
-[`DEVELOPER.md`](DEVELOPER.md).
+```bash
+npm install @textui/kit
+# pnpm add @textui/kit
+```
+
+[`@textui/kit`](https://www.npmjs.com/package/@textui/kit) is the runtime, a terminal to put it on, and `render`.
+
+`Box`, `Text`, the hooks and `render` all come from here. The example above needs nothing else.
+
+`render()` mounts the application and returns a handle immediately:
+
+```tsx
+const { app, waitUntilExit } = render(<App />);
+await waitUntilExit();
+```
+
+| On the handle | What it does |
+| --- | --- |
+| `app` | Commands, themes, focus, the store — everything hello world did not need |
+| `waitUntilExit()` | Resolves when the application stops, however it stopped |
+| `unmount()` | Stops the app, puts the terminal back, resolves `waitUntilExit()` |
+| `rerender(node)` | Swaps the root |
+
+For one frame and no terminal — a report, `--help`, a test — use `renderOnce` or `renderToString` instead.
+
+Those return. `render()` runs.
+
+## Add the component catalog
+
+For `Panel`, `Table`, `Row`, `Column`, charts, overlays, forms and the rest of the catalog, add [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets):
+
+```bash
+npm install @textui/widgets
+# pnpm add @textui/widgets
+```
+
+Components imported directly can be used directly:
+
+```tsx
+import { Badge, Card } from '@textui/widgets';
+
+function Status() {
+  return (
+    <Card title="Server">
+      <Badge label="Online" tone="success" />
+    </Card>
+  );
+}
+```
+
+Nothing to register.
+
+When a screen names components in data, a string has to resolve to something. That is the case that needs the registry:
+
+```tsx
+import { render } from '@textui/kit';
+import { registerBuiltins } from '@textui/widgets';
+
+render(<Dashboard />, {
+  onBoot: registerBuiltins,
+});
+```
+
+Without it the name resolves to nothing, and the miss is drawn where the component should have been rather than thrown — so a forgotten registration looks like this instead of a stack trace:
+
+```
+<Card>
+```
+
+## Or start with the CLI
+
+For a project set up for you, and for components copied into your source rather than imported:
+
+```bash
+npx @textui/cli init
+# pnpm dlx @textui/cli init
+```
+
+And when something renders wrong:
+
+```bash
+npx @textui/cli doctor
+```
+
+`doctor` tells you what this terminal can actually do: Unicode level, colour depth, keyboard protocol and the capabilities TextUI detected.
 
 ## Packages
 
-| Package | What it is | |
+All six published packages use the same version and depend only on each other.
+
+| Package | What it is | Source |
 | --- | --- | --- |
-| [`@textui/kit`](https://www.npmjs.com/package/@textui/kit) | One install: the runtime, a terminal, and `render`. Start here | [source](packages/facade) |
-| [`@textui/core`](https://www.npmjs.com/package/@textui/core) | The runtime: store, registries, renderer, hooks, the four host primitives | [source](packages/core) |
-| [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) | The component catalog: layout, display, controls, data, overlays, charts | [source](packages/widgets) |
-| [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) | Terminal adapters, capability detection, ANSI writing, input decoding | [source](packages/terminal) |
-| [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) | Headless harness: semantic queries, input, resizing, time | [source](packages/testing) |
-| [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) | `textui init / add / create / doctor`, and primitives for your own CLI | [source](packages/cli) |
+| [`@textui/kit`](https://www.npmjs.com/package/@textui/kit) | One install: the runtime, a terminal and `render`. **Start here.** | [`packages/facade`](packages/facade) |
+| [`@textui/core`](https://www.npmjs.com/package/@textui/core) | The runtime: store, registries, renderer, hooks and the four host primitives | [`packages/core`](packages/core) |
+| [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) | Component catalog: layout, display, controls, data, overlays and charts | [`packages/widgets`](packages/widgets) |
+| [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) | Terminal adapters, capability detection, ANSI writing and input decoding | [`packages/terminal`](packages/terminal) |
+| [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) | Headless harness: semantic queries, input, resizing and time | [`packages/testing`](packages/testing) |
+| [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) | `textui init / add / create / doctor`, and primitives for your own CLI | [`packages/cli`](packages/cli) |
 
-All six are published at the same version and depend only on each other.
+### Also in the repository
 
-Also in the repository, not yet published:
+Not published yet:
 
-| Package | What it is |
+| Project | What it is |
 | --- | --- |
 | [`@textui/documents`](packages/documents) | Document buffers, resource viewers and content adapters |
 | [`@textui/textide`](packages/textide) | An IDE that runs in a terminal, built on TextUI |
-| [`@textui/textide-git`](packages/textide-git) | Git for textide, as a loadable extension |
-| [`components/`](components) | The source-copy registry - components you own, not import |
-| [`playground/`](playground) | The showcase, fourteen focused playgrounds, and a filesystem explorer |
+| [`@textui/textide-git`](packages/textide-git) | Git for TextIDE, as a loadable extension |
+| [`components/`](components) | The source-copy registry — components you own, not import |
+| [`playground/`](playground) | The showcase, focused playgrounds and a filesystem explorer |
+
+## Zero dependencies
+
+Nothing third-party is installed alongside it.
+
+`@textui/core` has an empty `dependencies` field, and the packages above it depend only on each other — so what you audit is what you get, and the tree does not grow behind your back.
+
+That also keeps the source close to running unbuilt. Node has erased types by default since 23.6, and most of this codebase is already erasable syntax.
+
+The full argument, and what is still in the way, is in [`DEVELOPER.md`](DEVELOPER.md).
+
+## Requirements
+
+**Node >= 22**, or **Bun** — the packages are plain ESM with no native code, and run on either.
+
+TypeScript is how the examples are written rather than something TextUI needs. For TSX:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@textui/kit"
+  }
+}
+```
+
+See [Getting started](docs/getting-started.md).
 
 ## Documentation
 
-The whole of it is at **<https://softov.github.io/textui/>**, and the same pages
-are in [`docs/`](docs/README.md) as plain markdown if you would rather read them
-here.
+Published at **[softov.github.io/textui](https://softov.github.io/textui/)** and readable in [`docs/`](docs/README.md) as plain Markdown.
 
-The four that answer the most:
+Start here:
 
 | Document | What it answers |
 | --- | --- |
@@ -144,52 +247,53 @@ Then by subsystem:
 | [CLI](docs/cli/README.md) | The developer CLI and the registry model |
 | [Testing](docs/testing.md) | The harness, and what to assert |
 
-## A quick taste
+## Themes
 
-> *Let's cut to the chase, shall we?*
+### `dark`
 
-Here's what TextUI actually looks like and what it can do.
-
-
-### theme `dark`
 <p align="center">
-  <img src="./media/print-theme-dark.svg" alt="Terminal UI Dark" />
+  <img src="./media/print-theme-dark.svg" alt="TextUI dark theme" />
 </p>
 
-### theme `light`
+### `light`
+
 <p align="center">
-  <img src="./media/print-theme-light.svg" alt="Terminal UI Light" />
+  <img src="./media/print-theme-light.svg" alt="TextUI light theme" />
 </p>
 
-### theme `console`
+### `console`
+
 <p align="center">
-  <img src="./media/print-theme-console.svg" alt="Terminal UI Console" />
+  <img src="./media/print-theme-console.svg" alt="TextUI console theme" />
 </p>
 
-### theme `paper-dark`
+### `paper-dark`
+
 <p align="center">
-  <img src="./media/print-theme-paper-dark.svg" alt="Terminal UI showcase paper-dark" />
+  <img src="./media/print-theme-paper-dark.svg" alt="TextUI paper-dark theme" />
 </p>
 
-### theme `paper-light`
+### `paper-light`
+
 <p align="center">
-  <img src="./media/print-theme-paper-light.svg" alt="Terminal UI showcase paper-light" />
+  <img src="./media/print-theme-paper-light.svg" alt="TextUI paper-light theme" />
 </p>
 
-### theme `workbench`
+### `workbench`
+
 <p align="center">
-  <img src="./media/print-theme-workbench.svg" alt="Terminal UI Workbench" />
+  <img src="./media/print-theme-workbench.svg" alt="TextUI workbench theme" />
 </p>
 
-### theme `mono`
+### `mono`
+
 <p align="center">
-  <img src="./media/print-theme-mono.svg" alt="Terminal UI Mono" />
+  <img src="./media/print-theme-mono.svg" alt="TextUI mono theme" />
 </p>
 
 ## Developing
 
-Working on TextUI rather than with it - building, testing, the playgrounds, the
-docs site and how a release is cut - is in [`DEVELOPER.md`](DEVELOPER.md).
+Working on TextUI rather than with it — building, testing, the playgrounds, the docs site and how a release is cut — is in [`DEVELOPER.md`](DEVELOPER.md).
 
 ## License
 

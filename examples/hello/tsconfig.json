@@ -5,8 +5,7 @@
     "composite": false,
     "declaration": false,
     "declarationMap": false,
-    "types": ["node"],
-    "jsxImportSource": "textui"
+    "types": ["node"]
   },
-  "include": ["index.ts", "index.tsx"]
+  "include": ["index.ts"]
 }

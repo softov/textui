@@ -35,7 +35,7 @@ const Counter = () => {
       fg: running ? 'success' : 'muted',
     }),
     h('box', { direction: 'column' },
-      h('text', { dim: true, content: '+ / -   add or subtract one' }),
+      h('text', { dim: true, color: "red", content: '+ / -   add or subtract one' }),
       h('text', { dim: true, content: 'space   start or stop counting' }),
       h('text', { dim: true, content: 'r       reset' }),
       h('text', { dim: true, content: 'ctrl+c  quit' }),

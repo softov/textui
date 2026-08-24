@@ -17,13 +17,13 @@ by default since 23.6.
 | | |
 |---|---|
 | [`hello`](hello) | The smallest thing that runs |
-| [`counter`](counter) | `useKeymap`, `useState` and a timer you can pause |
+| [`counter`](counter) | `useKeymap`, `useState` and a timer you can pause - in `h` and in JSX |
 
 ## Can they use JSX?
 
-Under bun, yes, and with no build - [`hello/index.tsx`](hello/index.tsx) is the
-same program as [`hello/index.ts`](hello/index.ts), in JSX. Under node, no, and
-the reason is worth knowing because it is not a missing flag.
+Under bun, yes, and with no build - [`counter/index.tsx`](counter/index.tsx) is
+the same program as [`counter/index.ts`](counter/index.ts), in JSX. Under node,
+no, and the reason is worth knowing because it is not a missing flag.
 
 **Node strips types; it does not transform syntax.** A `.ts` file with no
 non-erasable syntax is a file node runs by deleting the annotations. JSX is not
@@ -35,8 +35,8 @@ TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".tsx"
 ```
 
 `--experimental-transform-types` does not help; it handles enums and
-namespaces. So the trade is angle brackets against node, and these two examples
-keep node as the default.
+namespaces. So the trade is angle brackets against node, which is why the
+counter ships both and `node index.ts` is the default.
 
 Bun compiles TSX, and the whole setup is one line beside the file:
 

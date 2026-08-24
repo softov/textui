@@ -1,10 +1,14 @@
 # counter
 
-Keys, state, and a timer you can pause.
+Keys, state, and a timer you can pause. The same program twice: once in plain
+`h`, once in JSX.
 
 ```bash
 node index.ts        # or: bun index.ts
+bun index.tsx        # the same program, in JSX
 ```
+
+Both render the same screen. Neither is built.
 
 | | |
 |---|---|
@@ -12,6 +16,33 @@ node index.ts        # or: bun index.ts
 | `space` | Start or stop counting up |
 | `r` | Reset |
 | `ctrl+c` | Quit |
+
+## Why two files
+
+`h` is what JSX compiles to - `<Box border="round"/>` and
+`{ component: 'box', border: 'round' }` are the same value - so `index.ts` is
+already in the form the runtime reads. Node has stripped types by default since
+23.6, which makes it a file node runs with nothing in between.
+
+`index.tsx` needs bun, and the reason is not a missing flag. **Node strips
+types; it does not transform syntax.** An annotation can be deleted; `<Box/>`
+has to *become* a call. Node rejects the extension outright:
+
+```
+TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".tsx"
+```
+
+`--experimental-transform-types` does not change it - that handles enums and
+namespaces, not JSX.
+
+The whole setup for the JSX side is one line of `tsconfig.json`:
+
+```json
+{ "compilerOptions": { "jsxImportSource": "textui" } }
+```
+
+Pointed at `textui` rather than `@textui/core`, so one install is enough - the
+facade re-exports the JSX runtime for exactly this.
 
 ## What it is showing
 

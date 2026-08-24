@@ -47,8 +47,10 @@ export const PANELS: Showpiece[] = [
           <Button label="Deploy" tone="success" hint="⏎" />
           <Button label="Cancel" />
         </Row>
-        <Checkbox label="Run migrations" checked />
-        <Checkbox label="Notify the channel" indeterminate />
+        <Row gap={1}>
+          <Checkbox label="Run migrations" checked />
+          <Checkbox label="Notify the channel" indeterminate />
+        </Row>
         <Switch label="Follow logs" value />
         <Slider value={40} label="Replicas" />
       </Column>
@@ -59,7 +61,7 @@ export const PANELS: Showpiece[] = [
     title: 'Text',
     subtitle: 'one line, and a paragraph',
     render: () => (
-      <Column gap={1}>
+      <Column>
         <TextInput value="release/4.2" label="Branch" onChange={noop} />
         <TextInput value="" search placeholder="Filter…" onChange={noop} />
         {/* A field wide enough to wrap, because the wrapping is the point: a
@@ -204,6 +206,22 @@ export const PANELS: Showpiece[] = [
     ),
   },
   {
+    id: 'grid',
+    title: 'A heatmap',
+    subtitle: 'a value per cell, one ramp',
+    render: () => (
+      <Heatmap
+        data={[
+          [1, 3, 6, 9, 7, 4],
+          [2, 5, 8, 9, 6, 3],
+          [0, 2, 4, 7, 5, 2],
+        ]}
+        rowLabels={['api', 'web', 'job']}
+        columnLabels={['m', 't', 'w', 't', 'f', 's']}
+      />
+    ),
+  },
+  {
     id: 'facts',
     title: 'Facts',
     subtitle: 'label and value, aligned',
@@ -268,9 +286,8 @@ export const PANELS: Showpiece[] = [
       <Timeline
         items={[
           { time: '09:12', title: 'Build passed', tone: 'success' },
-          { time: '09:14', title: 'Canary at 5%', description: 'error rate flat' },
+          { time: '09:14', title: 'Canary at 5%', description: 'error rate flat, check log file to see whats happening', tone: 'warning' },
           { time: '09:21', title: 'Rolled to 50%', tone: 'info' },
-          { time: '09:30', title: 'Latency spike', description: 'p99 1.4s', tone: 'warning' },
         ]}
       />
     ),
@@ -292,27 +309,43 @@ export const PANELS: Showpiece[] = [
     title: 'A table',
     subtitle: 'columns that drop by priority',
     render: () => (
-      <Table
-        focusable={false}
-        responsive
-        columns={[
-          { key: 'name', header: 'Service', flex: true, priority: 3 },
-          { key: 'region', header: 'Region', priority: 1 },
-          { key: 'p99', header: 'p99', align: 'right', priority: 2 },
-          {
-            key: 'state',
-            header: 'State',
-            priority: 3,
-            tone: (value) =>
-              value === 'down' ? 'danger' : value === 'degraded' ? 'warning' : 'success',
-          },
-        ]}
-        rows={[
-          { id: '1', name: 'checkout', region: 'eu-west-1', p99: '120ms', state: 'live' },
-          { id: '2', name: 'search', region: 'eu-west-1', p99: '480ms', state: 'degraded' },
-          { id: '3', name: 'mailer', region: 'us-east-1', p99: '—', state: 'down' },
-        ]}
-      />
+      <Column>
+        <Row gap={1}>
+          <Checkbox label="Filter row" />
+          <Select
+            label="Status"
+            options={[
+              { value: 'running', label: 'Running', description: 'All systems go' },
+              { value: 'degraded', label: 'Degraded', description: 'Some issues' },
+              { value: 'down', label: 'Down', description: 'Service unavailable' },
+            ]}
+            mode="floating"
+            onChange={noop}
+            border={undefined}
+          />
+        </Row>
+        <Table
+          focusable={false}
+          responsive
+          columns={[
+            { key: 'name', header: 'Service', flex: true, priority: 3 },
+            { key: 'region', header: 'Region', priority: 1 },
+            { key: 'p99', header: 'p99', align: 'right', priority: 2 },
+            {
+              key: 'state',
+              header: 'State',
+              priority: 3,
+              tone: (value) =>
+                value === 'down' ? 'danger' : value === 'degraded' ? 'warning' : 'success',
+            },
+          ]}
+          rows={[
+            { id: '1', name: 'checkout', region: 'eu-west-1', p99: '120ms', state: 'live' },
+            { id: '2', name: 'search', region: 'eu-west-1', p99: '480ms', state: 'degraded' },
+            { id: '3', name: 'mailer', region: 'us-east-1', p99: '—', state: 'down' },
+          ]}
+        />
+      </Column>
     ),
   },
   {
@@ -321,6 +354,8 @@ export const PANELS: Showpiece[] = [
     subtitle: 'highlighted, with a gutter',
     render: () => (
       <CodeViewer
+        bg="surface"
+        padding={[1, 0]}
         language="ts"
         lineNumbers
         content={[
@@ -341,22 +376,6 @@ export const PANELS: Showpiece[] = [
         <EmptyState title="No deployments" message="Nothing has shipped today." hint="n to start one" />
         <Skeleton lines={3} widths={[30, 22, 14]} />
       </Column>
-    ),
-  },
-  {
-    id: 'grid',
-    title: 'A heatmap',
-    subtitle: 'a value per cell, one ramp',
-    render: () => (
-      <Heatmap
-        data={[
-          [1, 3, 6, 9, 7, 4],
-          [2, 5, 8, 9, 6, 3],
-          [0, 2, 4, 7, 5, 2],
-        ]}
-        rowLabels={['api', 'web', 'job']}
-        columnLabels={['m', 't', 'w', 't', 'f', 's']}
-      />
     ),
   },
   {
@@ -420,7 +439,7 @@ export interface PieceProps extends BoxProps {
 export function Piece({ piece, ...rest }: PieceProps): RenderOutput {
   const theme = useTheme();
   const style: PanelProps = ['paper', 'paper-dark'].includes(theme.id) ? {
-    // bg: 'surfaceAlt',
+    bg: 'surfaceAlt',
     padding: {
       top: 1,
       right: 1,

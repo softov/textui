@@ -80,6 +80,45 @@ Then by subsystem:
 | [CLI](docs/cli/README.md) | The developer CLI and the registry model |
 | [Testing](docs/testing.md) | The harness, and what to assert |
 
+## A quick taste
+
+> *Let's cut to the chase, shall we?*
+
+Here's what TextUI actually looks like and what it can do.
+
+
+### theme `dark`
+<p align="center">
+  <img src="./media/print-theme-dark.svg" alt="Terminal UI Dark" />
+</p>
+
+### theme `light`
+<p align="center">
+  <img src="./media/print-theme-light.svg" alt="Terminal UI Light" />
+</p>
+
+### theme `console`
+<p align="center">
+  <img src="./media/print-theme-console.svg" alt="Terminal UI Console" />
+</p>
+
+### theme `paper-dark`
+<p align="center">
+  <img src="./media/print-theme-paper-dark.svg" alt="Terminal UI showcase paper-dark" />
+</p>
+
+### theme `paper-light`
+<p align="center">
+  <img src="./media/print-theme-paper-light.svg" alt="Terminal UI showcase paper-light" />
+</p>
+
+### theme `workbench`
+<p align="center">
+  <img src="./media/print-theme-workbench.svg" alt="Terminal UI Workbench" />
+</p>
+
+Now let's break down how it's built.
+
 ## Development
 
 ```bash

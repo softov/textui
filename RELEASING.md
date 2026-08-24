@@ -15,7 +15,7 @@ Six, in dependency order - `scripts/release-publish.mjs` works this out itself:
 ```
 @textui/core
   -> @textui/terminal -> @textui/widgets
-       -> @textui/cli, @textui/testing, textui
+       -> @textui/cli, @textui/testing, @textui/kit
 ```
 
 `@textui/documents`, `@textui/textide` and `@textui/textide-git` are marked
@@ -46,8 +46,23 @@ so in its own prerequisites - unlike PyPI, there is no pre-registration
 ([npm/cli#8544][npm-bootstrap]). So the first release of a new package needs a
 credential, and every release after it does not.
 
-That bootstrap is done once per package, and this repository has already been
-through it. If you add a package to the set later, it needs the same:
+That bootstrap is done once per package, and the six in this repository have
+already been through it. If you add a package to the set later, it needs the
+same - and check the name is publishable *before* writing anything against it:
+
+```bash
+npm view <name>          # free is a 404
+```
+
+A 404 is necessary and not sufficient. npm also refuses a name that is merely
+*similar* to an existing one, including a name whose every version was
+unpublished and which therefore has nothing behind it. That is what stopped
+this project publishing as bare `textui` - `text-ui` is an empty tombstone from
+2022 and the similarity check still counts it. The refusal arrives as a 403 at
+publish time, after the gate has run, so it is worth a minute up front.
+
+Scoped names are exempt from that check, which is why `@textui/kit` published
+without argument.
 
 1. Publish it once with an npm **automation** token - not a classic publish
    token, which prompts for a one-time password and fails in CI with `EOTP`,

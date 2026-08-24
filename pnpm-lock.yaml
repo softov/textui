@@ -304,6 +304,9 @@ importers:
       '@textui/documents':
         specifier: workspace:*
         version: link:../../../packages/documents
+      '@textui/kit':
+        specifier: workspace:*
+        version: link:../../../packages/facade
       '@textui/terminal':
         specifier: workspace:*
         version: link:../../../packages/terminal

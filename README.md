@@ -3,7 +3,53 @@
 A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is one way to write them.
 
 ```bash
-npm install @textui/kit @textui/widgets
+npm install @textui/kit
+```
+
+```tsx
+import { Box, Text, render, useInput, useState } from '@textui/kit';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+  useInput((e) => {
+    if (e.name !== '+') return false;
+    setCount((c) => c + 1);
+    return true;
+  });
+
+  return (
+    <Box border="round" padding={1} direction="column">
+      <Text bold>Count: {count}</Text>
+      <Text dim>+ to increment, ctrl+c to quit</Text>
+    </Box>
+  );
+}
+
+const { waitUntilExit } = render(<Counter />);
+await waitUntilExit();
+```
+
+> Status: pre-1.0. The surface is still moving.
+
+## Installing
+
+One package is enough to have something on screen. The rest are additive, and
+nothing pulls in a third-party dependency.
+
+```bash
+npm install @textui/kit          # pnpm add @textui/kit
+```
+
+`@textui/kit` is the runtime, a terminal to put it on, and `render`. `Box`,
+`Text`, the hooks and `render` all come from here, and the example above needs
+nothing else.
+
+**For the component catalog** - `Panel`, `Table`, `Row`, `Column`, charts,
+overlays, forms - add `@textui/widgets`. Its components are resolved by name at
+mount time, so they have to be registered before they can render:
+
+```bash
+npm install @textui/kit @textui/widgets    # pnpm add @textui/kit @textui/widgets
 ```
 
 ```tsx
@@ -14,7 +60,32 @@ const { waitUntilExit } = render(<Dashboard />, { onBoot: registerBuiltins });
 await waitUntilExit();
 ```
 
-> Status: pre-1.0. The surface is still moving.
+Forget `onBoot` and the components are missing registrations rather than
+missing imports - the screen renders, and says so where they should have been.
+
+**For a project set up for you**, and for components copied into your source
+rather than imported, use the CLI. It needs no install:
+
+```bash
+npx @textui/cli init             # pnpm dlx @textui/cli init
+npx @textui/cli doctor           # what this terminal can actually do
+```
+
+`doctor` is the one to run first when something renders wrong - it reports the
+unicode level, colour depth and keyboard protocol actually detected.
+
+**Working against the pieces directly** - `@textui/core` and `@textui/terminal`
+- is the same thing with a longer name. `@textui/kit` re-exports both and adds
+`render`; there is nothing in them it hides. Take them separately when you want
+the runtime without a terminal attached, which is what the test harness and the
+static renderer do:
+
+```bash
+npm install @textui/core @textui/terminal  # pnpm add @textui/core @textui/terminal
+```
+
+Node >= 22, and TypeScript wants `"jsx": "react-jsx"` with
+`"jsxImportSource": "@textui/kit"` - see [getting started](docs/getting-started.md).
 
 ## The one idea
 

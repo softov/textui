@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, renderToString } from '../src/render/static.js';
 import { h, defineComponent, toSerializable } from '../src/jsx/factory.js';
-import { Box, Text, Canvas } from '../src/ui/primitives.js';
+import { Box, Text, Canvas, Spacer } from '../src/ui/primitives.js';
 import type { ComponentNode } from '../src/types/graph.js';
 import { stringWidth } from '../src/util/text.js';
 
@@ -393,6 +393,41 @@ describe('auto height', () => {
 // A Capitalized tag resolves to the value in scope, and these values are the
 // primitive's own string - so the two spellings are not two paths that agree,
 // they are one path. The test is that nothing sits between them.
+// There were two spacers: the primitive, which collapsed unless given `flex`,
+// and a `Spacer` component that added `flex: 1` for you. Two things whose
+// names differed only in case and whose behaviour differed only in a default
+// is a trap, not a choice - and the primitive's own prop doc had always
+// claimed the greedy behaviour it did not have. The component is gone.
+describe('spacer', () => {
+  const row = (mid: ComponentNode) => ({
+    component: 'box', direction: 'row', width: 24,
+    children: [{ component: 'text', content: 'L' }, mid, { component: 'text', content: 'R' }],
+  } satisfies ComponentNode);
+
+  for (const width of [24, 40]) {
+    it(`takes what is left with nothing set, at ${width} columns`, () => {
+      const out = renderToString(row({ component: 'spacer' }), { width });
+      expect(out.trimEnd()).toBe(`L${' '.repeat(22)}R`);
+    });
+  }
+
+  it('is the same node either way it is spelled', () => {
+    expect(Spacer).toBe('spacer');
+    expect(h(Spacer, { size: 2 })).toEqual(h('spacer', { size: 2 }));
+    expect(renderToString(row(h(Spacer, {})), { width: 24 }))
+      .toBe(renderToString(row(h('spacer', {})), { width: 24 }));
+  });
+
+  it('takes exactly `size` cells when given one', () => {
+    expect(renderToString(row({ component: 'spacer', size: 4 }), { width: 24 }).trimEnd())
+      .toBe('L    R');
+  });
+
+  it('leaves an explicit flex alone', () => {
+    expect(renderToString(row({ component: 'spacer', flex: 0 }), { width: 24 }).trimEnd()).toBe('LR');
+  });
+});
+
 describe('Capitalized primitives', () => {
   it('are the strings, so the node is identical', () => {
     expect(Box).toBe('box');

@@ -12,7 +12,7 @@ of it.
 
 ## Layout
 
-`Row` `Column` `Center` `Grid` `Panel` `Divider` `Spacer` `Stack` `ScrollView` `Splitter`
+`Row` `Column` `Center` `Grid` `Panel` `Divider` `Stack` `ScrollView` `Splitter`
 
 `Panel` is the workhorse and the one that has to look right in all three house
 styles: it renders its title into the border when it has one, and as a heading

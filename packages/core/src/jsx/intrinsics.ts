@@ -86,6 +86,6 @@ export interface CanvasProps extends BaseProps {
 }
 
 export interface SpacerProps extends BaseProps {
-  /** Cells to take. Unset means "take whatever is left". */
+  /** Cells to take. Unset means "take whatever is left", the same as `flex: 1`. */
   size?: number;
 }

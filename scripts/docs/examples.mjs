@@ -85,20 +85,25 @@ anything that wants to know what is on screen.
   },
 
   spacer: {
-    summary: 'Empty space. A fixed number of cells, or greedy when given flex.',
+    summary: 'Empty space. Greedy by default, or a fixed number of cells.',
     example: `<box direction="row">
   <text content="left" />
-  <spacer flex={1} />
+  <spacer />
   <text content="right" />
 </box>`,
-    notes: `\`flex={1}\` is the common case: it takes whatever is left, which is how two
-things end up at opposite ends of a row. \`size\` fixes it at a number of cells
-instead.
+    notes: `Bare is the common case: with no \`size\` it takes whatever is left, which is
+how two things end up at opposite ends of a row. \`size\` fixes it at a number
+of cells instead, and \`flex\` is there when you want a share rather than all
+of it.
+
+\`Spacer\` is the same node under a Capitalized name, for a file written in one
+case. There is no separate component - there was one, and the two differed only
+in whether they were greedy, which is not a difference worth a second name.
 
 A spacer is not the only way to get gaps. Between *every* child, \`gap\` on the
 container is shorter and does not need a node per space.`,
-    seeAlso: `- [Spacer](../layout/spacer.md) - the component of the same name, greedy by default
-- [Divider](../layout/divider.md) - space with a rule drawn through it`,
+    seeAlso: `- [Divider](../layout/divider.md) - space with a rule drawn through it
+- [Row](../layout/row.md) - \`gap\`, for space between every child`,
   },
 
   // ---- layout -------------------------------------------------------------
@@ -248,26 +253,6 @@ that for you.
 - [spacer](../primitives/spacer.md) - the gap without the rule`,
   },
 
-  Spacer: {
-    summary: 'Empty space, greedy by default.',
-    example: `import { Row, Spacer } from '@textui/widgets';
-
-<Row>
-  <text content="left" />
-  <Spacer />
-  <text content="right" />
-</Row>`,
-    notes: `The component and the [\`<spacer>\` primitive](../primitives/spacer.md) differ
-in one way: this one is greedy without being told, so \`<Spacer />\` takes the
-leftover room where \`<spacer />\` needs \`flex={1}\`. \`size\` fixes it at a
-number of cells instead.
-
-They are two different things whose names differ only in case. That is worth
-knowing when reading a graph, where \`{ component: 'Spacer' }\` and
-\`{ component: 'spacer' }\` are not the same node.`,
-    seeAlso: `- [spacer](../primitives/spacer.md) - the primitive
-- [Divider](divider.md) - space with a rule through it`,
-  },
 
   Stack: {
     summary: 'A column whose spacing comes from the theme.',

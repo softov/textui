@@ -26,13 +26,11 @@ import type { HostComponent } from '../types/render.js';
  * from a host tag - and the four primitives being the exception meant mixing
  * `<Row>` and `<box>` in one file. The lowercase names remain what the node
  * actually holds, and stay the spelling for a screen written as data.
- *
- * There is no `Spacer` here: the catalog already exports one, a component that
- * wraps this primitive and adds `size`.
  */
 export const Box = 'box' as const;
 export const Text = 'text' as const;
 export const Canvas = 'canvas' as const;
+export const Spacer = 'spacer' as const;
 
 const box: HostComponent = { name: 'box', container: true };
 const text: HostComponent = { name: 'text', leaf: true };

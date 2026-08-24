@@ -6,7 +6,6 @@ import { Grid } from './grid.js';
 import { Panel } from './panel.js';
 import { Row } from './row.js';
 import { ScrollView } from './scroll-view.js';
-import { Spacer } from './spacer.js';
 import { Splitter } from './splitter.js';
 import { Stack } from './stack.js';
 
@@ -24,7 +23,6 @@ export * from './grid.js';
 export * from './panel.js';
 export * from './row.js';
 export * from './scroll-view.js';
-export * from './spacer.js';
 export * from './splitter.js';
 export * from './stack.js';
 
@@ -35,7 +33,6 @@ export const LAYOUT_COMPONENTS: ComponentDefinition[] = [
   { component: 'Grid', category: 'layout', renderer: { kind: 'function', render: Grid }, description: 'Equal-width columns, wrapping into rows.' },
   { component: 'Panel', category: 'layout', renderer: { kind: 'function', render: Panel }, description: 'Titled region. Bordered or airy, following the theme.', variants: ['bordered', 'plain'], role: 'region' },
   { component: 'Divider', category: 'layout', renderer: { kind: 'function', render: Divider }, description: 'A rule, optionally labelled.', role: 'separator' },
-  { component: 'Spacer', category: 'layout', renderer: { kind: 'function', render: Spacer }, description: 'Empty space, greedy by default.' },
   { component: 'Stack', category: 'layout', renderer: { kind: 'function', render: Stack }, description: 'Column with themed spacing.' },
   { component: 'ScrollView', category: 'layout', renderer: { kind: 'function', render: ScrollView }, description: 'Scrolling viewport with keyboard and wheel support.' },
   { component: 'Splitter', category: 'layout', renderer: { kind: 'function', render: Splitter }, description: 'Two panes with a divider.' },

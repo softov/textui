@@ -142,5 +142,5 @@ Props every node accepts. Style arrives three ways on purpose: the full `style` 
 
 | Prop | Type | |
 | --- | --- | --- |
-| `size` | `number` |  |
+| `size` | `number` | Cells to take. Unset means "take whatever is left", the same as `flex: 1`. |
 <!-- props:end -->

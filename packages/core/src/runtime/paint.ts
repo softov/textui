@@ -268,8 +268,15 @@ export function buildBoxes(
       break;
     }
     case 'spacer': {
-      const size = typeof instance.props.size === 'number' ? instance.props.size : 0;
-      box.measure = () => ({ width: size, height: size });
+      const size = typeof instance.props.size === 'number' ? instance.props.size : undefined;
+      // No size and no flex means take what is left. A spacer that measures
+      // zero and does not grow is a node that does nothing, which is never
+      // what anyone wrote one for - and it is what `size` has always been
+      // documented to mean when it is unset.
+      if (size === undefined && box.style.flex === undefined) {
+        box.style = { ...box.style, flex: 1 };
+      }
+      box.measure = () => ({ width: size ?? 0, height: size ?? 0 });
       break;
     }
     default:

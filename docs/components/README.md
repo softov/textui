@@ -36,7 +36,7 @@ without a hook.
 
 <!-- props:start -->
 
-97 components. Every one has a page.
+96 components. Every one has a page.
 
 ### The four primitives
 
@@ -57,7 +57,6 @@ without a hook.
 | [`Grid`](layout/grid.md) | Equal-width columns, wrapping into rows. |
 | [`Panel`](layout/panel.md) | Titled region. Bordered or airy, following the theme. |
 | [`Divider`](layout/divider.md) | A rule, optionally labelled. |
-| [`Spacer`](layout/spacer.md) | Empty space, greedy by default. |
 | [`Stack`](layout/stack.md) | Column with themed spacing. |
 | [`ScrollView`](layout/scroll-view.md) | Scrolling viewport with keyboard and wheel support. |
 | [`Splitter`](layout/splitter.md) | Two panes with a divider. |

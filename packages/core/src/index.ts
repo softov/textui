@@ -63,7 +63,7 @@ export * from './themes/index.js';
 // engine and the painter actually reason about, so they belong to the runtime
 // that reasons about them. `Box`, `Text` and `Canvas` are the Capitalized
 // spellings, and they are the strings themselves.
-export { PRIMITIVES, Box, Text, Canvas } from './ui/primitives.js';
+export { PRIMITIVES, Box, Text, Canvas, Spacer } from './ui/primitives.js';
 
 // Adapters
 export * from './adapters/index.js';

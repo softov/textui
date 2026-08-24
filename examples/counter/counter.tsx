@@ -7,7 +7,7 @@
 // The whole setup is `jsxImportSource` in tsconfig.json, pointed at `textui`
 // rather than `@textui/core` so that one install is enough.
 
-import { Box, Spacer, Text, render, useEffect, useInterval, useKeymap, useState } from 'textui';
+import { Box, Spacer, Text, render, useEffect, useInterval, useKeymap, useState } from '@textui/kit';
 
 const STEP_MS = 250;
 

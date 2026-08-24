@@ -6,7 +6,7 @@
     "declaration": false,
     "declarationMap": false,
     "types": ["node"],
-    "jsxImportSource": "textui"
+    "jsxImportSource": "@textui/kit"
   },
   "include": ["**/*.ts", "**/*.tsx"]
 }

@@ -14,7 +14,7 @@
 // the one on disk. `allowImportingTsExtensions` in tsconfig.json is what makes
 // TypeScript agree, and it is allowed because nothing here emits.
 
-import { h, render, useEffect, useKeymap, useState } from 'textui';
+import { h, render, useEffect, useKeymap, useState } from '@textui/kit';
 import { TextArea } from '@textui/widgets';
 import { describeAddress, joinRoom, parseAddress, type Message } from './room.ts';
 

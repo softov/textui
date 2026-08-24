@@ -8,7 +8,7 @@
 // everywhere else in textui - the same spelling the keybinding registry uses -
 // so `'ctrl+s'` is a string rather than four comparisons against a KeyEvent.
 
-import { h, render, useEffect, useInterval, useKeymap, useState } from 'textui';
+import { h, render, useEffect, useInterval, useKeymap, useState } from '@textui/kit';
 
 const STEP_MS = 250;
 

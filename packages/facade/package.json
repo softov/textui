@@ -1,7 +1,7 @@
 {
-  "name": "textui",
+  "name": "@textui/kit",
   "version": "0.1.0",
-  "description": "Build a terminal UI in TypeScript. The runtime, a terminal to put it on, and render.",
+  "description": "One install for TextUI - the runtime, a terminal, and render",
   "keywords": [
     "terminal",
     "tui",

@@ -82,22 +82,22 @@ importers:
 
   examples/chatunix:
     dependencies:
+      '@textui/kit':
+        specifier: workspace:*
+        version: link:../../packages/facade
       '@textui/widgets':
         specifier: workspace:*
         version: link:../../packages/widgets
-      textui:
-        specifier: workspace:*
-        version: link:../../packages/facade
 
   examples/counter:
     dependencies:
-      textui:
+      '@textui/kit':
         specifier: workspace:*
         version: link:../../packages/facade
 
   examples/hello:
     dependencies:
-      textui:
+      '@textui/kit':
         specifier: workspace:*
         version: link:../../packages/facade
 
@@ -283,15 +283,15 @@ importers:
       '@textui/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@textui/kit':
+        specifier: workspace:*
+        version: link:../packages/facade
       '@textui/terminal':
         specifier: workspace:*
         version: link:../packages/terminal
       '@textui/widgets':
         specifier: workspace:*
         version: link:../packages/widgets
-      textui:
-        specifier: workspace:*
-        version: link:../packages/facade
 
   scripts/docs/snippets:
     dependencies:

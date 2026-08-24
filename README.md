@@ -3,11 +3,11 @@
 A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is one way to write them.
 
 ```bash
-npm install textui @textui/widgets
+npm install @textui/kit @textui/widgets
 ```
 
 ```tsx
-import { render } from 'textui';
+import { render } from '@textui/kit';
 import { registerBuiltins } from '@textui/widgets';
 
 const { waitUntilExit } = render(<Dashboard />, { onBoot: registerBuiltins });
@@ -37,7 +37,7 @@ full argument, and what is still in the way, is in
 
 | Package | What it is |
 | --- | --- |
-| [`textui`](packages/facade) | One install: the runtime, a terminal, and `render`. Start here |
+| [`@textui/kit`](packages/facade) | One install: the runtime, a terminal, and `render`. Start here |
 | [`@textui/core`](packages/core) | The runtime: store, registries, renderer, hooks, the four host primitives |
 | [`@textui/widgets`](packages/widgets) | The component catalog: layout, display, controls, data, overlays, charts |
 | [`@textui/terminal`](packages/terminal) | Terminal adapters, capability detection, ANSI writing, input decoding |

@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Pack and check, publish nothing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write   # npm provenance signs the tarballs with this
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      # The same gate CI runs. A tag is not a reason to publish something that
+      # does not build.
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+      # Every `exports` and `bin` target has to exist in the built tree. tsc
+      # cannot catch a subpath nothing in the repo imports.
+      - run: node scripts/check-exports.mjs
+
+      # The tag says what the packages must say. A tag that disagrees with
+      # package.json publishes a version nobody asked for.
+      - name: Check the tag against the versions
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: node scripts/check-version.mjs "${GITHUB_REF_NAME#v}"
+
+      - name: Pack
+        run: pnpm -r --filter='!@textui/registry' --filter='!@textui/playground' exec npm pack --dry-run
+
+      # `pnpm publish -r` goes in dependency order and rewrites `workspace:^`
+      # to the real version. Private packages are skipped, which is what holds
+      # documents, textide and textide-git back.
+      - name: Publish
+        if: startsWith(github.ref, 'refs/tags/v') && inputs.dry_run != true
+        run: pnpm publish -r --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

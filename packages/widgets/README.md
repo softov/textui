@@ -1,7 +1,7 @@
 # @textui/widgets
 
 The component catalog: eighty-seven components built out of the four primitives
-in [`@textui/core`](https://github.com/softov/textui/tree/main/packages/core).
+in [`@textui/core`](https://www.npmjs.com/package/@textui/core).
 
 ```bash
 npm install @textui/widgets
@@ -59,7 +59,7 @@ src/display/` is the inventory.
 
 ## Runtime
 
-No dependencies beyond `@textui/core`, and no `node:` imports. Node 22+ and Bun.
+No dependencies beyond [`@textui/core`](https://www.npmjs.com/package/@textui/core), and no `node:` imports. Node 22+ and Bun.
 
 ## Documentation
 
@@ -67,3 +67,11 @@ No dependencies beyond `@textui/core`, and no `node:` imports. Node 22+ and Bun.
 
 Every component has its own page, with the prop table generated from the source
 and a working example - see [`docs/components/`](https://softov.github.io/textui/components/).
+
+<!-- family -->
+
+---
+
+Part of **[TextUI](https://github.com/softov/textui)** - [documentation](https://softov.github.io/textui/) - [getting started](https://softov.github.io/textui/getting-started.html)
+
+[`@textui/kit`](https://www.npmjs.com/package/@textui/kit) one install · [`@textui/core`](https://www.npmjs.com/package/@textui/core) the runtime · **`@textui/widgets`** the catalog · [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) adapters and input · [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) the harness · [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) the CLI

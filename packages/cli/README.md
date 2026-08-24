@@ -9,7 +9,7 @@ npx @textui/cli init
 
 ## Components are copied, not imported
 
-`@textui/widgets` is a dependency you install. The registry behind `textui add`
+[`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) is a dependency you install. The registry behind `textui add`
 is the opposite: it writes the source into your project and you own it from
 there, edits included.
 
@@ -49,10 +49,18 @@ without a second framework and a second idea of what an argument is.
 
 ## Runtime
 
-Depends on `@textui/core` and `@textui/terminal`. Uses `node:fs`, `node:path`
+Depends on [`@textui/core`](https://www.npmjs.com/package/@textui/core) and [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal). Uses `node:fs`, `node:path`
 and `node:crypto` - it is the one library package here that touches a disk.
 Node 22+ and Bun.
 
 ## Documentation
 
 <https://softov.github.io/textui/>
+
+<!-- family -->
+
+---
+
+Part of **[TextUI](https://github.com/softov/textui)** - [documentation](https://softov.github.io/textui/) - [getting started](https://softov.github.io/textui/getting-started.html)
+
+[`@textui/kit`](https://www.npmjs.com/package/@textui/kit) one install · [`@textui/core`](https://www.npmjs.com/package/@textui/core) the runtime · [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) the catalog · [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) adapters and input · [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) the harness · **`@textui/cli`** the CLI

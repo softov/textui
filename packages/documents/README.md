@@ -43,10 +43,18 @@ opens in the same pane as one registered for `file:`.
 
 ## Runtime
 
-Depends on `@textui/core` and `@textui/widgets`. No `node:` imports - a document
+Depends on [`@textui/core`](https://www.npmjs.com/package/@textui/core) and [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets). No `node:` imports - a document
 is a string and a URI, and where it came from is the provider's problem. Node
 22+ and Bun.
 
 ## Documentation
 
 <https://softov.github.io/textui/>
+
+<!-- family -->
+
+---
+
+Part of **[TextUI](https://github.com/softov/textui)** - [documentation](https://softov.github.io/textui/) - [getting started](https://softov.github.io/textui/getting-started.html)
+
+[`@textui/kit`](https://www.npmjs.com/package/@textui/kit) one install · [`@textui/core`](https://www.npmjs.com/package/@textui/core) the runtime · [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) the catalog · [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) adapters and input · [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) the harness · [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) the CLI

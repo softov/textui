@@ -1,6 +1,6 @@
 # @textui/terminal
 
-What [`@textui/core`](https://github.com/softov/textui/tree/main/packages/core) needs to reach an actual terminal: adapters,
+What [`@textui/core`](https://www.npmjs.com/package/@textui/core) needs to reach an actual terminal: adapters,
 capability detection, ANSI writing and input decoding.
 
 ```bash
@@ -75,9 +75,17 @@ dependencies should not need `@types/node` installed to compile.
 
 ## Runtime
 
-No dependencies beyond `@textui/core`. Uses `process` for stdio and signals, and
+No dependencies beyond [`@textui/core`](https://www.npmjs.com/package/@textui/core). Uses `process` for stdio and signals, and
 no other Node API. Node 22+ and Bun.
 
 ## Documentation
 
 <https://softov.github.io/textui/>
+
+<!-- family -->
+
+---
+
+Part of **[TextUI](https://github.com/softov/textui)** - [documentation](https://softov.github.io/textui/) - [getting started](https://softov.github.io/textui/getting-started.html)
+
+[`@textui/kit`](https://www.npmjs.com/package/@textui/kit) one install · [`@textui/core`](https://www.npmjs.com/package/@textui/core) the runtime · [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) the catalog · **`@textui/terminal`** adapters and input · [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) the harness · [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) the CLI

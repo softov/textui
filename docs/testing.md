@@ -96,6 +96,21 @@ supposed to degrade; this is how you find out whether it does. See
 [Glyphs, borders and colour depth](themes/downgrade.md) for what is expected to
 change and what is not.
 
+`settle` takes a turn of the clock as well as of the microtask queue, so it
+waits for the filesystem and not only for work already queued. That matters for
+how you wait: a fixed count - `for (let i = 0; i < 8; i++) await t.settle()` -
+is a budget denominated in turns of the loop, and a `readdir` is denominated in
+milliseconds. Prefer waiting for the thing itself, and give it a deadline:
+
+```ts
+const until = async (done: () => boolean, ms = 5000) => {
+  const deadline = Date.now() + ms;
+  while (!done() && Date.now() < deadline) await t.settle();
+};
+
+await until(() => t.hasText('.hidden'));
+```
+
 ## Structure and snapshots
 
 ```ts

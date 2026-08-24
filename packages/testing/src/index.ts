@@ -407,6 +407,17 @@ function createHarness(
       // schedules. Anything deeper is a test that should await explicitly.
       await Promise.resolve();
       await new Promise((resolve) => setImmediate(resolve));
+      // And one turn of the clock, which is the one that waits for the disk.
+      //
+      // `setImmediate` runs in the check phase, and the loop never blocks to
+      // get there - so a run of settles is a spin, costing microseconds and
+      // giving a `stat` or a `readdir` no opportunity to come back. Tests wait
+      // by counting settles, so the budget ends up denominated in turns of the
+      // loop while the thing being waited for is denominated in milliseconds:
+      // they pass on an idle machine and fail on a busy one, which is the
+      // shape of every flake this helper has produced. A pending timer makes
+      // the poll phase block, and pending I/O lands.
+      await new Promise((resolve) => setTimeout(resolve, 0));
       flush();
     },
 

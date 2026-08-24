@@ -344,12 +344,30 @@ async function rootEntries(): Promise<{ name: string; dir: boolean; size: number
   return out.sort((a, b) => (a.dir === b.dir ? a.name.localeCompare(b.name) : a.dir ? -1 : 1));
 }
 
+/**
+ * Settle until something is true, on a clock rather than on a count.
+ *
+ * `settle` drains the microtasks and takes one turn of the loop, so a run of
+ * them costs almost no wall clock. That is the right shape for waiting on work
+ * already queued, and no use at all for waiting on the filesystem: a busy
+ * machine can take tens of milliseconds to answer one `stat`, and forty turns
+ * of a tight loop are over in a fraction of that. Counted attempts are why
+ * these tests passed alone and failed in a full run - the budget was in turns
+ * of the loop, and the thing being waited for was measured in milliseconds.
+ *
+ * So the cheap turns come first, and then real pauses until the deadline. A
+ * test that is going to pass never reaches them.
+ */
 async function settleUntil(
   t: Awaited<ReturnType<typeof mount>>,
   done: () => boolean,
-  attempts = 40,
+  ms = 5000,
 ): Promise<void> {
-  for (let i = 0; i < attempts && !done(); i++) await t.settle();
+  const deadline = Date.now() + ms;
+  for (let turns = 0; !done() && Date.now() < deadline; turns++) {
+    await t.settle();
+    if (turns >= 8) await new Promise((resolve) => setTimeout(resolve, 2));
+  }
 }
 
 describe('the explorer example', () => {
@@ -426,6 +444,24 @@ describe('the explorer example', () => {
     const smallest = files[0]?.name as string;
     const largest = files[files.length - 1]?.name as string;
 
+    // A second pair sharing an extension, and so a kind, and so a viewer.
+    //
+    // The pane a document could move is the viewer's, but the viewer for a
+    // markdown file and the viewer for a json file are two different
+    // components - one of them need not even mark itself as a document. Put
+    // the two of them side by side and the difference measured is which viewer
+    // mounted, not whether the document moved anything. Same kind, different
+    // size, and the only thing left varying is how much there is to show.
+    const byKind = new Map<string, typeof files>();
+    for (const file of files) {
+      const ext = file.name.slice(file.name.lastIndexOf('.'));
+      byKind.set(ext, [...(byKind.get(ext) ?? []), file]);
+    }
+    const kin = [...byKind.values()].find((group) => group.length > 1);
+    expect(kin, 'two files of one kind to compare').toBeDefined();
+    const kinSmall = kin?.[0]?.name as string;
+    const kinLarge = kin?.[kin.length - 1]?.name as string;
+
     const t = await mount('explorer', { width: 100, height: 26 });
     await settleUntil(t, () => t.hasText(entries[0]?.name as string));
 
@@ -442,28 +478,80 @@ describe('the explorer example', () => {
       resource: t.lines().findIndex((line) => line.includes('Resource')),
     });
 
-    // From the top every time: the walk only goes downwards, and the two files
-    // are not in a known order.
+    /**
+     * Until the frame stops moving.
+     *
+     * Waiting for "a document exists" is not waiting at all once one does: the
+     * viewer for the previous file is still on screen while this one's content
+     * is read, so the predicate is already true and the frame gets measured
+     * mid-swap. The frame is what this test is about, so the frame is what it
+     * waits on - three readings the same, and a floor under how long that may
+     * take. The floor is the part that matters: reading the frame costs
+     * nothing, so on a busy machine three identical readings can all be taken
+     * before the document has even been asked for, and a pane that has not
+     * started moving yet reads exactly like one that has finished.
+     */
+    const stable = async () => {
+      const start = Date.now();
+      let last = '';
+      let same = 0;
+      while (Date.now() - start < 2000 && (same < 3 || Date.now() - start < 30)) {
+        await t.settle();
+        await new Promise((resolve) => setTimeout(resolve, 2));
+        const now = JSON.stringify(shape());
+        same = now === last ? same + 1 : 0;
+        last = now;
+      }
+    };
+
+    const active = () => t.store.get<{ name?: string }>('$/active/resource')?.name;
+
+    /**
+     * From the top every time - and every step waits for its answer.
+     *
+     * The walk only goes downwards and the two files are not in a known order,
+     * so each one is found from row zero. What makes that need care is that
+     * the tree's own cursor follows the selection rather than leading it: a
+     * key hands the uri to `resources.stat` and the row moves when that
+     * resolves. Press the next key before it does and the tree is still
+     * counting from where it was, so `home` followed by `down` on the same
+     * tick does not go to the second row - it goes one below wherever the
+     * previous file left the cursor, and a target above that point can never
+     * be reached.
+     *
+     * That is what made this test fail under load and pass on a quiet machine:
+     * one settle was enough for the answer most of the time.
+     */
+    const top = entries[0]?.name as string;
     const select = async (name: string) => {
       t.focus(t.getByRole('tree').id);
       t.press('home');
-      await t.settle();
-      for (let i = 0; i < entries.length + 5; i++) {
-        if (t.store.get<{ name?: string }>('$/active/resource')?.name === name) break;
+      await settleUntil(t, () => active() === top);
+      expect(active(), 'the walk starts at the top row').toBe(top);
+
+      for (let i = 0; i < entries.length + 5 && active() !== name; i++) {
+        const was = active();
         t.press('down');
-        await t.settle();
+        await settleUntil(t, () => active() !== was);
       }
-      expect(t.store.get<{ name?: string }>('$/active/resource')?.name).toBe(name);
-      await settleUntil(t, () => t.getAllByRole('document').length > 0);
+      expect(active()).toBe(name);
+      await stable();
     };
 
-    await select(smallest);
-    const small = shape();
+    const shapeOf = async (name: string) => {
+      await select(name);
+      return shape();
+    };
 
-    await select(largest);
-    const large = shape();
+    // A short document and a long one of the same kind: the viewer's own box
+    // must not have grown, which is the regression itself.
+    expect(await shapeOf(kinLarge)).toEqual(await shapeOf(kinSmall));
 
-    expect(large).toEqual(small);
+    // And across kinds, where the viewer is a different component and only the
+    // frame around it is comparable. The frame is what used to move.
+    const frame = ({ viewer: _viewer, ...rest }: ReturnType<typeof shape>) => rest;
+    expect(frame(await shapeOf(largest))).toEqual(frame(await shapeOf(smallest)));
+
     await t.unmount();
   });
 

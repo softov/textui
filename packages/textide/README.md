@@ -26,7 +26,7 @@ pnpm textide --colors 4         # sixteen colours
 pnpm textide --colors 0         # none
 ```
 
-Every glyph has three tiers - the theme's in [`glyphs.ts`](../core/src/themes/glyphs.ts), textide's own in [`icons.ts`](src/icons.ts) - and a test asserts the ASCII tier is actually ASCII, because a fallback holding one stray `⌸` fails on exactly the terminal it exists for.
+Every glyph has three tiers - the theme's in [`glyphs.ts`](https://github.com/softov/textui/tree/main/packages/core/src/themes/glyphs.ts), textide's own in [`icons.ts`](https://github.com/softov/textui/tree/main/packages/textide/src/icons.ts) - and a test asserts the ASCII tier is actually ASCII, because a fallback holding one stray `⌸` fails on exactly the terminal it exists for.
 
 **`--log-file` and `--log-unix` send a running commentary somewhere else.** What has focus, what the chrome did, every command that ran. `examples/logtail.mjs` listens on a socket.
 
@@ -161,7 +161,7 @@ a project's extensions belong, rather than beside the editor. One that fails to
 load is reported and skipped; an editor that will not open because a plugin is
 missing has made the plugin mandatory.
 
-[`@textui/textide-git`](../textide-git) is the one that exists, and it is the
+[`@textui/textide-git`](https://github.com/softov/textui/tree/main/packages/textide-git) is the one that exists, and it is the
 proof the boundary is in the right place: git arrives as an adapter, some
 commands, a component and a mount, and unloading it leaves nothing behind.
 

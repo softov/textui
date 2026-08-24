@@ -1,7 +1,7 @@
 # @textui/widgets
 
 The component catalog: eighty-seven components built out of the four primitives
-in [`@textui/core`](../core).
+in [`@textui/core`](https://github.com/softov/textui/tree/main/packages/core).
 
 ```bash
 npm install @textui/widgets
@@ -66,4 +66,4 @@ No dependencies beyond `@textui/core`, and no `node:` imports. Node 22+ and Bun.
 <https://softov.github.io/textui/>
 
 Every component has its own page, with the prop table generated from the source
-and a working example - see [`docs/components/`](../../docs/components).
+and a working example - see [`docs/components/`](https://softov.github.io/textui/components/).

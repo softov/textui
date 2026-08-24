@@ -30,7 +30,7 @@ are the strings themselves, so `<Box/>` and `<box/>` produce the identical node.
 
 The four primitives - `box`, `text`, `canvas`, `spacer` - are here because the
 layout engine and the painter are the things that reason about them. The
-eighty-seven components built out of them are [`@textui/widgets`](../widgets),
+eighty-seven components built out of them are [`@textui/widgets`](https://github.com/softov/textui/tree/main/packages/widgets),
 a separate package that depends on this one.
 
 That split is not tidiness. An imported component travels on its own node, so a

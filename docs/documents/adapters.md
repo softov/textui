@@ -30,7 +30,7 @@ registration.dispose();   // removes exactly what it added
 `register(app)` escape hatch for anything the fields cannot express. They are
 registered in that order, so a viewer always has its kind to match against.
 
-The JSON adapter shipped in `@textui/core/adapters` is the worked example:
+The JSON adapter shipped in `@textui/documents` is the worked example:
 
 <!-- docs:nocheck -->
 ```ts

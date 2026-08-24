@@ -28,8 +28,8 @@ console.log('App exited');
 
 ## What this package is
 
-The runtime ([`@textui/core`](../core)), a terminal to put it on
-([`@textui/terminal`](../terminal)), and `render`. Every other name here is
+The runtime ([`@textui/core`](https://github.com/softov/textui/tree/main/packages/core)), a terminal to put it on
+([`@textui/terminal`](https://github.com/softov/textui/tree/main/packages/terminal)), and `render`. Every other name here is
 re-exported from those two - importing from them directly is the same thing
 with a longer name.
 

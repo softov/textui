@@ -6,6 +6,7 @@ import type { Rect, Size } from '../types/geometry.js';
 import type { ServiceKey } from '../types/services.js';
 import type { KeyEvent } from '../types/input.js';
 import type { CommandDefinition } from '../types/command.js';
+import { strokeOf } from '../core/keybindings.js';
 import type { FocusDirection } from '../types/focus.js';
 import type { TaskFn, TaskState } from '../types/async.js';
 import type { Stream, StreamSource } from '../types/stream.js';
@@ -723,6 +724,45 @@ export function useInput(
  * can ask which task it is showing without every box between it and the screen
  * forwarding an id it does not care about.
  */
+/**
+ * Keys, by the name they are written under everywhere else.
+ *
+ * `useInput` hands you a `KeyEvent` and leaves you to compare its fields,
+ * which is four lines of `event.ctrl && event.name === 's'` per key and a bug
+ * the first time somebody forgets that shift is implied by an uppercase
+ * letter. The keybinding registry already had the answer - one canonical
+ * spelling per stroke - so this reads the same strings.
+ *
+ *     useKeymap({
+ *       '+': () => setCount((c) => c + 1),
+ *       '-': () => setCount((c) => c - 1),
+ *       space: () => setRunning((r) => !r),
+ *       'ctrl+s': save,
+ *     });
+ *
+ * Global by default, unlike `useInput`. A component that lists the keys it
+ * wants almost never also wants them to stop working the moment focus lands
+ * somewhere else - and the screens where that is wrong have a focusable to
+ * name, so they can say `{ global: false }` and mean it.
+ *
+ * A handler that returns nothing has handled the key. Return `false` to let
+ * it carry on to whatever is behind.
+ */
+export function useKeymap(
+  map: Record<string, (event: KeyEvent) => boolean | void>,
+  options: { focusId?: string; global?: boolean; enabled?: boolean } = {},
+): void {
+  const ref = useRef(map);
+  ref.current = map;
+
+  useInput((event) => {
+    const handler = ref.current[strokeOf(event)];
+    if (!handler) return;
+    // Silence is consent: a key you named is a key you meant to take.
+    return handler(event) ?? true;
+  }, { ...options, global: options.global ?? true });
+}
+
 export function useScreen<P = Record<string, unknown>>(): { id: string | null; params: P } {
   const id = useStoreValue<string | null>('$/layout/screen/current' as BindingPath, null);
   const params = useStoreValue<P>('$/layout/screen/params' as BindingPath);

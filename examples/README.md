@@ -1,93 +1,64 @@
 # Examples
 
-An example is an **application**. It owns its `package.json`, calls `createApp`
-itself, and is laid out the way a project that depends on TextUI would be laid
-out. Copying one out of this repo and running it somewhere else should work.
+Two of these run with no build step at all, and four are applications with one.
 
-That is the whole difference from a playground, and it is what decides where a
-new thing goes:
+## No build: `hello` and `counter`
 
-| | [`playground/`](../playground) | `examples/` |
-|---|---|---|
-| What it is | a node handed to the shared runner | its own application |
-| Owns the app | no - the runner does | yes - its own `main.tsx` |
-| Shape | one file, one screen | a folder: state, data, several screens |
-| Answers | "does this component work?" | "what does a real app look like?" |
-| Registered in | [`registry.ts`](../playground/src/registry.ts) | nothing - the folder is the registration |
-
-A screen that exists to exercise a feature is a playground, however pretty it
-is. An example that turns out to be one file and no logic belongs in the
-playground instead - it is not earning the package it costs.
-
-## Layout
-
-```
-examples/<name>/
-  package.json      @textui/example-<name>, depends on core and terminal
-  tsconfig.json
-  README.md         what it demonstrates, and what to look at first
-  src/
-    app.tsx         exports the root node and its registration - importable
-    main.tsx        createApp, the terminal session, the quit key
-  test/
-    smoke.test.tsx  mounts it, resizes it, strips capabilities
+```bash
+cd examples/counter
+node index.ts        # or: bun index.ts
 ```
 
-`app.tsx` and `main.tsx` are split so the example can be *mounted* without being
-*run*. That is what lets the smoke test exist, and the rule from the playground
-holds here too: an example nothing checks is an example that is already broken.
-
-## What is here
+Nothing compiles them. `h` is what JSX compiles to - `<Row gap={1}/>` and
+`{ component: 'Row', gap: 1 }` are the same value - so a file that calls `h`
+directly is a file the runtime already understands, and node has stripped types
+by default since 23.6.
 
 | | |
 |---|---|
-| [`todo/`](todo) | pages and a stack: list, detail, collection, search, settings - and the difference between a surface, a screen and a layer |
-| [`arcade/`](arcade) | snake, tetris and breakout: the ticker as a game loop, the canvas as a playfield, and a key that means two things in two places |
-| [`surfaces/`](surfaces) | chrome with no shell: naming your own surfaces, nesting one inside another, and writing a layout |
-| [`chat/`](chat) | an agent chat client over AHP: a streaming transcript, a composer, and the block that appears when the agent stops and waits for a person |
+| [`hello`](hello) | The smallest thing that runs |
+| [`counter`](counter) | `useKeymap`, `useState` and a timer you can pause |
 
-## Running
+## Can they use JSX?
+
+Under bun, yes, and with no build - [`hello/index.tsx`](hello/index.tsx) is the
+same program as [`hello/index.ts`](hello/index.ts), in JSX. Under node, no, and
+the reason is worth knowing because it is not a missing flag.
+
+**Node strips types; it does not transform syntax.** A `.ts` file with no
+non-erasable syntax is a file node runs by deleting the annotations. JSX is not
+an annotation - `<Box/>` has to *become* a call - so node rejects `.tsx`
+outright:
+
+```
+TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".tsx"
+```
+
+`--experimental-transform-types` does not help; it handles enums and
+namespaces. So the trade is angle brackets against node, and these two examples
+keep node as the default.
+
+Bun compiles TSX, and the whole setup is one line beside the file:
+
+```json
+{ "compilerOptions": { "jsxImportSource": "textui" } }
+```
+
+`textui` rather than `@textui/core`, so one install is enough - the facade
+re-exports the JSX runtime for this.
+
+## With a build: the applications
+
+Bigger programs, bundled by esbuild because they are many files rather than
+because textui needs it.
 
 ```bash
-pnpm example --list         # every example
-pnpm example <name>         # run one
-pnpm example <name> --static --width 100    # render one frame to stdout
+pnpm example todo        # or arcade, chat, surfaces
 ```
 
-The runner bundles from the workspace sources, so a change to the runtime shows
-up on the next run with no build in between. A consumer outside this repo would
-build with `tsc` and run the output instead - the example's own `build` script
-does exactly that, and is there to prove the published packages are enough.
-
-## logtail.mjs
-
-Watch what a textui application is doing, from outside it.
-
-A terminal application cannot print its own diagnostics, because the screen is
-the output. So it sends them somewhere else instead - a file, or a unix socket
-with this listening on the other end.
-
-```bash
-node examples/logtail.mjs /tmp/textide.sock
-node packages/textide/dist/main.js ~/scratch --log-unix /tmp/textide.sock
-```
-
-```text
-    141ms event   @/command/run   {"id":"file.edit","source":"api","args":{}}
-    199ms store   $/focus/id      n124:focus
-    199ms store   $/focus/scope   pane.main
-```
-
-Add `--verbose` to the application for every store write rather than only
-focus, chrome and commands, and pass substrings to filter:
-
-```bash
-node examples/logtail.mjs /tmp/textide.sock focus
-```
-
-`--log-file <path>` writes the same JSONL to a file, for a run you want to read
-afterwards rather than watch.
-
-What is recorded is the runtime's own vocabulary - `$/focus/id` moved, a
-command ran, a surface changed - rather than narration written at each call
-site, so the log cannot drift from what actually happened.
+| | |
+|---|---|
+| [`todo`](todo) | Screens, navigation, a store that persists |
+| [`arcade`](arcade) | Frame loops, canvas painting, input timing |
+| [`chat`](chat) | `Feed`, `TextArea`, markdown, and a fake host |
+| [`surfaces`](surfaces) | An application with no shell, arranging its own chrome |

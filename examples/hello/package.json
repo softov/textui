@@ -1,0 +1,16 @@
+{
+  "name": "@textui/example-hello",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The smallest thing that runs. No build step.",
+  "scripts": {
+    "start": "node index.ts",
+    "start:bun": "bun index.ts",
+    "start:jsx": "bun index.tsx",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "textui": "workspace:*"
+  }
+}

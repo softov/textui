@@ -80,6 +80,18 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/counter:
+    dependencies:
+      textui:
+        specifier: workspace:*
+        version: link:../../packages/facade
+
+  examples/hello:
+    dependencies:
+      textui:
+        specifier: workspace:*
+        version: link:../../packages/facade
+
   examples/surfaces:
     dependencies:
       '@textui/core':

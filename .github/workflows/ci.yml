@@ -24,6 +24,10 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
 
+      # Every `exports`/`bin` target exists in the built tree. A subpath nothing
+      # in the repo imports compiles clean and 404s for the first consumer.
+      - run: pnpm check:exports
+
       # The playgrounds render in a pipe, with no terminal at all.
       - run: pnpm dev gallery --static --width 100 --height 30
       - run: pnpm dev charts --static --ascii --mono --width 100

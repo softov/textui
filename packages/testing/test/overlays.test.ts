@@ -3,6 +3,7 @@ import type { TextUIApp } from '@textui/core';
 import { defineComponent, h, useCommand, useFocus, useFocusScope, useState } from '@textui/core';
 import { prompt } from '@textui/widgets';
 import { render, renderApp } from '../src/index.js';
+import type { ArgChoices } from '@textui/core';
 
 function promptDialog(app: TextUIApp) {
   return prompt(app.layers, {
@@ -275,7 +276,7 @@ describe('the command palette', () => {
   });
 
   describe('sub-items', () => {
-    function withChoices(choices: string[] | (() => string[] | Promise<string[]>)) {
+    function withChoices(choices: ArgChoices | (() => ArgChoices | Promise<ArgChoices>)) {
       const ran: Record<string, unknown>[] = [];
       return {
         ran,

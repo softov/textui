@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { packColor, downsample } from '@textui/core';
-import type { ColorDepth } from '@textui/core';
+import type { Color, ColorDepth } from '@textui/core';
 import { tintOf } from '../src/components/editor.js';
 
 /**
@@ -26,7 +26,7 @@ describe('tintOf', () => {
     expect(tintOf(CANVAS, WARNING, 1 as ColorDepth)).toBeUndefined();
   });
 
-  it.each([
+  it.each<[string, Color]>([
     ['added', SUCCESS],
     ['removed', DANGER],
     ['changed', WARNING],
@@ -39,7 +39,7 @@ describe('tintOf', () => {
     expect(downsample(packColor(tint), 8)).not.toBe(downsample(packColor(CANVAS), 8));
   });
 
-  it.each([SUCCESS, DANGER, WARNING])('washes at 24-bit, as it always did', (tone) => {
+  it.each<Color>([SUCCESS, DANGER, WARNING])('washes at 24-bit, as it always did', (tone) => {
     expect(tintOf(CANVAS, tone, 24 as ColorDepth)).toBeDefined();
   });
 

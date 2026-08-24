@@ -100,8 +100,10 @@ describe('a component that throws', () => {
  */
 describe('a handler that throws', () => {
   it('does not take the process with it', async () => {
+    // Diagnostics are on for every harness mount, so there is nothing to ask
+    // for here - this used to pass `diagnostics: true`, which is not an option
+    // and never did anything.
     const t = await renderApp({
-      diagnostics: true,
       onBoot: (app) => {
         app.commands.register({
           id: 'boom',
@@ -124,7 +126,6 @@ describe('a handler that throws', () => {
 
   it('refuses a command whose required argument is missing, without dying', async () => {
     const t = await renderApp({
-      diagnostics: true,
       onBoot: (app) => {
         app.commands.register({
           id: 'named',

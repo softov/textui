@@ -279,7 +279,7 @@ describe('a segment that contains a slash', () => {
   it('survives set and get as one segment', () => {
     const store = createStore();
     const uri = 'file:///home/x/notes.md';
-    const path = `$/session/documents/${escapeSegment(uri)}`;
+    const path: BindingPath = `$/session/documents/${escapeSegment(uri)}`;
 
     store.set(path, { uri, content: 'hello' });
 
@@ -290,7 +290,7 @@ describe('a segment that contains a slash', () => {
 
   it('notifies a subscriber on that exact path', () => {
     const store = createStore();
-    const path = `$/session/documents/${escapeSegment('file:///a/b')}`;
+    const path: BindingPath = `$/session/documents/${escapeSegment('file:///a/b')}`;
     const seen: unknown[] = [];
     store.subscribe(path, (value) => seen.push(value));
 
@@ -300,8 +300,8 @@ describe('a segment that contains a slash', () => {
 
   it('does not confuse two URIs that share a prefix', () => {
     const store = createStore();
-    const a = `$/session/documents/${escapeSegment('file:///a/b')}`;
-    const b = `$/session/documents/${escapeSegment('file:///a/b/c')}`;
+    const a: BindingPath = `$/session/documents/${escapeSegment('file:///a/b')}`;
+    const b: BindingPath = `$/session/documents/${escapeSegment('file:///a/b/c')}`;
 
     store.set(a, 'first');
     store.set(b, 'second');

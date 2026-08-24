@@ -311,7 +311,7 @@ describe('a panel an extension brings', () => {
         components: [{
           component: 'DemoPanel',
           category: 'chrome',
-          renderer: { kind: 'node', node: { component: 'text', content: 'demo panel' } },
+          renderer: { kind: 'template', template: { component: 'text', content: 'demo panel' } },
         }],
         views: [{
           surface: 'sidebar',

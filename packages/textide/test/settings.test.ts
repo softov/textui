@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
 import { CONFIG_FILE, loadWorkspace, registerTextide, rememberSettings } from '../src/index.js';
+import type { WorkspaceConfig } from '../src/index.js';
 
 /**
  * Settings that stick.
@@ -57,7 +58,7 @@ describe('what a workspace remembers', () => {
 
   it('writes a change back, once', async () => {
     const { t, workspace } = await open({});
-    const saves: Record<string, unknown>[] = [];
+    const saves: WorkspaceConfig[] = [];
     const bag = rememberSettings(t.app, workspace, {
       debounceMs: 1,
       write: async (config) => { saves.push(config); },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createVirtualTerminal } from '@textui/terminal';
-import { h } from '@textui/core';
+import { h, useEffect } from '@textui/core';
 import { render } from '../src/render.js';
 
 // Frames are coalesced at the animation driver's ceiling - 30fps by default,
@@ -81,5 +81,30 @@ describe('leaving', () => {
     await settle();
     await Promise.all([app.unmount(), app.unmount()]);
     await app.waitUntilExit();
+  });
+});
+
+// A cleanup that logs is a real debugging need, and it used to fail silently:
+// `stop` disposed the tree while the alternate screen was still up, so
+// anything a cleanup printed went into a buffer the terminal throws away on
+// its way out. Releasing first means the screen is back before any cleanup
+// runs, and a `console.log` in one lands where a person can read it.
+describe('the order of leaving', () => {
+  it('gives the terminal back before it disposes the tree', async () => {
+    const order: string[] = [];
+    const terminal = createVirtualTerminal({ width: 30, height: 5 });
+    const release = terminal.release.bind(terminal);
+    terminal.release = () => { order.push('release'); release(); };
+
+    const Logs = () => {
+      useEffect(() => () => { order.push('cleanup'); }, []);
+      return h('text', { content: 'x' });
+    };
+
+    const app = render(h(Logs, {}), { terminal });
+    await settle();
+    await app.unmount();
+
+    expect(order).toEqual(['release', 'cleanup']);
   });
 });

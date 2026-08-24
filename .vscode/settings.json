@@ -1,0 +1,14 @@
+{
+  // Ctrl+click lands in `src`, not in generated `.d.ts`.
+  //
+  // Every package ships declaration maps and its own sources, so the mapping
+  // back is there - but VS Code only follows it when asked. Without this,
+  // going to the definition of `Text` or `fg` stops at a type with no body and
+  // no comments in it, which reads as though it did not work.
+  "typescript.preferGoToSourceDefinition": true,
+
+  // Use the TypeScript the repo builds with, not the one bundled with the
+  // editor - `verbatimModuleSyntax` and `erasableSyntaxOnly` move faster than
+  // VS Code's copy does.
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

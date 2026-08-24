@@ -347,14 +347,24 @@ export class App implements TextUIApp {
     for (const entry of this.declaredFocus.values()) entry.dispose();
     this.declaredFocus.clear();
 
+    // The terminal goes back first, before anything a component wrote to run
+    // on its way out.
+    //
+    // Disposing the tree runs every effect cleanup, and a cleanup that prints
+    // - which is how anyone debugs one - was printing into the alternate
+    // screen, which the terminal discards the moment we leave it. The log ran,
+    // did what it was told, and vanished. Releasing first puts the ordinary
+    // screen back, so `console.log` in a cleanup lands where a person can read
+    // it. A cleanup that paints instead is painting into a screen that is
+    // already gone either way.
+    await this.terminal.release();
+
     if (this.root) {
       disposeTree(this.root);
       this.root = null;
     }
 
     for (const scope of this.options.clearOnStop ?? []) this.store.clearScope(scope);
-
-    await this.terminal.release();
   }
 
   dispose(): void {

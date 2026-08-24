@@ -7,13 +7,14 @@
 // everywhere else in textui - the same spelling the keybinding registry uses -
 // so `'ctrl+s'` is a string rather than four comparisons against a KeyEvent.
 
-import { h, render, useKeymap, useInterval, useState } from 'textui';
+import { h, render, useEffect, useInterval, useKeymap, useState } from 'textui';
 
 const STEP_MS = 250;
 
 const Counter = () => {
   const [count, setCount] = useState(0);
   const [running, setRunning] = useState(false);
+  const [seconds, setSeconds] = useState(0);
 
   useKeymap({
     // `+` needs shift on most layouts, so `=` is the same key unshifted.
@@ -28,10 +29,20 @@ const Counter = () => {
   // not running, rather than running and ignored.
   useInterval(() => { setCount((c) => c + 1); }, STEP_MS, running);
 
+  // And the same thing by hand, which is all `useInterval` is. The returned
+  // function is the cleanup: it runs before the effect runs again and when the
+  // component goes away, so stopping does not leave a timer behind.
+  useEffect(() => {
+    if (!running) return;
+    setSeconds(0);
+    const timer = setInterval(() => { setSeconds((s) => s + 1); }, 1000);
+    return () => { clearInterval(timer); };
+  }, [running]);
+
   return h('box', { border: 'round', padding: 1, direction: 'column', gap: 1, width: 42 },
     h('text', { bold: true, content: `Count: ${count}` }),
     h('text', {
-      content: running ? `counting up every ${STEP_MS}ms` : 'stopped',
+      content: running ? `counting up every ${STEP_MS}ms - ${seconds}s` : 'stopped',
       fg: running ? 'success' : 'muted',
     }),
     h('box', { direction: 'column' },

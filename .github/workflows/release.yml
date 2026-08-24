@@ -6,13 +6,16 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Pack and check, publish nothing'
+        description: 'Run the gate and rewrite manifests, publish nothing'
         type: boolean
         default: true
 
+# No NPM_TOKEN. npm exchanges this OIDC token for a short-lived credential,
+# and attaches provenance without being asked - see RELEASING.md for what has
+# to be configured on npmjs.com for the exchange to be accepted.
 permissions:
   contents: read
-  id-token: write   # npm provenance signs the tarballs with this
+  id-token: write
 
 jobs:
   release:
@@ -27,6 +30,13 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
+      # Trusted publishing needs npm >= 11.5.1, which is newer than the npm
+      # bundled with any Node 22.
+      - name: Use an npm that can do OIDC
+        run: |
+          npm install -g npm@latest
+          npm --version
+
       - run: pnpm install --frozen-lockfile
 
       # The same gate CI runs. A tag is not a reason to publish something that
@@ -38,23 +48,19 @@ jobs:
 
       # Every `exports` and `bin` target has to exist in the built tree. tsc
       # cannot catch a subpath nothing in the repo imports.
-      - run: node scripts/check-exports.mjs
+      - run: pnpm check:exports
 
-      # The tag says what the packages must say. A tag that disagrees with
-      # package.json publishes a version nobody asked for.
       - name: Check the tag against the versions
         if: startsWith(github.ref, 'refs/tags/v')
         run: node scripts/check-version.mjs "${GITHUB_REF_NAME#v}"
 
-      - name: Pack
-        run: pnpm -r --filter='!@textui/registry' --filter='!@textui/playground' exec npm pack --dry-run
-
-      # `pnpm publish -r` goes in dependency order and rewrites `workspace:^`
-      # to the real version. Private packages are skipped, which is what holds
-      # documents, textide and textide-git back.
+      # Rewrites `workspace:^` to the real version and publishes in dependency
+      # order. `pnpm publish` would do both, but cannot speak OIDC; `npm
+      # publish` speaks OIDC but cannot read pnpm's protocol.
       - name: Publish
         if: startsWith(github.ref, 'refs/tags/v') && inputs.dry_run != true
-        run: pnpm publish -r --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+        run: node scripts/release-publish.mjs "${GITHUB_REF_NAME#v}"
+
+      - name: Rehearse
+        if: inputs.dry_run == true
+        run: node scripts/release-publish.mjs --dry-run

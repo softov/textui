@@ -8,6 +8,17 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+Publishing moved to npm trusted publishing: GitHub Actions exchanges an OIDC
+token for a short-lived credential, and there is no `NPM_TOKEN` in the
+repository any more.
+
+Two things made that more than a flag. Trusted publishing cannot *create* a
+package - npm only attaches a trusted publisher to a name that already exists,
+so 0.1.0 still had to be bootstrapped with a token, which was then deleted.
+And `pnpm publish` has no OIDC support, while `npm publish` cannot read
+`workspace:^`; `scripts/release-publish.mjs` resolves the ranges and publishes
+each package from its own directory in dependency order.
+
 ### The facade is `@textui/kit`, not `textui`
 
 npm refused the unscoped name: "Package name too similar to existing package

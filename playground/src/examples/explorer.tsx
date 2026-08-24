@@ -1,5 +1,5 @@
 import type { Resource } from '@textui/core';
-import { useEffect, useRuntime, useState, useTheme } from '@textui/core';
+import { useEffect, useRef, useRuntime, useState, useTheme } from '@textui/core';
 import type { TreeNode } from '@textui/widgets';
 import { Breadcrumb, Column, KeyHints, KeyValue, Menu, Panel, Row, Tree } from '@textui/widgets';
 import { ResourceView, useDocument } from '@textui/documents';
@@ -58,7 +58,7 @@ export function Explorer({ root = process.cwd() }: ExplorerProps) {
   useEffect(() => {
     if (selected || !top?.length) return;
     const first = top.find((r) => !r.capabilities.includes('list')) ?? top[0];
-    if (first) void app?.resources.stat(first.uri).then(setSelected);
+    if (first) request(first.uri);
   }, [top?.length]);
 
   // Commands and palette actions need to know what is selected without being
@@ -74,6 +74,24 @@ export function Explorer({ root = process.cwd() }: ExplorerProps) {
     setSelected(resource);
     // A viewer chosen for a JSON file means nothing for the next markdown one.
     setViewerId(null);
+  };
+
+  /**
+   * The last row asked for, so a late answer cannot overrule a newer one.
+   *
+   * Highlighting a row starts a `stat`, and holding an arrow key starts one
+   * per row. They are separate promises with no order between them, so the
+   * pane belongs to whichever happens to come back last rather than to the row
+   * the cursor is on - the reader arrows past a file and the detail pane
+   * settles on one they have already left.
+   */
+  const asked = useRef<string | null>(null);
+  const request = (uri: string): void => {
+    if (!app) return;
+    asked.current = uri;
+    void app.resources.stat(uri).then((resource) => {
+      if (asked.current === uri) choose(resource);
+    });
   };
 
   const toNode = (resource: Resource): TreeNode => {
@@ -126,7 +144,7 @@ export function Explorer({ root = process.cwd() }: ExplorerProps) {
               setExpanded(isExpanded ? [...expanded, id] : expanded.filter((e) => e !== id));
               if (isExpanded) load(id);
             }}
-            onSelect={(id) => void app?.resources.stat(id).then(choose)}
+            onSelect={(id) => request(id)}
             onActivate={(id) => void app?.openResource(id)}
           />
         </Panel>

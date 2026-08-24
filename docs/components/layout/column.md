@@ -26,6 +26,7 @@ import { Column } from '@textui/widgets';
 | `children` | `unknown` |  |  |
 | `title` | `string` |  | Header text drawn into the top border. Needs a border to land on. |
 | `titleAlign` | `'left' \| 'center' \| 'right'` |  |  |
+| `rightTitle` | `string` |  | A second label on the top border, hard against the right. For the short thing that belongs beside a heading rather than under it - a count, a shortcut, a state. It takes its space first and `title` gets what is left, so the two never collide and the title is the one that truncates. |
 | `footer` | `string` |  | Footer text drawn into the bottom border. |
 | `footerAlign` | `'left' \| 'center' \| 'right'` |  |  |
 | `scrollTop` | `number` |  | Scroll offset in cells, when overflow is 'scroll'. |

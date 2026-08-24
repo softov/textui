@@ -26,7 +26,8 @@ import { Panel } from '@textui/widgets';
 | `subtitle` | `string` |  |  |
 | `tone` | `StyleColor` |  | Accent colour for the title. |
 | `border` | `BorderSpec` |  | Overrides the theme's default border. `'none'` gives an airy panel. |
-| `meta` | `string` |  | Right-aligned text in the title row. Counts, hints, shortcuts. |
+| `rightTitle` | `string` |  | Right-aligned text beside the title, on the same row. The short thing that belongs next to a heading rather than under it: a count, a state, the shortcut that opens it. Optional, and most panels do not have one. |
+| `meta` | `string` |  | Right-aligned text on the *bottom* rule, where there is one. Not the title row - which is what this said for a long time while doing something else. A bordered panel put it in the footer and a borderless one put it beside the title, so the same prop meant two places depending on a different prop. `rightTitle` is the title row, in both; this is the bottom, and on a borderless panel there is no bottom to put it on. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

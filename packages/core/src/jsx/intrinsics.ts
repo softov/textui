@@ -58,6 +58,14 @@ export interface BoxProps extends BaseProps {
   /** Header text drawn into the top border. Needs a border to land on. */
   title?: string;
   titleAlign?: 'left' | 'center' | 'right';
+  /**
+   * A second label on the top border, hard against the right.
+   *
+   * For the short thing that belongs beside a heading rather than under it - a
+   * count, a shortcut, a state. It takes its space first and `title` gets what
+   * is left, so the two never collide and the title is the one that truncates.
+   */
+  rightTitle?: string;
   /** Footer text drawn into the bottom border. */
   footer?: string;
   footerAlign?: 'left' | 'center' | 'right';

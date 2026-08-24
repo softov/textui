@@ -558,10 +558,31 @@ function paintBorder(
   const inner = w - 2;
   if (inner <= 0) return;
 
-  const title = instance.props.title;
-  if (sides.top && typeof title === 'string' && title !== '') {
+  /*
+   * A second label on the top rule, hard against the right.
+   *
+   * Painted *before* the title, and the title is then given the width it
+   * leaves, so the two cannot land on the same cells whatever `titleAlign`
+   * says. That order also decides which one loses when there is not enough
+   * room: the right label is the short one - a count, a shortcut, a state -
+   * and the title is the one that can be truncated and still be read.
+   */
+  const rightTitle = instance.props.rightTitle;
+  let reserved = 0;
+  if (sides.top && typeof rightTitle === 'string' && rightTitle !== '') {
+    const label = ` ${rightTitle} `;
+    reserved = Math.min(inner, stringWidth(sanitize(label)));
     paintBorderLabel(
-      surface, x, y, inner, ` ${title} `,
+      surface, x, y, inner, label, 'right',
+      { ...style, fg: colorOf(packStyleColor('muted', env.theme)), attrs: visual.attrs },
+      env.theme.glyphs.ellipsis,
+    );
+  }
+
+  const title = instance.props.title;
+  if (sides.top && typeof title === 'string' && title !== '' && inner - reserved > 0) {
+    paintBorderLabel(
+      surface, x, y, inner - reserved, ` ${title} `,
       (instance.props.titleAlign as 'left' | 'center' | 'right') ?? 'left',
       { ...style, fg: colorOf(visual.fg === COLOR_DEFAULT ? packStyleColor('text', env.theme) : visual.fg), attrs: visual.attrs },
       env.theme.glyphs.ellipsis,

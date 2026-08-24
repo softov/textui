@@ -146,11 +146,14 @@ render(<Dashboard />, {
 });
 ```
 
-Without it the name resolves to nothing, and the miss is drawn where the component should have been rather than thrown — so a forgotten registration looks like this instead of a stack trace:
+Forget it and nothing throws. The name resolves to nothing, and TextUI draws the name itself in red where the component should have been:
 
-```
+```console
+$ node dashboard.js
 <Card>
 ```
+
+That red `<Card>` on screen *is* the error message: a missing registration, not a missing import.
 
 ## Or start with the CLI
 

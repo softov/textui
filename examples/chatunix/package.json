@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "textui": "workspace:*",
+    "@textui/kit": "workspace:*",
     "@textui/widgets": "workspace:*"
   }
 }

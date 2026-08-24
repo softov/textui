@@ -1,13 +1,13 @@
-# textui
+# @textui/kit
 
 Build a terminal UI in TypeScript. One install, one import.
 
 ```bash
-npm install textui
+npm install @textui/kit
 ```
 
 ```tsx
-import { render, Box, Text, useState, useInput } from 'textui';
+import { render, Box, Text, useState, useInput } from '@textui/kit';
 
 function App() {
   const [count, setCount] = useState(0);

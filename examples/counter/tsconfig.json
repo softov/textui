@@ -8,7 +8,7 @@
     "types": [
       "node"
     ],
-    "jsxImportSource": "textui"
+    "jsxImportSource": "@textui/kit"
   },
   "include": [
     "*.ts",

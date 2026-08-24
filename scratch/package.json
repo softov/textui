@@ -8,6 +8,6 @@
     "@textui/core": "workspace:*",
     "@textui/terminal": "workspace:*",
     "@textui/widgets": "workspace:*",
-    "textui": "workspace:*"
+    "@textui/kit": "workspace:*"
   }
 }

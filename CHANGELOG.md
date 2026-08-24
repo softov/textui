@@ -8,9 +8,21 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+### The facade is `@textui/kit`, not `textui`
+
+npm refused the unscoped name: "Package name too similar to existing package
+`text-ui`". That package is a tombstone - zero versions, no maintainers,
+nothing published since 2022 - but npm reserves the names of unpublished
+packages permanently, and the reserved name still trips the similarity check.
+
+The bare name is not taken, only blocked, so it may become available if npm
+lifts the check. Until then the one-install entry point is `@textui/kit`. The
+`textui` *command* is unaffected: it is the bin of `@textui/cli`, and a bin
+name is not a package name.
+
 ### 0.1.0 - the first publish
 
-Six packages: [`textui`](packages/facade), [`@textui/core`](packages/core),
+Six packages: [`@textui/kit`](packages/facade), [`@textui/core`](packages/core),
 [`@textui/widgets`](packages/widgets), [`@textui/terminal`](packages/terminal),
 [`@textui/testing`](packages/testing) and [`@textui/cli`](packages/cli).
 

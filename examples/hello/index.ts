@@ -4,7 +4,7 @@
 // so a file that calls it directly is a file both node and bun will run as it
 // stands. `node index.ts`.
 
-import { h, render } from 'textui';
+import { h, render } from '@textui/kit';
 
 const Hello = () =>
   h('box', { border: 'round', padding: 1, direction: 'column', gap: 1 },

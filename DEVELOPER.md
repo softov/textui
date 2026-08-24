@@ -72,11 +72,21 @@ the record. Two guards run in CI:
 ```bash
 pnpm check:exports          # every exports/bin target exists in the built tree
 pnpm check:version 0.1.0    # the tag and the manifests agree
+pnpm release:dry            # the order and the version rewrite, publishing nothing
 ```
 
 `check:exports` is there because tsc cannot catch a subpath nothing in the
 repository imports - `@textui/core` shipped a broken `./hooks` for exactly that
 reason, and it compiled clean the whole time.
+
+Publishing goes through trusted publishing: GitHub Actions exchanges an OIDC
+token for a short-lived credential, and there is no `NPM_TOKEN` anywhere. The
+one thing that surprises people is that trusted publishing cannot *create* a
+package - a brand new name has to be published once with a credential before
+npm will let a workflow near it. `RELEASING.md` has the bootstrap.
+
+`pnpm release:dry` rewrites manifests in place and does not put them back; run
+`git checkout -- packages/` after it.
 
 ## Conventions
 

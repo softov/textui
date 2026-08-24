@@ -6,6 +6,7 @@
   "description": "Workspace root for TextUI - a graph-mounted terminal UI runtime",
   "scripts": {
     "dev": "pnpm --filter @textui/playground dev",
+    "dev:bun": "pnpm --filter @textui/playground dev:bun",
     "example": "node examples/run.mjs",
     "textide": "pnpm --filter @textui/textide dev",
     "build": "tsc -b packages/core packages/widgets packages/terminal packages/documents packages/testing packages/cli packages/textide packages/textide-git",

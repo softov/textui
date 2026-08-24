@@ -14,7 +14,7 @@
     "declaration": true,
     "declarationMap": true,
     "composite": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "jsx": "react-jsx",
     "jsxImportSource": "@textui/core"
   }

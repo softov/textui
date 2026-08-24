@@ -6,6 +6,7 @@
   "description": "The TextUI showcase and focused playgrounds. Never published.",
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "dev:bun": "bun scripts/dev.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },

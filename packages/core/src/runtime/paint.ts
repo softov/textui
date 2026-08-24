@@ -179,6 +179,8 @@ interface HostVisual {
   attrs: number;
   /** True when the background is this box's rather than an ancestor's. */
   ownBg: boolean;
+  /** The same question for the foreground, which the border has to ask. */
+  ownFg: boolean;
 }
 
 /** Colour and attributes handed down to a box's children. */
@@ -242,6 +244,7 @@ function visualFor(
     // and its rows and left the document showing through the gaps between
     // them, which is unreadable and looked like a compositing bug.
     ownBg: style.bg !== undefined,
+    ownFg: style.fg !== undefined,
   };
 }
 
@@ -521,9 +524,26 @@ function paintBorder(
   env: PaintEnv,
 ): void {
   const { chars, sides, colors } = visual.border;
+  /*
+   * A frame is the theme's `border` unless this box asked for something else.
+   *
+   * "Something else" is a colour on the border spec, or a colour on the box -
+   * `<box fg="danger" border="single">` means a danger frame, and that is
+   * worth keeping. What it must *not* mean is a colour the box merely
+   * inherited: the test used to be `visual.fg === COLOR_DEFAULT`, and
+   * `visual.fg` is the effective colour, so any box under an ancestor that set
+   * one took that instead of the border token. An application whose shell
+   * states its text colour - which is most of them - drew every frame in the
+   * text colour, as bright as the words inside it, and the `border` token in
+   * the theme went unused.
+   *
+   * `ownFg` is the same question `ownBg` already asks for the background.
+   */
   const fg = visual.border.color !== undefined
     ? colorOf(packStyleColor(visual.border.color, env.theme))
-    : colorOf(visual.fg === COLOR_DEFAULT ? packStyleColor('border', env.theme) : visual.fg);
+    : visual.ownFg
+      ? colorOf(visual.fg)
+      : colorOf(packStyleColor('border', env.theme));
   const bg = colorOf(visual.bg);
   // `dim` on the border spec dims the frame and nothing else. Setting it on
   // the box would take the title, the content and every child with it.

@@ -504,3 +504,54 @@ describe('what a canvas draws on', () => {
     r.dispose();
   });
 });
+
+/*
+ * A frame is the theme's `border` unless the box asked for something else -
+ * and "asked" has to mean this box, not an ancestor.
+ *
+ * The test used to be whether the *effective* colour was the default, so a box
+ * under anything that stated a text colour took that instead. An application
+ * whose shell states one - which is most of them - drew every frame as bright
+ * as the words inside it, and the `border` token went unused.
+ */
+describe('what colour a border is', () => {
+  const frame = (node: ComponentNode): unknown => {
+    const r = renderOnce(node, { width: 12, height: 3, theme: 'dark' });
+    const fg = r.buffer.get(0, 0)?.fg;
+    r.dispose();
+    return fg;
+  };
+
+  const BORDER = { rgb: [48, 54, 61] };
+  const DANGER = { rgb: [248, 81, 73] };
+
+  it('is the theme token on a box that says nothing', () => {
+    expect(frame(h(Box, { border: 'single' }, h(Text, { content: 'x' })))).toEqual(BORDER);
+  });
+
+  it('is still the token inside something that states a text colour', () => {
+    expect(frame(
+      h(Box, { fg: 'text' }, h(Box, { border: 'single' }, h(Text, { content: 'x' }))),
+    )).toEqual(BORDER);
+  });
+
+  it('follows a colour the box states itself', () => {
+    // Worth keeping: `<box fg="danger" border="single">` means a danger frame.
+    expect(frame(h(Box, { fg: 'danger', border: 'single' }, h(Text, { content: 'x' })))).toEqual(DANGER);
+  });
+
+  it('and a colour on the border spec wins over both', () => {
+    expect(frame(
+      h(Box, { fg: 'danger', border: { style: 'single', color: 'focus' } }, h(Text, { content: 'x' })),
+    )).toEqual({ rgb: [88, 166, 255] });
+  });
+
+  it('leaves the text inside it alone either way', () => {
+    const r = renderOnce(
+      h(Box, { fg: 'text' }, h(Box, { border: 'single' }, h(Text, { content: 'x' }))),
+      { width: 12, height: 3, theme: 'dark' },
+    );
+    expect(r.buffer.get(1, 1)?.fg).toEqual({ rgb: [230, 237, 243] });
+    r.dispose();
+  });
+});

@@ -14,7 +14,10 @@ const CORE_UI_DIR = at('packages/core/src/ui');
 const JSX_DIR = at('packages/core/src/jsx');
 
 const files = [
-  ...readdirSync(UI_DIR).filter((f) => f.endsWith('.ts')).map((f) => join(UI_DIR, f)),
+  // Recursive: widgets is one file per component, in a folder per group.
+  ...readdirSync(UI_DIR, { recursive: true })
+    .filter((f) => String(f).endsWith('.ts'))
+    .map((f) => join(UI_DIR, String(f))),
   // Screen and the four primitives stayed in core, with the runtime that
   // paints them.
   ...readdirSync(CORE_UI_DIR).filter((f) => f.endsWith('.ts')).map((f) => join(CORE_UI_DIR, f)),

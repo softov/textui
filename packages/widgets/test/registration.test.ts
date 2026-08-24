@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { h, renderToString } from '@textui/core';
-import { Badge } from '../src/display.js';
+import { Badge } from '../src/display/index.js';
 import { CATALOG } from '../src/index.js';
 
 // An imported component travels on its own node: `<Badge/>` compiles to a

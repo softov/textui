@@ -80,6 +80,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/chatunix:
+    dependencies:
+      '@textui/widgets':
+        specifier: workspace:*
+        version: link:../../packages/widgets
+      textui:
+        specifier: workspace:*
+        version: link:../../packages/facade
+
   examples/counter:
     dependencies:
       textui:
@@ -91,6 +100,22 @@ importers:
       textui:
         specifier: workspace:*
         version: link:../../packages/facade
+
+  examples/showcase:
+    dependencies:
+      '@textui/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@textui/terminal':
+        specifier: workspace:*
+        version: link:../../packages/terminal
+      '@textui/widgets':
+        specifier: workspace:*
+        version: link:../../packages/widgets
+    devDependencies:
+      '@textui/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
 
   examples/surfaces:
     dependencies:
@@ -255,6 +280,12 @@ importers:
 
   scratch:
     dependencies:
+      '@textui/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@textui/terminal':
+        specifier: workspace:*
+        version: link:../packages/terminal
       '@textui/widgets':
         specifier: workspace:*
         version: link:../packages/widgets

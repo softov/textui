@@ -11,12 +11,23 @@ export interface GaugeProps extends BoxProps {
   thresholds?: { at: number; tone: SemanticVariant }[];
   format?(value: number): string;
   gaugeWidth?: number;
+  /**
+   * Push the gauge away from the label, to the right edge of the row.
+   *
+   * The label's cell stretches, so it stays at the left and
+   * the track ends up hard against the right - which is what makes a column of
+   * these read as a table rather than as a ragged stack. Needs a row wider
+   * than its contents to have any effect, so the caller has to have given it a
+   * width or a `flex`.
+   */
+  spacer?: boolean;
 }
 
 export const Gauge = defineComponent<GaugeProps>('Gauge', (props) => {
   const theme = useTheme();
   const {
-    value, min = 0, max = 100, label, thresholds = [], format, gaugeWidth = 20, ...rest
+    value, min = 0, max = 100, label, thresholds = [], format, gaugeWidth = 20,
+    spacer, ...rest
   } = props;
 
   const ratio = Math.max(0, Math.min(1, (value - min) / (max - min || 1)));
@@ -28,7 +39,12 @@ export const Gauge = defineComponent<GaugeProps>('Gauge', (props) => {
     .find((t) => value >= t.at)?.tone ?? 'accent';
 
   return h('box', { direction: 'row', gap: 1, role: 'meter', label, ...rest },
-    label ? h('text', { content: label, fg: 'muted' }) : null,
+    label !== undefined
+      // The label's own cell stretches rather than a `spacer` child going in
+      // beside it: a child would be free but its gap would not, and a row
+      // sized exactly to its contents would truncate the gauge to fit a space.
+      ? h('text', { content: label, fg: 'muted', ...(spacer === true ? { flex: 1 } : {}) })
+      : spacer === true ? h('spacer', {}) : null,
     h('text', {
       content:
         theme.glyphs.progressFull.repeat(filled) +

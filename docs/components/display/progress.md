@@ -27,6 +27,7 @@ import { Progress } from '@textui/widgets';
 | `tone` | `'default' \| 'primary' \| 'secondary' \| 'accent' \| 'success' \| 'warning' \| 'danger' \| 'info' \| 'muted'` | `'primary'` |  |
 | `barWidth` | `number` |  |  |
 | `labelWidth` | `number` |  | A fixed gutter for the label, so a stack of bars starts at one column. Labels are their own width otherwise, which is right for one bar and wrong for three: "download", "index" and "working" each push their track to a different place and the group reads as three unrelated widgets. Nothing here can measure its siblings, so whoever stacks them says. |
+| `spacer` | `boolean` |  | Push the bar away from the label, to the right edge of the row. The label's cell stretches, so it stays at the left and the track ends up hard against the right - which is what makes a column of these read as a table rather than as a ragged stack. Different from `labelWidth`, which pads the *label* to a fixed gutter: use that when the bars should start at one column, and this when they should end at one. Needs a row wider than its contents to have any effect, so the caller has to have given it a width or a `flex`. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

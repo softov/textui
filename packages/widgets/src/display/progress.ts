@@ -20,6 +20,19 @@ export interface ProgressProps extends BoxProps {
    * Nothing here can measure its siblings, so whoever stacks them says.
    */
   labelWidth?: number;
+  /**
+   * Push the bar away from the label, to the right edge of the row.
+   *
+   * The label's cell stretches, so it stays at the left and
+   * the track ends up hard against the right - which is what makes a column of
+   * these read as a table rather than as a ragged stack.
+   *
+   * Different from `labelWidth`, which pads the *label* to a fixed gutter: use
+   * that when the bars should start at one column, and this when they should
+   * end at one. Needs a row wider than its contents to have any effect, so the
+   * caller has to have given it a width or a `flex`.
+   */
+  spacer?: boolean;
 }
 
 /**
@@ -29,7 +42,8 @@ export interface ProgressProps extends BoxProps {
 export const Progress = defineComponent<ProgressProps>('Progress', (props) => {
   const theme = useTheme();
   const {
-    value, total = 1, label, showValue = true, tone = 'primary', barWidth, labelWidth, ...rest
+    value, total = 1, label, showValue = true, tone = 'primary', barWidth, labelWidth,
+    spacer, ...rest
   } = props;
   const frame = useFrame(8);
 
@@ -57,13 +71,19 @@ export const Progress = defineComponent<ProgressProps>('Progress', (props) => {
   }
 
   return h('box', { role: 'progressbar', label, direction: 'row', gap: 1, ...rest },
-    label
+    label !== undefined
       ? h('text', {
           content: label,
           fg: 'muted',
           ...(labelWidth === undefined ? {} : { width: labelWidth, truncate: 'end' as const }),
+          // The label's own cell stretches, rather than a `spacer` child going
+          // in beside it. A child would be free but its *gap* would not: with
+          // `gap: 1` on the row, one more child is one more cell, so a row
+          // sized exactly to its contents would truncate the bar to make room
+          // for a space. Stretching what is already there costs nothing.
+          ...(spacer === true ? { flex: 1 } : {}),
         })
-      : null,
+      : spacer === true ? h('spacer', {}) : null,
     h('text', { content: bar, fg: TONE_COLOR[tone] }),
     showValue && value !== undefined
       ? h('text', { content: `${Math.round(ratio * 100)}%`, fg: 'muted' })

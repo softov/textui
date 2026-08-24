@@ -31,6 +31,7 @@ import { Gauge } from '@textui/widgets';
 | `thresholds` | `{ at: number; tone: 'default' \| 'primary' \| 'secondary' \| 'accent' \| 'success' \| 'warning' \| 'danger' \| 'info' \| 'muted' }[]` | `[]` | Bands that colour the reading by range. |
 | `format` | `(value: number) => string` |  |  |
 | `gaugeWidth` | `number` | `20` |  |
+| `spacer` | `boolean` |  | Push the gauge away from the label, to the right edge of the row. The label's cell stretches, so it stays at the left and the track ends up hard against the right - which is what makes a column of these read as a table rather than as a ragged stack. Needs a row wider than its contents to have any effect, so the caller has to have given it a width or a `flex`. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

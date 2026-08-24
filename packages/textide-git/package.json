@@ -1,6 +1,7 @@
 {
   "name": "@textui/textide-git",
   "version": "0.1.0",
+  "private": true,
   "description": "Git for textide: status, diff, stage, commit and branches, as a loadable extension",
   "keywords": [
     "terminal",
@@ -30,7 +31,8 @@
   "files": [
     "dist",
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "exports": {
     ".": {

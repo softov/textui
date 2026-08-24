@@ -1,6 +1,7 @@
 {
   "name": "@textui/documents",
   "version": "0.1.0",
+  "private": true,
   "description": "Document buffers, resource viewers and content adapters for TextUI",
   "keywords": [
     "terminal",
@@ -30,7 +31,8 @@
   "files": [
     "dist",
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "exports": {
     ".": {

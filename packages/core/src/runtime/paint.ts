@@ -32,10 +32,23 @@ import {
 // ------------------------------------------------------------ paint surface
 
 class Surface implements PaintSurface {
+  /**
+   * What a cell gets when the caller does not name a background.
+   *
+   * `COLOR_DEFAULT` for the painters that own the whole box, and the box's own
+   * resolved background for a `canvas`, which does not. A canvas is drawn
+   * *onto* something - a panel, a selected row, a themed surface - and a glyph
+   * written with only an `fg` was resetting the cell behind it to the
+   * terminal's default, punching a hole through whatever it was sitting on.
+   *
+   * A painter that really wants the terminal's own background can still say
+   * so, because `'default'` is a colour it can pass.
+   */
   constructor(
     private buffer: Buffer,
     readonly rect: Rect,
     private clipRect: Rect,
+    private defaultBg: PackedColor = COLOR_DEFAULT,
   ) {}
 
   private visible(ax: number, ay: number): boolean {
@@ -52,7 +65,7 @@ class Surface implements PaintSurface {
     this.buffer.put(
       ax, ay, char,
       style?.fg === undefined ? COLOR_DEFAULT : packColor(style.fg),
-      style?.bg === undefined ? COLOR_DEFAULT : packColor(style.bg),
+      style?.bg === undefined ? this.defaultBg : packColor(style.bg),
       style?.attrs ?? 0,
       style?.link,
     );
@@ -69,7 +82,7 @@ class Surface implements PaintSurface {
    */
   text(x: number, y: number, text: string, style?: CellStyle): number {
     const fg = style?.fg === undefined ? COLOR_DEFAULT : packColor(style.fg);
-    const bg = style?.bg === undefined ? COLOR_DEFAULT : packColor(style.bg);
+    const bg = style?.bg === undefined ? this.defaultBg : packColor(style.bg);
     const attrs = style?.attrs ?? 0;
     const link = style?.link;
     const oy = this.rect.y + y;
@@ -88,7 +101,7 @@ class Surface implements PaintSurface {
   fill(rect: Rect | undefined, char: string, style?: CellStyle): void {
     const r = rect ?? { x: 0, y: 0, width: this.rect.width, height: this.rect.height };
     const fg = style?.fg === undefined ? COLOR_DEFAULT : packColor(style.fg);
-    const bg = style?.bg === undefined ? COLOR_DEFAULT : packColor(style.bg);
+    const bg = style?.bg === undefined ? this.defaultBg : packColor(style.bg);
     const attrs = style?.attrs ?? 0;
     const link = style?.link;
 
@@ -114,7 +127,7 @@ class Surface implements PaintSurface {
       width: rect.width,
       height: rect.height,
     };
-    return new Surface(this.buffer, absolute, rectIntersect(this.clipRect, absolute));
+    return new Surface(this.buffer, absolute, rectIntersect(this.clipRect, absolute), this.defaultBg);
   }
 }
 
@@ -428,7 +441,7 @@ export function paintTree(
       paintText(surface, box, visual, instance, env);
       break;
     case 'canvas':
-      paintCanvas(buffer, box, instance, env, own);
+      paintCanvas(buffer, box, instance, env, own, visual.bg);
       break;
     default:
       break;
@@ -685,6 +698,8 @@ function paintCanvas(
   instance: Instance,
   env: PaintEnv,
   clip: Rect,
+  /** The box's own resolved background, which is what it is drawn onto. */
+  background: PackedColor,
 ): void {
   const draw = instance.props.draw;
   if (typeof draw !== 'function') return;
@@ -692,7 +707,7 @@ function paintCanvas(
   const area = box.content;
   if (area.width <= 0 || area.height <= 0) return;
 
-  const surface = new Surface(buffer, area, rectIntersect(clip, area));
+  const surface = new Surface(buffer, area, rectIntersect(clip, area), background);
   const ctx = createRenderContext(env.theme, env.capabilities, env.stateOf(instance));
   try {
     (draw as (s: PaintSurface, c: RenderContext) => void)(surface, ctx);

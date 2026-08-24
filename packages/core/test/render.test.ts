@@ -464,3 +464,43 @@ describe('wide characters', () => {
     expect(stringWidth(out)).toBe(6);
   });
 });
+
+/*
+ * A canvas is drawn *onto* something - a panel, a selected row, a themed
+ * surface - and a glyph written with only an `fg` was resetting the cell
+ * behind it to the terminal's default. On anything with a background that is a
+ * hole in the shape of the drawing.
+ */
+describe('what a canvas draws on', () => {
+  const draw = (style?: { bg?: string }) =>
+    renderOnce(
+      h(Box, { bg: '#102030', width: 4, height: 1 },
+        h(Canvas, {
+          width: 4,
+          height: 1,
+          draw: (surface: { put(x: number, y: number, c: string, s?: unknown): void }) => {
+            surface.put(0, 0, 'x', { fg: '#ffffff', ...(style ?? {}) });
+          },
+        })),
+      { width: 4, height: 1 },
+    );
+
+  it('keeps the background it is drawn on', () => {
+    const r = draw();
+    expect(r.buffer.get(0, 0)?.char).toBe('x');
+    // The glyph's cell, and the one beside it that nothing drew on: same
+    // background, because the canvas is on the box rather than through it.
+    expect(r.buffer.get(0, 0)?.bg).toEqual({ rgb: [16, 32, 48] });
+    expect(r.buffer.get(1, 0)?.bg).toEqual({ rgb: [16, 32, 48] });
+    r.dispose();
+  });
+
+  it('still lets a painter ask for the terminal default', () => {
+    // The escape hatch, and the reason this is a *default* rather than a rule:
+    // `'default'` is a colour, so a painter that means it can say so.
+    const r = draw({ bg: 'default' });
+    expect(r.buffer.get(0, 0)?.bg).toBe('default');
+    expect(r.buffer.get(1, 0)?.bg).toEqual({ rgb: [16, 32, 48] });
+    r.dispose();
+  });
+});

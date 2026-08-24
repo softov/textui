@@ -1,5 +1,5 @@
 import type { BorderSpec, BoxProps, StyleColor } from '@textui/core';
-import { defineComponent, h, useTheme } from '@textui/core';
+import { defineComponent, h, resolveEdges, useTheme } from '@textui/core';
 
 export interface PanelProps extends BoxProps {
   /** Section heading drawn into the border, or above a borderless panel. */
@@ -38,7 +38,32 @@ export interface PanelProps extends BoxProps {
  */
 export const Panel = defineComponent<PanelProps>('Panel', (props) => {
   const theme = useTheme();
-  const { title, subtitle, tone, meta, rightTitle, children, ...rest } = props;
+  const { title, subtitle, tone, meta, rightTitle, children, padding, ...rest } = props;
+
+  /*
+   * Padding is about the *body*, and a subtitle is not the body.
+   *
+   * It used to be one box: the border or the heading row, then the subtitle
+   * and the children together inside whatever padding the caller asked for. So
+   * `padding={1}` put a blank row between the title and its own caption and
+   * left the caption sitting directly on top of the content it was not part
+   * of - the subtitle read as the first line of the body. On a borderless
+   * panel it pushed the title down as well.
+   *
+   * Split, then: the horizontal padding stays outside and applies to
+   * everything, because a subtitle indented differently from the body under it
+   * is worse than either; the vertical padding wraps the children alone.
+   *
+   * Only when there is a subtitle to protect. Without one there is nothing to
+   * separate the padding from, and a panel that gained a box would be a panel
+   * whose layout changed for no reason.
+   */
+  const pad = resolveEdges(padding);
+  const split = subtitle !== undefined && (pad.top > 0 || pad.bottom > 0);
+  const outerPad = split ? { left: pad.left, right: pad.right } : padding;
+  const body = split
+    ? h('box', { direction: 'column', padding: { top: pad.top, bottom: pad.bottom } }, children)
+    : children;
   const border = props.border ?? theme.border;
   const borderless = border === 'none' || (typeof border === 'object' && border.style === 'none');
 
@@ -59,14 +84,22 @@ export const Panel = defineComponent<PanelProps>('Panel', (props) => {
       footer: meta,
       footerAlign: 'right',
       ...fill,
+      ...(outerPad === undefined ? {} : { padding: outerPad }),
       ...rest,
     },
-      subtitle ? h('text', { content: subtitle, fg: 'muted' }) : null,
-      children,
+      subtitle !== undefined ? h('text', { content: subtitle, fg: 'muted' }) : null,
+      body,
     );
   }
 
-  return h('box', { role: 'region', direction: 'column', ...fill, ...rest, border: 'none' },
+  return h('box', {
+    role: 'region',
+    direction: 'column',
+    ...fill,
+    ...(outerPad === undefined ? {} : { padding: outerPad }),
+    ...rest,
+    border: 'none',
+  },
     title
       ? h('box', { direction: 'row', gap: 1 },
           h('text', { content: title, bold: true, fg: tone ?? 'text', flex: 1, truncate: 'end' }),
@@ -75,7 +108,7 @@ export const Panel = defineComponent<PanelProps>('Panel', (props) => {
           rightTitle ? h('text', { content: rightTitle, fg: 'muted' }) : null,
           meta ? h('text', { content: meta, fg: 'muted' }) : null)
       : null,
-    subtitle ? h('text', { content: subtitle, fg: 'muted' }) : null,
-    children,
+    subtitle !== undefined ? h('text', { content: subtitle, fg: 'muted' }) : null,
+    body,
   );
 });

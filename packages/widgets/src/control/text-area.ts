@@ -15,8 +15,13 @@ export interface TextAreaProps extends BoxProps {
   value: string;
   onChange(value: string): void;
   /**
-   * Enter. A newline is `alt+enter` or `ctrl+j`, because in every place a
-   * multi-line field is worth having, enter already means "done".
+   * Enter. A newline is `alt+enter`, because in every place a multi-line field
+   * is worth having, enter already means "done".
+   *
+   * `ctrl+enter` works too, wherever the terminal can say it. Most cannot:
+   * without the kitty keyboard protocol ctrl+enter arrives as the same byte as
+   * enter, and so does `shift+enter` - which is why neither can be the one you
+   * document. Alt is an escape prefix and survives everywhere.
    *
    * Left off, enter inserts a newline like every other key does.
    */
@@ -181,14 +186,21 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
 
   const shown = lines.slice(first, first + rows);
 
+  // The row count fixes the *content*, on an inner box, and the outer one
+  // sizes to it.
+  //
+  // `height: rows` on the outer box meant the rows and the border had to share
+  // one allowance: `<TextArea border="single"/>` came out as a top border and
+  // nothing else, because one row is what the field asked for and the border
+  // spent it. Nobody saw it because a field without a border looks the same
+  // either way, and `TextInput` fixes no height at all.
   return h('box', {
     id: focus.id,
     role: 'textbox',
     label: placeholder,
     direction: 'column',
-    height: rows,
     ...rest,
-  },
+  }, h('box', { direction: 'column', height: rows },
     value === ''
       // The placeholder stays while the field is focused and empty: it is the
       // only thing on screen saying what enter will do, and hiding it when the
@@ -209,5 +221,5 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
           h('text', { content: lit ? theme.glyphs.caret : ' ', fg: caretTone ?? 'cursor' }),
           h('text', { content: cells.slice(caretColumn).join(''), flex: 1, truncate: 'end' }));
       }),
-  );
+  ));
 });

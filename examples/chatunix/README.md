@@ -15,6 +15,7 @@ JSON-RPC notifications, one per line.
 |---|---|
 | `enter` | Send |
 | `alt+enter` | Newline - the field is a `TextArea`, so a message can be a paragraph |
+| `ctrl+enter` | The same, where the terminal can say it - see below |
 | `pageup` / `pagedown` | Show more or fewer lines |
 | `ctrl+c` | Leave |
 
@@ -44,6 +45,30 @@ it. Being refused is the signal to unlink and host.
 **Echo the sender through the room.** Your own message appears when the room
 broadcasts it back, not when you press enter - so a message that did not arrive
 never looks as though it did.
+
+## Why `alt+enter` and not `ctrl+enter`
+
+Both work. Only one of them works everywhere.
+
+Without the kitty keyboard protocol, ctrl+enter arrives as the same byte as
+enter - and so does shift+enter - so nothing downstream can tell them apart.
+Under the protocol they are distinct:
+
+```
+enter (CR)                          -> enter
+LF, what many send for ctrl+enter   -> enter
+kitty ctrl+enter                    -> ctrl+enter
+```
+
+Alt is an escape prefix, and survives terminals that know nothing else. So
+alt+enter is the one worth writing on the screen.
+
+## A long message goes on its own line
+
+Not for looks. A wrapping text beside a rigid sibling in a row is measured
+against the whole width and then laid out with a share of it, so it comes out a
+line or two short and silently cut. On its own line there is nothing to share
+with, and the measurement is the one it gets.
 
 ## Reading a socket
 

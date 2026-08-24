@@ -85,10 +85,18 @@ const Chat = () => {
     h('box', { direction: 'column', flex: 1, border: 'single', padding: [0, 1] },
       ...(shown.length === 0
         ? [h('text', { dim: true, content: 'Nobody has said anything yet.' })]
-        : shown.map((m, i) => h('box', { key: `${m.at}-${i}`, direction: 'row', gap: 1 },
-            h('text', { dim: true, content: clock(m.at) }),
-            h('text', { bold: true, fg: toneFor(m.from), content: m.from }),
-            h('text', { content: m.text }),
+        : shown.map((m, i) => h('box', { key: `${m.at}-${i}`, direction: 'column' },
+            h('box', { direction: 'row', gap: 1 },
+              h('text', { dim: true, content: clock(m.at) }),
+              h('text', { bold: true, fg: toneFor(m.from), content: m.from }),
+            ),
+            // The message gets its own line, at the full width, because that
+            // is the only shape that wraps correctly today: a wrapping text
+            // beside a rigid sibling in a row is measured at the whole width
+            // and then laid out narrower, so it comes out one or two lines
+            // short and silently cut. On its own line there is nothing to
+            // share the width with, so measured and final agree.
+            h('text', { content: m.text, wrap: 'word' }),
           ))),
     ),
     // `TextArea`, not `TextInput`: a message is a paragraph often enough that
@@ -106,7 +114,7 @@ const Chat = () => {
     }),
     h('text', {
       dim: true,
-      content: 'enter  send      alt+enter  newline      pageup / pagedown  resize      ctrl+c  leave',
+      content: 'enter  send      alt+enter  newline      pageup/pagedown  resize      ctrl+c  leave',
     }),
   );
 };

@@ -1,17 +1,12 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
     "composite": false,
     "declaration": false,
     "declarationMap": false,
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "jsxImportSource": "textui"
   },
-  "include": [
-    "*.ts",
-    "*.tsx"
-  ]
+  "include": ["**/*.ts", "**/*.tsx"]
 }

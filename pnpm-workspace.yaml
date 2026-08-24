@@ -2,6 +2,7 @@ packages:
   - packages/*
   - components
   - playground
+  - scratch
   - examples/*
   - scripts/docs/snippets
 

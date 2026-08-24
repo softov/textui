@@ -253,6 +253,15 @@ importers:
         specifier: ^0.25.0
         version: 0.25.12
 
+  scratch:
+    dependencies:
+      '@textui/widgets':
+        specifier: workspace:*
+        version: link:../packages/widgets
+      textui:
+        specifier: workspace:*
+        version: link:../packages/facade
+
   scripts/docs/snippets:
     dependencies:
       '@textui/cli':

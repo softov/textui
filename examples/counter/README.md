@@ -5,7 +5,7 @@ Keys, state, and a timer you can pause. The same program twice: once in plain
 
 ```bash
 node index.ts        # or: bun index.ts
-bun index.tsx        # the same program, in JSX
+bun counter.tsx      # the same program, in JSX
 ```
 
 Both render the same screen. Neither is built.
@@ -24,7 +24,7 @@ Both render the same screen. Neither is built.
 already in the form the runtime reads. Node has stripped types by default since
 23.6, which makes it a file node runs with nothing in between.
 
-`index.tsx` needs bun, and the reason is not a missing flag. **Node strips
+`counter.tsx` needs bun, and the reason is not a missing flag. **Node strips
 types; it does not transform syntax.** An annotation can be deleted; `<Box/>`
 has to *become* a call. Node rejects the extension outright:
 
@@ -43,6 +43,19 @@ The whole setup for the JSX side is one line of `tsconfig.json`:
 
 Pointed at `textui` rather than `@textui/core`, so one install is enough - the
 facade re-exports the JSX runtime for exactly this.
+
+**The JSX file is not called `index.tsx`, and it cannot be.** TypeScript
+expands `include` with an extension preference, and `.ts` beats `.tsx` for the
+same basename - so an `index.ts` beside an `index.tsx` silently drops the
+`.tsx` from the project. No error, no warning: `tsc` reports success without
+ever reading it, and the editor, finding the file in no project at all, falls
+back to its implicit one and compiles the JSX as React:
+
+```
+This JSX tag requires the module path 'react/jsx-runtime' to exist
+```
+
+Two files, two basenames.
 
 ## What it is showing
 

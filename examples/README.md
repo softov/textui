@@ -21,7 +21,7 @@ by default since 23.6.
 
 ## Can they use JSX?
 
-Under bun, yes, and with no build - [`counter/index.tsx`](counter/index.tsx) is
+Under bun, yes, and with no build - [`counter/counter.tsx`](counter/counter.tsx) is
 the same program as [`counter/index.ts`](counter/index.ts), in JSX. Under node,
 no, and the reason is worth knowing because it is not a missing flag.
 

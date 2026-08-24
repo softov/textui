@@ -17,3 +17,10 @@ brief/
 # repo's happens to be somebody's editor state.
 /.textide.json
 /packages/textide/.textide.json
+
+# Somewhere to paste a snippet and have the editor typecheck it properly. The
+# config is committed so the folder works; whatever gets pasted into it is not.
+/scratch/*
+!/scratch/tsconfig.json
+!/scratch/package.json
+!/scratch/README.md

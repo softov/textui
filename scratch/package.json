@@ -1,0 +1,11 @@
+{
+  "name": "@textui/scratch",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Somewhere to paste a snippet and have the editor understand it. Not committed.",
+  "dependencies": {
+    "textui": "workspace:*",
+    "@textui/widgets": "workspace:*"
+  }
+}

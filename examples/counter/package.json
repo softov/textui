@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node index.ts",
     "start:bun": "bun index.ts",
-    "start:jsx": "bun index.tsx",
+    "start:jsx": "bun counter.tsx",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -57,6 +57,12 @@ export interface SvgOptions {
    * A terminal has no answer for this - "default" means whatever the emulator
    * is configured with - so a picture has to choose, and the honest choice is
    * the caller's. These are what the theme would call `background` and `text`.
+   *
+   * Passing `default` here is the one thing that cannot work, and a theme can
+   * hand it over without meaning to: `mono` is *made* of `default`, so
+   * `theme.colors.canvas` and `theme.colors.text` are both it. Either one is
+   * replaced with the exporter's own, because a picture with no ink is a
+   * rectangle.
    */
   background?: Color;
   foreground?: Color;
@@ -77,6 +83,8 @@ interface Run {
   text: string;
   fg: number;
   attrs: number;
+  /** Drawn with the box and block glyphs rather than with letters. */
+  graphic: boolean;
 }
 
 const DEFAULTS = {
@@ -109,8 +117,8 @@ export function bufferToSvg(buffer: CellBuffer, options: SvgOptions = {}): strin
   // other colour rather than as a special case per attribute. `Color` rather
   // than a hex string because that is what a theme holds: `theme.colors.canvas`
   // goes straight in.
-  const paperPacked = packColor(options.background ?? DEFAULTS.background);
-  const inkPacked = packColor(options.foreground ?? DEFAULTS.foreground);
+  const paperPacked = given(options.background, DEFAULTS.background);
+  const inkPacked = given(options.foreground, DEFAULTS.foreground);
   const paper = toHex(paperPacked);
   const reduce = (c: number): number => (depth === undefined ? c : downsample(c, depth));
 
@@ -154,9 +162,18 @@ export function bufferToSvg(buffer: CellBuffer, options: SvgOptions = {}): strin
         + (decoration !== '' ? ` text-decoration="${decoration}"` : '')
         // The run is told how wide it is, in columns, so the grid holds even
         // where the reader's monospace font has a different advance width from
-        // the one `cellWidth` was picked for. `spacing` rather than
-        // `spacingAndGlyphs`, which would stretch the letters themselves.
-        + ` textLength="${run.columns * cw}" lengthAdjust="spacing"`
+        // the one `cellWidth` was picked for.
+        //
+        // Which of the two adjustments only matters when the font is already
+        // wrong - where the run's natural width is the right one, both are no
+        // ops - and then the two kinds of run want opposite things. Letters
+        // want `spacing`: looser tracking is readable and squashed letterforms
+        // are not. A bar or a border wants `spacingAndGlyphs`: spacing a run of
+        // blocks apart is how a solid bar comes out striped and a box's sides
+        // stop meeting its corners, and a block stretched to its cell is still
+        // a block.
+        + ` textLength="${run.columns * cw}"`
+        + ` lengthAdjust="${run.graphic ? 'spacingAndGlyphs' : 'spacing'}"`
         // Leading spaces inside a run are part of the picture, and the default
         // is to collapse them.
         + ` xml:space="preserve">${escape(run.text)}</text>`,
@@ -166,6 +183,19 @@ export function bufferToSvg(buffer: CellBuffer, options: SvgOptions = {}): strin
 
   out.push('</svg>');
   return out.join('\n');
+}
+
+/**
+ * A colour the picture can actually use.
+ *
+ * `toHex` has nothing to return for `default` and returns black, so a `default`
+ * that reaches the file makes paper and ink the same colour and the whole
+ * frame disappears into the backdrop. That is not a colour the caller chose; it
+ * is the caller having no colour to give, which is what the fallback is for.
+ */
+function given(color: Color | undefined, fallback: Color): number {
+  const packed = packColor(color ?? fallback);
+  return packed === COLOR_DEFAULT ? packColor(fallback) : packed;
 }
 
 /**
@@ -205,22 +235,50 @@ function backgroundRuns(
       continue;
     }
 
+    // Reduced first, resolved after. A shallower terminal shrinks the palette
+    // it was *given*; a cell left at the terminal's own colour has nothing to
+    // shrink and still comes out as the emulator's. The other order asks
+    // `downsample` for the nearest palette entry to paper and ink, and at depth
+    // zero it hands back `default` again - which is how a picture ends up as
+    // one black rectangle.
     const back = cell
-      ? reduce(colorsOf(packColor(cell.fg), packColor(cell.bg), cell.attrs, paper, ink).bg)
+      ? colorsOf(reduce(packColor(cell.fg)), reduce(packColor(cell.bg)), cell.attrs, paper, ink).bg
       : paper;
 
     // Nothing to draw where the cell is the same colour as the backdrop, which
     // is most of most screens.
     if (back === paper) { open = null; continue; }
     if (open && open.fg === back && open.x + open.columns === x) { open.columns += 1; continue; }
-    open = { x, columns: 1, text: '', fg: back, attrs: 0 };
+    open = { x, columns: 1, text: '', fg: back, attrs: 0, graphic: false };
     runs.push(open);
   }
 
   return runs;
 }
 
-/** Text runs for one row, coalesced by colour and attributes. */
+/**
+ * Whether a cell is drawn with the drawing characters rather than with letters.
+ *
+ * The split is where a monospace font stops being certain to have the glyph.
+ * Below U+2000 is text - ASCII, Latin, the punctuation any font ships with -
+ * and above it is the box drawing, the block elements, the braille the charts
+ * are made of, the arrows and the geometric shapes. A font that lacks those
+ * substitutes another one for them, and a substitute is under no obligation to
+ * use the same advance width, which is the whole reason a run must not span
+ * both: `textLength` corrects a run as a unit, so one wrong-width glyph in a
+ * run of letters pushes every letter after it off the grid.
+ *
+ * The `mono` theme is where this shows, because it is where it is worst. Every
+ * other theme colours its bars and its borders differently from its text, and
+ * a colour change already ends a run - so the split was there by accident.
+ * Give a whole screen one colour and each row coalesces into a single run of
+ * letters and blocks together, corrected as one.
+ */
+function isGraphic(char: string): boolean {
+  return (char.codePointAt(0) ?? 0x20) >= 0x2000;
+}
+
+/** Text runs for one row, coalesced by colour, attributes, and kind. */
 function glyphRuns(
   buffer: CellBuffer, y: number, paper: number, ink: number,
   reduce: (c: number) => number,
@@ -236,22 +294,25 @@ function glyphRuns(
     }
     if (!cell) { open = null; continue; }
 
-    const { fg } = colorsOf(packColor(cell.fg), packColor(cell.bg), cell.attrs, paper, ink);
-    const front = reduce(fg);
+    const { fg: front } = colorsOf(
+      reduce(packColor(cell.fg)), reduce(packColor(cell.bg)), cell.attrs, paper, ink,
+    );
     // `hidden` is a cell whose glyph is not drawn - a masked field. Its
     // background still is, which is why this is here and not in `colorsOf`.
     const char = (cell.attrs & ATTR_HIDDEN) !== 0 ? ' ' : cell.char;
+    const graphic = isGraphic(char);
     // Only the attributes that change how a glyph is drawn. `blink` is not one
     // of them: a still frame cannot blink, and an SMIL animation would make
     // the file un-diffable for a flourish nobody asked for.
     const attrs = cell.attrs & (ATTR_BOLD | ATTR_ITALIC | ATTR_UNDERLINE | ATTR_STRIKE);
 
-    if (open && open.fg === front && open.attrs === attrs && open.x + open.columns === x) {
+    if (open && open.fg === front && open.attrs === attrs && open.graphic === graphic
+        && open.x + open.columns === x) {
       open.text += char;
       open.columns += 1;
       continue;
     }
-    open = { x, columns: 1, text: char, fg: front, attrs };
+    open = { x, columns: 1, text: char, fg: front, attrs, graphic };
     runs.push(open);
   }
 

@@ -131,6 +131,55 @@ describe('a frame as an SVG', () => {
     expect(svg).toContain('textLength="32" lengthAdjust="spacing"');
   });
 
+  it('gives a theme that has no colours of its own a pair it can use', () => {
+    const b = buffer(6, 1);
+    put(b, 0, 0, 'mono');
+    // `mono` is made of `default` - every colour in it is - so a caller doing
+    // the honest thing and passing the theme's own canvas and text hands over
+    // two non-answers. Taken at face value they both come out black, and the
+    // picture is a rectangle with nothing on it.
+    const svg = bufferToSvg(b, { background: 'default', foreground: 'default' });
+    const fills = [...svg.matchAll(/fill="(#[0-9a-f]{6})"/g)].map((m) => m[1]);
+    expect(new Set(fills).size).toBeGreaterThan(1);
+    expect(fills).not.toContain('#000000');
+  });
+
+  it('reduces the cell, not the colours the picture supplies', () => {
+    const b = buffer(6, 1);
+    put(b, 0, 0, 'ab', { fg: '#3fb950' });
+    // Depth zero is "no colour at all", and a cell with no colour is drawn in
+    // the terminal's own - which for a picture is the ink it was given. Asking
+    // `downsample` to reduce the resolved colour instead hands back `default`
+    // a second time, with nothing left to resolve it against.
+    const svg = bufferToSvg(b, {
+      colorDepth: 0, background: '#0d1117', foreground: '#c9d1d9',
+    });
+    expect(svg).toContain('fill="#c9d1d9"');
+    expect(svg).not.toContain('fill="#000000"');
+  });
+
+  it('never runs letters and block glyphs together', () => {
+    const b = buffer(20, 1);
+    put(b, 0, 0, 'cpu ████ 40%');
+    const runs = [...bufferToSvg(b, { cellWidth: 8 }).matchAll(/<text[^>]*>([^<]*)<\/text>/g)]
+      .map((m) => m[1]);
+    // One `textLength` corrects a run as a unit, so a block glyph the reader's
+    // font substitutes at another width drags every letter beside it off the
+    // grid. Three runs, each starting where its column does.
+    expect(runs).toEqual(['cpu ', '████', ' 40%']);
+  });
+
+  it('stretches a bar to its cells and only spaces letters apart', () => {
+    const b = buffer(12, 1);
+    put(b, 0, 0, 'ok ██');
+    const svg = bufferToSvg(b, { cellWidth: 8 });
+    // Spacing a run of blocks apart is how a solid bar comes out striped, and
+    // a block stretched to fill its cell is still a block. A squashed letter
+    // is not still a letter, which is why the two are not adjusted alike.
+    expect(svg).toContain('textLength="24" lengthAdjust="spacing"');
+    expect(svg).toContain('textLength="16" lengthAdjust="spacingAndGlyphs"');
+  });
+
   it('reduces colour only when asked to', () => {
     const b = buffer(4, 1);
     put(b, 0, 0, 'ab', { fg: '#123456' });

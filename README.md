@@ -117,6 +117,11 @@ Here's what TextUI actually looks like and what it can do.
   <img src="./media/print-theme-workbench.svg" alt="Terminal UI Workbench" />
 </p>
 
+### theme `mono`
+<p align="center">
+  <img src="./media/print-theme-mono.svg" alt="Terminal UI Mono" />
+</p>
+
 Now let's break down how it's built.
 
 ## Development

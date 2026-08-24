@@ -32,6 +32,12 @@ import { ZERO_EDGES } from '../types/geometry.js';
  * makes it useful for reports, `--help` output, generated documentation and
  * tests. A component that only works interactively is a component that cannot
  * be tested cheaply, so this path is not an afterthought.
+ *
+ * `renderOnce`, not `render`, because the difference that matters is lifetime.
+ * This draws a frame and hands it back; `render` mounts an application onto a
+ * terminal and keeps running. Two functions called `render` where one returns
+ * a string and the other takes over your screen is a trap, not a convenience -
+ * and every other library's `render` is the second one.
  */
 
 export interface StaticRenderOptions {
@@ -170,7 +176,7 @@ function rootBoxFor(children: LayoutBox[]): LayoutBox {
   };
 }
 
-export function render(
+export function renderOnce(
   node: ComponentNode,
   options: StaticRenderOptions = {},
 ): StaticRenderResult {
@@ -252,7 +258,7 @@ export function render(
 
 /** Render to plain text. The shortest path from a component to a string. */
 export function renderToString(node: ComponentNode, options: StaticRenderOptions = {}): string {
-  const result = render(node, options);
+  const result = renderOnce(node, options);
   try {
     return result.text;
   } finally {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, renderToString } from '../src/render/static.js';
+import { renderOnce, renderToString } from '../src/render/static.js';
 import { h, defineComponent, toSerializable } from '../src/jsx/factory.js';
 import { Box, Text, Canvas, Spacer } from '../src/ui/primitives.js';
 import type { ComponentNode } from '../src/types/graph.js';
@@ -346,7 +346,7 @@ describe('missing components', () => {
 
 describe('auto height', () => {
   it('sizes the buffer to the content', () => {
-    const result = render(
+    const result = renderOnce(
       { component: 'box', children: [
         { component: 'text', content: 'a' },
         { component: 'text', content: 'b' },

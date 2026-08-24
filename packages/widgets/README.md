@@ -36,7 +36,7 @@ const app = createApp({ terminal, root, onBoot: registerBuiltins });
 
 It registers the catalog, the surface layouts and the built-in shells in one
 call, and returns one `Disposable` that takes all of it back out. For a static
-render, `render(node, { components: CATALOG })` is the same idea.
+render, `renderOnce(node, { components: CATALOG })` is the same idea.
 
 ## What is here
 

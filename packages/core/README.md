@@ -52,7 +52,7 @@ in JSON, a template renderer, or an extension. `render` takes those through its
 |---|---|
 | Store | One reactive tree addressed by path. A prop can be `{ path: '$/x' }` and the runtime resolves it and redraws when it changes |
 | Registries | Components, commands, keybindings, themes, shells, surfaces, resources - typed, and disposable |
-| Renderer | Diffs cells rather than redrawing frames. `render` and `renderToString` do the same thing once, with no terminal |
+| Renderer | Diffs cells rather than redrawing frames. `renderOnce` and `renderToString` draw one frame with no terminal at all |
 | Hooks | `useState`, `useEffect`, `useStore`, `useFocus`, `useInterval` and thirty more - module imports, not a second argument |
 | Layers | Dialogs, palettes, toasts and tooltips are entries on five planes, so focus trapping and dismissal are decided once |
 

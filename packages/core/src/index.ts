@@ -27,7 +27,7 @@ export type { Frame, Run } from './render/diff.js';
 export * from './render/color.js';
 export { layout, measureBox, resolveEdges } from './render/layout.js';
 export type { LayoutBox } from './render/layout.js';
-export { render, renderToString, createStaticRuntime } from './render/static.js';
+export { renderOnce, renderToString, createStaticRuntime } from './render/static.js';
 export type { StaticRenderOptions, StaticRenderResult } from './render/static.js';
 
 // Runtime

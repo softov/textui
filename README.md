@@ -1,5 +1,10 @@
 # TextUI
 
+[![npm](https://img.shields.io/npm/v/@textui/kit?label=%40textui%2Fkit)](https://www.npmjs.com/package/@textui/kit)
+[![node](https://img.shields.io/node/v/@textui/kit)](https://nodejs.org)
+[![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)](#no-dependencies)
+[![license](https://img.shields.io/npm/l/@textui/kit)](LICENSE)
+
 A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is one way to write them.
 
 ```bash
@@ -106,14 +111,16 @@ full argument, and what is still in the way, is in
 
 ## Packages
 
-| Package | What it is |
-| --- | --- |
-| [`@textui/kit`](packages/facade) | One install: the runtime, a terminal, and `render`. Start here |
-| [`@textui/core`](packages/core) | The runtime: store, registries, renderer, hooks, the four host primitives |
-| [`@textui/widgets`](packages/widgets) | The component catalog: layout, display, controls, data, overlays, charts |
-| [`@textui/terminal`](packages/terminal) | Terminal adapters, capability detection, ANSI writing, input decoding |
-| [`@textui/testing`](packages/testing) | Headless harness: semantic queries, input, resizing, time |
-| [`@textui/cli`](packages/cli) | `textui init / add / create / doctor`, and primitives for your own CLI |
+| Package | What it is | |
+| --- | --- | --- |
+| [`@textui/kit`](https://www.npmjs.com/package/@textui/kit) | One install: the runtime, a terminal, and `render`. Start here | [source](packages/facade) |
+| [`@textui/core`](https://www.npmjs.com/package/@textui/core) | The runtime: store, registries, renderer, hooks, the four host primitives | [source](packages/core) |
+| [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets) | The component catalog: layout, display, controls, data, overlays, charts | [source](packages/widgets) |
+| [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal) | Terminal adapters, capability detection, ANSI writing, input decoding | [source](packages/terminal) |
+| [`@textui/testing`](https://www.npmjs.com/package/@textui/testing) | Headless harness: semantic queries, input, resizing, time | [source](packages/testing) |
+| [`@textui/cli`](https://www.npmjs.com/package/@textui/cli) | `textui init / add / create / doctor`, and primitives for your own CLI | [source](packages/cli) |
+
+All six are published at the same version and depend only on each other.
 
 Also in the repository, not yet published:
 

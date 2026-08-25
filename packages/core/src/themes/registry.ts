@@ -2,7 +2,7 @@ import type {
   ResolvedTheme, ThemeDefinition, ThemeGlyphs, ThemeRegistry, ThemeSpacing,
 } from '../types/theme.js';
 import type { Color } from '../types/cells.js';
-import type { BorderChars, BorderStyle, ColorToken, CursorStyle, Density, DividerChars, DividerStyle, StyleColor } from '../types/style.js';
+import type { BorderChars, BorderStyle, ColorToken, CursorStyle, Density, DividerChars, DividerStyle, StyleColor, TableRules } from '../types/style.js';
 import type { Style } from '../types/style.js';
 import type { SyntaxScope } from '../types/syntax.js';
 import type { TerminalCapabilities } from '../types/capabilities.js';
@@ -120,6 +120,10 @@ export class Themes implements ThemeRegistry {
     // Undefined means "leave the terminal's own setting alone", which is the
     // right default: a theme that says nothing should not restyle the caret.
     let cursorStyle: CursorStyle | undefined;
+    // The quiet one. A rule between every pair of rows is right for a table of
+    // few, long rows and noise on a table of twenty short ones, so a theme
+    // opts in rather than out.
+    let tableRules: TableRules = 'header';
     let density: Density = 'normal';
     const components: Record<string, Record<string, Style>> = {};
     let syntaxOverrides: Partial<Record<SyntaxScope, StyleColor>> = {};
@@ -149,6 +153,7 @@ export class Themes implements ThemeRegistry {
       if (def.border) border = def.border;
       if (def.divider) divider = def.divider;
       if (def.cursor) cursorStyle = def.cursor;
+      if (def.tableRules) tableRules = def.tableRules;
       if (def.density) density = def.density;
       for (const [name, variants] of Object.entries(def.components ?? {})) {
         components[name] = { ...components[name], ...variants };
@@ -191,6 +196,7 @@ export class Themes implements ThemeRegistry {
       border,
       divider,
       cursor: cursorStyle,
+      tableRules,
       density,
       components,
       syntax,

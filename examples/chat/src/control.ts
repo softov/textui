@@ -169,10 +169,30 @@ export function createController(
           type: 'string' as const,
           required: true,
           description: property.description ?? `Choose ${property.title.toLowerCase()}`,
+          /*
+           * What it is set to now, so the picker opens on that row.
+           *
+           * Read through a getter rather than captured: `offer` runs when the
+           * schema arrives and the value changes every time one of these is
+           * answered, so a value read at registration time is the answer that
+           * was in force when the host first replied.
+           */
+          get default(): string | undefined {
+            const values = app.store.get<Record<string, string>>(SETTINGS) ?? {};
+            return values[property.key];
+          },
           // The host's own words, all three of them. "Auto Mode" and "Plan
           // Mode" are two words apart and mean entirely different things; the
           // sentence under each is what tells them apart, and it is the
           // difference between picking and guessing.
+          //
+          // Which is why the sentence gets a line of its own as soon as one of
+          // the values has one. Beside the label it shares the width with it,
+          // and a column of "Every tool call is c…" / "File edits run; com…"
+          // truncates away the exact part the reader is choosing on.
+          ...(property.values.some((value) => value.description)
+            ? { descriptions: 'below' as const }
+            : {}),
           choices: () => property.values.map((value) => ({
             value: value.value,
             label: value.label,
@@ -490,7 +510,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
     {
       id: 'app.palette',
       title: 'Command Palette',
-      category: 'Go',
+      category: 'Navigation',
       slots: [],
       run: () => {
         app.layers.open({
@@ -511,7 +531,8 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
     {
       id: 'go.back',
       title: 'Back',
-      category: 'Go',
+      category: 'Navigation',
+      description: 'Return to the previous screen',
       slots: ['palette'],
       run: () => {
         // The composer is the root, so there is nothing under it to pop to -
@@ -524,21 +545,24 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
     {
       id: 'go.sessions',
       title: 'Sessions',
-      category: 'Go',
+      category: 'Screens',
+      description: 'List all sessions',
       slots: ['palette'],
       run: () => toSessions(),
     },
     {
       id: 'go.new',
       title: 'New session',
-      category: 'Go',
+      category: 'Screens',
+      description: 'Start a new conversation',
       slots: ['palette'],
       run: () => { app.screens.reset('new'); app.focus.focus('chat.composer'); },
     },
     {
       id: 'go.changes',
       title: 'What this session changed',
-      category: 'Go',
+      category: 'Screens',
+      description: 'Show the files',
       slots: ['palette'],
       when: `${OPEN}`,
       run: () => app.screens.push('changes'),
@@ -546,12 +570,20 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
     {
       id: 'go.settings',
       title: 'Session settings',
-      category: 'Go',
+      category: 'Screens',
+      description: 'Settings for this session',
       slots: ['palette'],
       when: `${OPEN}`,
       run: () => app.screens.push('settings'),
     },
-    { id: 'go.hosts', title: 'Hosts', category: 'Go', slots: ['palette'], run: () => app.screens.push('hosts') },
+    {
+      id: 'go.hosts',
+      title: 'Hosts',
+      category: 'Screens',
+      description: 'Manage all hosts',
+      slots: ['palette'],
+      run: () => app.screens.push('hosts')
+    },
 
     // Appearance is a registration, not a rewrite. The same graph is mounted
     // under whichever theme and shell are chosen, which is the claim the
@@ -560,6 +592,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'view.theme',
       title: 'Theme',
       category: 'View',
+      description: 'Change the colors and shapes',
       slots: ['palette'],
       // The command says what it needs and the palette asks. Wearing it while
       // the highlight moves is what makes a theme choosable at all: the names
@@ -589,6 +622,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'view.shell',
       title: 'Layout',
       category: 'View',
+      description: 'Change the layout and controls',
       slots: ['palette'],
       args: [{
         name: 'id',
@@ -618,6 +652,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'compose.harness',
       title: 'Harness',
       category: 'Compose',
+      description: 'Select the agent harness',
       slots: ['palette'],
       // Fixed once a session exists: it is the process the conversation is
       // running in, and a chip offering to change it would be offering a lie.
@@ -642,6 +677,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'compose.model',
       title: 'Model',
       category: 'Compose',
+      description: 'Select the model',
       slots: ['palette'],
       args: [{
         name: 'id',
@@ -661,6 +697,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'compose.workspace',
       title: 'Workspace',
       category: 'Compose',
+      description: 'Select the workspace',
       slots: ['palette'],
       when: `!${OPEN}`,
       // No `choices`, so the palette asks for it as text - the same overlay,
@@ -701,6 +738,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'session.open',
       title: 'Open session',
       category: 'Session',
+      description: 'Show the conversation',
       slots: ['palette'],
       run: (args: Record<string, unknown>) => {
         const uri = (typeof args.uri === 'string' ? args.uri : null) ?? selected();
@@ -714,6 +752,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'session.new',
       title: 'New session',
       category: 'Session',
+      description: 'Start a new conversation',
       slots: ['palette'],
       run: () => {
         // Nothing open, so the control row describes a session that does not
@@ -727,6 +766,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'session.refresh',
       title: 'Refresh the catalogue',
       category: 'Session',
+      description: 'Reload list from the host',
       slots: ['palette'],
       keepOpen: true,
       run: () => void controller.refresh(),
@@ -735,6 +775,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'session.archive',
       title: 'Archive / unarchive',
       category: 'Session',
+      description: 'Hide or show this session',
       slots: ['palette'],
       run: () => {
         const uri = target();
@@ -751,6 +792,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'session.read',
       title: 'Mark read / unread',
       category: 'Session',
+      description: 'Mark this session read or unread',
       slots: ['palette'],
       run: () => {
         const uri = target();
@@ -763,6 +805,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'session.dispose',
       title: 'Dispose session',
       category: 'Session',
+      description: 'Delete this session',
       slots: ['palette'],
       run: async () => {
         const uri = target();
@@ -783,6 +826,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'session.toggleArchived',
       title: 'Show archived sessions',
       category: 'Session',
+      description: 'List archived sessions',
       slots: ['palette'],
       keepOpen: true,
       run: () => app.store.set(ARCHIVED, !(app.store.get<boolean>(ARCHIVED) ?? false)),
@@ -792,6 +836,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'chat.stop',
       title: 'Stop the turn',
       category: 'Chat',
+      description: 'Force session to stop running',
       slots: ['palette'],
       // On the screen that is showing the turn. A session left open behind
       // you keeps its status - a blocked one reads 24 for ever - so a clause
@@ -805,15 +850,24 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'chat.approve',
       title: 'Approve what the agent is waiting on',
       category: 'Chat',
+      description: 'Approve the tool call ',
       slots: ['palette'],
       run: (args: Record<string, unknown>) => controller.approve(typeof args.option === 'string' ? args.option : undefined),
       args: [{ name: 'option', type: 'string' as const }],
     },
-    { id: 'chat.deny', title: 'Deny it', category: 'Chat', slots: ['palette'], run: () => controller.deny() },
+    {
+      id: 'chat.deny',
+      title: 'Deny it',
+      category: 'Chat',
+      description: 'Deny the tool call',
+      slots: ['palette'],
+      run: () => controller.deny()
+    },
     {
       id: 'chat.send',
       title: 'Send a message',
       category: 'Chat',
+      description: 'Send a message',
       slots: ['palette'],
       args: [{ name: 'text', type: 'string' as const, required: true, description: 'What to say' }],
       run: (args: Record<string, unknown>) => controller.send(String(args.text ?? '')),
@@ -822,6 +876,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'chat.focusComposer',
       title: 'Write a message',
       category: 'Chat',
+      description: 'Focus the composer',
       slots: ['palette'],
       run: () => app.focus.focus('chat.composer'),
     },
@@ -829,6 +884,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'session.filter',
       title: 'Filter the catalogue',
       category: 'Session',
+      description: 'Filter the catalogue',
       slots: ['palette'],
       run: () => app.focus.focus('chat.filter'),
     },
@@ -836,6 +892,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'chat.focusTranscript',
       title: 'Read the transcript',
       category: 'Chat',
+      description: 'Focus the transcript',
       slots: ['palette'],
       run: () => app.focus.focus('chat.transcript'),
     },
@@ -843,6 +900,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'chat.clearQueue',
       title: 'Drop queued messages',
       category: 'Chat',
+      description: 'Drop queued messages',
       slots: ['palette'],
       when: `${QUEUE}`,
       run: () => app.store.set(QUEUE, []),
@@ -851,6 +909,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'chat.expand',
       title: 'Expand / collapse the selected block',
       category: 'Chat',
+      description: 'Expand / collapse the selected block',
       slots: [],
       run: (args: Record<string, unknown>) => {
         const id = String(args.id ?? '');
@@ -864,6 +923,7 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       id: 'chat.running',
       title: 'Is a turn running',
       category: 'Chat',
+      description: 'Is a turn running',
       slots: [],
       run: () => running(),
     },

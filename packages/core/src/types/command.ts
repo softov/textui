@@ -43,6 +43,16 @@ export interface ArgSpec {
   /** Fixed choices, or a resolver for a picker. */
   choices?: ArgChoices | (() => Promise<ArgChoices> | ArgChoices);
   default?: unknown;
+  /**
+   * How the picker should lay out each choice's `description`.
+   *
+   * The argument is what knows: a list of branch names has nothing to say
+   * under each one, and a list of approval modes is *only* told apart by what
+   * is under each one. `below` gives every choice a second line, which is the
+   * only place a sentence fits - inline it shares the width with the label and
+   * every answer shows the same truncated half.
+   */
+  descriptions?: 'inline' | 'below';
 
   /**
    * Show what a choice would do, before it is chosen.
@@ -75,6 +85,13 @@ export interface CommandDefinition {
   id: string;
   title: string;
   description?: string;
+  /**
+   * The group this belongs to. The palette names it once, above the group.
+   *
+   * It is not a per-row label: repeating it beside every row spends the width
+   * the rows need for saying what they do, and still does not say where one
+   * group ends and the next begins.
+   */
   category?: string;
   icon?: string;
   /**
@@ -86,7 +103,7 @@ export interface CommandDefinition {
    */
   keepOpen?: boolean;
   /**
-   * A short state word shown beside the row, in place of the category.
+   * A short state word shown beside the row, in place of its description.
    *
    * The icon is the row's identity and should not move under the reader as
    * state changes; this is where the state goes instead.

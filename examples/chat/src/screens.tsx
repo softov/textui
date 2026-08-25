@@ -13,7 +13,7 @@ import {
   useStoreValue,
   useTheme,
 } from '@textui/core';
-import { Badge, Column, EmptyState, Panel, RadioGroup, Row, SearchBox } from '@textui/widgets';
+import { Badge, Column, EmptyState, Panel, RadioGroup, Row, SearchBox, argumentOf } from '@textui/widgets';
 import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE, settingCommand } from './control.js';
 import {
   ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, FOCUS, HISTORY, HOST, INPUT, MODEL, OPEN,
@@ -405,6 +405,18 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
           commands={app.commands.list({ slot: 'palette', enabledOnly: true })
             .map((command) => ({ id: command.id, title: command.title, ...(command.description ? { description: command.description } : {}) }))}
           onChange={(value: string) => app.store.set(DRAFT, value)}
+          onCommand={(id: string) => {
+            app.store.set(DRAFT, '');
+            const command = app.commands.get(id);
+            // A command that still has a question to ask cannot just be run -
+            // `execute` refuses a missing required argument, loudly - so it
+            // gets its picker, the same one the chip above would have opened.
+            if (command && argumentOf(command)) {
+              openPicker(app, { commandId: id, anchorId: 'chat.composer' });
+              return;
+            }
+            void app.execute(id, undefined, 'palette');
+          }}
           onSubmit={(value: string) => { controller.send(value); setRecall(history.length + 1); }}
           onCancel={() => app.focus.focus('chat.transcript')}
           onHistory={(direction: -1 | 1) => {

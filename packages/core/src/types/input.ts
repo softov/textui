@@ -52,6 +52,15 @@ export interface MouseEvent {
   ctrl: boolean;
   alt: boolean;
   shift: boolean;
+  /**
+   * When it happened, in milliseconds.
+   *
+   * A terminal reports presses and releases and never says "double click" -
+   * there is no such thing on the wire - so telling one gesture from two is
+   * arithmetic on when they arrived and where. Stamped by whatever produced
+   * the event, which is the only thing that knows.
+   */
+  at?: number;
   handled: boolean;
 }
 

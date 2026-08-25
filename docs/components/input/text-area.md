@@ -32,7 +32,8 @@ import { TextArea } from '@textui/widgets';
 | `autoFocus` | `boolean` |  |  |
 | `focusId` | `string` |  |  |
 | `caretTone` | `'default' \| 'primary' \| 'secondary' \| 'accent' \| 'success' \| 'warning' \| 'danger' \| 'info' \| 'muted'` |  | The caret's colour. `cursor` by default, which is the theme's own. A composer usually wants `accent`: the caret is the one thing on the screen saying where typing goes, and the field it sits in is the point of the screen. |
-| `caretStyle` | `'underline' \| 'block'` | `'underline'` | What the caret looks like. An underline under the character it is on by default; `block` fills the cell instead. Both **mark a cell rather than occupying one**. The caret used to be a glyph pushed in between the text before it and the text after, so every character to its right sat one column off from where it would be once the caret moved on, and the row was a cell wider than its own text. On a wrapped row that extra cell is the one that does not fit. |
+| `caretStyle` | `'underline' \| 'block'` |  | What the caret looks like. **The theme's `cursor` by default**, so the drawn caret and the terminal's own are the same shape, and an underline when the theme leaves it to the terminal. Both **mark a cell rather than occupying one**. The caret used to be a glyph pushed in between the text before it and the text after, so every character to its right sat one column off from where it would be once the caret moved on, and the row was a cell wider than its own text. On a wrapped row that extra cell is the one that does not fit. That is also why the theme's `bar` arrives here as an underline: a bar *between* two characters is exactly the caret this one is not. |
+| `copyOnSelect` | `boolean` | `true` | Put a selection on the system clipboard as it is made. On by default. Selecting with the mouse is how text leaves a terminal, and an application that reports mouse events has taken the terminal's own select-and-copy away - so it owes one back. The copy goes out over OSC 52 and into the store, which is the half a paste inside the application can read. |
 | `blink` | `boolean` | `true` | Blink the caret while the field has the keyboard. On by default. Driven by the animation ticker, so it stops with every other animation - a still, a test and a terminal that has animation off all draw the caret solid rather than at whatever phase the clock happened to be in. |
 
 Plus everything on [`BoxProps`](../base-props.md).
@@ -51,6 +52,32 @@ A newline is `ctrl+enter`, with `alt+enter` as the one that cannot fail - **neve
 It also settles the question a single-letter keybinding raises. The focused node is offered a key *before* any keybinding, so while a text field has the keyboard, `q` is a letter. That is what lets an application with a composer in it keep `n`, `r` and `d` as commands - and why a global `q` for quit only works where nothing happens to be reading it.
 
 `onOverflow` fires when the cursor tries to leave the top or the bottom, which is how a composer inside a list hands focus back.
+
+## Selecting with the mouse
+
+A click puts the caret where it landed. A **drag selects**, and the release puts what was selected on the system clipboard over OSC 52 - and into the store, which is the half a paste inside the application can read back. `copyOnSelect={false}` keeps the selection and skips the clipboard.
+
+That is a debt rather than a feature. Reporting mouse events takes the terminal's own select-and-copy away, so an application that reads the mouse has to hand one back, or text that is on the screen cannot leave it.
+
+Dragging past the edge of the field **scrolls it** rather than stopping at the last row on screen. The drag arrives at all because the application holds the pointer for whoever took the button down: mouse dispatch is otherwise a hit test, and a selection dragged past the field is the pointer being somewhere the field is not.
+
+A **double click takes the run under it** - letters with letters, spaces with spaces, punctuation with punctuation, so a double click in the gap between two words takes the gap rather than one of the words. A newline joins nothing, so a word selection never runs across a line break. A **third click takes the logical line** with its break, not the row it happened to be drawn on: a wrapped paragraph is one thing somebody wrote. A fourth comes back round to a caret.
+
+None of that arrives from the terminal. The wire reports presses and releases and has no notion of a double click, so it is arithmetic on `MouseEvent.at` and the cell: same cell, inside 450ms, or it is a new gesture.
+
+`shift` with `left`, `right`, `up`, `down`, `home` and `end` extends the selection from wherever it was anchored; the same keys without `shift` collapse it. A selection made this way **copies too** - highlighted and on the clipboard are the same thing, or it is a selection you have to make again with the mouse.
+
+`ctrl+left` and `ctrl+right` move a word at a time, and with `shift` select one. A line break is a step of its own: walking right stops at the end of the line and the next press crosses to the one below, because the end of a line is somewhere people mean to be.
+
+Typing replaces a selection, `backspace` and `delete` remove it, and `escape` clears it - which is why `onCancel` is documented as escape *when there is nothing inside the field to cancel*.
+
+## Selecting text this field does not own
+
+Only this component has a selection. The transcript, a viewer, the output of a tool call - anything drawn by something that is not a text field - has no selection of its own yet.
+
+**`shift` and drag** is the answer meanwhile, and it needs no code. An application that reports mouse events has taken the terminal's own select-and-copy, and every terminal worth using keeps a way to get it back: holding `shift` while dragging bypasses mouse reporting entirely and gives you the terminal's own selection, its own highlight and its own copy. xterm, iTerm2, Ghostty, WezTerm, Kitty, Alacritty and the VS Code terminal all do it, and the text it copies is whatever is on the screen - agent output included.
+
+It is worth saying in an application's own key hints, because a reader whose first drag selected nothing has no way to guess it.
 
 ## See also
 

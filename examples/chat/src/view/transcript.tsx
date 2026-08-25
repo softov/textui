@@ -48,6 +48,7 @@ export const ChatTranscript: (props: ChatTranscriptProps) => RenderOutput =
             block={block}
             expanded={expanded[block.id] ?? false}
             active={cursor !== undefined && blocks[cursor]?.id === block.id}
+            onToggle={() => onToggle(block.id)}
           />
         ))}
       </Feed>
@@ -58,7 +59,8 @@ const BlockView = defineComponent<{
   block: Block;
   expanded: boolean;
   active: boolean;
-}>('ChatBlockView', ({ block, expanded, active }) => {
+  onToggle(): void;
+}>('ChatBlockView', ({ block, expanded, active, onToggle }) => {
   const theme = useTheme();
 
   switch (block.kind) {
@@ -109,12 +111,11 @@ const BlockView = defineComponent<{
         </Row>
       );
     case 'tool':
-      return (
-        <Row gap={1}>
-          <Gutter />
-          <ToolCallRow call={block.call} expanded={expanded} active={active} flex={1} />
-        </Row>
-      );
+      // No gutter. A tool call is something the agent *did*, not something it
+      // said, so it sits at the turn's own left edge with a status glyph where
+      // the header's bullet is - rather than indented inside the rule as
+      // though it were a paragraph of the answer.
+      return <ToolCallRow call={block.call} expanded={expanded} active={active} onToggle={onToggle} />;
     case 'queued':
       // Not sent. It reads as a message unless it says so, and "I typed that
       // and nothing happened" is the complaint that follows.

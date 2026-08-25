@@ -1,7 +1,4 @@
-import type {
-  AcquiredState, CapabilityOverrides, Disposable, InputEvent, Size,
-  TerminalAdapter, TerminalCapabilities, TerminalSessionOptions,
-} from '@textui/core';
+import type { AcquiredState, CapabilityOverrides, CursorStyle, Disposable, InputEvent, Size, TerminalAdapter, TerminalCapabilities, TerminalSessionOptions } from '@textui/core';
 import { toDisposable } from '@textui/core';
 import * as ansi from './ansi.js';
 import { applyOverrides, detectCapabilities, describeEnvironment } from './capabilities.js';
@@ -71,7 +68,7 @@ export interface NodeAdapterOptions {
 const NOTHING_ACQUIRED: AcquiredState = {
   altScreen: false, mouse: false, wheel: false, focusEvents: false,
   paste: false, cursorHidden: false, enhancedKeys: false, rawMode: false,
-  titleSet: false,
+  titleSet: false, cursorShaped: false,
 };
 
 export class NodeTerminalAdapter implements TerminalAdapter {
@@ -235,6 +232,7 @@ export class NodeTerminalAdapter implements TerminalAdapter {
     if (state.mouse) out.push(state.wheel ? ansi.mouseOff : ansi.mouseButtonsOff);
     if (state.altScreen) out.push(ansi.altScreenLeave);
     if (state.cursorHidden) out.push(ansi.cursorShow);
+    if (state.cursorShaped) out.push(ansi.cursorShapeReset);
     out.push(ansi.reset);
 
     try {
@@ -289,6 +287,14 @@ export class NodeTerminalAdapter implements TerminalAdapter {
   setTitle(title: string): void {
     if (!this.caps.title) return;
     this.stdout.write(ansi.setTitle(title));
+  }
+
+  setCursorShape(shape: CursorStyle): void {
+    // No session means nothing to put back, and nothing that would put it
+    // back - so a shape set outside one is a shape left on the user's shell.
+    if (!this.caps.cursor || !this.state) return;
+    this.stdout.write(ansi.cursorShape(shape));
+    this.state.cursorShaped = true;
   }
 
   private installExitHandlers(): void {

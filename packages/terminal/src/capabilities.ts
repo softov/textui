@@ -106,7 +106,25 @@ export function detectCapabilities(input: DetectionInput): TerminalCapabilities 
     paste: true,
     // tmux rewrites OSC 8, and Apple Terminal ignores it.
     hyperlinks: modern && !mux && program !== 'Apple_Terminal',
-    clipboard: modern || mux,
+    /*
+     * OSC 52, and on for anything that is not known to mangle it.
+     *
+     * This used to require a recognised terminal, which switched it off in
+     * precisely the situation it exists for. Over ssh none of the variables
+     * that name a terminal survive the hop - `TERM_PROGRAM`, `KITTY_WINDOW_ID`
+     * and `WT_SESSION` are all set by the terminal on the machine you are
+     * sitting at, not the one the program is running on - so a remote session
+     * saw a bare `xterm-256color` and refused to copy. Reaching the clipboard
+     * of a machine the program is not running on is the entire reason OSC 52
+     * was specified.
+     *
+     * Assuming it works is safe in a way that assuming most sequences work is
+     * not: a terminal that does not implement OSC 52 ignores the whole string
+     * rather than printing part of it, because an OSC runs to its terminator.
+     * The one that does not is `screen`, which needs the payload wrapped in
+     * its own passthrough and shows it as text otherwise.
+     */
+    clipboard: !(env.TERM ?? '').startsWith('screen'),
     altScreen: true,
     cursor: true,
     // Synchronized output is safe when supported and harmless when not, but

@@ -25,9 +25,11 @@ import { CommandPalette } from '@textui/widgets';
 | `onRun` | `(id: string, args?: Record<string, unknown>) => void` |  | Notified after a command runs. The palette runs it itself. |
 | `onClose` | `() => void` |  |  |
 | `execute` | `boolean` | `true` | Off makes this a picker: it reports the choice and runs nothing. |
-| `grouped` | `boolean` | `true` | Group the list by `category`, with a rule between groups. |
+| `grouped` | `boolean` | `true` | Group the list by `category`, with the category named above each group. Only while nothing is typed. A query sorts by relevance, which interleaves the categories - and a heading over one row is not a group. |
 | `visibleRows` | `number` | `8` |  |
-| `width` | `number` | `60` |  |
+| `width` | `number` |  | A fixed width, in cells. Left off, the panel is as wide as its widest row and no wider than `maxWidth` - which is what a list of five short answers wants, and what a list of five sentences needs. A number here is a number: the panel is that wide whether the rows fill it or overflow it. |
+| `maxWidth` | `number` | `60` | The widest the panel may grow when `width` is left off. 60 by default. There is always a limit: a description is prose, and prose has no width it stops at. Past this the rows truncate, and the row under the cursor slides what it truncated. |
+| `descriptions` | `'inline' \| 'below'` | `'inline'` | Where a row's description goes. `inline` right-aligns it beside the label; `below` gives it a line of its own. `below` for a question whose answers differ by a sentence rather than by a word - four approval modes named in two words each are told apart by the line under them, and inline that line is the half that gets truncated. Every row costs two lines, so `visibleRows` buys half as many. |
 | `openAt` | `string` |  | Open already drilled into this command's choices. For a caller that has decided *which* question is being asked and only wants the palette to ask it - a menu item for "Theme" should offer the themes, not the whole command list with "Theme" typed into the search box. |
 
 Plus everything on [`BoxProps`](../base-props.md).

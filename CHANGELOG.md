@@ -6,6 +6,74 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+### Hover works on things that are not focusable
+
+`onHover` was declared on every node and called from nowhere, and the `hover` style overlay was driven by comparing a focus id against `props.id` - so only a focusable node could ever be hovered. A row that is clicked rather than focused, which is most of them, had a `hover` style nothing could trigger.
+
+Hover is now a hit test over laid-out boxes and inherits down the chain the way it does in a browser: a row is hovered while the pointer is over the label inside it, because the label is what the hit test finds. `onHover` fires once on the way in and once on the way out.
+
+### A selection made with the keyboard copies
+
+`shift` with the arrows highlighted something that was not on the clipboard, which is a selection you have to make again with the mouse. `ctrl+left` and `ctrl+right` also move a word at a time now, and select one with `shift` held.
+
+### Double click takes a word, a third click takes the line
+
+In `TextArea`. Letters with letters, spaces with spaces, punctuation with punctuation - so a double click in the gap between two words takes the gap. A newline joins nothing, so a word never runs across a line break, and the third click takes the logical line rather than the row it was drawn on. A fourth comes back round to a caret.
+
+None of that arrives from the terminal: the wire reports presses and releases and has no notion of a double click. `MouseEvent.at` is a timestamp stamped by whatever produced the event, and the count is same-cell-within-450ms arithmetic on top of it. `@textui/testing` gains `clickRepeat(x, y, times)`; `click` deliberately steps its clock past the window, so two clicks in a test are two clicks.
+
+### OSC 52 was switched off in the one place it exists for
+
+The clipboard capability required a recognised terminal, and none of the variables that name one survive an ssh hop - `TERM_PROGRAM`, `KITTY_WINDOW_ID` and `WT_SESSION` are set by the terminal you are sitting at, not by the machine the program runs on. So a remote session saw a bare `xterm-256color`, decided the terminal could not take a clipboard write, and dropped every copy. Reaching the clipboard of a machine the program is *not* running on is the whole reason OSC 52 was specified.
+
+It is on now for anything not known to mangle it, which is `screen` alone: a terminal that does not implement OSC 52 ignores the whole string rather than printing part of it, because an OSC runs to its terminator.
+
+### A picker opens on the answer that is in force
+
+`ArgSpec.default` is where a command says what its argument is currently set to, and the palette now starts the cursor there instead of at the top of the list. Opening at the top says the first option is the current one, which is wrong on every list where it is not.
+
+A panel opened from a control is also that control's toggle: opening the same one again closes it, rather than closing and reopening it - which looks exactly like the click doing nothing.
+
+### A palette sizes to what it holds
+
+`width` left off, the panel is as wide as its widest row and no wider than `maxWidth` (60 by default). A constant is too wide for a list of one-word answers and too narrow for a list of sentences, and it is the same constant either way. A stated `width` is still a width.
+
+A description on its own line is a `Marquee` like the inline one, so the row under the cursor slides what it had to truncate.
+
+### A description can have a line of its own
+
+`descriptions: 'below'` on `Menu` and `CommandPalette` gives each row's description a line under the label instead of a column beside it. `ArgSpec.descriptions` says it per argument, because the argument is what knows: a list of branch names has nothing to say under each one, and a list of approval modes is *only* told apart by what is under each one. Inline, that sentence shares the width with the label and every answer shows the same truncated half.
+
+### A narrow `List` row gives up the description, not the status
+
+All three columns shrank together, so a catalogue at 58 columns cut the label to "Kqueue events on Li…" *and* the status to "waiting on y…" in order to keep a workspace path nobody was scanning for. The description yields first now, and `meta` yields nothing - the same rule `Menu` already followed.
+
+### The palette says a category once, over its group
+
+The category was in every row's right-hand column, so four screens read "Screens, Screens, Screens, Screens" - in the width the rows needed for saying what they *do*, and still without marking where a group started. It is a heading over the group now, and the column is back to the command's `description`.
+
+`MenuItem` gains `sectionBefore`, which takes the line `separatorBefore` would have used rather than adding one. Typing turns the headings off: a query sorts by relevance, which interleaves the categories, and a heading over a single row is not a group.
+
+### A mouse gesture belongs to whoever started it
+
+Mouse dispatch is a hit test, so a `drag` only ever reached the node the pointer happened to be over - which is not the node the drag is *about* the moment the pointer leaves it. An `onMouse` that returns `true` on a `down` now claims the `drag`s and the `up` that follow, wherever they land, until the button comes back up. See [`onMouse`](docs/components/base-props.md).
+
+Nothing had a drag handler before this, so nothing changes for anything that does not want one. `@textui/testing` gains `drag(from, ...to)`, which sends the whole gesture - the press, the points between and the release - because the parts in the middle are the only ones a handler can be wrong about.
+
+### `TextArea` takes the mouse
+
+A click puts the caret where it landed, a drag selects, and the release puts the selection on the system clipboard over OSC 52 and into the store. Dragging past the edge of the field scrolls it. `shift` with the movement keys extends the selection, typing and `backspace` replace it, and `escape` clears it before it reaches `onCancel`.
+
+That is a debt being paid rather than a feature: reporting mouse events takes the terminal's own select-and-copy away, so an application that reads the mouse has to hand one back. `copyOnSelect={false}` opts out of the clipboard half.
+
+### A theme can say what shape the caret is
+
+`cursor` on a theme is `block`, `underline` or `bar`, applied to the terminal's own caret through `TerminalAdapter.setCursorShape` (DECSCUSR) and reset at teardown only if the session set it. It is also the default for `TextArea`'s drawn caret, so the two do not disagree about the same caret - `bar` arrives there as an underline, since a bar between two characters is the one caret that occupies a cell of its own.
+
+### A divider is not a border
+
+`divider` and `dividerChars` are their own theme setting with their own six sets, resolved down the `extends` chain the way borders are. A borderless theme can still separate with a line, which it could not when the rule was drawn from the border style. `Divider` takes `rule` rather than `style`, which collided with `BoxProps.style`.
+
 Publishing moved to npm trusted publishing: GitHub Actions exchanges an OIDC token for a short-lived credential, and there is no `NPM_TOKEN` in the repository any more.
 
 Two things made that more than a flag. Trusted publishing cannot *create* a package - npm only attaches a trusted publisher to a name that already exists, so 0.1.0 still had to be bootstrapped with a token, which was then deleted. And `pnpm publish` has no OIDC support, while `npm publish` cannot read `workspace:^`; `scripts/release-publish.mjs` resolves the ranges and publishes each package from its own directory in dependency order.

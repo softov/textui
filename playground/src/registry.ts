@@ -15,6 +15,7 @@ import { AnimationPlayground } from './playgrounds/animation.js';
 import { StressPlayground } from './playgrounds/stress.js';
 import { ShellsPlayground } from './playgrounds/shells.js';
 import { PatternPlayground } from './playgrounds/pattern.js';
+import { ScenePlayground } from './playgrounds/scene.js';
 import { Explorer } from './examples/explorer.js';
 import { registerFilesystem } from './examples/filesystem.js';
 import { jsonAdapter, registerDocuments } from '@textui/documents';
@@ -49,6 +50,14 @@ export const PLAYGROUNDS: Playground[] = [
     description: 'Every component, by category.',
     exercises: ['components', 'themes'],
     node: () => h(Gallery, {}),
+  },
+  {
+    id: 'scene',
+    title: 'Scene',
+    description: 'Sky over earth, with clouds and flowers nobody placed by hand.',
+    exercises: ['patterns', 'absolute positioning', 'measurement', 'ascii fallback'],
+    minSize: { width: 60, height: 20 },
+    node: () => h(ScenePlayground, {}),
   },
   {
     id: 'layout',

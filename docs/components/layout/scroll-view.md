@@ -27,6 +27,7 @@ import { ScrollView } from '@textui/widgets';
 | `scrollbar` | `boolean` | `true` | Draw a scrollbar on the right when the content overflows. |
 | `focusable` | `boolean` | `true` | A tab stop, so the keys that scroll it can reach it. On by default: a viewport had the arrow handlers all along and registered nothing, so unless the caller happened to make it focusable itself the only way to scroll was the wheel - which is to say, on a keyboard, not at all. Turn it off for a view that scrolls inside something already focused. |
 | `autoFocus` | `boolean` |  |  |
+| `focusId` | `string` |  | A stable focus id, so a command - or the screen that owns this - can put the reader here by name. Without one the id comes from the instance, which nothing outside the render can know: "scroll the preview" has nothing to name and the key that would do it cannot be written. Every other focusable control takes one; this was the exception, and there was no reason for it. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

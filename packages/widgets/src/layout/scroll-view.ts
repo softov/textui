@@ -27,6 +27,16 @@ export interface ScrollViewProps extends BoxProps {
    */
   focusable?: boolean;
   autoFocus?: boolean;
+  /**
+   * A stable focus id, so a command - or the screen that owns this - can put
+   * the reader here by name.
+   *
+   * Without one the id comes from the instance, which nothing outside the
+   * render can know: "scroll the preview" has nothing to name and the key that
+   * would do it cannot be written. Every other focusable control takes one;
+   * this was the exception, and there was no reason for it.
+   */
+  focusId?: string;
 }
 
 /**
@@ -38,10 +48,10 @@ export interface ScrollViewProps extends BoxProps {
  */
 export const ScrollView = defineComponent<ScrollViewProps>('ScrollView', (props) => {
   const {
-    offset, onScroll, scrollbar = true, focusable = true, autoFocus, id,
+    offset, onScroll, scrollbar = true, focusable = true, autoFocus, focusId, id,
     children, ...rest
   } = props;
-  const focus = useFocus({ disabled: !focusable, autoFocus });
+  const focus = useFocus({ ...(focusId ? { id: focusId } : {}), disabled: !focusable, autoFocus });
   const [internal, setInternal] = useState(0);
   const top = offset ?? internal;
   // How far down this can go before the last line leaves the bottom. Written

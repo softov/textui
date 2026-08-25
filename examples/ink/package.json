@@ -1,0 +1,20 @@
+{
+  "name": "@textui/example-ink",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Text coloured cell by cell: ramps, palettes, and an ink you write yourself",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:*",
+    "@textui/terminal": "workspace:*",
+    "@textui/widgets": "workspace:*"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*"
+  }
+}

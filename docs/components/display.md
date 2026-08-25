@@ -11,9 +11,11 @@ What shows a value: a label, a table of them, or a shape drawn from a series.
 
 ## Display
 
-`Heading` `Label` `Badge` `StatusDot` `Card` `KeyValue` `Timeline`
+`Heading` `Label` `Badge` `StatusDot` `Card` `ColorText` `Marquee` `KeyValue` `Timeline`
 
 `StatusDot` is the shared status vocabulary. A status is a glyph *and* a colour, because a 16-colour session, a colourblind reader and a piped log all lose the colour and keep the glyph.
+
+`ColorText` is the exception that proves that rule: it colours a block of text cell by cell - a ramp, a palette walked in runs, or a function handed each cell - and everything it does is decoration. A banner, a title, ascii art. What a reader has to know still has to be in the words, because the ramp is the first thing an ssh session flattens.
 
 ## Data
 

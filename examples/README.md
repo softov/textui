@@ -54,7 +54,7 @@ Bigger programs, bundled by esbuild because they are many files rather than
 because textui needs it.
 
 ```bash
-pnpm example todo        # or arcade, chat, surfaces
+pnpm example todo        # or arcade, chat, surfaces, ink
 ```
 
 | | |
@@ -63,4 +63,5 @@ pnpm example todo        # or arcade, chat, surfaces
 | [`arcade`](arcade) | Frame loops, canvas painting, input timing |
 | [`chat`](chat) | `Feed`, `TextArea`, markdown, and a fake host |
 | [`surfaces`](surfaces) | An application with no shell, arranging its own chrome |
+| [`ink`](ink) | `ColorText`: a colour per cell, over a banner and over prose |
 | [`showcase`](showcase) | The catalog on one screen, as a row that wraps. Writes its own screenshot |

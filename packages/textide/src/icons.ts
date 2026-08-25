@@ -115,7 +115,7 @@ export const FULL_ICONS = {
   // saying where focus is. It was a `'\u258e'` written into the component -
   // exactly the drift this file exists to stop, and the one glyph that has to
   // survive an ASCII terminal because without it nothing marks the pane.
-  activeRule: '▎',
+  activeRule: '┆',
   dirty: '●',
   readonly: '⊘',
   error: '✖',

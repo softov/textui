@@ -13,7 +13,8 @@ import { SessionFlag } from './ahp/types.js';
 import { valueIcon } from './view/icons.js';
 import {
   ARCHIVED, CHAT_URI, DRAFT, EXPANDED, FILTER, HOST, HOST_ERROR, INPUT, MODEL, OPEN, PROVIDER,
-  QUEUE, RUNNING, SCREEN, SELECTED, SETTINGS, TURNS, WORKSPACE,
+  MARKDOWN, QUEUE, RUNNING, SCREEN, SELECTED, SETTINGS, SIDEBAR, SPLIT_AT, SPLIT_DEFAULT, TURNS,
+  WORKSPACE,
   applyEvent, pendingInput, queue, sessions, turns, writeSessions, writeStatus,
 } from './state.js';
 
@@ -245,11 +246,27 @@ export function createController(
   let pending: ReturnType<typeof setTimeout> | null = null;
   const refreshSoon = (): void => {
     if (pending) return;
-    pending = setTimeout(() => { pending = null; void controller.refresh(); }, 120);
+    pending = setTimeout(() => { pending = null; void reread(); }, 120);
     // Nothing here should hold a process open: this is a repaint, not work.
     (pending as unknown as { unref?(): void }).unref?.();
   };
   bag.add({ dispose: () => { if (pending) clearTimeout(pending); pending = null; } });
+
+  /**
+   * Read the catalogue, and say nothing about anything else.
+   *
+   * `refresh` clears the last refusal, because a person pressing `r` is asking
+   * whether the host is answering again and a fresh list is the answer. This
+   * one is not that: it runs whenever the host says something moved, and a
+   * catalogue that answered says nothing about a session channel that refused
+   * - so clearing it here wiped "Authentication is required" off the status
+   * bar the moment any other session ticked.
+   */
+  const reread = async (): Promise<void> => {
+    try {
+      writeSessions(app.store, await host.listSessions());
+    } catch (error) { failed(error); }
+  };
 
   const controller: Controller = {
     async refresh() {
@@ -612,6 +629,30 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       run: () => app.screens.push('hosts')
     },
 
+    /**
+     * Markdown, or the characters the agent typed.
+     *
+     * An agent writes markdown, so drawing it is the default - reading
+     * `**this**` is reading the punctuation instead of the sentence. Off is
+     * for when the punctuation *is* what you are after: copying a fenced
+     * block out with its fence, checking whether a table is a table or four
+     * lines with pipes in them, reading a link's target rather than its
+     * label.
+     *
+     * A toggle rather than two commands, because there are two states and the
+     * screen shows you which one you are in.
+     */
+    {
+      id: 'view.markdown',
+      title: 'Markdown or raw text',
+      category: 'View',
+      description: 'Draw what the agent said as markdown, or as it typed it',
+      slots: ['palette'],
+      run: () => {
+        const on = app.store.get<boolean>(MARKDOWN) ?? true;
+        app.store.set(MARKDOWN, !on);
+      },
+    },
     // Appearance is a registration, not a rewrite. The same graph is mounted
     // under whichever theme and shell are chosen, which is the claim the
     // runtime makes and the one an example is meant to be evidence for.
@@ -915,6 +956,51 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       slots: ['palette'],
       run: () => app.focus.focus('chat.filter'),
     },
+    /**
+     * The detail pane, as a drawer.
+     *
+     * Right opens it and left puts it away: the key points at the pane. It is
+     * on the right of the screen, so right is where you go to read it and
+     * left is the way back to the list - which is also what makes the pair
+     * work above `splitAt`, where the pane is always out and the same two
+     * keys just move the keyboard between the halves.
+     *
+     * Opening is going there. There is no state where the pane is out and
+     * nobody is reading it, because the width follows the focus and a wide
+     * pane nobody asked for is the session list being narrow for nothing.
+     *
+     * Tab still walks the screen. It is the way *out* of a text field, where
+     * left and right are letters, and taking it away would strand anyone who
+     * had reached the filter box.
+     */
+    {
+      id: 'session.openDetails',
+      title: 'Open the session detail',
+      category: 'Session',
+      description: 'Show the detail pane, and read it',
+      slots: ['palette'],
+      run: () => {
+        app.store.set(SIDEBAR, true);
+        app.focus.focus('chat.details');
+      },
+    },
+    {
+      id: 'session.closeDetails',
+      title: 'Put the session detail away',
+      category: 'Session',
+      description: 'Hide the detail pane, and give the list the width',
+      slots: ['palette'],
+      run: () => {
+        // The focus first. Unmounting the pane the keyboard is in leaves the
+        // focus on a node that is no longer there, and the next key goes
+        // nowhere at all.
+        app.focus.focus('chat.sessions');
+        // Only below the split, where the pane is a drawer. Above it, both
+        // panes are always drawn and this key is the way back to the list.
+        const width = app.store.get<number>(SPLIT_AT) ?? SPLIT_DEFAULT;
+        if (app.size.width <= width) app.store.set(SIDEBAR, false);
+      },
+    },
     {
       id: 'chat.focusTranscript',
       title: 'Read the transcript',
@@ -984,6 +1070,21 @@ function keys(): {
     { keys: 'ctrl+n', commandId: 'session.new' },
     { keys: 'ctrl+r', commandId: 'session.refresh' },
     { keys: 'ctrl+t', commandId: 'view.theme' },
+    /*
+     * Both, and the letter is the one that always works.
+     *
+     * Ctrl+M and Return are the same byte. In raw mode the Return key sends
+     * CR, `0x0d`, and this decoder names that `enter` - deliberately, and
+     * with a comment saying so. A terminal speaking the kitty protocol or
+     * xterm's `modifyOtherKeys` sends the two apart and `ctrl+m` arrives as
+     * itself; everywhere else it cannot, and no binding here changes that.
+     *
+     * So `m` as well, in the scope where letters are letters only when the
+     * composer has them - which is the same bargain `c`, `s` and `t` already
+     * made on this screen.
+     */
+    { keys: 'ctrl+m', commandId: 'view.markdown' },
+    { keys: 'm', commandId: 'view.markdown', scopeId: CHAT_SCOPE },
     { keys: 'escape', commandId: 'go.back' },
 
     // The catalogue.
@@ -994,6 +1095,11 @@ function keys(): {
     { keys: 'x', commandId: 'session.toggleArchived', scopeId: SESSIONS_SCOPE },
     { keys: 'd', commandId: 'session.dispose', scopeId: SESSIONS_SCOPE },
     { keys: '/', commandId: 'session.filter', scopeId: SESSIONS_SCOPE },
+    // Scoped, not global, and after the focused node has had its turn: while
+    // the filter box has the keyboard these two are caret movement, and the
+    // runtime offers the key there first.
+    { keys: 'right', commandId: 'session.openDetails', scopeId: SESSIONS_SCOPE },
+    { keys: 'left', commandId: 'session.closeDetails', scopeId: SESSIONS_SCOPE },
 
     // The conversation. `i` is the one that gets you into the composer, and
     // out of it is escape - the pair that makes every other letter reachable.

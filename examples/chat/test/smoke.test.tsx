@@ -12,7 +12,7 @@ import { SessionFlag } from '../src/ahp/types.js';
 import { CLIPBOARD_PATH, layoutMarkdown, wrapRuns } from '@textui/core';
 import { toBlocks } from '../src/blocks.js';
 import {
-  DRAFT, HOST_ERROR, INPUT, OPEN, PROVIDER, QUEUE, SELECTED, SETTINGS, TURNS, WORKSPACE,
+  DRAFT, HOST_ERROR, INPUT, OPEN, PROVIDER, QUEUE, SELECTED, SETTINGS, SIDEBAR, TURNS, WORKSPACE,
 } from '../src/state.js';
 import type { Turn } from '../src/ahp/types.js';
 import { PICKER, openPicker } from '../src/view/picker.js';
@@ -136,7 +136,10 @@ describe('the transcript', () => {
     // At the top of it: the seeded session has a blocked turn at the bottom,
     // and a transcript that follows the tail is showing that instead.
     t.focus('chat.transcript');
+    // `home` is the top of the feed, and the top of the feed is the caption
+    // saying what this session is. One down is the first thing said in it.
     t.press('home');
+    t.press('down');
     for (let i = 0; i < 4; i++) await t.settle();
     expect(t.hasText('EVFILT_FS never fires')).toBe(true);
     // The prose is in `content`, not `markdown` or `text`. Reading the wrong
@@ -538,6 +541,132 @@ describe('the catalogue', () => {
     expect(t.hasText('Old build script')).toBe(true);
     await t.unmount();
   });
+
+  /**
+   * A row is two lines, and the first one is why.
+   *
+   * A title, a harness, a workspace and a status sharing a pane that is also
+   * sharing the terminal with the detail panel leaves all four truncated -
+   * and a row reading `Draft replies for desk-produ…` beside
+   * `1b444e78-d050-4fb5-a5…` has answered neither of the two questions it was
+   * asked. So the title gets the width and what qualifies it goes underneath.
+   */
+  /** The two lines of one row, read out of the pane it is actually in. */
+  const rowOf = (t: Harness, title: string): [string, string] => {
+    const rect = t.getByLabel(title).rect;
+    if (!rect) throw new Error(`no rect for ${title}`);
+    const cut = (y: number): string => t.line(y).slice(rect.x, rect.x + rect.width);
+    return [cut(rect.y), cut(rect.y + 1)];
+  };
+
+  it('gives the title its own line, and what qualifies it the next one', async () => {
+    const { t } = await catalogue();
+    expect(t.getByLabel('Kqueue events on Linux').rect?.height).toBe(2);
+    const [first, second] = rowOf(t, 'Kqueue events on Linux');
+
+    // The status stays with the title: it is the column the list is scanned
+    // for, and it is three words at most.
+    expect(first).toContain('Kqueue events on Linux');
+    expect(first).toContain('waiting on you');
+    // ...and the harness and the workspace are not competing with it.
+    expect(first).not.toContain('brb_framework');
+    expect(second).toContain('claude');
+    expect(second).toContain('brb_framework');
+    await t.unmount();
+  });
+
+  it('starts the second line under the title, not under the glyph', async () => {
+    const { t } = await catalogue();
+    const [first, second] = rowOf(t, 'Kqueue events on Linux');
+    // The second line qualifies the thing the first one names, so it begins
+    // where that thing begins rather than out at the marker's gutter.
+    expect(second.indexOf('claude')).toBe(first.indexOf('Kqueue'));
+    await t.unmount();
+  });
+
+  /**
+   * The detail pane, as a drawer.
+   *
+   * Right opens it and left puts it away: the key points at the pane, which
+   * is on the right of the screen.
+   *
+   * Under `splitAt` it is not drawn at all until it is asked for. Forty cells
+   * of detail take the session list down to a column that cuts every title,
+   * and the detail pane they were taken for is still too narrow to hold the
+   * URIs it exists to show - two truncated halves rather than one whole one.
+   */
+  it('keeps the detail pane shut on a terminal too narrow to split', async () => {
+    const { t } = await catalogue();
+    expect(t.hasText('enter copies')).toBe(false);
+    expect(t.hasText('ahp-chat:/1f0a')).toBe(false);
+    // Which is the whole point: with the pane away, a title is not cut.
+    expect(t.hasText('Split the transcript viewport')).toBe(true);
+    await t.unmount();
+  });
+
+  it('pulls the drawer out with right, and puts it back with left', async () => {
+    const { t } = await catalogue();
+    expect(t.app.focus.focused()).toBe('chat.sessions');
+
+    t.press('right');
+    for (let i = 0; i < 6; i++) await t.settle();
+    // Opening it is going to it. A pane that appeared and left the cursor
+    // behind is a pane you then have to press something else to read.
+    expect(t.app.focus.focused()).toBe('chat.details');
+    expect(t.hasText('ahp-chat:/1f0a')).toBe(true);
+
+    t.press('left');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.app.focus.focused()).toBe('chat.sessions');
+    expect(t.hasText('ahp-chat:/1f0a')).toBe(false);
+    await t.unmount();
+  });
+
+  it('draws both panes from the start when the terminal is wide enough', async () => {
+    const { t } = await catalogue({ width: 150, height: 30 });
+    // Nothing has been pressed. Above the split there is room for both, so
+    // the detail is not something you go and fetch.
+    expect(t.hasText('ahp-chat:/1f0a')).toBe(true);
+    expect(t.app.focus.focused()).toBe('chat.sessions');
+    await t.unmount();
+  });
+
+  it('takes the width to open on, from wherever it was configured', async () => {
+    const host = fakeHost();
+    // 100 columns is under the 140 default, so this is only two panes if the
+    // option was read - which is the point of it being an option.
+    const t = await renderApp({
+      width: 100,
+      height: 30,
+      shell: 'workbench',
+      theme: 'workbench',
+      onBoot: (app) => { registerChat(app, { host, splitAt: 80 }); },
+    });
+    for (let i = 0; i < 8; i++) await t.settle();
+    await t.app.execute('go.sessions');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    expect(t.hasText('ahp-chat:/1f0a')).toBe(true);
+    await t.unmount();
+  });
+
+  it('leaves left and right to the filter box while it has the keyboard', async () => {
+    const { t } = await catalogue();
+    await t.app.execute('session.filter');
+    await t.settle();
+    t.type('brb');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    // In a text field these are caret movement, and the runtime offers the
+    // key to the focused node before any binding. A pane key that stole them
+    // would make the filter box impossible to edit.
+    t.press('left');
+    t.press('right');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.app.focus.focused()).toBe('chat.filter');
+    expect(t.store.get<string>('$/chat/ui/filter')).toBe('brb');
+    await t.unmount();
+  });
 });
 
 describe('leaving', () => {
@@ -624,7 +753,10 @@ describe('the catalogue tells the truth about what is waiting', () => {
     for (let i = 0; i < 6; i++) await t.settle();
 
     t.focus('chat.transcript');
+    // `home` is the top of the feed, and the top of the feed is the caption
+    // saying what this session is. One down is the first thing said in it.
     t.press('home');
+    t.press('down');
     for (let i = 0; i < 4; i++) await t.settle();
     expect(t.hasText('EVFILT_FS never fires')).toBe(true);
     await t.unmount();
@@ -666,6 +798,8 @@ describe('what a session actually is', () => {
   it('shows the chat, the permissions and the model, not just the session id', async () => {
     const { t } = await catalogue();
     t.app.store.set(SELECTED, 'ahp-session:/6b21');
+    // At this width the pane is a drawer, so it has to be pulled out first.
+    await t.app.execute('session.openDetails');
     for (let i = 0; i < 6; i++) await t.settle();
 
     // A session is not a conversation: it holds chats, and the chat URI is
@@ -689,9 +823,16 @@ describe('what a session actually is', () => {
   it('gives the width to whichever pane has the keyboard', async () => {
     const { t } = await catalogue();
     t.app.store.set(SELECTED, SEEDED);
+    // The drawer out, and the keyboard put back on the list: this is about
+    // which pane is the wide one, which only means anything once both of them
+    // are drawn. Wider than the split there is room for the workspace either
+    // way, and the test would pass without proving anything.
+    t.app.store.set(SIDEBAR, true);
     for (let i = 0; i < 6; i++) await t.settle();
+    t.focus('chat.sessions');
+    for (let i = 0; i < 4; i++) await t.settle();
 
-    // The list has the keyboard on arrival, so the workspace does not fit.
+    // The list has the keyboard, so the workspace does not fit.
     expect(t.hasText('/brb_main/src/brb_framework')).toBe(false);
 
     t.focus('chat.details');
@@ -709,6 +850,7 @@ describe('what a session actually is', () => {
   it('copies the value under the cursor', async () => {
     const { t } = await catalogue();
     t.app.store.set(SELECTED, 'ahp-session:/9c74');
+    await t.app.execute('session.openDetails');
     for (let i = 0; i < 6; i++) await t.settle();
 
     t.focus('chat.details');
@@ -754,7 +896,14 @@ describe('putting a session away, and taking it back', () => {
   it('marks a session unread, and reading it marks it read again', async () => {
     const { t } = await catalogue();
     t.app.store.set(SELECTED, 'ahp-session:/9c74');
+    // The flags are in the detail pane, which at this width is a drawer. Set
+    // rather than pressed, and the keyboard put back where the row keys are:
+    // the pane takes focus when it is *asked* for, and `enter` there copies a
+    // field rather than opening the session.
+    t.app.store.set(SIDEBAR, true);
     for (let i = 0; i < 6; i++) await t.settle();
+    t.focus('chat.sessions');
+    for (let i = 0; i < 4; i++) await t.settle();
     expect(t.hasText('read')).toBe(true);
 
     t.press('u');
@@ -1129,7 +1278,7 @@ describe.each(['plain', 'console', 'paper', 'workbench'])('under the %s shell', 
 });
 
 describe('on a terminal that can only do ASCII', () => {
-  it('draws nothing that terminal cannot draw', async () => {
+  const plain = async (): Promise<Harness> => {
     const host = fakeHost();
     const t = await renderApp({
       width: 100,
@@ -1139,12 +1288,51 @@ describe('on a terminal that can only do ASCII', () => {
       capabilities: { unicode: 'ascii', wideChars: false },
       onBoot: (app) => { registerChat(app, { host }); },
     });
+    for (let i = 0; i < 8; i++) await t.settle();
+    return t;
+  };
+
+  /** Every codepoint the frame used that a Windows console would not draw. */
+  const beyondAscii = (t: Harness): string[] =>
+    [...new Set([...t.text()].filter((c) => (c.codePointAt(0) as number) > 0x7f))];
+
+  it('draws nothing that terminal cannot draw', async () => {
+    const t = await plain();
     t.app.services.require(CONTROLLER).open(SEEDED);
     t.app.screens.push('chat');
     for (let i = 0; i < 8; i++) await t.settle();
 
-    const offending = [...new Set([...t.text()].filter((c) => (c.codePointAt(0) as number) > 0x7f))];
-    expect(offending).toEqual([]);
+    expect(beyondAscii(t)).toEqual([]);
+    await t.unmount();
+  });
+
+  /**
+   * The catalogue too, which the check above never reached.
+   *
+   * It is the screen with the most glyphs on it - a status per row, a marker,
+   * a search, a separator between the harness and the workspace, and a hint
+   * row naming four keys - so it is the one where a new glyph is most likely
+   * to arrive without a fallback beside it.
+   */
+  it('draws the catalogue in ASCII as well', async () => {
+    const t = await plain();
+    await t.app.execute('go.sessions');
+    for (let i = 0; i < 6; i++) await t.settle();
+
+    expect(t.hasText('Kqueue events on Linux')).toBe(true);
+    expect(beyondAscii(t)).toEqual([]);
+    await t.unmount();
+  });
+
+  it('names the pane keys with something a console can print', async () => {
+    const t = await plain();
+    await t.app.execute('go.sessions');
+    for (let i = 0; i < 6; i++) await t.settle();
+    // `←→ panes` is the hint on a terminal that can draw arrows. This is what
+    // it degrades to, and the point is that it degrades at all: a hint row
+    // that named a key with a glyph the console renders as a box is a hint
+    // row that has told you nothing.
+    expect(t.hasText('<> detail')).toBe(true);
     await t.unmount();
   });
 });
@@ -1207,6 +1395,79 @@ describe('the figure on an empty screen', () => {
       expect(t.hasText('A new session')).toBe(true);
       await t.unmount();
     }
+  });
+});
+
+/**
+ * Markdown, and the switch that turns it off.
+ *
+ * An agent writes markdown, so drawing it is the default - reading
+ * `**this**` is reading the punctuation instead of the sentence. Off is for
+ * when the punctuation is what you are after: copying a fence out with its
+ * fence, or reading a link's target rather than its label.
+ */
+describe('what the agent said, as markdown or as typed', () => {
+  it('draws the emphasis rather than the asterisks', async () => {
+    const m = await conversation();
+    await run(m);
+    // The transcript is scrolled to the newest turn, so this asserts on what
+    // is actually on screen there: a code span, drawn as one.
+    expect(m.t.hasText('#if 0')).toBe(true);
+    expect(m.t.hasText('`#if 0`')).toBe(false);
+    await m.t.unmount();
+  });
+
+  it('shows the characters that arrived once it is switched off', async () => {
+    const m = await conversation();
+    await run(m);
+    await m.t.app.execute('view.markdown');
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    expect(m.t.hasText('`#if 0`')).toBe(true);
+    // The list marker too: raw is the characters that arrived, not markdown
+    // with some of it left on.
+    expect(m.t.hasText('- keep the FreeBSD path')).toBe(true);
+
+    // And back, because it is one command and two states.
+    await m.t.app.execute('view.markdown');
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    expect(m.t.hasText('`#if 0`')).toBe(false);
+    await m.t.unmount();
+  });
+
+  /**
+   * Ctrl+M and Return are the same byte.
+   *
+   * In raw mode the Return key sends CR, `0x0d`, and this stack names that
+   * `enter` - deliberately, and with a comment in the decoder saying so. Only
+   * a terminal speaking the kitty protocol or xterm's `modifyOtherKeys` can
+   * send the two apart. So the letter is the binding that always works, and
+   * `ctrl+m` is the one for terminals that can express it.
+   */
+  it('has a letter for it, because ctrl+m is not always a key', async () => {
+    const m = await conversation();
+    await run(m);
+    m.t.focus('chat.transcript');
+    for (let i = 0; i < 4; i++) await m.t.settle();
+
+    m.t.press('m');
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    expect(m.t.hasText('`#if 0`')).toBe(true);
+    await m.t.unmount();
+  });
+
+  it('leaves the letter alone while the composer has the keyboard', async () => {
+    const m = await conversation();
+    await run(m);
+    m.t.focus('chat.composer');
+    for (let i = 0; i < 4; i++) await m.t.settle();
+
+    m.t.type('maybe');
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    // Typed, not toggled. That is the bargain every single letter on this
+    // screen makes.
+    expect(m.t.store.get<string>(DRAFT)).toBe('maybe');
+    expect(m.t.hasText('`#if 0`')).toBe(false);
+    await m.t.unmount();
   });
 });
 

@@ -78,6 +78,37 @@ export const HISTORY = '$/chat/ui/history' as BindingPath;
 export const FILTER = '$/chat/ui/filter' as BindingPath;
 export const ARCHIVED = '$/chat/ui/archived' as BindingPath;
 export const EXPANDED = '$/chat/ui/expanded' as BindingPath;
+/**
+ * Whether what the agent said is drawn as markdown, or as what it typed.
+ *
+ * On, because an agent writes markdown and reading `**this**` is reading the
+ * punctuation instead of the sentence. Off is for the times the punctuation is
+ * the point: copying a fenced block out with the fence, seeing whether a table
+ * is a table or four lines that happen to have pipes in them, and reading a
+ * link's target rather than its label.
+ */
+export const MARKDOWN = '$/chat/ui/markdown' as BindingPath;
+/**
+ * Whether the catalogue's detail pane is out, or `null` for "whatever the
+ * terminal is wide enough for".
+ *
+ * Three states rather than two, because "nobody has said" and "somebody said
+ * no" are different: the first still follows the window as it is resized, and
+ * the second has to survive a resize or the key that closed the pane would be
+ * undone by dragging the corner.
+ */
+export const SIDEBAR = '$/chat/ui/sidebar' as BindingPath;
+/**
+ * The width at which the detail pane is out to begin with.
+ *
+ * Under it the two panes are each other's problem: forty cells of detail take
+ * the session list down to a column that cuts every title, and the detail
+ * pane they were taken for is itself too narrow to hold the URIs it exists to
+ * show. So below this the catalogue is one pane, and the detail is something
+ * you open.
+ */
+export const SPLIT_AT = '$/chat/ui/splitAt' as BindingPath;
+export const SPLIT_DEFAULT = 140;
 
 /**
  * The runtime's own state, read rather than asked for.

@@ -1,6 +1,7 @@
 import type { BoxProps, RenderOutput, SemanticVariant, StyleColor } from '@textui/core';
-import { defineComponent, useFrame, useTheme } from '@textui/core';
+import { defineComponent, useFrame, useStoreValue, useTheme } from '@textui/core';
 import { Column, MarkdownView, Row } from '@textui/widgets';
+import { MARKDOWN } from '../state.js';
 
 /**
  * One thing said, and the two ways it is still being said.
@@ -79,6 +80,14 @@ export interface StreamingTextProps extends BoxProps {
   streaming?: boolean;
   quiet?: boolean;
   maxLines?: number;
+  /**
+   * Draw it as markdown, or as the characters that arrived.
+   *
+   * Unstated it follows the application's own switch, which is what the key
+   * that toggles it moves - so a caller has to say something here only when
+   * it wants one or the other regardless.
+   */
+  markdown?: boolean;
 }
 
 /**
@@ -93,14 +102,37 @@ export interface StreamingTextProps extends BoxProps {
  */
 export const StreamingText: (props: StreamingTextProps) => RenderOutput =
   defineComponent<StreamingTextProps>('StreamingText', (props) => {
-    const { content, streaming, quiet, maxLines, ...rest } = props;
+    const { content, streaming, quiet, maxLines, markdown, ...rest } = props;
     const theme = useTheme();
     const frame = useFrame(2);
     const caret = streaming && frame % 2 === 0 ? theme.glyphs.caret : '';
+    // Read unconditionally: `??` short-circuits, and a hook that is only
+    // reached when a prop is absent is a hook that changes position between
+    // renders. The prop still wins - it is just decided after the read.
+    const preference = useStoreValue<boolean>(MARKDOWN, true) ?? true;
+    const rendered = markdown ?? preference;
+    const shown = streaming ? `${content}${caret}` : content;
+
+    // Raw is a `text`, not a `MarkdownView` that was told not to parse: the
+    // point of turning it off is to see the characters that arrived, and
+    // anything that lays the document out has already decided some of them
+    // were structure. `wrap` rather than truncate, because the lines being
+    // read are the long ones - a fenced block and a table are exactly what is
+    // wider than the pane.
+    if (!rendered) {
+      return (
+        <text
+          content={shown}
+          wrap="word"
+          {...(quiet ? { fg: 'muted' as const } : {})}
+          {...rest}
+        />
+      );
+    }
 
     return (
       <MarkdownView
-        content={streaming ? `${content}${caret}` : content}
+        content={shown}
         {...(quiet ? { quiet: true } : {})}
         {...(maxLines !== undefined ? { maxLines } : {})}
         {...rest}

@@ -15,10 +15,10 @@ import { sessions } from '../src/state.js';
  * drained for something else and thrown away.
  */
 
-async function open() {
+async function open(height = 26) {
   const host = fakeHost();
   const t = await renderApp({
-    width: 90, height: 26, shell: 'workbench', theme: 'dark',
+    width: 90, height, shell: 'workbench', theme: 'dark',
     onBoot: (app) => { registerChat(app, { host }); },
   });
   for (let i = 0; i < 8; i++) await t.settle();
@@ -78,20 +78,80 @@ describe('the catalogue keeps up', () => {
 });
 
 describe('the conversation, above and around', () => {
-  it('says what the header could not fit, outside the scrolling', async () => {
-    const { t } = await open();
+  /*
+   * The caption is the first thing *in* the conversation, not a band above it.
+   *
+   * Pinned outside the scrolling region it costs a row of the conversation on
+   * every screen for ever, so it has to earn each one - which forces it down
+   * to a line, and then down to less than it was for. Scrolled with the
+   * conversation it costs nothing after the first screen and can say the
+   * whole thing.
+   */
+  it('opens the conversation with what the session is', async () => {
+    const { t } = await open(40);
     t.app.services.require(CONTROLLER).open('ahp-session:/1f0a');
     t.app.screens.push('chat');
-    for (let i = 0; i < 10; i++) await t.settle();
+    // Settle first: the transcript is not mounted until the screen is, and
+    // focusing a node that does not exist yet focuses nothing.
+    for (let i = 0; i < 12; i++) await t.settle();
+    t.focus('chat.transcript');
+    t.press('home');
+    for (let i = 0; i < 8; i++) await t.settle();
 
-    // The caption: harness, model, workspace, when it started, and the uri
-    // that gets pasted into a shell.
-    const caption = t.lines().find((line) => line.includes('claude-opus-5')) ?? '';
-    expect(caption).toContain('brb_framework');
-    expect(caption).toContain('ahp-chat:/1f0a');
-    // Not the title: that is on the line above, in the application's header,
-    // and repeating it spends the width these need.
-    expect(caption).not.toContain('Kqueue events');
+    // The title in full - it is not competing with the application's name for
+    // one line any more - and every identifier whole.
+    expect(t.hasText('Kqueue events on Linux')).toBe(true);
+    expect(t.hasText('claude-opus-5')).toBe(true);
+    expect(t.hasText('/brb_main/src/brb_framework')).toBe(true);
+    expect(t.hasText('ahp-session:/1f0a')).toBe(true);
+    expect(t.hasText('ahp-chat:/1f0a')).toBe(true);
+    // And the host's own questions, answered - the same answers the chips
+    // under the composer are showing.
+    expect(t.hasText('Permissions')).toBe(true);
+    await t.unmount();
+  });
+
+  it('scrolls away, because it is part of the conversation', async () => {
+    const { t } = await open(40);
+    t.app.services.require(CONTROLLER).open('ahp-session:/1f0a');
+    t.app.screens.push('chat');
+    // Settle first: the transcript is not mounted until the screen is, and
+    // focusing a node that does not exist yet focuses nothing.
+    for (let i = 0; i < 12; i++) await t.settle();
+    t.focus('chat.transcript');
+    t.press('home');
+    for (let i = 0; i < 8; i++) await t.settle();
+    expect(t.hasText('ahp-session:/1f0a')).toBe(true);
+
+    t.press('end');
+    for (let i = 0; i < 8; i++) await t.settle();
+    expect(t.hasText('ahp-session:/1f0a')).toBe(false);
+    await t.unmount();
+  });
+
+  it('keeps the cursor on the conversation, not on the caption', async () => {
+    const { t } = await open(40);
+    t.app.services.require(CONTROLLER).open('ahp-session:/1f0a');
+    t.app.screens.push('chat');
+    // Settle first: the transcript is not mounted until the screen is, and
+    // focusing a node that does not exist yet focuses nothing.
+    for (let i = 0; i < 12; i++) await t.settle();
+    t.focus('chat.transcript');
+    t.press('home');
+    for (let i = 0; i < 8; i++) await t.settle();
+
+    // Home is the first *block*, not the caption above it. There is nothing
+    // to do to a caption, so it sits ahead of the indices rather than in them.
+    expect(t.app.store.get('$/screen.chat/cursor')).toBe(0);
+    // And enter still opens the block the cursor names.
+    for (let i = 0; i < 4; i++) { t.press('down'); await t.settle(); }
+    expect(t.app.store.get('$/screen.chat/cursor')).toBe(4);
+
+    // And enter opens the block the cursor names - `c1`, the tool call, not
+    // whatever sits one along because a caption took an index.
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.app.store.get('$/chat/ui/expanded')).toEqual({ c1: true });
     await t.unmount();
   });
 

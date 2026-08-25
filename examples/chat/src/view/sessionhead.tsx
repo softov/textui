@@ -1,22 +1,23 @@
-import type { BoxProps, RenderOutput } from '@textui/core';
+import type { BoxProps, RenderOutput, SemanticVariant } from '@textui/core';
 import { defineComponent, useTheme } from '@textui/core';
-import { Row } from '@textui/widgets';
+import { Column, KeyValue, Row } from '@textui/widgets';
 import type { SessionSummary } from '../ahp/types.js';
-import { workspaceName } from '../state.js';
+import { decodeStatus } from '../ahp/status.js';
 
 /**
- * What this conversation *is*, above the conversation itself.
+ * What this conversation *is*, at the top of it.
  *
- * The application header says which session is open, and it is one line shared
- * with the application's own name - so what it can hold is a title and a
- * workspace. Everything else about a session lives on the catalogue's detail
- * pane, which is a screen away: when it started, which harness, what it last
- * ran on, and the uri you paste into a shell.
+ * The first thing in the transcript rather than a band above it, and that is
+ * the whole design: a caption pinned outside the scrolling region costs a row
+ * of the conversation on every screen for ever, so it has to earn each one -
+ * which meant one line, which meant dropping most of what it is for. Scrolled
+ * with the conversation it costs nothing after the first screen and can say
+ * everything, the way the top of a printed letter does.
  *
- * Those are the things a person scrolls up looking for and does not find, so
- * they go here: once, above the transcript, outside the scrolling region. Two
- * lines, because it is a caption and not a pane - anything that needs more
- * than that belongs on the screen that already shows it in full.
+ * The identifiers are the point. They are what gets pasted into a shell or a
+ * bug report, they are exactly what does not fit anywhere else, and the
+ * catalogue's detail pane - the only other place they appear - is a screen
+ * away from the conversation they belong to.
  */
 
 export interface ChatSessionHeadProps extends BoxProps {
@@ -25,6 +26,8 @@ export interface ChatSessionHeadProps extends BoxProps {
   model?: string;
   /** The chat uri, when the host has said which one this dispatches to. */
   chat?: string | null;
+  /** The settings in force, by the host's own labels. */
+  settings?: { label: string; value: string }[];
 }
 
 /**
@@ -39,36 +42,45 @@ function when(iso: string | undefined): string {
   const at = new Date(iso);
   if (Number.isNaN(at.getTime())) return iso;
   return at.toLocaleString(undefined, {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }
 
 export const ChatSessionHead: (props: ChatSessionHeadProps) => RenderOutput =
   defineComponent<ChatSessionHeadProps>('ChatSessionHead', (props) => {
-    const { session, model, chat, ...rest } = props;
+    const { session, model, chat, settings = [], ...rest } = props;
     const theme = useTheme();
-    const dot = theme.glyphs.separator;
+    const status = decodeStatus(session.status);
+    const started = when(session.createdAt);
+    const updated = when(session.modifiedAt);
 
-    // Only what is known. A row of "· · ·" with nothing between the dots is
-    // what building this from a fixed list of fields produces.
-    const facts = [
-      session.provider,
-      model,
-      workspaceName(session.workingDirectories[0]),
-      when(session.createdAt),
-    ].filter((fact): fact is string => Boolean(fact));
+    // Only what is known. A row of empty values is what building this from a
+    // fixed list produces, and it reads as a session the host would not talk
+    // about rather than as one nobody has asked yet.
+    const rows: { label: string; value: string; tone?: SemanticVariant }[] = [
+      { label: 'Harness', value: [session.provider, model].filter(Boolean).join(`  ${theme.glyphs.separator}  `) },
+      ...settings.filter((setting) => setting.value).map((setting) => ({ ...setting })),
+      { label: 'Workspace', value: session.workingDirectories.map((dir) => dir.replace(/^file:\/\//, '')).join(', ') },
+      {
+        label: 'Started',
+        value: started && updated && updated !== started
+          ? `${started}  ${theme.glyphs.separator}  updated ${updated}`
+          : started,
+      },
+      // Last, and in full. A uri you can read half of is worse than one you
+      // cannot see at all: it looks like the whole thing.
+      { label: 'Session', value: session.resource },
+      ...(chat ? [{ label: 'Chat', value: chat }] : []),
+    ].filter((row) => row.value !== '');
 
-    // The title is not here. It is on the line directly above this one, in
-    // the application's own header, and repeating it costs the width that the
-    // things the header could not fit need.
     return (
-      <Row {...rest} gap={1}>
-        <text content={facts.join(`  ${dot}  `)} fg="muted" truncate="end" shrink={1} />
-        <text content="" flex={1} />
-        {/* Last, and the first to go: the longest thing on the row, and the
-            one there is a whole screen for. Truncated in the middle, because
-            a uri you can read half of looks like the whole thing. */}
-        <text content={chat ?? session.resource} fg="subtle" truncate="middle" shrink={8} />
-      </Row>
+      <Column {...rest} gap={0}>
+        <Row gap={1}>
+          <text content={theme.glyphs[status.glyph]} fg={status.tone as SemanticVariant} shrink={0} />
+          <text content={session.title} bold wrap="word" flex={1} />
+          <text content={status.label} fg={status.tone as SemanticVariant} shrink={0} />
+        </Row>
+        <KeyValue items={rows} />
+      </Column>
     );
   });

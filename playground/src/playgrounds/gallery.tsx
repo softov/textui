@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Checkbox,
+  ColorText,
   Column,
   Divider,
   Feed,
@@ -444,6 +445,9 @@ const WRAP_MODES = [
 
 const COLUMN = 26;
 
+/** Long enough for a ramp to be a ramp rather than two colours side by side. */
+const BLOCK = 'colour is decoration';
+
 function TypographySection() {
   return (
     <ScrollView flex={1}>
@@ -471,6 +475,37 @@ function TypographySection() {
               </box>
             ))}
           </Row>
+        </Panel>
+
+        {/*
+          * The one component here that colours below the level of a run: a
+          * `text` takes one colour, and these three take a different one per
+          * cell. Kept beside the wrap and align panels because everything else
+          * about it is a `text` - same props, same line breaking.
+          */}
+        <Panel title="ColorText" subtitle="a colour per cell, from data or from a function">
+          <Column gap={0}>
+            <Row gap={2}>
+              <Label content="gradient" width={16} />
+              <ColorText content={BLOCK} ink={{ gradient: ['#ff5f6d', '#3fa7ff'] }} />
+            </Row>
+            <Row gap={2}>
+              <Label content="axis: 'y'" width={16} />
+              <ColorText content="one\ntwo\nthree" ink={{ gradient: ['success', 'danger'], axis: 'y' }} />
+            </Row>
+            <Row gap={2}>
+              <Label content="per line" width={16} />
+              <ColorText content="one\ntwo\nthree" ink={['info', 'warning', 'success']} />
+            </Row>
+            <Row gap={2}>
+              <Label content="every: [4, 3]" width={16} />
+              <ColorText content={BLOCK} ink={{ cycle: ['info', 'accent', 'success'], every: [4, 3] }} />
+            </Row>
+            <Row gap={2}>
+              <Label content="a function" width={16} />
+              <ColorText content={BLOCK} ink={(cell) => (cell.index % 2 ? 'muted' : 'accent')} />
+            </Row>
+          </Column>
         </Panel>
 
         <Panel title="Emphasis">

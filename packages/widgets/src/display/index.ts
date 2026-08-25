@@ -2,6 +2,7 @@ import type { ComponentDefinition } from '@textui/core';
 import { Alert } from './alert.js';
 import { Badge } from './badge.js';
 import { Card } from './card.js';
+import { ColorText } from './color-text.js';
 import { EmptyState } from './empty-state.js';
 import { ErrorState } from './error-state.js';
 import { Heading } from './heading.js';
@@ -25,6 +26,7 @@ import { Timeline } from './timeline.js';
 export * from './alert.js';
 export * from './badge.js';
 export * from './card.js';
+export * from './color-text.js';
 export * from './empty-state.js';
 export * from './error-state.js';
 export * from './heading.js';
@@ -47,6 +49,7 @@ export const DISPLAY_COMPONENTS: ComponentDefinition[] = [
   { component: 'KeyValue', category: 'data', renderer: { kind: 'function', render: KeyValue }, description: 'Aligned label/value pairs.' },
   { component: 'Progress', category: 'feedback', renderer: { kind: 'function', render: Progress }, role: 'progressbar', description: 'Determinate or indeterminate bar, sub-cell resolution.' },
   { component: 'Spinner', category: 'feedback', renderer: { kind: 'function', render: Spinner }, role: 'status', description: 'Animated activity indicator.' },
+  { component: 'ColorText', category: 'display', renderer: { kind: 'function', render: ColorText }, description: 'Multiline text coloured cell by cell - a ramp, a palette per line, or a function.' },
   { component: 'Marquee', category: 'display', renderer: { kind: 'function', render: Marquee }, role: 'marquee', description: 'Text too long for its box, read by sliding it while it has the cursor.' },
   { component: 'Skeleton', category: 'feedback', renderer: { kind: 'function', render: Skeleton }, description: 'Loading placeholder.' },
   { component: 'EmptyState', category: 'feedback', renderer: { kind: 'function', render: EmptyState }, description: 'Nothing here, and what to do about it.' },

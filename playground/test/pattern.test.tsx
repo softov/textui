@@ -192,3 +192,128 @@ describe('a supplied tile', () => {
     await t.unmount();
   });
 });
+
+/**
+ * Spacing and deviation, which are both about the step from one copy to the
+ * next rather than about the tile.
+ *
+ * A ten-wide tile of digits makes an offset readable straight off the row,
+ * which is the only reason these read as assertions rather than as riddles.
+ */
+describe('Pattern spaces its copies', () => {
+  const TILE = ['0123456789'];
+
+  /** One row of a full-width pattern, with the gaps left visible. */
+  async function row(props: Record<string, unknown>, width = 46): Promise<string> {
+    const t = await render(
+      h('box', { width, height: 1 },
+        h(Pattern, { tile: TILE, flex: 1, x: -1, transparent: null, ...props })) as never,
+      { width, height: 1 },
+    );
+    await t.settle();
+    const line = t.line(0);
+    await t.unmount();
+    return line;
+  }
+
+  /** Where each copy starts, read back off the row. */
+  const starts = (line: string): number[] =>
+    [...line].flatMap((c, i) => (c === '0' ? [i] : []));
+
+  const steps = (line: string): number[] =>
+    starts(line).slice(1).map((at, i) => at - (starts(line)[i] as number));
+
+  it('is flush when neither is given', async () => {
+    expect(steps(await row({}))).toEqual([10, 10, 10, 10]);
+  });
+
+  it('adds the spacing to every step', async () => {
+    // Ten wide plus five of air: the second copy starts at 15, not at 10.
+    expect(steps(await row({ spacing: { x: 5 } }))).toEqual([15, 15, 15]);
+  });
+
+  it('treats a deviation of zero as no deviation at all', async () => {
+    // The default has to be the old behaviour exactly, or every pattern
+    // already drawn moves the day this prop is added.
+    expect(await row({ jitter: { x: 0 } })).toBe(await row({}));
+  });
+
+  it('adds up to the deviation, and no more', async () => {
+    const out = steps(await row({ jitter: { x: 10 }, seed: 2 }));
+    // A limit, not a factor: never closer than flush and never more than ten
+    // further on, with every step dealt separately.
+    for (const step of out) {
+      expect(step).toBeGreaterThanOrEqual(10);
+      expect(step).toBeLessThanOrEqual(20);
+    }
+    expect(new Set(out).size).toBeGreaterThan(1);
+  });
+
+  it('stacks on the spacing rather than replacing it', async () => {
+    const out = steps(await row({ jitter: { x: 5 }, spacing: { x: 5 }, seed: 2 }));
+    // Spacing is the air you always want; the deviation is how much more of
+    // it is left to chance. Ten plus four, plus nought to five.
+    for (const step of out) {
+      expect(step).toBeGreaterThanOrEqual(15);
+      expect(step).toBeLessThanOrEqual(20);
+    }
+  });
+
+  it('deals the same pattern for the same seed, and a different one otherwise', async () => {
+    // A pattern re-renders whenever its box changes. One that reached for
+    // `Math.random()` would crawl.
+    expect(await row({ jitter: { x: 10 }, seed: 7 }))
+      .toBe(await row({ jitter: { x: 10 }, seed: 7 }));
+    expect(await row({ jitter: { x: 10 }, seed: 7 }))
+      .not.toBe(await row({ jitter: { x: 10 }, seed: 8 }));
+  });
+
+  /**
+   * The case a sparse tile is always in.
+   *
+   * A big tile with two marks on it is somebody scattering by hand, and it is
+   * as wide as the box - so there is no second copy, no step, and nothing for
+   * a step's deviation to act on. Every seed dealt the same picture, which is
+   * the opposite of what a seed is for.
+   */
+  it('moves a tile that only fits once, by starting the walk earlier', async () => {
+    const wide = ['   .' + ' '.repeat(38)];
+    const at = async (seed: number): Promise<string> => (await row(
+      { tile: wide, jitter: { x: 25 }, seed, transparent: ' ' },
+      46,
+    )).indexOf('.').toString();
+
+    // Three different seeds, three different places for the one mark there is.
+    expect(new Set([await at(1), await at(2), await at(3)]).size).toBeGreaterThan(1);
+  });
+
+  it('leaves the origin alone when there is no deviation', async () => {
+    // The phase is part of the deviation, not a thing of its own: without one
+    // the first copy is at zero, which is where every pattern already drawn
+    // expects it.
+    const flush = await row({ spacing: { x: 5 } });
+    expect(flush.startsWith('0123456789')).toBe(true);
+  });
+
+  it('leaves the origin alone for a stated number of copies', async () => {
+    // `x: 2` is "put two here", not "fill this". Sliding those off the left
+    // would be answering a different question.
+    const two = await row({ x: 2, jitter: { x: 10 }, seed: 5 });
+    expect(two.startsWith('0123456789')).toBe(true);
+  });
+
+  it('deviates down the box as well as across it', async () => {
+    const t = await render(
+      h('box', { width: 6, height: 9 },
+        h(Pattern, { tile: ['ab'], flex: 1, x: -1, y: -1, jitter: { y: 2 }, seed: 3 })) as never,
+      { width: 6, height: 9 },
+    );
+    await t.settle();
+    const filled = t.lines().filter((l) => l.includes('a'));
+    await t.unmount();
+    // Fewer rows than a flush pattern would have drawn, because some of them
+    // went to air.
+    expect(filled.length).toBeLessThan(9);
+    expect(filled.length).toBeGreaterThan(0);
+  });
+});

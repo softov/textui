@@ -69,6 +69,14 @@ export interface DividerChars {
  */
 export type CursorStyle = 'block' | 'underline' | 'bar';
 
+/**
+ * How much of a table gets ruled: the header only, or between every row.
+ *
+ * Not a border style - it is a question about how many lines, not which
+ * glyphs. The glyphs are the theme's border set either way.
+ */
+export type TableRules = 'header' | 'all';
+
 export type BorderSides = {
   top?: boolean;
   right?: boolean;

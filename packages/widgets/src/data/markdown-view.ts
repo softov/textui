@@ -51,6 +51,9 @@ export const MarkdownView = defineComponent<MarkdownViewProps>('MarkdownView', (
       bullet: theme.glyphs.bulletFilled,
       quoteBar: theme.borderChars().left,
       ruled,
+      // How many rules a table gets is the theme's, but *where* they go is a
+      // question about rows, so it is answered in the layout rather than here.
+      tableRules: theme.tableRules,
     }),
     [given, content, width, theme, ruled],
   );
@@ -117,6 +120,59 @@ export const MarkdownView = defineComponent<MarkdownViewProps>('MarkdownView', (
         })));
       }
       i = end;
+      continue;
+    }
+
+    if (row.kind === 'table') {
+      /*
+       * A table is ruled even where nothing else is.
+       *
+       * `theme.border` being `none` is a theme saying "do not box things" -
+       * panels, fences, dialogs. It is not saying "do not tell these columns
+       * apart": the rules in a table are its structure, not its decoration,
+       * and without them it is text that happens to line up, with nothing to
+       * say where it ended. So a borderless theme still gets a table, drawn
+       * in the plainest set there is.
+       *
+       * Asked for by name rather than taken from `borderChars()`, which is
+       * the same request routed through the terminal's own limits: on a
+       * console that cannot draw box characters this comes back as `+`, `-`
+       * and `|` rather than as something it would print as a row of boxes.
+       */
+      const chars = theme.borderChars(theme.border === 'none' ? 'single' : theme.border);
+      const fg = 'borderSubtle';
+
+      if (row.part !== 'head' && row.part !== 'body') {
+        const [left, joint, right] =
+          row.part === 'top' ? [chars.topLeft, chars.teeTop, chars.topRight]
+            : row.part === 'bottom' ? [chars.bottomLeft, chars.teeBottom, chars.bottomRight]
+              : [chars.teeRight, chars.cross, chars.teeLeft];
+        const bar = row.part === 'bottom' ? chars.bottom : chars.top;
+        // Every column plus the space either side of it, which is what the
+        // cell rows spend - an edge measured off the cells alone is an edge
+        // two cells short per column.
+        out.push(h('text', {
+          key,
+          content: left
+            + row.widths.map((w) => repeatToWidth(bar, w + 2)).join(joint)
+            + right,
+          fg,
+          wrap: 'none',
+        }));
+        i++;
+        continue;
+      }
+
+      // The cells arrive padded to their column, so nothing here measures
+      // anything: a row is its cells with a rule between each pair.
+      out.push(h('box', { key, direction: 'row', overflow: 'hidden' },
+        ...row.cells.flatMap((cell, c) => [
+          h('text', { key: `s${c}`, content: c === 0 ? `${chars.left} ` : ` ${chars.left} `, fg, wrap: 'none' }),
+          h('box', { key: `c${c}`, direction: 'row', overflow: 'hidden' },
+            ...runNodes(cell, quiet ? { fg: 'muted' as StyleColor } : {})),
+        ]),
+        h('text', { key: 'end', content: ` ${chars.right}`, fg, wrap: 'none' })));
+      i++;
       continue;
     }
 

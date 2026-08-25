@@ -1,5 +1,8 @@
 import type { Color } from './cells.js';
-import type { BorderChars, BorderStyle, ColorToken, CursorStyle, Density, DividerChars, DividerStyle, Style, StyleColor } from './style.js';
+import type {
+  BorderChars, BorderStyle, ColorToken, CursorStyle, Density, DividerChars, DividerStyle,
+  Style, StyleColor, TableRules,
+} from './style.js';
 import type { SyntaxScope } from './syntax.js';
 import type { Disposable } from './disposable.js';
 import type { TerminalCapabilities } from './capabilities.js';
@@ -33,6 +36,8 @@ export interface ThemeGlyphs {
   chevronUp: string;
   arrowUp: string;
   arrowDown: string;
+  arrowLeft: string;
+  arrowRight: string;
   ellipsis: string;
   search: string;
   radioOn: string;
@@ -88,6 +93,17 @@ export interface ThemeDefinition {
   dividerChars?: Partial<Record<DividerStyle, DividerChars>>;
   /** The caret's shape. The terminal's own setting is the default. */
   cursor?: CursorStyle;
+  /**
+   * How much of a table gets ruled.
+   *
+   * `header` is the default and the quiet one: a box, and a rule under the
+   * header. `all` puts a rule between every pair of rows as well, which is
+   * what a table of few, long rows wants - a wrapped-looking cell beside a
+   * short one is ambiguous about which row it belongs to until something
+   * separates them. On a table of twenty short rows the same lines are noise,
+   * which is why it is the theme's call rather than the default.
+   */
+  tableRules?: TableRules;
   density?: Density;
   /** Per-component style overrides, keyed by component name then variant. */
   components?: Record<string, Record<string, Style>>;
@@ -110,6 +126,7 @@ export interface ResolvedTheme {
   border: BorderStyle;
   divider: DividerStyle;
   cursor: CursorStyle | undefined;
+  tableRules: TableRules;
   density: Density;
   components: Record<string, Record<string, Style>>;
   /** Every syntax scope, resolved to a colour. */

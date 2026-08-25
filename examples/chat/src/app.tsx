@@ -12,8 +12,8 @@ import { CONTROLLER, createController } from './control.js';
 import { fakeHost } from './ahp/fake.js';
 import type { HostConnection } from './ahp/connection.js';
 import {
-  FOCUS, HOST, HOST_ERROR, INPUT, OPEN, RUNNING, SCREEN, SESSIONS, STATUS, WORKSPACE,
-  openSession, workspaceName,
+  FOCUS, HOST, HOST_ERROR, INPUT, OPEN, RUNNING, SCREEN, SESSIONS, SPLIT_AT, SPLIT_DEFAULT,
+  STATUS, WORKSPACE, openSession, workspaceName,
 } from './state.js';
 import type { HostState } from './state.js';
 import { decodeStatus } from './ahp/status.js';
@@ -105,7 +105,8 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
    */
   const newline = 'ctrl+enter';
   const waiting = useStoreValue<{ kind: string } | null>(INPUT, null);
-  const arrows = `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown}`;
+  const upDown = `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown}`;
+  const leftRight = `${theme.glyphs.arrowLeft}${theme.glyphs.arrowRight}`;
   // Which keys exist is a property of where you are, not of what is open: a
   // session stays open while its changes are on screen, and `i write` there
   // is an offer nothing honours.
@@ -164,7 +165,7 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
             { keys: 'ctrl+c', label: running ? 'stop' : 'quit' },
           ]
           : [
-            { keys: arrows, label: 'move' },
+            { keys: upDown, label: 'move' },
             { keys: 'enter', label: 'expand' },
             { keys: 'i', label: 'write' },
             { keys: 'G', label: 'follow' },
@@ -212,7 +213,10 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
     <KeyHints
       {...props}
       hints={[
-        { keys: arrows, label: 'move' },
+        { keys: upDown, label: 'move' },
+        // Which one it is depends on where the detail pane is, and the pane is
+        // right there on the screen saying so. Naming both is what fits.
+        { keys: leftRight, label: 'detail' },
         { keys: 'enter', label: 'open' },
         { keys: 'n', label: 'new' },
         { keys: 'a', label: 'archive' },
@@ -252,6 +256,16 @@ export interface ChatOptions {
    * editor's agents window never shows it.
    */
   workspace?: string;
+  /**
+   * How wide the terminal has to be before the catalogue shows both panes.
+   *
+   * Narrower than this and the detail pane starts hidden - left opens it,
+   * right puts it away - because a split that leaves both halves truncated is
+   * worse than either half whole. Settable here so it can be tuned without a
+   * rebuild; `140` is where a session list stops cutting its titles with a
+   * detail pane beside it.
+   */
+  splitAt?: number;
 }
 
 export function registerChat(app: TextUIApp, options: ChatOptions = {}): Disposable {
@@ -261,6 +275,7 @@ export function registerChat(app: TextUIApp, options: ChatOptions = {}): Disposa
   const host = options.host ?? fakeHost();
   const controller = createController(app, host);
   app.store.set(WORKSPACE, options.workspace ?? process.cwd());
+  app.store.set(SPLIT_AT, options.splitAt ?? SPLIT_DEFAULT);
   bag.add(controller);
   bag.add(app.services.provide(CONTROLLER, controller));
 

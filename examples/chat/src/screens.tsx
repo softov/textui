@@ -17,8 +17,8 @@ import { Badge, Column, Divider, EmptyState, Panel, RadioGroup, Row, SearchBox, 
 import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE, settingCommand } from './control.js';
 import {
   ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, FOCUS, HISTORY, HOST, INPUT, MODEL, OPEN,
-  CHAT_URI, PROVIDER, QUEUE, SELECTED, SESSIONS, SETTINGS, TURNS, WORKSPACE,
-  openSession, visibleSessions, workspaceName,
+  CHAT_URI, PROVIDER, QUEUE, SELECTED, SESSIONS, SETTINGS, SIDEBAR, SPLIT_AT, SPLIT_DEFAULT,
+  TURNS, WORKSPACE, openSession, visibleSessions, workspaceName,
 } from './state.js';
 import type { HostState } from './state.js';
 import { toBlocks } from './blocks.js';
@@ -147,12 +147,30 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
      * left a session list too narrow to read a title in, and widening the list
      * would truncate the URIs the detail pane exists to let you copy. Neither
      * of those is a problem while you are looking at the *other* one, so the
-     * space follows the reader - and walking out of the details with tab or
-     * escape gives the list its width back on the way past.
+     * space follows the reader.
+     *
+     * Below `splitAt` there is not enough of it to divide at all: forty cells
+     * of detail take the list down to a column that cuts every title, and the
+     * detail pane they were taken for is still too narrow to hold the URIs it
+     * exists to show. Two truncated halves are worse than one whole one, so
+     * under that width the catalogue is one pane and the detail is a drawer.
+     *
+     * Right opens it and left puts it away: the key points at the pane, which
+     * is on the right of the screen. Above the split both panes are always
+     * drawn and the same two keys only move the keyboard between them.
      */
+    const width = useSize().width;
+    const splitAt = useStoreValue<number>(SPLIT_AT, SPLIT_DEFAULT) ?? SPLIT_DEFAULT;
+    // Three states: out, away, and nobody has said. The last one follows the
+    // window, so a terminal being dragged wider opens the pane - and a person
+    // who put it away keeps it away, which a plain boolean defaulted from the
+    // width could not do.
+    const asked = useStoreValue<boolean | null>(SIDEBAR, null);
+    const open = asked ?? width > splitAt;
+
     const focused = useStoreValue<string | null>(FOCUS, null);
-    const reading = focused === 'chat.details';
-    const aside = Math.max(34, Math.min(56, Math.round(useSize().width * 0.4)));
+    const reading = open && focused === 'chat.details';
+    const aside = Math.max(34, Math.min(56, Math.round(width * 0.4)));
     // What the pane without the keyboard keeps: two fifths, and never less
     // than a session title fits in. Capped as the terminal grows, because the
     // pane being read has a use for the rest and this one does not.
@@ -212,6 +230,7 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
           {!archived ? <text content="x  show archived" fg="subtle" /> : null}
         </Panel>
 
+        {open ? (
         <Panel
           title="Session"
           {...(reading ? { flex: 1 } : { width: aside })}
@@ -224,10 +243,19 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
                 <text content={current.title} bold wrap="word" flex={1} />
                 {status.archived ? <Badge label="archived" tone="muted" /> : null}
               </Row>
-              {/* Tab reaches this, arrows walk it, enter copies the row. The
-                  identifiers are the reason: they are what gets pasted into a
-                  shell, and they are exactly what does not fit on one line. */}
-              <SessionDetails fields={describe(current, detail)} focusId="chat.details" />
+              {/* Right arrow reaches this, up and down walk it, enter copies
+                  the row. The identifiers are the reason: they are what gets
+                  pasted into a shell, and they are exactly what does not fit
+                  on one line. */}
+              {/* Opened by asking, so the cursor goes with it - and `asked`
+                  rather than `open`, so a terminal dragged past the split
+                  width reveals the pane without taking the keyboard off
+                  whatever was holding it. */}
+              <SessionDetails
+                fields={describe(current, detail)}
+                focusId="chat.details"
+                claim={asked === true}
+              />
               <text content="" flex={1} />
               <ConnectionBadge
                 url={host?.url ?? ''}
@@ -239,6 +267,7 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
             <EmptyState title="Nothing selected" message="Choose a session on the left." />
           )}
         </Panel>
+        ) : null}
       </Row>
     );
   });
@@ -319,6 +348,8 @@ function useComposerOptions(): ComposerOption[] {
             : undefined)
             ?? settingIcon(unicode, property.key, property.title),
           label: chosen?.label ?? value ?? property.title,
+          // The question, for anything showing these with room for the pair.
+          title: property.title,
           // Shown but not asked where the host says it cannot be changed on a
           // running session: offering it produces a refusal, not an edit.
           ...(open && !property.sessionMutable ? {} : { commandId: settingCommand(property.key) }),
@@ -359,6 +390,11 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
     const running = turns.some((turn) => turn.state === 'running');
     const blocks = toBlocks(turns, queued);
     const options = useComposerOptions();
+    // The same answers the chips are showing, with the question beside each -
+    // read off one source rather than asked for a second time.
+    const settingRows = options
+      .filter((option) => option.title !== undefined)
+      .map((option) => ({ label: option.title as string, value: option.label }));
 
     if (!session) {
       return <EmptyState title="No session open" message="Open one from the catalogue." flex={1} />;
@@ -366,15 +402,19 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
 
     return (
       <Column flex={1} gap={1}>
-        {/* Outside the feed, so it does not scroll away with the first reply.
-            What it says is true of the whole conversation, not of a point in
-            it. */}
-        <Column>
-          <ChatSessionHead session={session} {...(model ? { model } : {})} {...(chat ? { chat } : {})} />
-          <Divider dim />
-        </Column>
-
         <ChatTranscript
+          // The top of the conversation, inside it. See `head`.
+          head={(
+            <Column padding={[0, 0, 1, 0]}>
+              <ChatSessionHead
+                session={session}
+                {...(model ? { model } : {})}
+                {...(chat ? { chat } : {})}
+                settings={settingRows}
+              />
+              <Divider dim />
+            </Column>
+          )}
           flex={1}
           blocks={blocks}
           expanded={expanded}

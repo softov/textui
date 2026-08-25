@@ -22,14 +22,33 @@ export interface ChatTranscriptProps extends BoxProps {
   /** Which block the cursor is on. Held by the screen, like every other state. */
   cursor?: number;
   onCursor?(index: number): void;
+  /**
+   * What this conversation is, as the first thing in it.
+   *
+   * Inside the scrolling region rather than pinned above it: a caption outside
+   * costs a row of the conversation on every screen for ever, so it has to
+   * earn each one - which is what forces it down to a line and then down to
+   * less than it was for. Here it costs nothing after the first screen.
+   *
+   * It is not a block. The cursor walks the conversation and there is nothing
+   * to do to a caption, so it sits ahead of the indices rather than in them.
+   */
+  head?: RenderOutput;
   focusId?: string;
 }
 
 export const ChatTranscript: (props: ChatTranscriptProps) => RenderOutput =
   defineComponent<ChatTranscriptProps>('ChatTranscript', (props) => {
     const {
-      blocks, expanded, onToggle, cursor, onCursor, focusId = 'chat.transcript', ...rest
+      blocks, expanded, onToggle, cursor, onCursor, head,
+      focusId = 'chat.transcript', ...rest
     } = props;
+
+    // The caption is an entry the feed scrolls and the cursor does not visit,
+    // so every index the feed reports is one further along than the block it
+    // stands for. Converted here, once, rather than at each of the three
+    // places that would otherwise each have to remember.
+    const lead = head ? 1 : 0;
 
     return (
       <Feed
@@ -38,15 +57,15 @@ export const ChatTranscript: (props: ChatTranscriptProps) => RenderOutput =
         // nothing else on this screen those keys could be for, and taking the
         // keyboard off the field to use them is what a reader is avoiding.
         pageKeys="always"
-
-        {...(cursor !== undefined ? { selectedIndex: cursor } : {})}
-        {...(onCursor ? { onSelect: onCursor } : {})}
+        {...(cursor !== undefined ? { selectedIndex: cursor + lead } : {})}
+        {...(onCursor ? { onSelect: (index: number) => onCursor(Math.max(0, index - lead)) } : {})}
         onActivate={(index: number) => {
-          const block = blocks[index];
+          const block = blocks[index - lead];
           if (block) onToggle(block.id);
         }}
         {...rest}
       >
+        {head ?? null}
         {blocks.map((block) => (
           <BlockView
             key={block.id}

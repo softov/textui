@@ -20,6 +20,15 @@ export interface ComposerOption {
   id: string;
   /** The value, as a person reads it. Never the id the host stores. */
   label: string;
+  /**
+   * The question, as opposed to the answer in `label`.
+   *
+   * The chip has no room for it - "Ask each time" is the whole row and the
+   * mark in front says which question it belongs to - but anything listing
+   * these somewhere with more space needs the pair, and the host's own wording
+   * for both is on the schema rather than in this file.
+   */
+  title?: string;
   icon?: string;
   /** The command whose argument this chip asks about. Absent: shown, not asked. */
   commandId?: string;

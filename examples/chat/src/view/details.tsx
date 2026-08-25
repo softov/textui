@@ -2,6 +2,7 @@ import type { BoxProps, RenderOutput, SemanticVariant } from '@textui/core';
 import {
   defineComponent,
   useClipboard,
+  useEffect,
   useFocus,
   useInput,
   useState,
@@ -41,11 +42,25 @@ export interface SessionDetailsProps extends BoxProps {
   focusId?: string;
   /** Width of the label column. The labels are ours, so this is knowable. */
   labelWidth?: number;
+  /**
+   * Take the keyboard on the frame this mounts, out of whatever holds it.
+   *
+   * Not `autoFocus`, which claims focus rather than taking it: a pane that
+   * appears *because* a key asked for it has to end up with the cursor, and
+   * the thing it is taking the cursor from - the session list - is in the
+   * same focus scope and already has it.
+   *
+   * It has to be done here rather than by the screen that mounts this,
+   * because a focusable registers in its own effect: on the render that opens
+   * the pane, the id does not exist yet and the screen's `focus()` is a call
+   * that quietly returns false.
+   */
+  claim?: boolean;
 }
 
 export const SessionDetails: (props: SessionDetailsProps) => RenderOutput =
   defineComponent<SessionDetailsProps>('SessionDetails', (props) => {
-    const { fields, focusId, labelWidth = 11, ...rest } = props;
+    const { fields, focusId, labelWidth = 11, claim, ...rest } = props;
     const theme = useTheme();
     const clipboard = useClipboard();
     const focus = useFocus({ ...(focusId ? { id: focusId } : {}) });
@@ -55,6 +70,9 @@ export const SessionDetails: (props: SessionDetailsProps) => RenderOutput =
     // The selection is an index into a list that changes with the selected
     // session, so it is clamped on the way out rather than reset on the way in.
     const at = Math.max(0, Math.min(index, fields.length - 1));
+
+    // After the registration above, which is the whole point of it being here.
+    useEffect(() => { if (claim) focus.focus(); }, [claim]);
 
     useInput((event) => {
       if (fields.length === 0) return false;

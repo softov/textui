@@ -2,6 +2,7 @@ import type { ArgChoice, ArgSpec, BoxProps, CommandDefinition, TextUIApp } from 
 import {
   defineComponent,
   h,
+  stringWidth,
   useEffect,
   useFocusScope,
   useInput,
@@ -29,10 +30,41 @@ export interface CommandPaletteProps extends BoxProps {
   onClose?(): void;
   /** Off makes this a picker: it reports the choice and runs nothing. */
   execute?: boolean;
-  /** Group the list by `category`, with a rule between groups. */
+  /**
+   * Group the list by `category`, with the category named above each group.
+   *
+   * Only while nothing is typed. A query sorts by relevance, which interleaves
+   * the categories - and a heading over one row is not a group.
+   */
   grouped?: boolean;
   visibleRows?: number;
+  /**
+   * A fixed width, in cells.
+   *
+   * Left off, the panel is as wide as its widest row and no wider than
+   * `maxWidth` - which is what a list of five short answers wants, and what a
+   * list of five sentences needs. A number here is a number: the panel is that
+   * wide whether the rows fill it or overflow it.
+   */
   width?: number;
+  /**
+   * The widest the panel may grow when `width` is left off. 60 by default.
+   *
+   * There is always a limit: a description is prose, and prose has no width it
+   * stops at. Past this the rows truncate, and the row under the cursor slides
+   * what it truncated.
+   */
+  maxWidth?: number;
+  /**
+   * Where a row's description goes. `inline` right-aligns it beside the label;
+   * `below` gives it a line of its own.
+   *
+   * `below` for a question whose answers differ by a sentence rather than by a
+   * word - four approval modes named in two words each are told apart by the
+   * line under them, and inline that line is the half that gets truncated.
+   * Every row costs two lines, so `visibleRows` buys half as many.
+   */
+  descriptions?: 'inline' | 'below';
   /**
    * Open already drilled into this command's choices.
    *
@@ -62,7 +94,8 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const runtime = useRuntime();
   const {
     commands, placeholder, onRun, onClose, execute = true,
-    grouped = true, visibleRows = 8, width = 60, openAt, ...rest
+    grouped = true, visibleRows = 8, width, maxWidth = 60, openAt,
+    descriptions = 'inline', ...rest
   } = props;
 
   const [query, setQuery] = useState('');
@@ -124,17 +157,28 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     : matches.map((command, i) => ({
         id: command.id,
         label: command.title,
-        // `badge` when the row has state to report, the category otherwise.
-        // The icon stays put either way: it is what the row *is*.
-        description: command.badge ?? command.category,
+        // What this row does, or the state it is reporting. The category is
+        // not here: it names the *group*, so it is said once above it.
+        description: command.badge ?? command.description,
         icon: command.icon,
         // A row may stand for a command registered under another id, and the
         // key a person would press belongs to that one.
         shortcut: command.shortcut ?? app?.keybindings.forCommand(command.id)[0],
         // A chevron, from `Menu`, for anything that will ask a question.
         children: argumentOf(command) ? [] : undefined,
-        separatorBefore:
-          grouped && i > 0 && (matches[i - 1] as CommandDefinition).category !== command.category,
+        // The heading goes on the first row of each group, including the
+        // first - a group with no name over it is the one the reader has to
+        // work out from the rows in it.
+        //
+        // Sorted matches interleave the categories, so a query turns the
+        // headings off rather than repeating them: with the rows in relevance
+        // order, "Screens" over a single row is noise, and the group it claims
+        // to start is one row long.
+        ...(grouped && query.trim() === ''
+          && (i === 0 || (matches[i - 1] as CommandDefinition).category !== command.category)
+          && command.category
+          ? { sectionBefore: command.category }
+          : {}),
       }));
 
   const back = (): void => {
@@ -193,18 +237,42 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     const resolved = typeof arg.choices === 'function' ? arg.choices() : arg.choices ?? [];
     setPending({ command, arg, collected });
     setQuery('');
-    setHighlight(0);
+
+    /*
+     * Open on the answer that is already in force.
+     *
+     * A question about a setting is nearly always asked in order to change it
+     * *from* something, and the row that something is on is where the reader
+     * is looking. Starting at the top instead says the first option is the
+     * current one, which is wrong on every list where it is not - and it
+     * costs an extra press to get back to where you began.
+     *
+     * `default` is the argument's own word for it, and the same one the row
+     * labelled "default" already used.
+     */
+    const startAt = (list: ArgChoice[]): number => {
+      const at = list.findIndex((choice) => choice.value === arg.default);
+      return at < 0 ? 0 : at;
+    };
+
     if (Array.isArray(resolved)) {
       setAsking(false);
-      setChoices(resolved.map(asChoice));
+      const list = resolved.map(asChoice);
+      setChoices(list);
+      setHighlight(startAt(list));
       return;
     }
     setChoices([]);
+    setHighlight(0);
     setAsking(true);
     // Answered either way: a `choices` function that rejects leaves the panel
     // saying "nothing to choose", which is true of what it can offer.
     void resolved
-      .then((list) => setChoices(list.map(asChoice)))
+      .then((list) => {
+        const choices = list.map(asChoice);
+        setChoices(choices);
+        setHighlight(startAt(choices));
+      })
       .catch(() => setChoices([]))
       .finally(() => setAsking(false));
   };
@@ -322,12 +390,33 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       ?? pending.arg.description ?? `${pending.command.title} needs a ${pending.arg.name}`
     : highlighted?.description ?? highlighted?.id ?? '';
 
+  /*
+   * How wide the panel wants to be.
+   *
+   * A menu sized to a constant is a menu that is too wide for a list of
+   * one-word answers and too narrow for a list of sentences, and it is the
+   * same menu either way. So it asks for what it holds - the widest row, plus
+   * what the row draws around it - and takes `maxWidth` when that is more than
+   * there is any point having.
+   *
+   * `minWidth` keeps the search field, the hint row and the crumb from being
+   * the things that decide it: a question with two short answers still needs
+   * somewhere to type and a line saying what the keys do.
+   */
+  const content = Math.max(
+    ...items.map((item) => rowWidth(item, descriptions)),
+    ...(pending ? [stringWidth(pending.command.title) + 12] : [stringWidth(placeholder ?? '') + 4]),
+  );
+
   return h('box', {
     role: 'dialog',
     label: 'Commands',
     border: theme.border,
     bg: 'overlay',
-    width,
+    // A stated width is a width. Left off, it fits what it holds.
+    ...(width !== undefined
+      ? { width }
+      : { minWidth: Math.min(28, maxWidth), maxWidth, width: Math.min(content, maxWidth) }),
     direction: 'column',
     // A border is a gutter as well as a line. Without one - `paper` sets
     // `border: 'none'` - the rows run flush to the panel edge and the last
@@ -376,6 +465,9 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     h(Menu, {
       items,
       visibleRows,
+      // The argument gets the last word: only it knows whether its answers are
+      // told apart by a word or by a sentence.
+      descriptions: pending?.arg.descriptions ?? descriptions,
       interactive: false,
       activeId: rows[index],
       onSelect: (id: string) => {
@@ -482,4 +574,26 @@ function subsequenceScore(haystack: string, needle: string): number {
     hi = found + 1;
   }
   return score;
+}
+
+/**
+ * The cells one row would like, drawn the way this menu draws it.
+ *
+ * Mirrors `Menu`'s own layout rather than guessing: the cursor's column and
+ * the gap after it, the icon when there is one, the label, and then either the
+ * description beside it or a line of its own under it. A description on its
+ * own line does not widen the row past its own indent, which is why `below`
+ * is the layout a long sentence wants.
+ */
+function rowWidth(item: MenuItem, descriptions: 'inline' | 'below'): number {
+  // The marker and its gap; a switch column when the menu has one.
+  const lead = 2 + (item.checked !== undefined ? 2 : 0)
+    + (item.icon ? stringWidth(item.icon) + 1 : 0);
+  const label = stringWidth(item.label);
+  const trail = (item.shortcut ? stringWidth(item.shortcut) + 1 : 0) + (item.children ? 2 : 0);
+  const description = item.description ? stringWidth(item.description) : 0;
+
+  return descriptions === 'below'
+    ? Math.max(lead + label + trail, lead + description)
+    : lead + label + (description > 0 ? description + 2 : 0) + trail;
 }

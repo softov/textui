@@ -19,6 +19,8 @@ export const WorkbenchShell = defineComponent<ShellProps>('WorkbenchShell', (pro
   const sidebar = useSurfaceMounted('sidebar');
   const aside = useSurfaceMounted('aside');
   const narrow = size.width < 90;
+  const showSidebar = Boolean(sidebar) && !sidebarCollapsed && !narrow;
+  const showAside = Boolean(aside) && asideVisible && !narrow;
 
   return h('box', {
     direction: 'column',
@@ -34,7 +36,7 @@ export const WorkbenchShell = defineComponent<ShellProps>('WorkbenchShell', (pro
     h('box', { direction: 'row', flex: 1 },
       h(SurfaceArea, { surface: 'rail' }),
 
-      sidebar && !sidebarCollapsed && !narrow
+      showSidebar
         ? h('box', {
             width: 24,
             border: { style: theme.border, sides: { right: true } },
@@ -43,11 +45,22 @@ export const WorkbenchShell = defineComponent<ShellProps>('WorkbenchShell', (pro
           }, h(SurfaceArea, { surface: 'sidebar', flex: 1 }))
         : null,
 
-      h('box', { flex: 1, direction: 'column', padding: { left: 1 } },
+      // A gutter separates main from the pane beside it, so it belongs on the
+      // sides that have one. Applied unconditionally it insets every screen by
+      // a cell on the left and nothing on the right - hidden under a theme
+      // that draws a frame, and plainly lopsided under one that does not.
+      h('box', {
+        flex: 1,
+        direction: 'column',
+        padding: {
+          ...(showSidebar ? { left: 1 } : {}),
+          ...(showAside ? { right: 1 } : {}),
+        },
+      },
         h(SurfaceArea, { surface: 'main', flex: 1 }),
         h(SurfaceArea, { surface: 'panel' })),
 
-      aside && asideVisible && !narrow
+      showAside
         ? h('box', {
             width: 30,
             border: { style: theme.border, sides: { left: true } },

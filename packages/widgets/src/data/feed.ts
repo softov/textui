@@ -33,6 +33,20 @@ export interface FeedProps extends BoxProps {
   onSelect?(index: number): void;
   onActivate?(index: number): void;
   scrollbar?: boolean;
+  /**
+   * Who `pageup` and `pagedown` belong to.
+   *
+   * `focused` is the ordinary answer: the keys go to whatever has the
+   * keyboard. `always` claims them even while something else does - for the
+   * feed that *is* the screen, with a text field under it. Somebody typing a
+   * message who presses page up means the conversation above them; there is
+   * nothing else on that screen those keys could be for, and taking the
+   * keyboard away from the field to use them is the thing they are avoiding.
+   *
+   * Only those two keys, and only when the focused node has declined them
+   * first - so a field that pages its own content keeps them.
+   */
+  pageKeys?: 'focused' | 'always';
   focusable?: boolean;
   autoFocus?: boolean;
   /** So a command can send the reader here by name. */
@@ -59,6 +73,7 @@ export interface FeedProps extends BoxProps {
 export const Feed = defineComponent<FeedProps>('Feed', (props) => {
   const {
     children, follow: followProp, onFollowChange, selectedIndex, onSelect, onActivate,
+    pageKeys = 'focused',
     scrollbar = true, focusable = true, autoFocus, focusId, id, ...rest
   } = props;
 
@@ -164,6 +179,24 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
       }
     },
     { focusId: focus.id, enabled: focusable },
+  );
+
+  /*
+   * The page keys, from wherever the keyboard happens to be.
+   *
+   * `global` handlers run only after the focused node has declined the key,
+   * so a field that pages its own content still keeps them - this is the one
+   * that catches what nothing else wanted.
+   */
+  useInput(
+    (event) => {
+      if (event.name !== 'pageup' && event.name !== 'pagedown') return false;
+      if (chorded(event)) return false;
+      const page = Math.max(1, measured.height - 2);
+      scrollTo(event.name === 'pageup' ? top - page : top + page);
+      return true;
+    },
+    { global: true, enabled: pageKeys === 'always' },
   );
 
   const drawn = entries.map((entry, i) => h(FeedEntry, {

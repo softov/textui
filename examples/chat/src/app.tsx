@@ -4,6 +4,7 @@ import {
   defineComponent,
   useApp,
   useTheme,
+  useStoreSubtree,
   useStoreValue,
 } from '@textui/core';
 import { KeyHints, Row, registerBuiltins } from '@textui/widgets';
@@ -11,7 +12,7 @@ import { CONTROLLER, createController } from './control.js';
 import { fakeHost } from './ahp/fake.js';
 import type { HostConnection } from './ahp/connection.js';
 import {
-  FOCUS, HOST, HOST_ERROR, INPUT, OPEN, RUNNING, SCREEN, STATUS, WORKSPACE,
+  FOCUS, HOST, HOST_ERROR, INPUT, OPEN, RUNNING, SCREEN, SESSIONS, STATUS, WORKSPACE,
   openSession, workspaceName,
 } from './state.js';
 import type { HostState } from './state.js';
@@ -53,21 +54,32 @@ const Header = defineComponent<Record<string, never>>('ChatHeader', () => {
   // remounted to notice.
   useStoreValue<string | null>(SCREEN, null);
   useStoreValue<string | null>(OPEN, null);
+  // And to the summaries themselves. `openSession` is a plain read, so a
+  // title or a status arriving from the host changed the store and left this
+  // row showing what it said when the session was opened - which is why the
+  // header only caught up when navigating away and back remounted it.
+  useStoreSubtree(SESSIONS);
   const session = openSession(app.store);
   const decoded = decodeStatus(status);
 
   return (
+    // Only the title gives way. Everything else on this row is fixed-width and
+    // says what the application *is* - a header that truncates its own name to
+    // "Assist…" in order to fit more of a session title has given up the one
+    // part that is the same on every screen. The workspace yields after the
+    // title, and the status glyph never does: it is one cell and it is the
+    // thing the row is scanned for.
     <Row gap={1}>
-      <text content="Assistant" bold fg="accent" />
-      <text content={theme.glyphs.separator} fg="subtle" />
+      <text content="Assistant" bold fg="accent" shrink={0} />
+      <text content={theme.glyphs.separator} fg="subtle" shrink={0} />
       {session ? (
         <>
-          <text content={theme.glyphs[decoded.glyph]} fg={decoded.tone} />
+          <text content={theme.glyphs[decoded.glyph]} fg={decoded.tone} shrink={0} />
           <text content={session.title} flex={1} truncate="end" />
-          <text content={workspaceName(session.workingDirectories[0])} fg="muted" />
+          <text content={workspaceName(session.workingDirectories[0])} fg="muted" shrink={4} truncate="end" />
         </>
       ) : (
-        <text content={host?.url ?? 'no host'} fg="muted" flex={1} />
+        <text content={host?.url ?? 'no host'} fg="muted" flex={1} truncate="end" />
       )}
     </Row>
   );

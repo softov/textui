@@ -12,7 +12,7 @@ import type { Agent, Answer, SessionConfig, SessionDetail, SessionUri, Turn } fr
 import { SessionFlag } from './ahp/types.js';
 import { valueIcon } from './view/icons.js';
 import {
-  ARCHIVED, DRAFT, EXPANDED, FILTER, HOST, HOST_ERROR, INPUT, MODEL, OPEN, PROVIDER,
+  ARCHIVED, CHAT_URI, DRAFT, EXPANDED, FILTER, HOST, HOST_ERROR, INPUT, MODEL, OPEN, PROVIDER,
   QUEUE, RUNNING, SCREEN, SELECTED, SETTINGS, TURNS, WORKSPACE,
   applyEvent, pendingInput, queue, sessions, turns, writeSessions, writeStatus,
 } from './state.js';
@@ -234,6 +234,23 @@ export function createController(
     app.store.set(HOST_ERROR, typeof rpc?.code === 'number' ? `${message} (${rpc.code})` : message);
   };
 
+  /**
+   * Read the catalogue again, at most once per turn of the loop.
+   *
+   * The host says "something moved" per action, and a turn finishing is
+   * several of them - so the unguarded version is one `listSessions` per
+   * delta. Coalescing makes a burst one read, and the read is what the list
+   * is drawn from either way.
+   */
+  let pending: ReturnType<typeof setTimeout> | null = null;
+  const refreshSoon = (): void => {
+    if (pending) return;
+    pending = setTimeout(() => { pending = null; void controller.refresh(); }, 120);
+    // Nothing here should hold a process open: this is a repaint, not work.
+    (pending as unknown as { unref?(): void }).unref?.();
+  };
+  bag.add({ dispose: () => { if (pending) clearTimeout(pending); pending = null; } });
+
   const controller: Controller = {
     async refresh() {
       try {
@@ -257,7 +274,10 @@ export function createController(
       app.store.set(INPUT, null);
       subscription = host.subscribe(uri, (event) => {
         model = applyEvent(app.store, event, model);
-        if (event.type === 'status') void controller.refresh();
+        // The open session's own status still refreshes the list here: the
+        // catalogue watch below covers what the *host* says moved, and this
+        // covers what this client is watching happen.
+        if (event.type === 'status') refreshSoon();
       });
 
       // The composer's row is about the next message, so on an open session it
@@ -270,9 +290,11 @@ export function createController(
         app.store.set(PROVIDER, summary.provider);
         app.store.set(WORKSPACE, (summary.workingDirectories[0] ?? '').replace(/^file:\/\//, ''));
       }
+      app.store.set(CHAT_URI, null);
       void host.detail(uri).then((detail) => {
         if (app.store.get<SessionUri>(OPEN) !== uri) return;
         app.store.set(SETTINGS, detail.config.values);
+        app.store.set(CHAT_URI, detail.chat);
         if (detail.model) app.store.set(MODEL, detail.model);
         offer(detail.config, uri);
       }).catch(failed);
@@ -409,6 +431,11 @@ export function createController(
   };
 
   bag.add({ dispose: () => subscription?.close() });
+  // What the host says about sessions this client is not watching: one
+  // appearing, one finishing, one starting to wait. Without it the catalogue
+  // is only ever as fresh as the last time somebody navigated to it.
+  const watching = host.onSessions(refreshSoon);
+  bag.add({ dispose: () => watching.close() });
   for (const command of commands(app, controller)) bag.add(app.commands.register(command));
   for (const binding of keys()) bag.add(app.keybindings.register(binding));
 

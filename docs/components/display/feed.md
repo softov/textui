@@ -30,6 +30,7 @@ import { Feed } from '@textui/widgets';
 | `onSelect` | `(index: number) => void` |  |  |
 | `onActivate` | `(index: number) => void` |  |  |
 | `scrollbar` | `boolean` | `true` |  |
+| `pageKeys` | `'focused' \| 'always'` | `'focused'` | Who `pageup` and `pagedown` belong to. `focused` is the ordinary answer: the keys go to whatever has the keyboard. `always` claims them even while something else does - for the feed that *is* the screen, with a text field under it. Somebody typing a message who presses page up means the conversation above them; there is nothing else on that screen those keys could be for, and taking the keyboard away from the field to use them is the thing they are avoiding. Only those two keys, and only when the focused node has declined them first - so a field that pages its own content keeps them. |
 | `focusable` | `boolean` | `true` |  |
 | `autoFocus` | `boolean` |  |  |
 | `focusId` | `string` |  | So a command can send the reader here by name. |

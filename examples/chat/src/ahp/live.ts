@@ -456,12 +456,28 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
 
   // The root channel, for the agents it advertises. Drained rather than
   // polled: re-subscribing to take a fresh look tears down the stream.
+  /**
+   * Watchers of the catalogue.
+   *
+   * The root channel is already being drained for the agents it advertises,
+   * and every session that appears, finishes or starts waiting arrives on it
+   * as an action. Nothing was told: the catalogue only got fresh when somebody
+   * navigated away and back, which is a reader doing by hand what the host had
+   * already said.
+   */
+  const catalogue = new Set<() => void>();
+
   const root = await client.subscribe(ROOT);
   if (root.result.snapshot) mirror.applySnapshot(root.result.snapshot);
   void (async () => {
     try {
       for await (const event of root.subscription) {
-        if (event.type === 'action') mirror.apply(event.params);
+        if (event.type !== 'action') continue;
+        mirror.apply(event.params);
+        // Every action, without inspecting it. What a root action means is the
+        // host's business and it grows new kinds; "something over there moved,
+        // read it again" is true of all of them, and the read is one request.
+        for (const listener of catalogue) listener();
       }
     } catch { moveTo('offline'); }
   })();
@@ -639,6 +655,11 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
      * that is what it does when it is opened - so this costs nothing but a
      * rebuild per action.
      */
+    onSessions: (observer) => {
+      catalogue.add(observer);
+      return { close: () => { catalogue.delete(observer); } };
+    },
+
     subscribe: (uri, observer) => {
       let live = true;
       const closers: (() => void)[] = [];

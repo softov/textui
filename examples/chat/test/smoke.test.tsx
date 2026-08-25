@@ -142,7 +142,14 @@ describe('the transcript', () => {
     // The prose is in `content`, not `markdown` or `text`. Reading the wrong
     // field costs every word the agent said and nothing else.
     expect(t.hasText('libkqueue')).toBe(true);
-    // And the tool call is a row of its own, never rendered as text.
+
+    // And the tool call is a row of its own, never rendered as text - one
+    // block further down, which is where it is rather than where it happened
+    // to fit. Asserting it from the top made this test a hostage to the row
+    // budget: anything else the screen grew - a divider, a caption - pushed it
+    // out of view and failed a test about *parsing a snapshot*.
+    for (let i = 0; i < 4; i++) { t.press('down'); await t.settle(); }
+    for (let i = 0; i < 4; i++) await t.settle();
     expect(t.hasText('Search')).toBe(true);
     await t.unmount();
   });
@@ -166,12 +173,13 @@ describe('the transcript', () => {
     // The call's output is not on screen until it is asked for.
     expect(m.t.hasText('#define EVFILT_FS')).toBe(false);
     m.t.app.store.set('$/chat/ui/expanded', { c1: true });
-    // Onto the call itself. The cursor is what scrolls the feed, and the
-    // seeded session has a blocked turn under this one holding the bottom of
-    // the screen.
+    // Onto the call itself, which is the fifth block. Two past it also
+    // happened to work while the transcript had two more rows to give - the
+    // output stayed on screen from below - and that is luck rather than a
+    // test: the cursor belongs on the thing being expanded.
     m.t.focus('chat.transcript');
     m.t.press('home');
-    for (let i = 0; i < 6; i++) { m.t.press('down'); await m.t.settle(); }
+    for (let i = 0; i < 4; i++) { m.t.press('down'); await m.t.settle(); }
     for (let i = 0; i < 4; i++) await m.t.settle();
     expect(m.t.hasText('#define EVFILT_FS')).toBe(true);
     await m.t.unmount();

@@ -75,6 +75,20 @@ export interface HostConnection {
    */
   subscribe(uri: SessionUri, observer: (event: HostEvent) => void): { close(): void };
 
+  /**
+   * The catalogue moved: a session appeared, finished, or is now waiting.
+   *
+   * Separate from `subscribe`, which is one session's channel and says nothing
+   * about the ninety-nine a client is not watching. Without this the only way
+   * a list gets fresh is somebody navigating away and back, which is a reader
+   * doing by hand what the host already said.
+   *
+   * It carries no payload on purpose. The host owns the catalogue and
+   * `listSessions` is how you read it; an event that carried a row would be a
+   * second, staler source of the same answer.
+   */
+  onSessions(observer: () => void): { close(): void };
+
   /** Begin a turn. Any turn - this is not only how the first one starts. */
   say(uri: SessionUri, text: string, model?: string): void;
   stopTurn(uri: SessionUri): void;

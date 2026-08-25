@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderApp } from '@textui/testing';
-import { loadWorkspace, registerTextide, paletteOrder, CATEGORIES } from '../src/index.js';
+import { Icon, loadWorkspace, registerTextide, paletteOrder, CATEGORIES } from '../src/index.js';
 import { shortcutSheet } from '../src/commands.js';
 
 /**
@@ -350,7 +350,12 @@ describe('the command palette', () => {
     expect(t.store.get('$/focus/scope')).toBe('pane.main');
     expect(t.app.focus.focused(), 'lands on the editor, not on the pane')
       .not.toBe('pane.main');
-    const bar = (): number => t.lines().filter((l) => l.includes('\u258e')).length;
+    // The glyph from the icon set, not a copy of it. `icons.ts` says in as
+    // many words that the rule used to be written into the component and that
+    // the file exists to stop exactly that drift - and then this test wrote it
+    // out again, so changing the glyph in the one place that owns it failed a
+    // test about focus.
+    const bar = (): number => t.lines().filter((l) => l.includes(Icon.activeRule)).length;
     expect(bar(), 'the bar spans the pane').toBeGreaterThan(3);
 
     // Leaving it and coming back is one press each way, because the pane

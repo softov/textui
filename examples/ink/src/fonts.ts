@@ -59,40 +59,44 @@ const CAPS: Record<string, string> = {
 /**
  * Lowercase, on the same five rows.
  *
- * The body sits on rows two to five and the ascenders reach up into row one,
- * so the two cases share a baseline and a cap is visibly taller than an x -
- * which is the whole reason for having a second set rather than folding the
- * case away. Nothing descends below the baseline: five rows is not enough to
- * put a tail under a `g` and keep the line spacing honest, so the tails curl
- * sideways instead.
+ * **One x-height, for all of them.** The body of every lowercase letter sits
+ * on rows two to five and the ascenders reach up into row one, so the two
+ * cases share a baseline and a cap is visibly taller than an x - which is the
+ * whole reason for a second set rather than folding the case away. Letting an
+ * `e` be four rows while the `o` beside it was three is what made `Hello` read
+ * as a ransom note, and it is the kind of thing only a rendered alphabet shows.
+ *
+ * Nothing descends below the baseline: five rows is not enough to put a tail
+ * under a `g` and keep the line spacing honest, so `g` and `y` hook left
+ * instead - which is also what keeps `g` from being a `q`.
  */
 const LOWER: Record<string, string> = {
   a: '    | ###|#  #|#  #| ###',
-  b: '#   |#   |### |#  #|### ',
+  b: '#   |### |#  #|#  #|### ',
   c: '    | ###|#   |#   | ###',
-  d: '   #|   #| ###|#  #| ###',
-  e: '    | ## |#  #|####| ###',
+  d: '   #| ###|#  #|#  #| ###',
+  e: '    | ## |#  #|### | ###',
   f: '  ##| #  |### | #  | #  ',
-  g: '    | ###|#  #| ###|### ',
-  h: '#   |#   |### |#  #|#  #',
-  i: ' #  |    |##  | #  |### ',
-  j: '  # |    | ## |  # |##  ',
+  g: '    | ###|#  #| ###|##  ',
+  h: '#   |### |#  #|#  #|#  #',
+  i: ' # |   | # | # | # ',
+  j: '  # |    |  # |  # |##  ',
   k: '#   |#  #|##  |# # |#  #',
   l: '##  | #  | #  | #  |### ',
-  m: '     |     |#### |# # #|# # #',
-  n: '    |    |### |#  #|#  #',
-  o: '    |    | ## |#  #| ## ',
+  m: '     |#####|# # #|# # #|# # #',
+  n: '    |### |#  #|#  #|#  #',
+  o: '    | ## |#  #|#  #| ## ',
   p: '    |### |#  #|### |#   ',
   q: '    | ###|#  #| ###|   #',
-  r: '    |    |# ##|##  |#   ',
-  s: '    | ###| ## |   #|### ',
+  r: '    |# ##|##  |#   |#   ',
+  s: '    | ###|##  |  ##|### ',
   t: ' #  |### | #  | #  |  ##',
-  u: '    |    |#  #|#  #| ###',
-  v: '    |    |#  #|#  #| ## ',
-  w: '     |     |# # #|# # #| # # ',
-  x: '    |    |#  #| ## |#  #',
-  y: '    |#  #|#  #| ###|### ',
-  z: '    |    |####| ## |####',
+  u: '    |#  #|#  #|#  #| ###',
+  v: '    |#  #|#  #| ## |  # ',
+  w: '     |#   #|# # #|# # #| # # ',
+  x: '    |#  #| ## | ## |#  #',
+  y: '    |#  #|#  #| ###|##  ',
+  z: '    |####|  # | #  |####',
 };
 
 const REST: Record<string, string> = {

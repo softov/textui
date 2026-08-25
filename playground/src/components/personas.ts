@@ -138,7 +138,7 @@ export const pip = definePersona({
     sleepy: { normal: ['__'] },
   },
   eyeAt: EYES_AT,
-  middle: { normal: [' /(_)\\ '] },
+  middle: { normal: ['==\\o/=='] },
   foot: STRIDE,
 });
 

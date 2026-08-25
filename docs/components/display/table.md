@@ -31,17 +31,11 @@ _No props of its own._
 
 Role: `table`.
 
-Narrowing **drops columns rather than squeezing them**. As the space runs out
-the lowest `priority` goes first, and the first column never goes at all -
-a row you cannot identify is not a smaller row, it is a useless one.
+Narrowing **drops columns rather than squeezing them**. As the space runs out the lowest `priority` goes first, and the first column never goes at all - a row you cannot identify is not a smaller row, it is a useless one.
 
-A column with no stated priority inherits its position, so it never ties with
-one explicitly marked unimportant. Set `responsive={false}` to turn the whole
-behaviour off.
+A column with no stated priority inherits its position, so it never ties with one explicitly marked unimportant. Set `responsive={false}` to turn the whole behaviour off.
 
-`format` renders a cell and `tone` colours it, both from the value and the
-whole row - which is how a latency column goes red past a threshold without
-the rows carrying presentation.
+`format` renders a cell and `tone` colours it, both from the value and the whole row - which is how a latency column goes red past a threshold without the rows carrying presentation.
 
 ## See also
 

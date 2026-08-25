@@ -34,18 +34,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `region`.
 
-`Panel` is the workhorse, and the one component that has to look right in all
-three house styles. Where the theme draws borders it renders `title` into the
-top rule; where the theme says `border: 'none'` it renders the title as a
-heading row instead. `meta` goes to the right of the bottom rule, or of the
-heading row.
+`Panel` is the workhorse, and the one component that has to look right in all three house styles. Where the theme draws borders it renders `title` into the top rule; where the theme says `border: 'none'` it renders the title as a heading row instead. `meta` goes to the right of the bottom rule, or of the heading row.
 
-A panel stretches to fill the row it is in. [`Row`](row.md) centres its
-children by default, and a pane floating in the middle of a taller neighbour is
-nobody's intent.
+A panel stretches to fill the row it is in. [`Row`](row.md) centres its children by default, and a pane floating in the middle of a taller neighbour is nobody's intent.
 
-`tone` colours the border rather than the body, which is how a panel marks
-itself as the errored or the active one without repainting its contents.
+`tone` colours the border rather than the body, which is how a panel marks itself as the errored or the active one without repainting its contents.
 
 ## See also
 

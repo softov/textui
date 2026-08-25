@@ -34,15 +34,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `progressbar`.
 
-`total` defaults to `1`, so a fraction works without arithmetic:
-`value={0.42}` and `value={42} total={100}` draw the same bar.
+`total` defaults to `1`, so a fraction works without arithmetic: `value={0.42}` and `value={42} total={100}` draw the same bar.
 
-`showValue` is on by default, and turning it off is usually wrong - a bar
-with no number is a shape, and a reader cannot tell 80% from 85% by looking at
-eight cells.
+`showValue` is on by default, and turning it off is usually wrong - a bar with no number is a shape, and a reader cannot tell 80% from 85% by looking at eight cells.
 
-Omitting `value` gives an indeterminate bar, for work whose size is not known
-yet.
+Omitting `value` gives an indeterminate bar, for work whose size is not known yet.
 
 ## See also
 

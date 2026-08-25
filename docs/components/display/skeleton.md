@@ -26,12 +26,9 @@ import { Skeleton } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-`widths` are percentages, and varying them is the whole trick: three identical
-bars read as a bar chart, while three ragged ones read as a paragraph.
+`widths` are percentages, and varying them is the whole trick: three identical bars read as a bar chart, while three ragged ones read as a paragraph.
 
-Worth it when the layout is known and the data is not, so that arriving content
-does not shift the screen. Not worth it for anything that usually resolves in
-one frame.
+Worth it when the layout is known and the data is not, so that arriving content does not shift the screen. Not worth it for anything that usually resolves in one frame.
 
 ## See also
 

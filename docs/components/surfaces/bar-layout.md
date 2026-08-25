@@ -27,11 +27,9 @@ const bar = BUILTIN_LAYOUTS.find((layout) => layout.name === 'bar');
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-One row, mounts laid left to right, ordered by each mount's `order`. What the
-`header` and `status` surfaces use.
+One row, mounts laid left to right, ordered by each mount's `order`. What the `header` and `status` surfaces use.
 
-A mount that does not fit is dropped rather than wrapped, because a status bar
-that becomes two rows moves everything above it.
+A mount that does not fit is dropped rather than wrapped, because a status bar that becomes two rows moves everything above it.
 
 ## See also
 

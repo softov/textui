@@ -5,16 +5,11 @@ nav_order: 1
 ---
 
 <!-- docs:setup
-declare function lookup(uri: string): Promise<{ name: string } | null>;
-declare const app: import('@textui/core').TextUIApp;
--->
+declare function lookup(uri: string): Promise<{ name: string } | null>; declare const app: import('@textui/core').TextUIApp; -->
 
 # Providers
 
-One per URI scheme. Register one and every resource under that scheme is
-reachable through `app.resources`, which is the only thing callers touch -
-there is no public path to a provider, and a caller that found one would be
-hardcoding a scheme.
+One per URI scheme. Register one and every resource under that scheme is reachable through `app.resources`, which is the only thing callers touch - there is no public path to a provider, and a caller that found one would be hardcoding a scheme.
 
 ```ts
 import type { Resource } from '@textui/core';
@@ -39,20 +34,14 @@ app.resources.registerProvider({
 });
 ```
 
-`stat` is the only method a provider must have. A provider may return
-`kind: 'unknown'` and leave classification to the registry, which keeps the
-rules in one place.
+`stat` is the only method a provider must have. A provider may return `kind: 'unknown'` and leave classification to the registry, which keeps the rules in one place.
 
 ## What the registry forwards
 
-Everything a provider can offer: `stat`, `list`, `read`, `write`, `delete`,
-`rename` and `watch`. Which means the caller writes the same line whether the
-file is on this disk or on a machine somewhere else - only the scheme differs,
-and the scheme is what picks the provider.
+Everything a provider can offer: `stat`, `list`, `read`, `write`, `delete`, `rename` and `watch`. Which means the caller writes the same line whether the file is on this disk or on a machine somewhere else - only the scheme differs, and the scheme is what picks the provider.
 
 <!-- docs:local
-declare const uri: string;
--->
+declare const uri: string; -->
 
 ```ts
 await app.resources.delete(uri);
@@ -67,22 +56,16 @@ Two answers, and the split is intent rather than convenience:
 | `list`, `watch` | answers emptily - `[]`, and a disposable that does nothing |
 | `read`, `write`, `delete`, `rename` | throws |
 
-An absent listing is a fact about the resource. An absent delete is a request
-that did not happen, and it has to be heard: a Delete that appears in a menu
-and removes nothing is the worst outcome available, and it is what an optional
-call - `resources.delete?.(uri)` - quietly produces.
+An absent listing is a fact about the resource. An absent delete is a request that did not happen, and it has to be heard: a Delete that appears in a menu and removes nothing is the worst outcome available, and it is what an optional call - `resources.delete?.(uri)` - quietly produces.
 
-A rename is within one scheme. Across two it throws, because that is a copy
-and a delete and belongs above a registry that dispatches on a single scheme
-by construction.
+A rename is within one scheme. Across two it throws, because that is a copy and a delete and belongs above a registry that dispatches on a single scheme by construction.
 
 ## Asking before you call
 
 `Resource.capabilities` is what decides whether to *offer* an action.
 
 <!-- docs:local
-declare const uri: string;
--->
+declare const uri: string; -->
 
 ```ts
 const resource = await app.resources.stat(uri);
@@ -91,10 +74,6 @@ if (resource?.capabilities.includes('delete')) {
 }
 ```
 
-It is per resource rather than per provider, so a read-only mount, a file the
-user has no permission on and something inherently immutable all come back the
-same shape - and a caller deciding whether to draw a Delete never has to know
-which of the three it is looking at.
+It is per resource rather than per provider, so a read-only mount, a file the user has no permission on and something inherently immutable all come back the same shape - and a caller deciding whether to draw a Delete never has to know which of the three it is looking at.
 
-The throw is still there for the race that asking cannot close: the remote
-goes away, the permission changes, between the offer and the call.
+The throw is still there for the race that asking cannot close: the remote goes away, the permission changes, between the offer and the call.

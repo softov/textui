@@ -4,8 +4,7 @@ nav_order: 2
 ---
 
 <!-- docs:setup
-type Service = { name: string; status: string; cpu: string };
--->
+type Service = { name: string; status: string; cpu: string }; -->
 
 # Getting started
 
@@ -13,13 +12,11 @@ type Service = { name: string; status: string; cpu: string };
 npm install @textui/kit          # pnpm add @textui/kit
 ```
 
-Node ≥ 22. There are no other dependencies, and this one package is enough to
-put something on screen.
+Node ≥ 22. There are no other dependencies, and this one package is enough to put something on screen.
 
 ## Hello, in full
 
-`@textui/kit` is the runtime, a terminal to put it on, and `render`. Everything
-this example uses comes from it.
+`@textui/kit` is the runtime, a terminal to put it on, and `render`. Everything this example uses comes from it.
 
 ```tsx
 import { Box, Text, render, useInput, useState } from '@textui/kit';
@@ -44,9 +41,7 @@ const { waitUntilExit } = render(<Counter />);
 await waitUntilExit();
 ```
 
-`render` mounts and keeps running - it returns a handle rather than a promise,
-so the application is up before the next line. `waitUntilExit()` resolves when
-it stops, however it stopped.
+`render` mounts and keeps running - it returns a handle rather than a promise, so the application is up before the next line. `waitUntilExit()` resolves when it stops, however it stopped.
 
 For JSX, point the compiler at the runtime:
 
@@ -62,10 +57,7 @@ For JSX, point the compiler at the runtime:
 
 ## Adding the catalog
 
-`Box` and `Text` are host primitives and always available. `Panel`, `Table`,
-`Row`, `Column`, the charts, forms and overlays live in `@textui/widgets`, and
-are resolved **by name at mount time** - so they have to be registered before
-they can render:
+`Box` and `Text` are host primitives and always available. `Panel`, `Table`, `Row`, `Column`, the charts, forms and overlays live in `@textui/widgets`, and are resolved **by name at mount time** - so they have to be registered before they can render:
 
 ```bash
 npm install @textui/widgets      # pnpm add @textui/widgets
@@ -87,16 +79,11 @@ const { waitUntilExit } = render(<Dashboard />, { onBoot: registerBuiltins });
 await waitUntilExit();
 ```
 
-Forget `onBoot` and nothing throws at compile time: a missing registration is a
-runtime miss, rendered visibly where the component should have been.
+Forget `onBoot` and nothing throws at compile time: a missing registration is a runtime miss, rendered visibly where the component should have been.
 
 ## The pieces underneath
 
-`@textui/kit` re-exports `@textui/core` and [`@textui/terminal`](terminal)
-and adds `render`; it hides nothing. Take them
-separately when you want the runtime without a terminal attached - which is
-what the test harness and the static renderer do - or when you want to own the
-wiring:
+`@textui/kit` re-exports `@textui/core` and [`@textui/terminal`](terminal) and adds `render`; it hides nothing. Take them separately when you want the runtime without a terminal attached - which is what the test harness and the static renderer do - or when you want to own the wiring:
 
 ```bash
 npm install @textui/core @textui/terminal   # pnpm add @textui/core @textui/terminal
@@ -125,9 +112,7 @@ await app.start();
 
 ## JSX
 
-Working against the pieces directly, `jsxImportSource` is `@textui/core`
-rather than `@textui/kit` - the runtime is where the factory lives, and the kit
-re-exports it.
+Working against the pieces directly, `jsxImportSource` is `@textui/core` rather than `@textui/kit` - the runtime is where the factory lives, and the kit re-exports it.
 
 `<Row gap={1}/>` produces `{ component: 'Row', gap: 1 }`. Lowercase names are host primitives - `box`, `text`, `canvas`, `spacer` - and capitalised names are components you import, which is what gives them prop types.
 
@@ -160,14 +145,7 @@ function Services() {
 A `root` node fills the terminal. To get chrome - a header, a sidebar, tabs, a status bar - mount into surfaces and let a shell arrange them:
 
 <!-- docs:local
-import { createApp } from '@textui/core';
-import { KeyHints, registerBuiltins } from '@textui/widgets';
-import type { RenderOutput } from '@textui/core';
-import { createNodeTerminal } from '@textui/terminal';
-declare const terminal: ReturnType<typeof createNodeTerminal>;
-declare function Navigation(): RenderOutput;
-declare function Services(): RenderOutput;
--->
+import { createApp } from '@textui/core'; import { KeyHints, registerBuiltins } from '@textui/widgets'; import type { RenderOutput } from '@textui/core'; import { createNodeTerminal } from '@textui/terminal'; declare const terminal: ReturnType<typeof createNodeTerminal>; declare function Navigation(): RenderOutput; declare function Services(): RenderOutput; -->
 
 ```tsx
 const app = createApp({
@@ -189,9 +167,7 @@ Switch `shell` to `'console'` or `'paper'` and the same mounts render as a dense
 ## Commands, not handlers
 
 <!-- docs:local
-import { registerBuiltins } from '@textui/widgets';
-import type { TextUIApp } from '@textui/core';
--->
+import { registerBuiltins } from '@textui/widgets'; import type { TextUIApp } from '@textui/core'; -->
 
 ```tsx
 onBoot: (app: TextUIApp) => {
@@ -216,10 +192,7 @@ The command is now reachable from the chord, from the palette, and from `app.exe
 The same component model renders to a string, which is what makes it useful for reports, `--help` output and tests:
 
 <!-- docs:local
-import type { RenderOutput } from '@textui/core';
-declare function Services(): RenderOutput;
-declare const services: Service[];
--->
+import type { RenderOutput } from '@textui/core'; declare function Services(): RenderOutput; declare const services: Service[]; -->
 
 ```ts
 import { renderToString } from '@textui/core';

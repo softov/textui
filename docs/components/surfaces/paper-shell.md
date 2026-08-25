@@ -27,12 +27,9 @@ const app = createApp({
 _No props of its own._
 <!-- props:end -->
 
-Generous spacing, few rules. For a report, a document or a wizard - anything
-read once rather than monitored.
+Generous spacing, few rules. For a report, a document or a wizard - anything read once rather than monitored.
 
-This is the shell that exercises the "no border" path in every component, which
-is why [`Panel`](../layout/panel.md) has to render its title as a heading row
-rather than into a rule.
+This is the shell that exercises the "no border" path in every component, which is why [`Panel`](../layout/panel.md) has to render its title as a heading row rather than into a rule.
 
 ## See also
 

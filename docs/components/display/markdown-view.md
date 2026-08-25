@@ -31,17 +31,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `document`.
 
-It deliberately owns no viewport. A document viewer scrolls; a message inside a
-transcript does not, and making this scroll would put a second scrollable thing
-inside the first.
+It deliberately owns no viewport. A document viewer scrolls; a message inside a transcript does not, and making this scroll would put a second scrollable thing inside the first.
 
-Two ways to drive it. Pass `content` and it lays out what it measured. Pass
-`rows` from `layoutMarkdown` plus a `window` and it paints that slice of
-somebody else's layout - which is exactly what
-[`MarkdownViewer`](../surfaces/markdown-viewer.md) does with it.
+Two ways to drive it. Pass `content` and it lays out what it measured. Pass `rows` from `layoutMarkdown` plus a `window` and it paints that slice of somebody else's layout - which is exactly what [`MarkdownViewer`](../surfaces/markdown-viewer.md) does with it.
 
-Inline emphasis, code and links survive the wrap, because in text a service or
-an agent wrote for a person those are meaning rather than markup.
+Inline emphasis, code and links survive the wrap, because in text a service or an agent wrote for a person those are meaning rather than markup.
 
 ## See also
 

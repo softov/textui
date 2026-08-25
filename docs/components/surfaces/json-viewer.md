@@ -30,12 +30,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `document`.
 
-Ships with the JSON adapter rather than with the core catalog, so it is
-registered when that adapter is - which is why it and
-[`JsonTreeViewer`](json-tree-viewer.md) are in `@textui/documents`.
+Ships with the JSON adapter rather than with the core catalog, so it is registered when that adapter is - which is why it and [`JsonTreeViewer`](json-tree-viewer.md) are in `@textui/documents`.
 
-Text is the right default: it preserves key order and formatting, and a diff of
-it is readable.
+Text is the right default: it preserves key order and formatting, and a diff of it is readable.
 
 ## See also
 

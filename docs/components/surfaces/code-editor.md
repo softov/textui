@@ -38,15 +38,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `textbox`.
 
-[`CodeViewer`](../display/code-viewer.md) with editing on top: a real caret,
-a selection, clipboard integration, and `onChange` for the text.
+[`CodeViewer`](../display/code-viewer.md) with editing on top: a real caret, a selection, clipboard integration, and `onChange` for the text.
 
-`onCursor` and `onSelection` report position and selection size for a status
-bar. `readonly` keeps the caret and the selection while refusing edits, which
-is what a diff or a preview wants.
+`onCursor` and `onSelection` report position and selection size for a status bar. `readonly` keeps the caret and the selection while refusing edits, which is what a diff or a preview wants.
 
-Given a `uri` it reads and writes through the document buffer, so dirty state
-and saving are the buffer's - see [Document buffers](../../documents/buffers.md).
+Given a `uri` it reads and writes through the document buffer, so dirty state and saving are the buffer's - see [Document buffers](../../documents/buffers.md).
 
 ## See also
 

@@ -31,17 +31,11 @@ import { ScrollView } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Focusable by default, because a viewport nobody can put the keyboard into can
-only be scrolled with a mouse. It draws a scrollbar unless told not to.
+Focusable by default, because a viewport nobody can put the keyboard into can only be scrolled with a mouse. It draws a scrollbar unless told not to.
 
-It knows nothing about what is inside it - it scrolls cells. That is the
-difference between this and the data components: [`List`](../display/list.md)
-scrolls by rows and keeps a selection,
-[`Feed`](../display/feed.md) scrolls by measured entries, and a `ScrollView`
-scrolls whatever it was handed.
+It knows nothing about what is inside it - it scrolls cells. That is the difference between this and the data components: [`List`](../display/list.md) scrolls by rows and keeps a selection, [`Feed`](../display/feed.md) scrolls by measured entries, and a `ScrollView` scrolls whatever it was handed.
 
-Pass `offset` and `onScroll` to hold the position in the store rather than
-inside the component, which is what lets a screen restore where the reader was.
+Pass `offset` and `onScroll` to hold the position in the store rather than inside the component, which is what lets a screen restore where the reader was.
 
 ## See also
 

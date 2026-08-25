@@ -5,14 +5,12 @@ nav_order: 2
 ---
 
 <!-- docs:setup
-declare const app: import('@textui/core').TextUIApp;
--->
+declare const app: import('@textui/core').TextUIApp; -->
 
 # Base props
 {: .no_toc }
 
-Every node accepts these, whatever component it names. A component page lists
-what that component adds; this is the set underneath all of them.
+Every node accepts these, whatever component it names. A component page lists what that component adds; this is the set underneath all of them.
 
 ```tsx
 import { Panel } from '@textui/widgets';
@@ -32,8 +30,7 @@ Four things are worth knowing before the tables.
 
 ## Style arrives three ways
 
-The same declaration can be written inline, as an object, or as a stateful map,
-and they compose rather than compete:
+The same declaration can be written inline, as an object, or as a stateful map, and they compose rather than compete:
 
 ```tsx
 <>
@@ -43,41 +40,31 @@ and they compose rather than compete:
 </>
 ```
 
-Inline keys are the convenience form for the common case. Reach for `style`
-when a value is stateful - `base` / `focus` / `disabled` - or when it is
-computed and passing twenty props would be worse than passing one object.
+Inline keys are the convenience form for the common case. Reach for `style` when a value is stateful - `base` / `focus` / `disabled` - or when it is computed and passing twenty props would be worse than passing one object.
 
 ## `label` and `role` are not decoration
 
-They are what the test harness queries by, and what future accessibility work
-will read. A node with an interactive `role` is focusable without saying so:
+They are what the test harness queries by, and what future accessibility work will read. A node with an interactive `role` is focusable without saying so:
 
 ```tsx
 <box role="button" label="Restart the server" onClick={() => {}} />
 ```
 
-That is a working button - focusable, in the tab order, named - without
-importing `Button`. `Button` exists because it also draws a ring, states a
-tone, and inverts when focused.
+That is a working button - focusable, in the tab order, named - without importing `Button`. `Button` exists because it also draws a ring, states a tone, and inverts when focused.
 
 ## `onKey` normally needs focus
 
-A handler runs while its node is focused. `global` opts out of that, for a node
-that wants the keys its children decline:
+A handler runs while its node is focused. `global` opts out of that, for a node that wants the keys its children decline:
 
 ```tsx
 <box global onKey={(event) => event.name === 'escape'} />
 ```
 
-Use it for a wrapper - a dropdown taking left and right while the menu inside
-keeps up and down. Everywhere else, focus is what decides who gets a key, and
-`global` throws that away.
+Use it for a wrapper - a dropdown taking left and right while the menu inside keeps up and down. Everywhere else, focus is what decides who gets a key, and `global` throws that away.
 
 ## `breakpoints` are per node, not per screen
 
-A node renders `compact` below the first width and `minimal` below the second.
-The widths are its own, not the terminal's, so a panel in a narrow column
-degrades while the same component in the main pane does not.
+A node renders `compact` below the first width and `minimal` below the second. The widths are its own, not the terminal's, so a panel in a narrow column degrades while the same component in the main pane does not.
 
 ## The tables
 

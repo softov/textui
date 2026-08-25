@@ -31,12 +31,9 @@ import { Sparkline } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-One row, so it fits in a table cell or beside a label. A cell has one level of
-resolution, so the shape is drawn from the eight block glyphs rather than
-pretending at pixels.
+One row, so it fits in a table cell or beside a label. A cell has one level of resolution, so the shape is drawn from the eight block glyphs rather than pretending at pixels.
 
-`showValue` prints the last value after the line, and is worth turning on: a
-shape with no scale is decoration.
+`showValue` prints the last value after the line, and is worth turning on: a shape with no scale is decoration.
 
 ## See also
 

@@ -32,11 +32,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `contentinfo`.
 
-`leading` and `trailing` rather than `left` and `right`, so the component
-still reads correctly under a right-to-left locale.
+`leading` and `trailing` rather than `left` and `right`, so the component still reads correctly under a right-to-left locale.
 
-Each segment carries its own `tone`, which is how one indicator goes red
-without the bar changing colour.
+Each segment carries its own `tone`, which is how one indicator goes red without the bar changing colour.
 
 ## See also
 

@@ -30,9 +30,7 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `status`.
 
-The message itself. Placement, stacking and expiry belong to
-[`ToastHost`](toast-host.md), and one is normally created through the app's
-notify helper rather than mounted directly.
+The message itself. Placement, stacking and expiry belong to [`ToastHost`](toast-host.md), and one is normally created through the app's notify helper rather than mounted directly.
 
 Never put anything in a toast that the reader must act on - it will be gone.
 

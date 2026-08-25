@@ -38,15 +38,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `menu`.
 
-`shortcut` draws the chord; it does not register it. The keybinding is still
-[`app.keybindings.register`](../../platform/keybindings.md), and the menu is
-saying out loud what the chord already does.
+`shortcut` draws the chord; it does not register it. The keybinding is still [`app.keybindings.register`](../../platform/keybindings.md), and the menu is saying out loud what the chord already does.
 
-`separatorBefore` puts a rule above an item, which is how a destructive action
-gets separated from the ones above it. `children` nests a submenu.
+`separatorBefore` puts a rule above an item, which is how a destructive action gets separated from the ones above it. `children` nests a submenu.
 
-`interactive={false}` renders it as a static list - for a cheat sheet or a
-help pane rather than a menu.
+`interactive={false}` renders it as a static list - for a cheat sheet or a help pane rather than a menu.
 
 ## See also
 

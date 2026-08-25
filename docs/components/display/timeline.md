@@ -30,12 +30,9 @@ import { Timeline } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Ordered top to bottom, in the order given - the component does not sort, since
-"most recent first" and "oldest first" are both right depending on whether you
-are reading history or watching it happen.
+Ordered top to bottom, in the order given - the component does not sort, since "most recent first" and "oldest first" are both right depending on whether you are reading history or watching it happen.
 
-`tone` marks an entry, which is what separates the failed step from the four
-that worked.
+`tone` marks an entry, which is what separates the failed step from the four that worked.
 
 ## See also
 

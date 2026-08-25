@@ -27,11 +27,9 @@ const rail = BUILTIN_LAYOUTS.find((layout) => layout.name === 'rail');
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-The activity strip down the left of a workbench. Each mount contributes an
-icon from its `display` metadata, and the rail stays narrow whatever they are.
+The activity strip down the left of a workbench. Each mount contributes an icon from its `display` metadata, and the rail stays narrow whatever they are.
 
-Selecting one is what usually changes what the `sidebar` surface shows, but
-that wiring is the application's - the rail reports, it does not route.
+Selecting one is what usually changes what the `sidebar` surface shows, but that wiring is the application's - the rail reports, it does not route.
 
 ## See also
 

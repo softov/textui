@@ -38,12 +38,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `meter`.
 
-`thresholds` are what makes this different from a
-[`Progress`](progress.md) bar: the gauge recolours itself as the value crosses
-each one, so "how full" and "is that bad" are one glance instead of two.
+`thresholds` are what makes this different from a [`Progress`](progress.md) bar: the gauge recolours itself as the value crosses each one, so "how full" and "is that bad" are one glance instead of two.
 
-They are read in order, so list them ascending. `min` and `max` default to 0
-and 100.
+They are read in order, so list them ascending. `min` and `max` default to 0 and 100.
 
 ## See also
 

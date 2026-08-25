@@ -29,9 +29,7 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 `axis` takes `'both'` (the default), `'horizontal'` or `'vertical'`.
 
-Centring needs room to centre in, so this is nearly always paired with
-`flex={1}` or a fixed size. A `Center` that is exactly as big as its child
-does nothing at all.
+Centring needs room to centre in, so this is nearly always paired with `flex={1}` or a fixed size. A `Center` that is exactly as big as its child does nothing at all.
 
 ## See also
 

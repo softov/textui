@@ -32,13 +32,9 @@ import { Field, TextInput } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-`name` is how it finds its error in the surrounding [`Form`](form.md), so it
-must match the key in `initialValues`. Outside a form a field is just a
-labelled row, which is fine.
+`name` is how it finds its error in the surrounding [`Form`](form.md), so it must match the key in `initialValues`. Outside a form a field is just a labelled row, which is fine.
 
-`labelWidth` aligns labels across fields that are not siblings. `stacked`
-puts the label above the control instead of beside it, which is what a narrow
-terminal wants.
+`labelWidth` aligns labels across fields that are not siblings. `stacked` puts the label above the control instead of beside it, which is what a narrow terminal wants.
 
 ## See also
 

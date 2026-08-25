@@ -27,11 +27,9 @@ import { TextViewer } from '@textui/documents';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Takes a `resource`, a `uri` or `content` directly - the last of which is
-what makes it testable without a provider.
+Takes a `resource`, a `uri` or `content` directly - the last of which is what makes it testable without a provider.
 
-Registered against text kinds, and beaten by any viewer that claims something
-more specific.
+Registered against text kinds, and beaten by any viewer that claims something more specific.
 
 ## See also
 

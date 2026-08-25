@@ -28,14 +28,9 @@ import { Row } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-`Row` is `<box direction="row">` with one difference worth knowing: it
-centres its children on the cross axis by default, so a one-line label sits
-level with a three-line panel beside it rather than at its top. `vAlign`
-overrides that - `'start'`, `'center'`, `'end'` or `'stretch'`.
+`Row` is `<box direction="row">` with one difference worth knowing: it centres its children on the cross axis by default, so a one-line label sits level with a three-line panel beside it rather than at its top. `vAlign` overrides that - `'start'`, `'center'`, `'end'` or `'stretch'`.
 
-Sideways is the axis that shrinks. When a row does not fit, a child with
-`flex` gives way first and a rigid one truncates its text; nothing is placed
-outside the container.
+Sideways is the axis that shrinks. When a row does not fit, a child with `flex` gives way first and a rigid one truncates its text; nothing is placed outside the container.
 
 ## See also
 

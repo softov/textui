@@ -43,22 +43,13 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `list`.
 
-`onSelect` fires as the cursor moves; `onActivate` fires on enter. Keeping
-them apart is what lets a list drive a preview pane without opening something
-on every arrow key.
+`onSelect` fires as the cursor moves; `onActivate` fires on enter. Keeping them apart is what lets a list drive a preview pane without opening something on every arrow key.
 
-Hold `selectedId` in the store rather than inside the list when anything else
-needs to know what is selected - which is usually.
+Hold `selectedId` in the store rather than inside the list when anything else needs to know what is selected - which is usually.
 
-\`focusId\` gives the list a stable name, so a command meaning "focus the
-results" has something to address. Without one the id is derived from the
-instance and nothing outside the render can know it - the same reason
-[\`TextInput\`](../input/text-input.md) takes one.
+\`focusId\` gives the list a stable name, so a command meaning "focus the results" has something to address. Without one the id is derived from the instance and nothing outside the render can know it - the same reason [\`TextInput\`](../input/text-input.md) takes one.
 
-How much it draws is decided by the props you pass, not by `visibleRows`:
-given `flex`, a `height` or a `maxHeight` it renders what fits and scrolls;
-given none of those it renders everything and grows. See
-[how much these draw](../display.md).
+How much it draws is decided by the props you pass, not by `visibleRows`: given `flex`, a `height` or a `maxHeight` it renders what fits and scrolls; given none of those it renders everything and grows. See [how much these draw](../display.md).
 
 ## See also
 

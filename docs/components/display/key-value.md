@@ -33,11 +33,9 @@ import { KeyValue } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Labels are aligned to a common width so the values line up; `labelWidth`
-fixes that width when two blocks must agree and their longest labels do not.
+Labels are aligned to a common width so the values line up; `labelWidth` fixes that width when two blocks must agree and their longest labels do not.
 
-Per-item `tone` colours the value, not the label - the field name is not the
-thing that has gone wrong.
+Per-item `tone` colours the value, not the label - the field name is not the thing that has gone wrong.
 
 ## See also
 

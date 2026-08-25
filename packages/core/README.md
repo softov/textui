@@ -1,10 +1,8 @@
 # @textui/core
 
-[![npm](https://img.shields.io/npm/v/@textui/core?label=%40textui%2Fcore)](https://www.npmjs.com/package/@textui/core)
-[![license](https://img.shields.io/npm/l/@textui/core)](https://github.com/softov/textui/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/@textui/core?label=%40textui%2Fcore)](https://www.npmjs.com/package/@textui/core) [![license](https://img.shields.io/npm/l/@textui/core)](https://github.com/softov/textui/blob/main/LICENSE)
 
-The runtime: a reactive store, typed registries, a cell-diffing renderer, hooks,
-and the four host primitives. Everything else in TextUI sits on this.
+The runtime: a reactive store, typed registries, a cell-diffing renderer, hooks, and the four host primitives. Everything else in TextUI sits on this.
 
 ```bash
 npm install @textui/core
@@ -12,10 +10,7 @@ npm install @textui/core
 
 ## The one idea
 
-**JSX compiles to data.** `<Row gap={1}/>` and `{ component: 'Row', gap: 1 }` are
-the same value, and the runtime mounts either. A screen can be written in
-TypeScript, loaded from JSON, generated, edited or sent over a wire without the
-runtime changing.
+**JSX compiles to data.** `<Row gap={1}/>` and `{ component: 'Row', gap: 1 }` are the same value, and the runtime mounts either. A screen can be written in TypeScript, loaded from JSON, generated, edited or sent over a wire without the runtime changing.
 
 ```ts
 import { h, renderToString } from '@textui/core';
@@ -26,18 +21,13 @@ console.log(renderToString(
 ));
 ```
 
-Capitalized spellings of the primitives exist for JSX - `Box`, `Text`, `Canvas`
-are the strings themselves, so `<Box/>` and `<box/>` produce the identical node.
+Capitalized spellings of the primitives exist for JSX - `Box`, `Text`, `Canvas` are the strings themselves, so `<Box/>` and `<box/>` produce the identical node.
 
 ## What is in here, and what is not
 
-The four primitives - `box`, `text`, `canvas`, `spacer` - are here because the
-layout engine and the painter are the things that reason about them. The
-eighty-seven components built out of them are [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets),
-a separate package that depends on this one.
+The four primitives - `box`, `text`, `canvas`, `spacer` - are here because the layout engine and the painter are the things that reason about them. The eighty-seven components built out of them are [`@textui/widgets`](https://www.npmjs.com/package/@textui/widgets), a separate package that depends on this one.
 
-That split is not tidiness. An imported component travels on its own node, so a
-screen written in JSX resolves without a registry at all:
+That split is not tidiness. An imported component travels on its own node, so a screen written in JSX resolves without a registry at all:
 
 ```ts
 import { Badge } from '@textui/widgets';
@@ -45,9 +35,7 @@ import { Badge } from '@textui/widgets';
 renderToString(h(Badge, { label: 'ok' }), { width: 20 });  // registry empty
 ```
 
-The registry is for the case JSX cannot cover - a component named by a string,
-in JSON, a template renderer, or an extension. `render` takes those through its
-`components` option.
+The registry is for the case JSX cannot cover - a component named by a string, in JSON, a template renderer, or an extension. `render` takes those through its `components` option.
 
 ## The parts
 
@@ -61,9 +49,7 @@ in JSON, a template renderer, or an extension. `render` takes those through its
 
 ## Runtime
 
-No dependencies, and no `node:` imports - this package never touches a
-filesystem or a process. It runs on Node 22+ and on Bun, and would run in a
-browser against a virtual terminal.
+No dependencies, and no `node:` imports - this package never touches a filesystem or a process. It runs on Node 22+ and on Bun, and would run in a browser against a virtual terminal.
 
 ## Documentation
 

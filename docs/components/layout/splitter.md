@@ -30,14 +30,9 @@ import { Splitter } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Exactly two children. `size` applies to the first one and takes a number of
-cells or a percentage; the second takes what is left. `dividerSize` is the
-gap between them in cells.
+Exactly two children. `size` applies to the first one and takes a number of cells or a percentage; the second takes what is left. `dividerSize` is the gap between them in cells.
 
-`direction` is `'row'` for a vertical divide and `'column'` for a
-horizontal one - it names the axis the children are laid along, matching
-[`Row`](row.md) and [`Column`](column.md) rather than the direction the rule
-is drawn.
+`direction` is `'row'` for a vertical divide and `'column'` for a horizontal one - it names the axis the children are laid along, matching [`Row`](row.md) and [`Column`](column.md) rather than the direction the rule is drawn.
 
 ## See also
 

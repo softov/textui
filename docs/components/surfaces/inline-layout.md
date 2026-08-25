@@ -27,9 +27,7 @@ const inline = BUILTIN_LAYOUTS.find((layout) => layout.name === 'inline');
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-No tabs, no divider, no frame - the mounts and nothing else. For a surface
-that is a hole in someone else's layout, where any decoration would be a second
-frame around a thing already framed.
+No tabs, no divider, no frame - the mounts and nothing else. For a surface that is a hole in someone else's layout, where any decoration would be a second frame around a thing already framed.
 
 ## See also
 

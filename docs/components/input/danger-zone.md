@@ -34,12 +34,9 @@ import { DangerZone } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-`confirmText` is the part worth using: the action stays disabled until the
-reader types that exact string. For anything irreversible that is a better
-guard than a confirmation dialog, which people dismiss by reflex.
+`confirmText` is the part worth using: the action stays disabled until the reader types that exact string. For anything irreversible that is a better guard than a confirmation dialog, which people dismiss by reflex.
 
-Put it last. A destructive action among ordinary fields is one mis-aimed
-keystroke from happening.
+Put it last. A destructive action among ordinary fields is one mis-aimed keystroke from happening.
 
 ## See also
 

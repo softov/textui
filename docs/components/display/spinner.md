@@ -28,12 +28,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `status`.
 
-Use it only when the duration is genuinely unknown. Anything with a numerator
-and a denominator should be a [`Progress`](progress.md), because a spinner
-tells a reader nothing except that the program has not died.
+Use it only when the duration is genuinely unknown. Anything with a numerator and a denominator should be a [`Progress`](progress.md), because a spinner tells a reader nothing except that the program has not died.
 
-The frames come from the theme's glyph set and degrade to ASCII where the
-terminal cannot draw them.
+The frames come from the theme's glyph set and degrade to ASCII where the terminal cannot draw them.
 
 ## See also
 

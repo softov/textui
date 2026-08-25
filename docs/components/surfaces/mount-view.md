@@ -28,9 +28,7 @@ declare const mount: Mount;
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Every shipped layout delegates to this. A layout decides *where* a mount goes;
-`MountView` decides what it draws, applying the mount's data context and its
-display metadata.
+Every shipped layout delegates to this. A layout decides *where* a mount goes; `MountView` decides what it draws, applying the mount's data context and its display metadata.
 
 You need it when writing a layout of your own, and almost never otherwise.
 

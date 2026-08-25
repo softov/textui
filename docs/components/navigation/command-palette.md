@@ -35,16 +35,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `dialog`.
 
-It searches the **command registry**, not a list you pass it. Anything
-registered with the `palette` slot is in it, which means a feature becomes
-reachable by registering a command and doing nothing else.
+It searches the **command registry**, not a list you pass it. Anything registered with the `palette` slot is in it, which means a feature becomes reachable by registering a command and doing nothing else.
 
-That is the whole argument for commands over handlers: the palette, the
-keybinding and the menu item cannot drift apart, because there is one
-implementation and three ways in.
+That is the whole argument for commands over handlers: the palette, the keybinding and the menu item cannot drift apart, because there is one implementation and three ways in.
 
-`commands` overrides the registry for the rare screen that wants its own list;
-`execute={false}` reports the choice through `onRun` instead of running it.
+`commands` overrides the registry for the rare screen that wants its own list; `execute={false}` reports the choice through `onRun` instead of running it.
 
 ## See also
 

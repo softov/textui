@@ -32,12 +32,9 @@ import { EmptyState } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-`hint` is the part that earns the component. An empty list that says only
-"No services" leaves the reader stuck; one that names the key out is the
-difference between an empty state and a dead end.
+`hint` is the part that earns the component. An empty list that says only "No services" leaves the reader stuck; one that names the key out is the difference between an empty state and a dead end.
 
-Centre it with [`Center`](../layout/center.md) if it is standing in for a
-whole pane.
+Centre it with [`Center`](../layout/center.md) if it is standing in for a whole pane.
 
 ## See also
 

@@ -23,9 +23,7 @@ _No props of its own._
 
 Role: `tree`.
 
-The other viewer for the same kind. A tree is better for finding one value in
-a large document and worse for reading the document, which is exactly why both
-are registered and the reader chooses.
+The other viewer for the same kind. A tree is better for finding one value in a large document and worse for reading the document, which is exactly why both are registered and the reader chooses.
 
 ## See also
 

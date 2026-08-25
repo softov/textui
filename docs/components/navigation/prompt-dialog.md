@@ -41,9 +41,7 @@ Role: `dialog`.
 
 Enter submits, escape cancels. `mask` turns it into a password field.
 
-Usually reached through the app's `prompt` helper rather than mounted by hand -
-that opens it on the modal layer and resolves a promise with the answer, which
-is what calling code actually wants.
+Usually reached through the app's `prompt` helper rather than mounted by hand - that opens it on the modal layer and resolves a promise with the answer, which is what calling code actually wants.
 
 ## See also
 

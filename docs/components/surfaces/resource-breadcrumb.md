@@ -27,9 +27,7 @@ import { ResourceBreadcrumb } from '@textui/documents';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Splits the URI into segments and renders them as a
-[`Breadcrumb`](../navigation/breadcrumb.md). `root` trims the prefix so the
-trail starts at the workspace rather than at the filesystem root.
+Splits the URI into segments and renders them as a [`Breadcrumb`](../navigation/breadcrumb.md). `root` trims the prefix so the trail starts at the workspace rather than at the filesystem root.
 
 ## See also
 

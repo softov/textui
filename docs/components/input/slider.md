@@ -34,13 +34,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `slider`.
 
-Left and right move by `step`. `format` renders the number beside the track,
-which is where a unit goes - `${value}ms` reads and `420` does not.
+Left and right move by `step`. `format` renders the number beside the track, which is where a unit goes - `${value}ms` reads and `420` does not.
 
-A terminal slider is coarse: `trackWidth` cells for the whole range, so 20
-cells over 0-100 moves in visible jumps of five. Where the exact number matters
-more than the sense of a range, a [`TextInput`](text-input.md) is honest and a
-slider is not.
+A terminal slider is coarse: `trackWidth` cells for the whole range, so 20 cells over 0-100 moves in visible jumps of five. Where the exact number matters more than the sense of a range, a [`TextInput`](text-input.md) is honest and a slider is not.
 
 ## See also
 

@@ -32,18 +32,11 @@ import { ResourcePanel } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-The panel is the *place*; what fills it is decided by the resource registry.
-Hand it a URI and it asks what renders that kind - an editor when `mode` is
-`'edit'` and one is registered, a viewer otherwise, the fallback when nothing
-claims it.
+The panel is the *place*; what fills it is decided by the resource registry. Hand it a URI and it asks what renders that kind - an editor when `mode` is `'edit'` and one is registered, a viewer otherwise, the fallback when nothing claims it.
 
-`uri` takes `null` so a panel can stand empty with `emptyTitle` rather than
-being unmounted, which keeps the layout still while nothing is open.
+`uri` takes `null` so a panel can stand empty with `emptyTitle` rather than being unmounted, which keeps the layout still while nothing is open.
 
-`renderer` pins one instead of asking, and `rendererProps` is passed through
-to it. Registering `registerBuiltins` also registers the panel's commands -
-"open with" reads its options off the resource registry, so a host that mounts
-a panel has already said everything those commands need. The keys stay yours.
+`renderer` pins one instead of asking, and `rendererProps` is passed through to it. Registering `registerBuiltins` also registers the panel's commands - "open with" reads its options off the resource registry, so a host that mounts a panel has already said everything those commands need. The keys stay yours.
 
 ## See also
 

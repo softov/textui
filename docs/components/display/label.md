@@ -27,12 +27,9 @@ Plus everything on [`TextProps`](../base-props.md).
 
 Role: `label`.
 
-Use it for the name of a value rather than for prose. `tone` is the semantic
-scale - `muted` for a field name, `danger` for one that has gone wrong - so
-the colour survives a theme change and a downgrade to sixteen colours.
+Use it for the name of a value rather than for prose. `tone` is the semantic scale - `muted` for a field name, `danger` for one that has gone wrong - so the colour survives a theme change and a downgrade to sixteen colours.
 
-This is a display component and not the `label` *prop*, which every node
-takes and which names a node for the test harness and for accessibility.
+This is a display component and not the `label` *prop*, which every node takes and which names a node for the test harness and for accessibility.
 
 ## See also
 

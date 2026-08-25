@@ -28,13 +28,9 @@ import { Stack } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-`Stack` is [`Column`](column.md) with `gap` taken from the theme's spacing
-scale rather than from a number: `'none'`, `'xs'`, `'sm'`, `'md'`, `'lg'`,
-`'xl'`.
+`Stack` is [`Column`](column.md) with `gap` taken from the theme's spacing scale rather than from a number: `'none'`, `'xs'`, `'sm'`, `'md'`, `'lg'`, `'xl'`.
 
-Use it wherever the gap is "the usual one", so that changing the theme's
-rhythm changes the screen. Use `Column` with an explicit `gap` where the
-number is load-bearing and must not move.
+Use it wherever the gap is "the usual one", so that changing the theme's rhythm changes the screen. Use `Column` with an explicit `gap` where the number is load-bearing and must not move.
 
 ## See also
 

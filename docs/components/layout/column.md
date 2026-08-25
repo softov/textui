@@ -35,12 +35,9 @@ import { Column } from '@textui/widgets';
 Plus everything on [`BaseProps`](../base-props.md).
 <!-- props:end -->
 
-Downwards is the axis that clips. Where a row narrows its children, a column
-keeps their height and cuts the overflow - because a panel below the fold is
-still readable and a panel with no bottom border is not.
+Downwards is the axis that clips. Where a row narrows its children, a column keeps their height and cuts the overflow - because a panel below the fold is still readable and a panel with no bottom border is not.
 
-Give exactly one child `flex={1}` to make it absorb the leftover height; that
-is how a header, a body and a status bar divide a screen.
+Give exactly one child `flex={1}` to make it absorb the leftover height; that is how a header, a body and a status bar divide a screen.
 
 ## See also
 

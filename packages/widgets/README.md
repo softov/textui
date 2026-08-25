@@ -1,10 +1,8 @@
 # @textui/widgets
 
-[![npm](https://img.shields.io/npm/v/@textui/widgets?label=%40textui%2Fwidgets)](https://www.npmjs.com/package/@textui/widgets)
-[![license](https://img.shields.io/npm/l/@textui/widgets)](https://github.com/softov/textui/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/@textui/widgets?label=%40textui%2Fwidgets)](https://www.npmjs.com/package/@textui/widgets) [![license](https://img.shields.io/npm/l/@textui/widgets)](https://github.com/softov/textui/blob/main/LICENSE)
 
-The component catalog: eighty-seven components built out of the four primitives
-in [`@textui/core`](https://www.npmjs.com/package/@textui/core).
+The component catalog: eighty-seven components built out of the four primitives in [`@textui/core`](https://www.npmjs.com/package/@textui/core).
 
 ```bash
 npm install @textui/widgets
@@ -23,12 +21,9 @@ import { Card, Row, Badge } from '@textui/widgets';
 
 ## Importing is registering
 
-There is nothing to call first. `<Card/>` compiles to a node that carries the
-imported function, and the runtime uses that in preference to any registry - so
-a screen written in JSX renders with the registry empty.
+There is nothing to call first. `<Card/>` compiles to a node that carries the imported function, and the runtime uses that in preference to any registry - so a screen written in JSX renders with the registry empty.
 
-`registerBuiltins(app)` exists for the other case: a screen named in data, where
-a string has to resolve to something.
+`registerBuiltins(app)` exists for the other case: a screen named in data, where a string has to resolve to something.
 
 ```ts
 import { createApp } from '@textui/core';
@@ -37,9 +32,7 @@ import { registerBuiltins } from '@textui/widgets';
 const app = createApp({ terminal, root, onBoot: registerBuiltins });
 ```
 
-It registers the catalog, the surface layouts and the built-in shells in one
-call, and returns one `Disposable` that takes all of it back out. For a static
-render, `renderOnce(node, { components: CATALOG })` is the same idea.
+It registers the catalog, the surface layouts and the built-in shells in one call, and returns one `Disposable` that takes all of it back out. For a static render, `renderOnce(node, { components: CATALOG })` is the same idea.
 
 ## What is here
 
@@ -57,8 +50,7 @@ render, `renderOnce(node, { components: CATALOG })` is the same idea.
 | `shells` | 4 | The frame around an application |
 | `panel` | 1 | A pane that opens a resource with whatever viewer is registered |
 
-One file per component, in a folder per group - `src/display/badge.ts`. `ls
-src/display/` is the inventory.
+One file per component, in a folder per group - `src/display/badge.ts`. `ls src/display/` is the inventory.
 
 ## Runtime
 
@@ -68,8 +60,7 @@ No dependencies beyond [`@textui/core`](https://www.npmjs.com/package/@textui/co
 
 <https://softov.github.io/textui/>
 
-Every component has its own page, with the prop table generated from the source
-and a working example - see [`docs/components/`](https://softov.github.io/textui/components/).
+Every component has its own page, with the prop table generated from the source and a working example - see [`docs/components/`](https://softov.github.io/textui/components/).
 
 <!-- family -->
 

@@ -28,11 +28,9 @@ import { FormSection } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Grouping only - it holds no form state and does not need to be inside a
-[`Form`](form.md).
+Grouping only - it holds no form state and does not need to be inside a [`Form`](form.md).
 
-Worth reaching for once a form is long enough that a reader scrolls it. Below
-about six fields it adds a heading to something that did not need one.
+Worth reaching for once a form is long enough that a reader scrolls it. Below about six fields it adds a heading to something that did not need one.
 
 ## See also
 

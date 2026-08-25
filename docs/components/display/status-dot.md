@@ -28,13 +28,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `status`.
 
-Five states, and they are fixed: `up`, `down`, `degraded`, `unknown`,
-`pending`. Fixing them is the point - a status that means the same thing
-everywhere can be read at a glance, and one invented per screen cannot.
+Five states, and they are fixed: `up`, `down`, `degraded`, `unknown`, `pending`. Fixing them is the point - a status that means the same thing everywhere can be read at a glance, and one invented per screen cannot.
 
-Each is **a glyph and a colour**, not a colour. A sixteen-colour session, a
-colourblind reader and a piped log all lose the colour and keep the glyph, so
-the glyph has to carry the meaning on its own.
+Each is **a glyph and a colour**, not a colour. A sixteen-colour session, a colourblind reader and a piped log all lose the colour and keep the glyph, so the glyph has to carry the meaning on its own.
 
 ## See also
 

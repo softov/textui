@@ -37,12 +37,9 @@ import { BarChart } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Horizontal by default, which is the right way round in a terminal: labels read
-left to right and a vertical bar chart has nowhere to put them.
+Horizontal by default, which is the right way round in a terminal: labels read left to right and a vertical bar chart has nowhere to put them.
 
-Per-bar `tone` marks one out. `max` fixes the scale so two charts can be
-compared - without it each scales to its own largest value and the taller bar
-means nothing.
+Per-bar `tone` marks one out. `max` fixes the scale so two charts can be compared - without it each scales to its own largest value and the taller bar means nothing.
 
 ## See also
 

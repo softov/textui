@@ -35,12 +35,9 @@ import { Wizard } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-The indicator only. It shows where you are in a sequence; it holds no step
-content and enforces no order, so the screen decides what a step contains and
-whether you may skip one.
+The indicator only. It shows where you are in a sequence; it holds no step content and enforces no order, so the screen decides what a step contains and whether you may skip one.
 
-`orientation="vertical"` runs it down the side, which fits a narrow terminal
-better once there are more than about four steps.
+`orientation="vertical"` runs it down the side, which fits a narrow terminal better once there are more than about four steps.
 
 ## See also
 

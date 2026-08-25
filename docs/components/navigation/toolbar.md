@@ -36,9 +36,7 @@ Role: `toolbar`.
 
 Like [`Menu`](menu.md), `shortcut` is drawn and not registered.
 
-A toolbar is horizontal and space is scarce, so the ids should be
-[commands](../../platform/commands.md) - the same action then reaches the
-palette and a chord without a second implementation.
+A toolbar is horizontal and space is scarce, so the ids should be [commands](../../platform/commands.md) - the same action then reaches the palette and a chord without a second implementation.
 
 ## See also
 

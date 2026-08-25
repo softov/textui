@@ -29,15 +29,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `alert`.
 
-`error` is `unknown` on purpose: what a `catch` gives you is not always an
-`Error`, and a component that demanded one would push a type assertion into
-every call site. It renders what it can from whatever it is handed.
+`error` is `unknown` on purpose: what a `catch` gives you is not always an `Error`, and a component that demanded one would push a type assertion into every call site. It renders what it can from whatever it is handed.
 
-`onRetry` draws a retry button when given and nothing when not, so a failure
-with no recovery does not offer one.
+`onRetry` draws a retry button when given and nothing when not, so a failure with no recovery does not offer one.
 
-This is also what a component boundary renders when a subtree throws - see
-[When one throws](../errors.md).
+This is also what a component boundary renders when a subtree throws - see [When one throws](../errors.md).
 
 ## See also
 

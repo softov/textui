@@ -1,7 +1,6 @@
 # @textui/kit
 
-[![npm](https://img.shields.io/npm/v/@textui/kit?label=%40textui%2Fkit)](https://www.npmjs.com/package/@textui/kit)
-[![license](https://img.shields.io/npm/l/@textui/kit)](https://github.com/softov/textui/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/@textui/kit?label=%40textui%2Fkit)](https://www.npmjs.com/package/@textui/kit) [![license](https://img.shields.io/npm/l/@textui/kit)](https://github.com/softov/textui/blob/main/LICENSE)
 
 Build a terminal UI in TypeScript. One install, one import.
 
@@ -31,13 +30,9 @@ console.log('App exited');
 
 ## What this package is
 
-The runtime ([`@textui/core`](https://www.npmjs.com/package/@textui/core)), a terminal to put it on
-([`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal)), and `render`. Every other name here is
-re-exported from those two - importing from them directly is the same thing
-with a longer name.
+The runtime ([`@textui/core`](https://www.npmjs.com/package/@textui/core)), a terminal to put it on ([`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal)), and `render`. Every other name here is re-exported from those two - importing from them directly is the same thing with a longer name.
 
-`render` mounts and keeps running. It returns a handle rather than a promise,
-so the application is up before the next line:
+`render` mounts and keeps running. It returns a handle rather than a promise, so the application is up before the next line:
 
 | | |
 |---|---|
@@ -46,18 +41,13 @@ so the application is up before the next line:
 | `unmount()` | Stop, put the terminal back, resolve `waitUntilExit` |
 | `rerender(node)` | Swap the root |
 
-For one frame and no terminal - a report, `--help`, a test - use `renderOnce`
-or `renderToString` instead. Those return; this one runs.
+For one frame and no terminal - a report, `--help`, a test - use `renderOnce` or `renderToString` instead. Those return; this one runs.
 
 ## ctrl+c
 
-Handled, and it has to be handled as a **key rather than a signal**. The
-terminal is in raw mode from the moment the app starts, and raw mode is
-exactly the mode where ctrl+c stops being SIGINT and becomes the byte `0x03` -
-so process signal handlers never fire.
+Handled, and it has to be handled as a **key rather than a signal**. The terminal is in raw mode from the moment the app starts, and raw mode is exactly the mode where ctrl+c stops being SIGINT and becomes the byte `0x03` - so process signal handlers never fire.
 
-`exitOnCtrlC: false` gives you the key instead, which is what an editor with
-unsaved work wants.
+`exitOnCtrlC: false` gives you the key instead, which is what an editor with unsaved work wants.
 
 ## Components
 
@@ -71,14 +61,9 @@ npm install @textui/widgets
 import { Card, Badge } from '@textui/widgets';
 ```
 
-Nothing to register. `<Card/>` compiles to a node that carries the imported
-function, and the runtime uses that in preference to any registry - so
-importing a component *is* registering it. That is why the catalog is not
-bundled here: a screen made of `Box` and `Text` should not carry eighty
-components it never mentions.
+Nothing to register. `<Card/>` compiles to a node that carries the imported function, and the runtime uses that in preference to any registry - so importing a component *is* registering it. That is why the catalog is not bundled here: a screen made of `Box` and `Text` should not carry eighty components it never mentions.
 
-The one case that needs a registry is a screen named in data, where a string
-has to resolve to something:
+The one case that needs a registry is a screen named in data, where a string has to resolve to something:
 
 ```tsx
 import { registerBuiltins } from '@textui/widgets';
@@ -88,8 +73,7 @@ render(<App />, { onBoot: registerBuiltins });
 
 ## Runtime
 
-No dependencies outside the two packages it re-exports, and no `node:` imports
-of its own. Node 22+ and Bun.
+No dependencies outside the two packages it re-exports, and no `node:` imports of its own. Node 22+ and Bun.
 
 ## Documentation
 

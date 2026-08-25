@@ -43,13 +43,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `tree`.
 
-`expandedIds` is a controlled list, so what is open lives wherever you keep
-it and survives the tree being unmounted. `hasChildren` marks a node as
-expandable before its children are known, which is what a lazily-loaded
-directory needs to draw an arrow at all.
+`expandedIds` is a controlled list, so what is open lives wherever you keep it and survives the tree being unmounted. `hasChildren` marks a node as expandable before its children are known, which is what a lazily-loaded directory needs to draw an arrow at all.
 
-`indent` is in cells per level, and two is usually right in a terminal - four
-runs out of width three levels down.
+`indent` is in cells per level, and two is usually right in a terminal - four runs out of width three levels down.
 
 ## See also
 

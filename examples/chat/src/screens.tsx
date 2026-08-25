@@ -255,6 +255,12 @@ export const SessionsScreen: (props: Record<string, never>) => RenderOutput =
                 fields={describe(current, detail)}
                 focusId="chat.details"
                 claim={asked === true}
+                // Whole, not just the row under the cursor. The values here
+                // are the answer - a workspace path, a branch, two URIs - and
+                // a pane that shows you the first half of the one you are
+                // looking for has made you walk to it to find out it was not
+                // the one.
+                values="all"
               />
               <text content="" flex={1} />
               <ConnectionBadge

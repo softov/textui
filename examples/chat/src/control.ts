@@ -1071,18 +1071,26 @@ function keys(): {
     { keys: 'ctrl+r', commandId: 'session.refresh' },
     { keys: 'ctrl+t', commandId: 'view.theme' },
     /*
-     * Both, and the letter is the one that always works.
+     * Three, and `alt+m` is the one to reach for.
      *
      * Ctrl+M and Return are the same byte. In raw mode the Return key sends
      * CR, `0x0d`, and this decoder names that `enter` - deliberately, and
      * with a comment saying so. A terminal speaking the kitty protocol or
      * xterm's `modifyOtherKeys` sends the two apart and `ctrl+m` arrives as
-     * itself; everywhere else it cannot, and no binding here changes that.
+     * itself; everywhere else it cannot, and no binding here can change that.
+     * It is kept for the terminals that can, and it is not the one to
+     * document.
      *
-     * So `m` as well, in the scope where letters are letters only when the
-     * composer has them - which is the same bargain `c`, `s` and `t` already
-     * made on this screen.
+     * `alt+m` has no such collision: it arrives as ESC then `m`, which this
+     * decoder reads as alt+the key - so it works over SSH, in tmux and on a
+     * console that has never heard of the kitty protocol. Global, because
+     * nothing types it.
+     *
+     * And `m` on its own in the chat scope, where letters are letters only
+     * while the composer holds them - the same bargain `c`, `s` and `t`
+     * already made on this screen.
      */
+    { keys: 'alt+m', commandId: 'view.markdown' },
     { keys: 'ctrl+m', commandId: 'view.markdown' },
     { keys: 'm', commandId: 'view.markdown', scopeId: CHAT_SCOPE },
     { keys: 'escape', commandId: 'go.back' },

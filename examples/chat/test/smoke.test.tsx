@@ -1455,6 +1455,27 @@ describe('what the agent said, as markdown or as typed', () => {
     await m.t.unmount();
   });
 
+  /**
+   * `alt+m` is the one to reach for.
+   *
+   * It arrives as ESC then `m`, which the decoder reads as alt+the key - so
+   * it survives SSH, tmux and a console that has never heard of the kitty
+   * protocol, which is exactly where `ctrl+m` cannot work at all.
+   */
+  it('takes alt+m wherever the keyboard is, composer included', async () => {
+    const m = await conversation();
+    await run(m);
+    m.t.focus('chat.composer');
+    for (let i = 0; i < 4; i++) await m.t.settle();
+
+    m.t.press('alt+m');
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    expect(m.t.hasText('`#if 0`')).toBe(true);
+    // And it did not type anything on the way.
+    expect(m.t.store.get<string>(DRAFT) ?? '').toBe('');
+    await m.t.unmount();
+  });
+
   it('leaves the letter alone while the composer has the keyboard', async () => {
     const m = await conversation();
     await run(m);

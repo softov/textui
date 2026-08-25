@@ -56,11 +56,21 @@ export interface SessionDetailsProps extends BoxProps {
    * that quietly returns false.
    */
   claim?: boolean;
+  /**
+   * Which rows show their value whole.
+   *
+   * `selected` is the default and the one that keeps the pane a list: every
+   * row is one line, and the row you have stopped on wraps to as many as its
+   * value needs. `all` wraps every row, which is what you want when the
+   * values *are* the point - a pane of URIs where the answer is on the third
+   * one down and reading it should not mean walking there first.
+   */
+  values?: 'selected' | 'all';
 }
 
 export const SessionDetails: (props: SessionDetailsProps) => RenderOutput =
   defineComponent<SessionDetailsProps>('SessionDetails', (props) => {
-    const { fields, focusId, labelWidth = 11, claim, ...rest } = props;
+    const { fields, focusId, labelWidth = 11, claim, values = 'selected', ...rest } = props;
     const theme = useTheme();
     const clipboard = useClipboard();
     const focus = useFocus({ ...(focusId ? { id: focusId } : {}) });
@@ -99,22 +109,39 @@ export const SessionDetails: (props: SessionDetailsProps) => RenderOutput =
         {fields.map((field, i) => {
           const active = i === at;
           const selected = active && focus.focused;
+          const whole = values === 'all' || active;
           return (
-            <Row key={field.id} gap={1}>
+            // `align="start"` because a wrapped value makes the row two lines
+            // tall and the label is one: centred, it drifted down to sit
+            // beside the *second* line of a URI, with nothing at all beside
+            // the first. A label names the row it starts.
+            <Row key={field.id} gap={1} align="start">
               <text
                 content={active ? theme.glyphs.chevronRight : ' '}
                 fg={selected ? 'accent' : 'subtle'}
+                shrink={0}
               />
-              <text content={field.label} width={labelWidth} fg="muted" truncate="end" />
+              {/* Neither of these gives up a cell. `width` is a starting size,
+                  not a floor - shrink is 1 unless it is said - so a value with
+                  no space in it to break at was squeezing the label column,
+                  and `Chat` ended up four columns left of `Harness`. A column
+                  that moves per row is not a column. */}
+              <text
+                content={field.label}
+                width={labelWidth}
+                shrink={0}
+                fg="muted"
+                truncate="end"
+              />
               <text
                 content={field.value || field.absent || '-'}
                 flex={1}
-                {...(active ? { wrap: 'word' as const } : { truncate: 'end' as const })}
+                {...(whole ? { wrap: 'word' as const } : { truncate: 'end' as const })}
                 {...(field.value ? {} : { fg: 'subtle' as const })}
                 {...(field.tone && field.value ? { fg: field.tone } : {})}
                 {...(selected ? { bold: true } : {})}
               />
-              {copied === field.id ? <text content="copied" fg="success" /> : null}
+              {copied === field.id ? <text content="copied" fg="success" shrink={0} /> : null}
             </Row>
           );
         })}

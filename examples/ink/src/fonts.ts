@@ -13,9 +13,13 @@
  * characters can be sheared, doubled or duplicated by ten lines of code. Every
  * font below has both cases, because the table does.
  *
- * `#` is where the ink goes, `%` is a second glyph for the fonts that use one,
- * and a space is nothing. Blank columns at either edge are trimmed when a
- * glyph is used, so the letters are proportional rather than a fixed pitch.
+ * A glyph is a grid of characters. Four of them are placeholders the renderer
+ * fills in from the theme - `#` a full cell, `%` a lighter one, `^` the top
+ * half of a cell and `v` the bottom half - and every other character is drawn
+ * as itself, which is what lets `dots`, `stars` and `mini` be made of dots,
+ * stars and pipes rather than of blocks. A space is nothing. Blank columns at
+ * either edge are trimmed when a glyph is used, so the letters are
+ * proportional rather than a fixed pitch.
  */
 
 type Grid = string[];
@@ -139,6 +143,74 @@ const BLOCK: Record<string, Grid> = Object.fromEntries(
   Object.entries({ ...CAPS, ...LOWER, ...REST }).map(([key, spec]) => [key, pad(spec.split('|'))]),
 );
 
+/**
+ * A second hand-drawn table: three rows, and drawn in strokes rather than in
+ * cells.
+ *
+ * Three rows of *solid* cells cannot hold an alphabet - at that size an `A` and
+ * an `M` are the same three-by-three block, and so are `G` and `O`. The way out
+ * is the one every small figlet font takes: stop filling cells and start
+ * drawing strokes, so a `|` and a `/` and a `\` each carry a direction the cell
+ * on its own could not. That is why this table is characters rather than `#`,
+ * and why it needs no placeholder - it is already what it looks like.
+ *
+ * One case. At three rows there is no room under a cap for an x-height, so
+ * lowercase folds to these; `banner` does the folding.
+ */
+const MINI: Record<string, Grid> = {
+  A: [' _ ', '|_|', '| |'],
+  B: [' _ ', '|_)', '|_)'],
+  C: [' _ ', '/  ', '\\_ '],
+  D: [' _ ', '| \\', '|_/'],
+  E: [' _ ', '|_ ', '|_ '],
+  F: [' _ ', '|_ ', '|  '],
+  G: [' _ ', '/ _', '\\_|'],
+  H: ['   ', '|_|', '| |'],
+  I: [' _ ', ' | ', ' | '],
+  J: [' _ ', '  |', '._|'],
+  K: ['   ', '|/ ', '|\\ '],
+  L: ['   ', '|  ', '|_ '],
+  M: ['    ', '|\\/|', '|  |'],
+  N: ['    ', '|\\ |', '| \\|'],
+  O: [' _ ', '/ \\', '\\_/'],
+  P: [' _ ', '|_)', '|  '],
+  Q: [' _ ', '/ \\', '\\_\\'],
+  R: [' _ ', '|_)', '| \\'],
+  S: [' _ ', '(_ ', '._)'],
+  T: ['___', ' | ', ' | '],
+  U: ['   ', '| |', '|_|'],
+  V: ['    ', '\\  /', ' \\/ '],
+  W: ['    ', '|  |', '|\\/|'],
+  X: ['   ', '\\ /', '/ \\'],
+  Y: ['   ', '\\ /', ' | '],
+  Z: ['___', ' / ', '/_ '],
+  0: [' _ ', '/ \\', '\\_/'],
+  1: ['   ', ' /|', '  |'],
+  2: [' _ ', ' _)', '(_ '],
+  3: [' _ ', ' _)', ' _)'],
+  4: ['   ', '|_|', '  |'],
+  5: [' _ ', '|_ ', ' _)'],
+  6: [' _ ', '/_ ', '(_)'],
+  7: ['___', '  /', ' / '],
+  8: [' _ ', '(_)', '(_)'],
+  9: [' _ ', '(_)', ' _/'],
+  '!': [' ', '|', '.'],
+  '?': [' _ ', ' _)', ' . '],
+  '.': ['  ', '  ', '. '],
+  ',': ['  ', '  ', ', '],
+  ':': ['  ', '. ', '. '],
+  ';': ['  ', '. ', ', '],
+  '-': ['   ', '___', '   '],
+  '+': ['   ', ' + ', '   '],
+  '=': [' _ ', '___', '   '],
+  '/': ['   ', '  /', ' / '],
+  "'": ['| ', '  ', '  '],
+  '(': [' /', '| ', ' \\'],
+  ')': ['\\ ', ' |', '/ '],
+  _: ['   ', '   ', '___'],
+};
+
+
 // ------------------------------------------------------------- transforms
 
 /** Every row the same length, so a transform can index a rectangle. */
@@ -219,6 +291,51 @@ function outside(height: number, width: number, lit: (y: number, x: number) => b
   return open;
 }
 
+/**
+ * Two rows of the table to one row of output, as half cells.
+ *
+ * The only transform that changes the *height*: five rows become three, and a
+ * banner that would not fit a short terminal does. A cell is full where both
+ * source rows are lit, a top or a bottom half where one is, and nothing where
+ * neither - which is four characters standing in for four combinations, and
+ * why it is a substitution rather than a redrawing.
+ */
+function half(rows: Grid): Grid {
+  const width = (rows[0] as string).length;
+  const out: string[] = [];
+  for (let y = 0; y < rows.length; y += 2) {
+    let line = '';
+    for (let x = 0; x < width; x++) {
+      const top = (rows[y] as string)[x] !== ' ';
+      const bottom = y + 1 < rows.length && (rows[y + 1] as string)[x] !== ' ';
+      line += top && bottom ? '#' : top ? '^' : bottom ? 'v' : ' ';
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+/**
+ * Drawn in dots and colons rather than in blocks.
+ *
+ * A colon where the cell has a lit neighbour above or below and a full stop
+ * where it does not, so a vertical stroke reads as a line and a horizontal one
+ * reads as a row of dots. The letters are the same letters - this is a change
+ * of pen, not of hand, which is the whole reason it is fifteen lines.
+ */
+function dots(rows: Grid): Grid {
+  const lit = (y: number, x: number): boolean =>
+    y >= 0 && y < rows.length && (rows[y] as string)[x] !== ' ';
+  return rows.map((row, y) => Array.from(row)
+    .map((cell, x) => (cell === ' ' ? ' ' : lit(y - 1, x) || lit(y + 1, x) ? ':' : '.'))
+    .join(''));
+}
+
+/** Every lit cell a star with a gap after it, which is `wide` with one column of two drawn. */
+function stars(rows: Grid): Grid {
+  return rows.map((row) => Array.from(row).map((c) => (c === ' ' ? '  ' : '* ')).join(''));
+}
+
 // ------------------------------------------------------------------ fonts
 
 export interface Font {
@@ -231,6 +348,14 @@ export interface Font {
   tracking: number;
   /** Columns a word space takes. */
   space: number;
+  /**
+   * Two sets of letters, or one.
+   *
+   * Everything off the five-row table has `both`, because the table does and a
+   * transform of it cannot lose a case. `mini` has one set and folds - at three
+   * rows there is no room under a cap for an x-height.
+   */
+  cases: 'both' | 'folded';
 }
 
 export const FONTS: Font[] = [
@@ -241,6 +366,7 @@ export const FONTS: Font[] = [
     glyphs: BLOCK,
     tracking: 1,
     space: 3,
+    cases: 'both',
   },
   {
     id: 'wide',
@@ -249,6 +375,7 @@ export const FONTS: Font[] = [
     glyphs: mapGlyphs(BLOCK, wide),
     tracking: 2,
     space: 4,
+    cases: 'both',
   },
   {
     id: 'slant',
@@ -257,16 +384,55 @@ export const FONTS: Font[] = [
     glyphs: mapGlyphs(BLOCK, slant),
     tracking: 1,
     space: 3,
+    cases: 'both',
   },
   {
     id: 'shadow',
     title: 'shadow',
-    note: "The same table twice: the letter, and a copy of it one cell down and right in a second glyph. Two characters in one block, which an ink colours without being told there are two.",
+    note: 'The same table twice: the letter, and a copy of it one cell down and right in a second glyph. Two characters in one block, which an ink colours without being told there are two.',
     glyphs: mapGlyphs(BLOCK, shadow),
     tracking: 1,
     space: 3,
+    cases: 'both',
+  },
+  {
+    id: 'half',
+    title: 'half',
+    note: 'Two rows of the table to one row of half cells. The only transform that changes the height - five rows become three, and a banner that would not fit a short terminal does.',
+    glyphs: mapGlyphs(BLOCK, half),
+    tracking: 1,
+    space: 3,
+    cases: 'both',
+  },
+  {
+    id: 'dots',
+    title: 'dots',
+    note: 'A colon where the cell has a lit neighbour above or below, a full stop where it does not. The same letters in a different pen - and the one font here that is legible over a phone line.',
+    glyphs: mapGlyphs(BLOCK, dots),
+    tracking: 1,
+    space: 3,
+    cases: 'both',
+  },
+  {
+    id: 'stars',
+    title: 'stars',
+    note: 'Every lit cell a star with a gap after it, which is `wide` with one column of the two drawn. Airy enough that a per-cell ink reads as a pattern rather than as a wash.',
+    glyphs: mapGlyphs(BLOCK, stars),
+    tracking: 2,
+    space: 4,
+    cases: 'both',
+  },
+  {
+    id: 'mini',
+    title: 'mini',
+    note: 'A second table, three rows, drawn in strokes rather than in cells - because at three rows a solid A and a solid M are the same block. One case: lowercase folds to it.',
+    glyphs: MINI,
+    tracking: 1,
+    space: 2,
+    cases: 'folded',
   },
 ];
+
 
 export function fontAt(id: string): Font {
   return FONTS.find((f) => f.id === id) ?? (FONTS[0] as Font);
@@ -278,6 +444,28 @@ export function heightOf(font: Font): number {
 }
 
 // ----------------------------------------------------------------- render
+
+/**
+ * The glyph for a character, or nothing.
+ *
+ * Its own, or the other case's - folding is what lets a font with one set of
+ * letters take either - and trimmed of blank edge columns, so a `1` is narrow
+ * and an `M` is wide. Shared by the drawing and the measuring, because a wrap
+ * that measured a letter differently from the way it is drawn is a wrap that
+ * is wrong by however much they disagree.
+ */
+function glyphOf(font: Font, char: string): Grid | undefined {
+  const found = font.glyphs[char]
+    ?? font.glyphs[char.toUpperCase()]
+    ?? font.glyphs[char.toLowerCase()];
+  return found === undefined ? undefined : trim(found);
+}
+
+/** The columns a character takes, not counting the gap before it. */
+function widthOf(font: Font, char: string): number {
+  const glyph = glyphOf(font, char);
+  return char === ' ' || !glyph ? font.space : (glyph[0] as string).length;
+}
 
 /** Blank edge columns removed, so a `1` is narrow and an `M` is wide. */
 function trim(rows: Grid): Grid {
@@ -291,44 +479,130 @@ function trim(rows: Grid): Grid {
 }
 
 /**
- * Text as block letters.
+ * The four characters a glyph's placeholders are drawn in.
  *
- * `fill` and `shade` are the characters the ink and its shadow are drawn in,
- * and they come from the caller rather than from here: an ascii terminal has
- * no full block, and a font that hardcoded one would put a row of question
- * marks on the screen that needs the banner most.
+ * `fill` and `shade` are theme glyphs; the two halves are not, because the
+ * theme has no name for half a cell. What they all share is that the *font*
+ * names a role and something else decides what the terminal can show - which
+ * is the rule the whole catalog follows, and the reason `half` degrades to
+ * quotes and underscores instead of putting a row of question marks on the
+ * screen that needs the banner most.
+ */
+export interface InkGlyphs {
+  fill: string;
+  shade: string;
+  top: string;
+  bottom: string;
+}
+
+export function inkGlyphs(
+  glyphs: { progressFull: string; progressEmpty: string },
+  unicode = true,
+): InkGlyphs {
+  return {
+    fill: glyphs.progressFull,
+    shade: glyphs.progressEmpty,
+    top: unicode ? '▀' : '"',
+    bottom: unicode ? '▄' : '_',
+  };
+}
+
+/** What the fonts are drawn in where nothing has said otherwise. */
+export const PLAIN_GLYPHS: InkGlyphs = { fill: '#', shade: '-', top: '"', bottom: '_' };
+
+/**
+ * Text as block letters.
  *
  * Newlines are lines: each one becomes its own block of rows, stacked with a
  * blank row between them so two lines of banner do not read as one. A
  * character with no glyph becomes a word space, so a missing one shows as a
  * gap the reader can see rather than silently closing up.
  */
-export function banner(text: string, font: Font, fill = '#', shade = fill): string {
+export function banner(
+  text: string,
+  font: Font,
+  ink: InkGlyphs = PLAIN_GLYPHS,
+  width = Infinity,
+): string {
   const height = heightOf(font);
   return text
     .split('\n')
-    .map((line) => bannerLine(line, font, height, fill, shade))
+    .flatMap((line) => wrapToWidth(line, font, width))
+    .map((line) => bannerLine(line, font, height, ink))
     .join('\n\n');
 }
 
-function bannerLine(text: string, font: Font, height: number, fill: string, shade: string): string {
+/**
+ * Break a line of text into lines that fit, measured in this font.
+ *
+ * The wrapping has to happen *here*, on the text, and not on the drawn block:
+ * a line of block letters cut at column sixty is a line of half letters, and
+ * five rows each cut in a different place is not a word at all. So the letters
+ * are measured before they are drawn, and the break goes between them.
+ *
+ * Words first, characters only when one word cannot fit on a line of its own -
+ * because breaking `Deployment` in half is bad and dropping the second half is
+ * worse, and one of those has to happen.
+ */
+function wrapToWidth(text: string, font: Font, width: number): string[] {
+  if (!Number.isFinite(width) || width <= 0) return [text];
+
+  const lines: string[] = [];
+  let line = '';
+  let used = 0;
+  const flush = (): void => { lines.push(line); line = ''; used = 0; };
+
+  /**
+   * Put a piece on the line, or on the next one.
+   *
+   * `sep` is the gap it needs from what is already there - a word space
+   * between words, tracking between the letters of one word - and `gap` is
+   * what that gap is spelled as in the text, which is a space for the first
+   * and nothing for the second.
+   */
+  const add = (piece: string, cost: number, sep: number, gap: string): void => {
+    if (line !== '' && used + sep + cost > width) flush();
+    if (line === '') { line = piece; used = cost; return; }
+    line += gap + piece;
+    used += sep + cost;
+  };
+
+  for (const word of text.split(' ')) {
+    const cost = costOf(word, font);
+    if (cost <= width) { add(word, cost, font.space, ' '); continue; }
+    // Wider than a whole line even on its own, so it is spent a character at a
+    // time - starting in whatever room is left on this line rather than on a
+    // fresh one, because a line holding three letters and a lot of air is not
+    // an improvement on a broken word.
+    let first = true;
+    for (const char of Array.from(word)) {
+      add(char, widthOf(font, char), first ? font.space : font.tracking, first ? ' ' : '');
+      first = false;
+    }
+  }
+  if (line !== '' || lines.length === 0) lines.push(line);
+  return lines;
+}
+
+/** The columns a word takes, letters and the tracking between them. */
+function costOf(word: string, font: Font): number {
+  const chars = Array.from(word);
+  return chars.reduce((total, char, i) => total + (i === 0 ? 0 : font.tracking) + widthOf(font, char), 0);
+}
+
+function bannerLine(text: string, font: Font, height: number, ink: InkGlyphs): string {
   const rows: string[] = Array.from({ length: height }, () => '');
   let first = true;
 
   for (const char of Array.from(text)) {
-    // A glyph of its own, or the other case's, or nothing. Folding to the
-    // other case is what lets a font with one set of letters take either.
-    const found = font.glyphs[char]
-      ?? font.glyphs[char.toUpperCase()]
-      ?? font.glyphs[char.toLowerCase()];
-    if (char === ' ' || !found) {
+    const glyph = char === ' ' ? undefined : glyphOf(font, char);
+    if (!glyph) {
       for (let y = 0; y < height; y++) rows[y] += ' '.repeat(font.space);
       first = true;
       continue;
     }
     // Bottom-aligned: a font whose glyphs are not all the same height - the
     // shadow one is a row taller - has to agree about where the baseline is.
-    const glyph = trim(found);
     const drop = height - glyph.length;
     for (let y = 0; y < height; y++) {
       const row = y < drop ? ' '.repeat((glyph[0] as string).length) : (glyph[y - drop] as string);
@@ -341,24 +615,13 @@ function bannerLine(text: string, font: Font, height: number, fill: string, shad
   // letters is four rows rather than five with a gap over it. Per line, which
   // is the unit that is stacked - the letters inside one still share a
   // baseline, and that is the alignment that has to hold.
-  const drawn = rows.map((row) => row.replace(/#/g, fill).replace(/%/g, shade).trimEnd());
+  const drawn = rows.map((row) => row
+    .replace(/#/g, ink.fill)
+    .replace(/%/g, ink.shade)
+    .replace(/\^/g, ink.top)
+    .replace(/v/g, ink.bottom)
+    .trimEnd());
   while (drawn.length > 0 && drawn[0] === '') drawn.shift();
   while (drawn.length > 0 && drawn[drawn.length - 1] === '') drawn.pop();
   return drawn.join('\n');
-}
-
-/**
- * What the letters are drawn in, and what their shadow is.
- *
- * The progress glyphs, because they are already the pair this needs: a full
- * cell and a lighter one, stated per theme and downgraded to `#` and `-` where
- * the terminal is ascii. The theme has made that choice and the example has no
- * business making it again - a font that hardcoded a full block would put a
- * row of question marks on the screen that needs the banner most.
- */
-export function fillGlyphs(glyphs: { progressFull: string; progressEmpty: string }): {
-  fill: string;
-  shade: string;
-} {
-  return { fill: glyphs.progressFull, shade: glyphs.progressEmpty };
 }

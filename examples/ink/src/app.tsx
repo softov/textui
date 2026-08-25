@@ -1,11 +1,12 @@
 import type { Disposable, RenderOutput, TextUIApp } from '@textui/core';
 import {
-  createBag, defineComponent, useKeymap, useStore, useStoreValue, useTheme,
+  createBag, defineComponent, useCapabilities, useKeymap, useMeasure, useStore, useStoreValue,
+  useTheme,
 } from '@textui/core';
 import {
   ColorText, KeyHints, List, ScrollView, Select, TextArea, registerBuiltins,
 } from '@textui/widgets';
-import { FONTS, banner, fillGlyphs, fontAt } from './fonts.js';
+import { FONTS, banner, fontAt, inkGlyphs } from './fonts.js';
 import { PRESETS, sample } from './inks.js';
 
 /**
@@ -46,26 +47,36 @@ function presetAt(id: string): (typeof PRESETS)[number] {
 /** The block the ink is applied to: block letters, or the prose that shows it is not a banner component. */
 const Subject = defineComponent<Record<string, never>>('InkSubject', () => {
   const theme = useTheme();
+  // `half` is the one font that needs a character the theme has no name for,
+  // so this is the one place the example asks what the terminal can show.
+  const unicode = useCapabilities().unicode !== 'ascii';
   const text = useStoreValue<string>(TEXT, DEFAULT_TEXT) ?? DEFAULT_TEXT;
   const plain = useStoreValue<boolean>(PLAIN, false) ?? false;
   const wrap = useStoreValue<boolean>(WRAP, true) ?? true;
   const preset = presetAt(useStoreValue<string>(PRESET, FIRST_INK) ?? FIRST_INK);
   const font = fontAt(useStoreValue<string>(FONT, FIRST_FONT) ?? FIRST_FONT);
 
-  const { fill, shade } = fillGlyphs(theme.glyphs);
+  // What the panel gave this last frame. A banner cannot wrap the way a
+  // paragraph does - a line of block letters cut at column sixty is a line of
+  // half letters - so the *text* is wrapped instead, measured in the font, and
+  // that needs a width to measure against. Zero on the first pass, which is the
+  // one where nothing is known and the honest answer is not to break anything.
+  const width = useMeasure().width;
   const content = plain
     ? `${text}\n\n${PROSE}`
-    : banner(text || DEFAULT_TEXT, font, fill, shade);
+    : banner(text || DEFAULT_TEXT, font, inkGlyphs(theme.glyphs, unicode), width);
 
   return (
-    <ColorText
-      content={content}
-      ink={preset.ink}
-      fg="muted"
-      wrap={plain && wrap ? 'word' : 'none'}
-      textAlign={plain ? 'left' : 'center'}
-      alignBlock={!plain}
-    />
+    <box>
+      <ColorText
+        content={content}
+        ink={preset.ink}
+        fg="muted"
+        wrap={plain && wrap ? 'word' : 'none'}
+        textAlign={plain ? 'left' : 'center'}
+        alignBlock={!plain}
+      />
+    </box>
   );
 });
 
@@ -114,7 +125,7 @@ const Sidebar = defineComponent<Record<string, never>>('InkSidebar', () => {
  * reminder that the component has no idea the other one is drawing letters.
  */
 const Swatch = defineComponent<{ width: number }>('InkSwatch', ({ width }) => {
-  const { fill } = fillGlyphs(useTheme().glyphs);
+  const { fill } = inkGlyphs(useTheme().glyphs);
   return <ColorText content={fill.repeat(width)} ink={sample(width)} />;
 });
 

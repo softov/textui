@@ -10,6 +10,14 @@ Type in the field - enter starts a second line - pick an ink and a font, and
 watch the same component colour a banner or a paragraph. The panel scrolls, so
 a tall font or three paragraphs of prose is not a clipped screen.
 
+**A banner wraps, and it wraps in the text rather than in the drawing.** A line
+of block letters cut at column sixty is a line of half letters, and five rows
+each cut in a different place is not a word at all - so the letters are
+measured in the chosen font *before* they are drawn and the break goes between
+them. Words first; a word too wide for a line of its own is spent a character
+at a time, because breaking `Deployment` in half is bad and dropping the second
+half is worse.
+
 ## What it is for
 
 `ColorText` colours a block of text cell by cell. The example is a banner
@@ -46,27 +54,46 @@ The first two are data and would survive being written in a JSON screen. The
 third would not, and that is the trade: it is the same one `canvas` makes with
 `draw`.
 
-## The fonts are one table and three transforms
+## Eight fonts, two tables
 
 `block` is hand-drawn: five rows, one cell to a stroke, and **both cases on one
 baseline** - lowercase sits on the bottom four rows and the ascenders reach up
 into the fifth, so a cap is visibly taller than an x. Nothing descends below
 the baseline, because five rows is not enough to put a tail under a `g` and
-keep the line spacing honest.
+keep the line spacing honest, so `g` and `y` hook left instead.
 
-The other three are that table, transformed:
+Six of the eight are that table, transformed - which is the other thing worth
+showing: a bitmap font is a grid of characters, and a grid of characters can be
+sheared, doubled, halved or re-inked in about fifteen lines. None of them can
+lose a case, because the table has both.
 
 | | |
 |---|---|
 | `wide` | every column drawn twice |
 | `slant` | sheared half a column per row - an italic |
 | `shadow` | the letter, and a copy one cell down and right in a second glyph |
+| `half` | two rows to one row of half cells: five rows become **three** |
+| `dots` | a colon where the stroke runs down, a full stop where it runs across |
+| `stars` | every lit cell a star with a gap after it |
 
-Which is the other thing worth showing: a bitmap font is a grid of characters,
-and a grid of characters can be sheared, doubled or duplicated by ten lines of
-code. `shadow` has one subtlety - the shadow is kept only *outside* the letter,
-found by a flood fill from the border, because a shadow that fell into the
-counter of an `A` turned a five-row capital into a smudge.
+Two have a subtlety worth knowing. `shadow` keeps the shadow only *outside* the
+letter, found by a flood fill from the border, because one that fell into the
+counter of an `A` turned a capital into a smudge. And `half` is the only font
+that needs a character the theme has no name for - there is no token for half a
+cell - so it is also the only place this example asks what the terminal can
+show, and on an ascii one it is drawn in `"` and `_` instead.
+
+`mini` is the second table: **three rows, drawn in strokes rather than in
+cells.** Three rows of solid cells cannot hold an alphabet - at that size a
+solid `A` and a solid `M` are the same three-by-three block, and so are `G` and
+`O`. The way out is the one every small figlet font takes: stop filling cells
+and start drawing strokes, so a `|` and a `/` each carry a direction the cell
+on its own could not. It has one case, and lowercase folds to it.
+
+The fonts here are hand-drawn rather than converted from figlet `.flf` files on
+purpose. FIGlet's own font licensing is [a long-standing muddle](https://github.com/pwaller/pyfiglet/issues/89) -
+the original notice covers copying but not modification, and many fonts have
+unknown origin - so nothing in this directory came from one.
 
 ## What the flags are for
 

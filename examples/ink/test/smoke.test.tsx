@@ -3,7 +3,7 @@ import { render } from '@textui/testing';
 import type { Harness } from '@textui/testing';
 import { FONT, PLAIN, PRESET, TEXT, registerInk } from '../src/app.js';
 import { PRESETS } from '../src/inks.js';
-import { FONTS, banner, fontAt } from '../src/fonts.js';
+import { FONTS, banner, fontAt, inkGlyphs } from '../src/fonts.js';
 
 /**
  * The example, mounted.
@@ -23,6 +23,9 @@ const SIZES = [
 /** What the default theme draws a banner and its shadow in. */
 const FILL = '█';
 const SHADE = '░';
+/** What the default theme on a unicode terminal draws them in. */
+const PEN = inkGlyphs({ progressFull: FILL, progressEmpty: SHADE });
+const ASCII_PEN = inkGlyphs({ progressFull: '#', progressEmpty: '-' }, false);
 
 async function open(size = SIZES[0] as { width: number; height: number }): Promise<Harness> {
   const t = await render({ component: 'InkFrame' }, {
@@ -53,7 +56,7 @@ describe('the ink example', () => {
       expect(t.hasText('sunrise')).toBe(true);
       expect(t.hasText('font')).toBe(true);
       // The top row of a `T`, which is a solid bar however wide the terminal is.
-      expect(t.text()).toContain(banner('T', fontAt('block'), FILL).split('\n')[0]);
+      expect(t.text()).toContain(banner('T', fontAt('block'), PEN).split('\n')[0]);
       await t.unmount();
     });
   }
@@ -75,19 +78,21 @@ describe('the ink example', () => {
     await t.unmount();
   });
 
-  it('draws every font, and each one differently', async () => {
+  it('draws every font, in the characters that font is made of', async () => {
     const t = await open();
-    const seen = new Map<string, string>();
+    // Short, so every font fits the panel - `wide` and `stars` are twice the
+    // width of the rest, and a clipped row would not be found.
+    t.app.store.set(TEXT, 'AB');
     for (const font of FONTS) {
       t.app.store.set(FONT, font.id);
       await t.settle();
       expect(t.errors(), font.id).toEqual([]);
-      const drawn = block(t).join('\n');
-      expect(drawn, font.id).not.toBe('');
-      for (const [id, other] of seen) {
-        expect(drawn, `${font.id} vs ${id}`).not.toBe(other);
+      // Every row of what this font draws, on the screen. Not "differs from
+      // the last one" - `dots` and `stars` differ from `block` in the
+      // characters, which a filter for block glyphs would have thrown away.
+      for (const row of banner('AB', font, PEN).split('\n')) {
+        if (row.trim() !== '') expect(t.text(), `${font.id}: ${row}`).toContain(row);
       }
-      seen.set(font.id, drawn);
     }
     await t.unmount();
   });
@@ -99,8 +104,29 @@ describe('the ink example', () => {
     const drawn = block(t).join('\n');
     // Both lines, each as its own block of rows - the second one is what a
     // single-line banner would have dropped on the floor.
-    expect(drawn).toContain(banner('AB', fontAt('block'), FILL).split('\n')[2]);
-    expect(drawn).toContain(banner('CD', fontAt('block'), FILL).split('\n')[2]);
+    expect(drawn).toContain(banner('AB', fontAt('block'), PEN).split('\n')[2]);
+    expect(drawn).toContain(banner('CD', fontAt('block'), PEN).split('\n')[2]);
+    await t.unmount();
+  });
+
+  it('wraps a banner too wide for the panel rather than cutting it', async () => {
+    const t = await open(SIZES[1] as { width: number; height: number });
+    t.app.store.set(TEXT, 'Deployment finished');
+    await t.settle();
+    expect(t.errors()).toEqual([]);
+
+    // The last word is on the screen. Truncating put the first few letters up
+    // and dropped the rest, and the panel looked like the component was
+    // broken rather than like the terminal was narrow.
+    const drawn = block(t).join('\n');
+    expect(drawn).not.toBe('');
+    // More rows than one line of this font takes, which is what wrapping means
+    // here: the text broke, the letters did not. The swatch is dropped first -
+    // it is a solid bar of the same glyph, and leaving it in made a count of
+    // six pass whether anything had wrapped or not.
+    const rows = drawn.split('\n')
+      .filter((line) => line.includes(FILL) && line.trim().replace(new RegExp(FILL, 'g'), '') !== '');
+    expect(rows.length).toBeGreaterThan(5);
     await t.unmount();
   });
 
@@ -154,7 +180,17 @@ describe('the ink example', () => {
     expect(t.errors()).toEqual([]);
     // No block glyph anywhere, and the letters are still there.
     expect(t.text()).not.toContain(FILL);
-    expect(t.text()).toContain(banner('T', fontAt('block'), '#').split('\n')[0]);
+    expect(t.text()).toContain(banner('T', fontAt('block'), ASCII_PEN).split('\n')[0]);
+
+    // `half` is the font that asks for a character the theme has no name for.
+    // Here it has to be quotes and underscores, and it still has to be a `T`.
+    t.app.store.set(FONT, 'half');
+    t.app.store.set(TEXT, 'T');
+    await t.settle();
+    for (const row of banner('T', fontAt('half'), ASCII_PEN).split('\n')) {
+      expect(t.text(), row).toContain(row);
+    }
+    expect(t.text()).not.toContain('▀');
     await t.unmount();
   });
 });

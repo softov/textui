@@ -141,8 +141,18 @@ export const List = defineComponent<ListProps>('List', (props) => {
         h('text', { content: item.label, flex: 1, truncate: 'end' }),
         // The secondary columns keep the row's colour once it is selected;
         // `muted` on a selected background is unreadable.
-        item.description ? h('text', { content: item.description, fg: active ? undefined : 'muted', truncate: 'end' }) : null,
-        item.meta ? h('text', { content: item.meta, fg: active ? undefined : 'muted' }) : null,
+        //
+        // The description yields first, and by a lot: it is the elaboration,
+        // and a row reading "brb_fram…" beside a status cut to "waiting on y…"
+        // has spent the width on the wrong two things. `meta` gives up none of
+        // it - a status is three words at most, and it is the column the row
+        // is being scanned for.
+        item.description
+          ? h('text', { content: item.description, fg: active ? undefined : 'muted', truncate: 'end', shrink: 8 })
+          : null,
+        item.meta
+          ? h('text', { content: item.meta, fg: active ? undefined : 'muted', shrink: 0 })
+          : null,
       );
     }),
   );

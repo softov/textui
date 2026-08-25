@@ -190,6 +190,234 @@ describe('the palette component', () => {
     await t.unmount();
   });
 
+  /**
+   * The category names the group, above it, once.
+   *
+   * It used to sit in every row's right-hand column, so a list of four
+   * screens said "Screens" four times - in the column the rows needed for
+   * saying what they do, and still without marking where the group began.
+   */
+  const grouped = async (extra: Record<string, unknown> = {}) => renderApp({
+    width: 60,
+    height: 20,
+    onBoot: (app) => {
+      app.commands.register({ id: 'go.back', title: 'Back', category: 'Navigation', description: 'Return to the previous screen', slots: ['palette'], run: () => {} });
+      app.commands.register({ id: 'go.sessions', title: 'Sessions', category: 'Screens', description: 'List all sessions', slots: ['palette'], run: () => {} });
+      app.commands.register({ id: 'go.hosts', title: 'Hosts', category: 'Screens', description: 'Manage all hosts', slots: ['palette'], run: () => {} });
+      app.open({ surface: 'main', key: 'p', target: { component: 'CommandPalette', ...extra } });
+    },
+  });
+
+  it('names each category once, above its group', async () => {
+    const t = await grouped();
+    await t.settle();
+
+    const category = (name: string): number =>
+      t.lines().filter((line) => line.includes(name)).length;
+
+    expect(category('Navigation')).toBe(1);
+    expect(category('Screens')).toBe(1);
+
+    // On a line of its own, above the first row of the group - not in a row.
+    const heading = t.lines().findIndex((line) => line.includes('Screens'));
+    expect(t.lines()[heading]).not.toContain('Sessions');
+    expect(t.lines()[heading]).not.toContain('Hosts');
+    expect(t.lines()[heading + 1]).toContain('Sessions');
+
+    // And the column the category used to occupy says what the row does.
+    expect(t.hasText('List all sessions')).toBe(true);
+    await t.unmount();
+  });
+
+  it('drops the headings once a query sorts the rows', async () => {
+    const t = await grouped();
+    t.type('s');
+    await t.settle();
+
+    // Relevance order interleaves the categories, so a heading would sit over
+    // one row and claim to start a group.
+    expect(t.hasText('Screens')).toBe(false);
+    expect(t.hasText('Navigation')).toBe(false);
+    await t.unmount();
+  });
+
+  it('leaves the headings out when grouping is off', async () => {
+    const t = await grouped({ grouped: false });
+    await t.settle();
+
+    expect(t.hasText('Screens')).toBe(false);
+    expect(t.hasText('Sessions')).toBe(true);
+    await t.unmount();
+  });
+
+  /**
+   * A sentence needs a line, not a column.
+   *
+   * Four approval modes named in two words each are told apart entirely by
+   * what is written under them. Beside the label that sentence shares the
+   * width with it, so every row shows the same truncated half and the reader
+   * is choosing on the part that was cut.
+   */
+  it('puts each description on its own line when the argument asks', async () => {
+    const t = await renderApp({
+      width: 50,
+      height: 16,
+      onBoot: (app) => {
+        app.commands.register({
+          id: 'set.mode',
+          title: 'Permissions',
+          slots: ['palette'],
+          args: [{
+            name: 'value',
+            type: 'string',
+            required: true,
+            descriptions: 'below',
+            choices: [
+              { value: 'ask', label: 'Ask each time', description: 'Every tool call is confirmed' },
+              { value: 'edits', label: 'Accept edits', description: 'File edits run; commands still ask' },
+            ],
+          }],
+          run: () => {},
+        });
+        app.open({ surface: 'main', key: 'p', target: { component: 'CommandPalette', openAt: 'set.mode', width: 50 } });
+      },
+    });
+    await t.settle();
+
+    const label = t.lines().findIndex((line) => line.includes('Ask each time'));
+    expect(label).toBeGreaterThan(-1);
+    // The sentence is not on the label's line - it is on the next one, and
+    // whole rather than cut to whatever the label left over.
+    expect(t.lines()[label]).not.toContain('Every tool call');
+    expect(t.lines()[label + 1]).toContain('Every tool call is confirmed');
+    // Indented to the label, not to the cursor's gutter.
+    expect(t.lines()[label + 1]?.indexOf('Every')).toBe(t.lines()[label]?.indexOf('Ask each'));
+    await t.unmount();
+  });
+
+  /**
+   * The picker opens on the answer already in force.
+   *
+   * A question about a setting is asked in order to change it *from*
+   * something, and that something is where the reader is looking. Opening at
+   * the top says the first option is the current one, which is wrong on every
+   * list where it is not - and costs a press to get back to where you began.
+   */
+  const choosing = async (extra: Record<string, unknown> = {}, width?: number) => {
+    const t = await renderApp({
+      width: width ?? 60,
+      height: 18,
+      onBoot: (app) => {
+        app.commands.register({
+          id: 'set.mode',
+          title: 'Permissions',
+          slots: ['palette'],
+          args: [{
+            name: 'value',
+            type: 'string',
+            required: true,
+            choices: [
+              { value: 'ask', label: 'Ask each time' },
+              { value: 'edits', label: 'Accept edits' },
+              { value: 'plan', label: 'Plan only' },
+            ],
+            ...extra,
+          }],
+          run: () => {},
+        });
+        app.open({ surface: 'main', key: 'p', target: { component: 'CommandPalette', openAt: 'set.mode' } });
+      },
+    });
+    for (let i = 0; i < 4; i++) await t.settle();
+    return t;
+  };
+
+  /** The row the cursor is on, which is the one carrying the marker. */
+  const marked = (t: Awaited<ReturnType<typeof choosing>>): string =>
+    t.lines().find((line) => line.includes('\u25b8')) ?? '';
+
+  it('starts on the value the argument calls its default', async () => {
+    const t = await choosing({ default: 'plan' });
+    expect(marked(t)).toContain('Plan only');
+    await t.unmount();
+  });
+
+  it('starts at the top when the argument names no default', async () => {
+    const t = await choosing();
+    expect(marked(t)).toContain('Ask each time');
+    await t.unmount();
+  });
+
+  /**
+   * How wide the panel is.
+   *
+   * A constant is too wide for a list of one-word answers and too narrow for a
+   * list of sentences, and it is the same constant either way.
+   */
+  const panel = (t: Awaited<ReturnType<typeof choosing>>): number => {
+    const line = t.lines().find((row) => row.includes('Plan only')) ?? '';
+    return line.trimEnd().length;
+  };
+
+  it('fits the panel to its widest row', async () => {
+    const narrow = await choosing({}, 100);
+    const wide = await choosing({
+      choices: [
+        { value: 'ask', label: 'Ask each time' },
+        { value: 'edits', label: 'Accept edits' },
+        { value: 'plan', label: 'Plan only, and do not touch a single file until it is agreed' },
+      ],
+    }, 100);
+
+    expect(panel(wide)).toBeGreaterThan(panel(narrow));
+    await narrow.unmount();
+    await wide.unmount();
+  });
+
+  it('stops at maxWidth, however long the rows are', async () => {
+    const t = await renderApp({
+      width: 100,
+      height: 18,
+      onBoot: (app) => {
+        app.commands.register({
+          id: 'set.mode', title: 'Permissions', slots: ['palette'],
+          args: [{
+            name: 'value', type: 'string', required: true,
+            choices: [{ value: 'a', label: 'A'.repeat(200) }],
+          }],
+          run: () => {},
+        });
+        app.open({ surface: 'main', key: 'p', target: { component: 'CommandPalette', openAt: 'set.mode', maxWidth: 40 } });
+      },
+    });
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    expect(t.lines().every((line) => line.trimEnd().length <= 40)).toBe(true);
+    await t.unmount();
+  });
+
+  it('takes a stated width as stated', async () => {
+    const t = await renderApp({
+      width: 100,
+      height: 18,
+      onBoot: (app) => {
+        app.commands.register({
+          id: 'set.mode', title: 'Permissions', slots: ['palette'],
+          args: [{ name: 'value', type: 'string', required: true, choices: [{ value: 'a', label: 'A' }] }],
+          run: () => {},
+        });
+        app.open({ surface: 'main', key: 'p', target: { component: 'CommandPalette', openAt: 'set.mode', width: 70 } });
+      },
+    });
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    // One row of one letter, and the panel is still 70 wide because it was
+    // told to be.
+    const widest = Math.max(...t.lines().map((line) => line.trimEnd().length));
+    expect(widest).toBe(70);
+    await t.unmount();
+  });
+
   it('filters as you type and runs the choice', async () => {
     const ran: string[] = [];
     const t = await renderApp({

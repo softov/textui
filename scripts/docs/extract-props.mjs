@@ -94,13 +94,36 @@ for (const file of files) {
     // const X = defineComponent<XProps>('X', (props) => { const { a = 1 } = props;
     if (ts.isVariableStatement(node)) {
       for (const decl of node.declarationList.declarations) {
-        const init = decl.initializer;
+        // A generic component cannot say its own type through
+        // `defineComponent`, so it is written as a plain function and cast on
+        // the way out: `defineComponent('X', XView as ...) as typeof XView`.
+        // Reading only the bare call meant those components lost their whole
+        // prop table to a "_No props of its own._", which is a table that
+        // disagrees with the source - the one thing this script exists to
+        // prevent.
+        let init = decl.initializer;
+        while (init && (ts.isAsExpression(init) || ts.isParenthesizedExpression(init))) {
+          init = init.expression;
+        }
         if (!init || !ts.isCallExpression(init)) continue;
         const callee = init.expression.getText(source);
         if (!callee.startsWith('defineComponent')) continue;
         const nameArg = init.arguments[0];
         if (!nameArg || !ts.isStringLiteral(nameArg)) continue;
-        const body = init.arguments[1]?.getText(source) ?? '';
+        // The render function, however it was handed over: written out here,
+        // cast, or named. A named one has its defaults in its own
+        // declaration, which is where the destructure lives.
+        let render = init.arguments[1];
+        while (render && (ts.isAsExpression(render) || ts.isParenthesizedExpression(render))) {
+          render = render.expression;
+        }
+        if (render && ts.isIdentifier(render)) {
+          const named = render.text;
+          source.forEachChild((sibling) => {
+            if (ts.isFunctionDeclaration(sibling) && sibling.name?.text === named) render = sibling;
+          });
+        }
+        const body = render?.getText(source) ?? '';
         const found = {};
         // Only the first destructure of `props`, so a nested default elsewhere
         // in the body is not mistaken for a prop default.
@@ -112,7 +135,11 @@ for (const file of files) {
           }
         }
         defaults[nameArg.text] = {
-          propsType: init.typeArguments?.[0]?.getText(source) ?? null,
+          // Stated, else the convention. A generic component passes its props
+          // type on the function rather than to `defineComponent`, and
+          // `<Name>Props` is what every component in the catalog calls it.
+          propsType: init.typeArguments?.[0]?.getText(source)
+            ?? (interfaces[`${nameArg.text}Props`] ? `${nameArg.text}Props` : null),
           file: relative(ROOT, file),
           defaults: found,
         };

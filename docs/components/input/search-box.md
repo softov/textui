@@ -31,5 +31,7 @@ Filtering is not its job. It reports what was typed; what that matches is the sc
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
+- [The clipboard](../../terminal/clipboard.md) - copy and paste belong to the terminal
 - [TextInput](text-input.md) - the full prop list
 - [List](../display/list.md), [Table](../display/table.md) - what a search box usually filters

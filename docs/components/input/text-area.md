@@ -55,9 +55,15 @@ It also settles the question a single-letter keybinding raises. The focused node
 
 ## Selecting with the mouse
 
+The full set of editing and selection keys is
+[Editing keys and selection](editing.md); what follows is what this control
+does with them.
+
 A click puts the caret where it landed. A **drag selects**, and the release puts what was selected on the system clipboard over OSC 52 - and into the store, which is the half a paste inside the application can read back. `copyOnSelect={false}` keeps the selection and skips the clipboard.
 
 That is a debt rather than a feature. Reporting mouse events takes the terminal's own select-and-copy away, so an application that reads the mouse has to hand one back, or text that is on the screen cannot leave it.
+
+The terminal's own copy and paste keys are the reader's, not ours - `Ctrl+Shift+C` on most Linux terminals, `Cmd+C` on macOS, `Shift+Insert` as the most portable paste. [The clipboard](../../terminal/clipboard.md) has the table, and why `Ctrl+C` could never have been it.
 
 Dragging past the edge of the field **scrolls it** rather than stopping at the last row on screen. The drag arrives at all because the application holds the pointer for whoever took the button down: mouse dispatch is otherwise a hit test, and a selection dragged past the field is the pointer being somewhere the field is not.
 
@@ -81,5 +87,7 @@ It is worth saying in an application's own key hints, because a reader whose fir
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
+- [The clipboard](../../terminal/clipboard.md) - copy and paste belong to the terminal
 - [TextInput](text-input.md) - one line, and enter submits
 - [Keybindings](../../platform/keybindings.md) - why the focused node wins

@@ -48,5 +48,6 @@ Closed it is one row; open it is a panel on the floating [layer](../../platform/
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
 - [RadioGroup](radio-group.md) - when there are few enough to show at once
 - [CommandPalette](../navigation/command-palette.md) - searching commands rather than choosing a value

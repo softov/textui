@@ -202,6 +202,7 @@ A theme asking for `none` or `ascii` borders keeps them: both are deliberate loo
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
 - [Checkbox](checkbox.md), [Switch](switch.md) - a state to toggle rather than an action to run
 - [FormActions](form-actions.md) - the submit/cancel row, already laid out
 - [Nodes](../nodes.md) - actions and bindings in general

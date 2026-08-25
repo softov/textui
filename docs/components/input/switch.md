@@ -36,5 +36,6 @@ The difference from [`Checkbox`](checkbox.md) is a promise to the reader, not a 
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
 - [Checkbox](checkbox.md) - when submission is what applies it
 - [Button](button.md) - when it is an action rather than a state

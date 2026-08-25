@@ -46,6 +46,8 @@ It publishes a **real cursor position** when the terminal has a cursor, so the c
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
+- [The clipboard](../../terminal/clipboard.md) - copy and paste belong to the terminal
 - [TextArea](text-area.md) - more than one line
 - [SearchBox](search-box.md) - the same field with a glyph and a count
 - [Field](field.md) - label, hint and validation around it

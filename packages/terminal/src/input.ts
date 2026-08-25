@@ -362,6 +362,10 @@ function decodeSgrMouse(body: string, final: string): MouseEvent | null {
     x: col - 1,
     y: row - 1,
     ctrl, alt, shift,
+    // Stamped on arrival, because nothing downstream can tell a double click
+    // from two clicks without knowing when each one landed. The wire says
+    // press and release and nothing else.
+    at: Date.now(),
     handled: false,
   };
 

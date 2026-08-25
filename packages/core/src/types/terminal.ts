@@ -1,3 +1,4 @@
+import type { CursorStyle } from './style.js';
 import type { Disposable } from './disposable.js';
 import type { Size } from './geometry.js';
 import type { TerminalCapabilities, CapabilityOverrides } from './capabilities.js';
@@ -30,6 +31,8 @@ export interface AcquiredState {
   focusEvents: boolean;
   paste: boolean;
   cursorHidden: boolean;
+  /** Whether this session changed the caret shape, and so owes a reset. */
+  cursorShaped?: boolean;
   enhancedKeys: boolean;
   rawMode: boolean;
   titleSet: boolean;
@@ -55,4 +58,10 @@ export interface TerminalAdapter extends Disposable {
   /** OSC 52, when the terminal allows it. */
   writeClipboard?(text: string): void;
   setTitle?(title: string): void;
+  /**
+   * DECSCUSR. Session state rather than frame state - it survives until
+   * something changes it, so it is set when it changes and put back on
+   * teardown, the way the alt screen and raw mode are.
+   */
+  setCursorShape?(shape: CursorStyle): void;
 }

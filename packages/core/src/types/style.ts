@@ -16,7 +16,7 @@ export type ColorToken =
   | 'onAccent' | 'onPrimary' | 'onSecondary'
   | 'onSuccess' | 'onWarning' | 'onDanger' | 'onInfo'
   | 'hover' | 'active' | 'selected' | 'focus' | 'disabled'
-  | 'scrim' | 'cursor' | 'shadow';
+  | 'scrim' | 'cursor' | 'shadow' | 'divider';
 
 /** Anywhere a colour is accepted, a semantic token is accepted too. */
 export type StyleColor = ColorToken | Color;
@@ -44,6 +44,30 @@ export interface BorderChars {
   teeLeft: string;
   teeRight: string;
 }
+
+/**
+ * A rule that separates, rather than a frame that encloses.
+ *
+ * Kept apart from `BorderStyle` on purpose: a theme that draws no frames may
+ * still want a rule, and tying the two means choosing a divider glyph decides
+ * whether every bordered component reserves a ring.
+ */
+export type DividerStyle =
+  | 'none' | 'single' | 'double' | 'dashed' | 'thick' | 'ascii';
+
+/** A divider runs either way, so it names both. */
+export interface DividerChars {
+  horizontal: string;
+  vertical: string;
+}
+
+/**
+ * The shape of the caret.
+ *
+ * Named for DECSCUSR, which is what a terminal understands, so a theme value
+ * maps straight onto the escape sequence with nothing to translate.
+ */
+export type CursorStyle = 'block' | 'underline' | 'bar';
 
 export type BorderSides = {
   top?: boolean;

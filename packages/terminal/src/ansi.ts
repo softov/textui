@@ -26,6 +26,9 @@ export const cursorBack = (n = 1): string => `${CSI}${n}D`;
 export const cursorColumn = (x: number): string => `${CSI}${x + 1}G`;
 
 /** Cursor shapes, for a text field that wants a bar rather than a block. */
+/** DECSCUSR 0: back to whatever the terminal was configured for. */
+export const cursorShapeReset = `${CSI}0 q`;
+
 export const cursorShape = (
   shape: 'block' | 'underline' | 'bar',
   blinking = true,

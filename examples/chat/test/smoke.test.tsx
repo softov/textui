@@ -12,9 +12,10 @@ import { SessionFlag } from '../src/ahp/types.js';
 import { CLIPBOARD_PATH, layoutMarkdown, wrapRuns } from '@textui/core';
 import { toBlocks } from '../src/blocks.js';
 import {
-  HOST_ERROR, INPUT, OPEN, PROVIDER, QUEUE, SELECTED, SETTINGS, TURNS, WORKSPACE,
+  DRAFT, HOST_ERROR, INPUT, OPEN, PROVIDER, QUEUE, SELECTED, SETTINGS, TURNS, WORKSPACE,
 } from '../src/state.js';
 import type { Turn } from '../src/ahp/types.js';
+import { PICKER, openPicker } from '../src/view/picker.js';
 
 /**
  * The example, mounted.
@@ -61,6 +62,11 @@ async function catalogue(size?: { width: number; height: number }): Promise<Moun
   await m.t.app.execute('go.sessions');
   for (let i = 0; i < 6; i++) await m.t.settle();
   return m;
+}
+
+/** How many turns the open session has, which is what "sent" looks like. */
+function turnsIn(m: Mounted): number {
+  return (m.t.store.get<Turn[]>(TURNS) ?? []).length;
 }
 
 /** Run the script to where it needs an answer, rendering as it goes. */
@@ -225,6 +231,151 @@ describe('when the agent is waiting', () => {
     await run(m);
     expect(m.t.store.get(INPUT)).toBeNull();
     expect(m.t.hasText('transcript-scope')).toBe(true);
+    await m.t.unmount();
+  });
+});
+
+describe('a chip on the control row', () => {
+  /**
+   * The panel a chip opens is the chip's toggle, and it opens on the answer
+   * that is in force.
+   *
+   * Both of those were wrong in the same way: the panel knew which question
+   * was being asked and nothing about what it was currently answered with, so
+   * it opened at the top of the list and a second click on the chip closed and
+   * reopened it - which looks exactly like the click doing nothing.
+   */
+  const chip = async () => {
+    const m = await idle();
+    m.t.app.store.set(SETTINGS, { ...(m.t.app.store.get<object>(SETTINGS) ?? {}), permissionMode: 'plan' });
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    return m;
+  };
+
+  const open = (m: Mounted): void => {
+    openPicker(m.t.app, { commandId: 'compose.set.permissionMode', anchorId: 'chat.composer' });
+  };
+
+  it('opens on the value in force, not on the first one', async () => {
+    const m = await chip();
+    open(m);
+    for (let i = 0; i < 6; i++) await m.t.settle();
+
+    const marked = m.t.lines().find((line) => line.includes('\u25b8') && line.includes('Plan')) ?? '';
+    expect(marked).toContain('Plan only');
+    await m.t.unmount();
+  });
+
+  it('closes when the same chip is clicked again', async () => {
+    const m = await chip();
+    open(m);
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    expect(m.t.app.layers.entries().some((e) => e.id === PICKER)).toBe(true);
+
+    open(m);
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    expect(m.t.app.layers.entries().some((e) => e.id === PICKER)).toBe(false);
+    await m.t.unmount();
+  });
+
+  it('swaps to another chip rather than closing', async () => {
+    const m = await chip();
+    // A second question, so "the same chip again" and "a different chip" are
+    // told apart rather than both reading as a second click.
+    m.t.app.commands.register({
+      id: 'compose.set.pace',
+      title: 'Pace',
+      slots: ['palette'],
+      args: [{
+        name: 'value', type: 'string', required: true,
+        choices: [{ value: 'slow', label: 'Deliberate' }, { value: 'fast', label: 'Brisk' }],
+      }],
+      run: () => {},
+    });
+    open(m);
+    for (let i = 0; i < 6; i++) await m.t.settle();
+
+    openPicker(m.t.app, { commandId: 'compose.set.pace', anchorId: 'chat.composer' });
+    for (let i = 0; i < 6; i++) await m.t.settle();
+    expect(m.t.app.layers.entries().some((e) => e.id === PICKER)).toBe(true);
+    expect(m.t.hasText('Deliberate')).toBe(true);
+    await m.t.unmount();
+  });
+});
+
+describe('the slash menu', () => {
+  /**
+   * A slash command of ours is ours.
+   *
+   * The menu listed the client's own commands and then sent whatever was
+   * typed down the session channel, so `/go.sessions` went to the agent as a
+   * message - the one place it could not possibly mean anything. Only a slash
+   * the menu does not match is the agent's.
+   */
+  const composing = async (typed: string) => {
+    const m = await idle();
+    m.t.focus('chat.composer');
+    await m.t.settle();
+    m.t.type(typed);
+    for (let i = 0; i < 4; i++) await m.t.settle();
+    return m;
+  };
+
+  it('walks the completions with the arrow keys', async () => {
+    const m = await composing('/go');
+    // The first row is marked; down moves the mark to the second.
+    const marked = (): string => m.t.lines().find((line) => line.includes('\u25b8 /go')) ?? '';
+    expect(marked()).toContain('/go.back');
+
+    m.t.press('down');
+    for (let i = 0; i < 4; i++) await m.t.settle();
+    expect(marked()).toContain('/go.sessions');
+
+    m.t.press('up');
+    for (let i = 0; i < 4; i++) await m.t.settle();
+    expect(marked()).toContain('/go.back');
+    await m.t.unmount();
+  });
+
+  it('runs the chosen command instead of sending it', async () => {
+    const m = await composing('/go.sessions');
+    const before = turnsIn(m);
+
+    m.t.press('enter');
+    for (let i = 0; i < 8; i++) await m.t.settle();
+
+    expect(m.t.app.screens.current()?.id).toBe('sessions');
+    expect(m.t.app.store.get(DRAFT)).toBe('');
+    // Nothing went down the channel: the agent was never asked about this.
+    expect(turnsIn(m)).toBe(before);
+    await m.t.unmount();
+  });
+
+  it('runs the row that was clicked', async () => {
+    const m = await composing('/go');
+    const row = m.t.lines().findIndex((line) => line.includes('/go.new'));
+    expect(row).toBeGreaterThan(-1);
+
+    const before = turnsIn(m);
+    m.t.click(10, row);
+    for (let i = 0; i < 8; i++) await m.t.settle();
+
+    expect(m.t.app.screens.current()?.id).toBe('new');
+    expect(turnsIn(m)).toBe(before);
+    await m.t.unmount();
+  });
+
+  it('sends a slash it does not know, because that one is the agent\'s', async () => {
+    const m = await composing('/compact');
+    // Nothing of ours matched, so there is no menu to choose from.
+    expect(m.t.hasText('/go.back')).toBe(false);
+    const before = turnsIn(m);
+
+    m.t.press('enter');
+    await run(m);
+
+    expect(turnsIn(m)).toBeGreaterThan(before);
+    expect(m.t.hasText('/compact')).toBe(true);
     await m.t.unmount();
   });
 });

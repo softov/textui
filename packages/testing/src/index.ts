@@ -119,6 +119,24 @@ export interface Harness {
   click(x: number, y: number, button?: 'left' | 'middle' | 'right'): void;
   /** Click the centre of an element. */
   clickOn(element: Element): void;
+  /**
+   * Click the same cell `times` in a row, close enough together to count as
+   * one gesture.
+   *
+   * `click` deliberately does not: it steps the clock past the repeat window
+   * each time, so two of them are two clicks and a test that means a double
+   * click has to say so.
+   */
+  clickRepeat(x: number, y: number, times: number): void;
+  /**
+   * Press at one point, drag through any points between, and release at the
+   * last one - the whole gesture, because that is the only part of it a
+   * handler can be wrong about.
+   *
+   * The drag goes to whoever took the press, wherever the points lead, so
+   * dragging off the element under test is a case worth writing.
+   */
+  drag(from: [number, number], ...to: [number, number][]): void;
   moveMouse(x: number, y: number): void;
   wheel(x: number, y: number, delta: number): void;
   focusTerminal(focused: boolean): void;
@@ -241,6 +259,15 @@ function createHarness(
 ): Harness {
   const flush = (): void => app.flush();
 
+  /**
+   * The clock mouse events are stamped from.
+   *
+   * A real terminal stamps them on arrival; here they are synthesised, so the
+   * harness owns the time - which is what lets "a double click" and "two
+   * clicks" be two different tests rather than a race.
+   */
+  let mouseClock = 0;
+
   const collect = (predicate: (node: InspectorNode) => boolean): Element[] => {
     const tree = app.inspect();
     if (!tree) return [];
@@ -354,14 +381,40 @@ function createHarness(
       flush();
     },
     click(x, y, button = 'left') {
-      app.handleInput({ type: 'mouse', action: 'down', button, x, y, ctrl: false, alt: false, shift: false, handled: false });
-      app.handleInput({ type: 'mouse', action: 'up', button, x, y, ctrl: false, alt: false, shift: false, handled: false });
+      // Past any repeat window, so consecutive clicks in a test are what they
+      // look like: separate ones.
+      mouseClock += 1000;
+      app.handleInput({ type: 'mouse', action: 'down', button, x, y, ctrl: false, alt: false, shift: false, at: mouseClock, handled: false });
+      app.handleInput({ type: 'mouse', action: 'up', button, x, y, ctrl: false, alt: false, shift: false, at: mouseClock, handled: false });
+      flush();
+    },
+    clickRepeat(x, y, times) {
+      mouseClock += 1000;
+      for (let i = 0; i < times; i++) {
+        // Inside the window, and on the same cell: the two things that make
+        // presses one gesture rather than several.
+        mouseClock += 60;
+        app.handleInput({ type: 'mouse', action: 'down', button: 'left', x, y, ctrl: false, alt: false, shift: false, at: mouseClock, handled: false });
+        app.handleInput({ type: 'mouse', action: 'up', button: 'left', x, y, ctrl: false, alt: false, shift: false, at: mouseClock, handled: false });
+      }
       flush();
     },
     clickOn(element) {
       const rect = element.rect;
       if (!rect) throw new Error(`[textui/testing] <${element.component}> has no bounds to click`);
       this.click(rect.x + Math.floor(rect.width / 2), rect.y + Math.floor(rect.height / 2));
+    },
+    drag(from, ...to) {
+      mouseClock += 1000;
+      const send = (action: 'down' | 'drag' | 'up', [x, y]: [number, number]): void => {
+        mouseClock += 20;
+        app.handleInput({ type: 'mouse', action, button: 'left', x, y, ctrl: false, alt: false, shift: false, at: mouseClock, handled: false });
+      };
+      send('down', from);
+      const last = to[to.length - 1] ?? from;
+      for (const point of to) send('drag', point);
+      send('up', last);
+      flush();
     },
     moveMouse(x, y) {
       app.handleInput({ type: 'mouse', action: 'move', button: 'none', x, y, ctrl: false, alt: false, shift: false, handled: false });

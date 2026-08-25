@@ -23,6 +23,7 @@ import { Divider } from '@textui/widgets';
 | `direction` | `'horizontal' \| 'vertical'` | `'horizontal'` | A divider runs across the flow, so it names its own axis. |
 | `label` | `string` |  | Text set into the rule. |
 | `labelAlign` | `'left' \| 'center' \| 'right'` | `'left'` |  |
+| `rule` | `'none' \| 'single' \| 'double' \| 'dashed' \| 'thick' \| 'ascii'` |  | The rule style. The theme's own is the default, so a borderless theme still gets the line it asked for. |
 | `char` | `string` |  |  |
 
 Plus everything on [`BoxProps`](../base-props.md).

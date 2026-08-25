@@ -24,13 +24,38 @@ export interface PickerOptions {
   commandId: string;
   /** The node the panel sits above: the chip's own focus id. */
   anchorId: string;
+  /**
+   * A fixed width. Left off, the panel is as wide as its widest answer, up to
+   * `maxWidth` - which is what a chip wants: "Worktree" and "Step-by-step
+   * collaboration" are the same question asked at two very different widths.
+   */
   width?: number;
+  maxWidth?: number;
   visibleRows?: number;
+  /**
+   * Put each value's sentence on its own line.
+   *
+   * For the questions whose answers are two words apart - "Accept edits" and
+   * "Plan only" - and told apart entirely by the line under them. Inline,
+   * that line shares the width with the label and shows the same truncated
+   * half of every answer.
+   */
+  descriptions?: 'inline' | 'below';
 }
 
 export function openPicker(app: TextUIApp, options: PickerOptions): void {
   const command = app.commands.get(options.commandId);
   if (!command) return;
+
+  // The chip that opened this one closes it. A control whose panel is already
+  // showing is a toggle - clicking it again to make it go away is the first
+  // thing anybody tries, and reopening it looks like the click did nothing.
+  const showing = app.layers.entries().find((entry) => entry.id === PICKER);
+  const already = showing?.node as { openAt?: string } | undefined;
+  if (already?.openAt === options.commandId) {
+    app.layers.close(PICKER);
+    return;
+  }
 
   // Closed first, so opening a second chip's panel replaces the first rather
   // than stacking two of them with the same id.
@@ -50,12 +75,14 @@ export function openPicker(app: TextUIApp, options: PickerOptions): void {
     position: { kind: 'anchor', targetId: options.anchorId, side: 'top', align: 'start' },
     node: {
       component: 'CommandPalette',
-      width: options.width ?? 46,
+      ...(options.width !== undefined ? { width: options.width } : {}),
+      maxWidth: options.maxWidth ?? 52,
       visibleRows: options.visibleRows ?? 6,
       // One command, so the panel opens on its values instead of on a search
       // box with everything in it.
       commands: [command],
       openAt: options.commandId,
+      ...(options.descriptions ? { descriptions: options.descriptions } : {}),
       onClose: { handler: () => app.layers.close(PICKER) },
     },
     // Back to the chip that asked, however it was closed.

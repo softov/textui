@@ -99,6 +99,27 @@ export class App implements TextUIApp {
   private resolvedTheme: ResolvedTheme;
   private bag = createBag();
   private hovered: string | null = null;
+  /**
+   * Whoever took the last button down, until it comes back up.
+   *
+   * Mouse dispatch is a hit test, so without this a drag stops the moment the
+   * pointer leaves the box it started in - which is precisely when a drag
+   * becomes interesting. A selection dragged off the bottom of a field, a
+   * slider dragged past its own track and a splitter dragged across the pane
+   * it is resizing are all the pointer being somewhere the handler is not.
+   */
+  private captured: Instance | null = null;
+  /**
+   * Everything under the pointer, innermost outwards.
+   *
+   * A chain rather than one node, because hover is inherited the way it is in
+   * a browser: a row lights up when the pointer is over the label inside it,
+   * and the label is what the hit test finds. Hover used to be a focus id
+   * compared against `props.id`, which meant only a focusable node could ever
+   * be hovered - so a tool call row, a list row and every other box that is
+   * clicked rather than focused had a `hover` style nothing could trigger.
+   */
+  private hoveredChain = new Set<Instance>();
   /** Focus registrations created from `focusable` props, by focus id. */
   private declaredFocus = new Map<string, { instanceId: string; dispose(): void }>();
   private lastFrame: Frame | null = null;
@@ -258,9 +279,21 @@ export class App implements TextUIApp {
     }
     this.themeId = id;
     this.resolvedTheme = this.themes.resolve(id, this.terminal.capabilities());
+    this.applyCursorShape();
     this.store.set('$/modus/theme', id);
     this.buffer_.invalidate();
     this.requestRender(true);
+  }
+
+  /**
+   * Ask the terminal for the theme's caret, when the theme states one.
+   *
+   * A theme that says nothing leaves the terminal's own setting alone, which
+   * is why this is not called with a default.
+   */
+  private applyCursorShape(): void {
+    const shape = this.resolvedTheme.cursor;
+    if (shape) this.terminal.setCursorShape?.(shape);
   }
 
   setShell(id: string): void {
@@ -282,6 +315,7 @@ export class App implements TextUIApp {
   setCapabilityOverrides(overrides: CapabilityOverrides): void {
     this.terminal.setCapabilityOverrides(overrides);
     this.resolvedTheme = this.themes.resolve(this.themeId, this.terminal.capabilities());
+    this.applyCursorShape();
     this.publishEnvironment();
     this.buffer_.invalidate();
     this.requestRender(true);
@@ -324,6 +358,10 @@ export class App implements TextUIApp {
       enhancedKeys: caps.kittyKeyboard,
       ...this.options.session,
     });
+
+    // After `acquire`, never before: with no session there is nothing to put
+    // the shape back, so an early call is dropped rather than leaked.
+    this.applyCursorShape();
 
     this.bag.add(this.terminal.onInput((event) => this.handleInput(event)));
     this.bag.add(this.terminal.onResize((size) => this.handleResize(size)));
@@ -625,7 +663,7 @@ export class App implements TextUIApp {
     const focusedId = this.focus.focused();
     return {
       focused: focusedId === id || focusedId === `${instance.id}:focus`,
-      hovered: this.hovered === id,
+      hovered: this.hovered === id || this.hoveredChain.has(instance),
       active: false,
       selected: instance.props.selected === true,
       disabled: instance.props.disabled === true,
@@ -930,15 +968,43 @@ export class App implements TextUIApp {
   }
 
   private handleMouse(event: MouseEvent): void {
+    // The rest of the gesture belongs to whoever took the button down,
+    // wherever the pointer has got to since - and it is delivered whether or
+    // not the handler claims it, because during a drag there is nothing else
+    // it could be for.
+    if (this.captured && (event.action === 'drag' || event.action === 'up')) {
+      const target = this.captured;
+      if (event.action === 'up') this.captured = null;
+      if (target.mounted) {
+        const onMouse = target.props.onMouse;
+        if (typeof onMouse === 'function') {
+          (onMouse as (e: MouseEvent) => boolean | void)(event);
+          this.requestRender();
+          return;
+        }
+      }
+      // Unmounted mid-drag, or it stopped taking the pointer: the gesture has
+      // nowhere to go, so let the hit test have it back.
+      this.captured = null;
+    }
+
     const hit = this.focus.at(event.x, event.y);
 
     if (event.action === 'move') {
+      const moved = this.updateHover(event);
       if (hit !== this.hovered) {
         this.hovered = hit;
+        this.requestRender();
+      } else if (moved) {
         this.requestRender();
       }
       return;
     }
+
+    // A new press ends the last one, claimed or not: an `up` that never
+    // arrived - a terminal that lost focus mid-drag - must not leave a capture
+    // that eats the next gesture.
+    if (event.action === 'down') this.captured = null;
 
     if (event.action === 'down' && hit) this.focus.focus(hit);
 
@@ -946,6 +1012,41 @@ export class App implements TextUIApp {
       this.dispatchMouse(this.root, event);
     }
     this.requestRender();
+  }
+
+  /**
+   * Who the pointer is over now, and who it has just left.
+   *
+   * `onHover` is called on the way in and the way out, once each - a handler
+   * that fires on every pixel of movement is a handler nobody can use for
+   * anything but a repaint.
+   */
+  private updateHover(event: MouseEvent): boolean {
+    const next = new Set<Instance>();
+    if (this.root) collectHover(this.root, event.x, event.y, next);
+
+    let changed = next.size !== this.hoveredChain.size;
+    if (!changed) {
+      for (const instance of next) {
+        if (!this.hoveredChain.has(instance)) { changed = true; break; }
+      }
+    }
+    if (!changed) return false;
+
+    const previous = this.hoveredChain;
+    this.hoveredChain = next;
+
+    for (const instance of previous) {
+      if (next.has(instance) || !instance.mounted) continue;
+      const onHover = instance.props.onHover;
+      if (typeof onHover === 'function') (onHover as (over: boolean) => void)(false);
+    }
+    for (const instance of next) {
+      if (previous.has(instance)) continue;
+      const onHover = instance.props.onHover;
+      if (typeof onHover === 'function') (onHover as (over: boolean) => void)(true);
+    }
+    return true;
   }
 
   /** Innermost box under the pointer first, then outward. */
@@ -962,6 +1063,8 @@ export class App implements TextUIApp {
 
     const onMouse = instance.props.onMouse;
     if (typeof onMouse === 'function' && (onMouse as (e: MouseEvent) => boolean | void)(event) === true) {
+      // Taking the button down is what claims the drag that follows it.
+      if (event.action === 'down') this.captured = instance;
       return true;
     }
 
@@ -1093,4 +1196,22 @@ export const WRITER_KEY = serviceKey<FrameWriter>('textui.writer');
 
 export function createApp(options: CreateAppOptions = {}): App {
   return new App(options);
+}
+
+/**
+ * Every box containing the point, from the root down.
+ *
+ * The whole chain rather than the innermost one: a row is hovered when the
+ * pointer is over the text inside it, and the text is what a hit test finds.
+ * Only boxes with a laid-out rect count - a component that produced no box
+ * occupies no space, so there is nothing to be over.
+ */
+function collectHover(instance: Instance, x: number, y: number, into: Set<Instance>): void {
+  const box = instance.box;
+  if (box) {
+    const { x: bx, y: by, width, height } = box.rect;
+    if (x < bx || x >= bx + width || y < by || y >= by + height) return;
+    into.add(instance);
+  }
+  for (const child of instance.children) collectHover(child, x, y, into);
 }

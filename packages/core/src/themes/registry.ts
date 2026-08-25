@@ -2,13 +2,14 @@ import type {
   ResolvedTheme, ThemeDefinition, ThemeGlyphs, ThemeRegistry, ThemeSpacing,
 } from '../types/theme.js';
 import type { Color } from '../types/cells.js';
-import type { BorderChars, BorderStyle, ColorToken, Density, StyleColor } from '../types/style.js';
+import type { BorderChars, BorderStyle, ColorToken, CursorStyle, Density, DividerChars, DividerStyle, StyleColor } from '../types/style.js';
 import type { Style } from '../types/style.js';
 import type { SyntaxScope } from '../types/syntax.js';
 import type { TerminalCapabilities } from '../types/capabilities.js';
 import type { Disposable } from '../types/disposable.js';
 import { toDisposable } from '../util/disposable.js';
 import { borderCharsFor } from './borders.js';
+import { dividerCharsFor } from './dividers.js';
 import { glyphsFor } from './glyphs.js';
 import { BUILTIN_THEMES } from './builtin.js';
 
@@ -16,7 +17,7 @@ const DEFAULT_SPACING: ThemeSpacing = { none: 0, xs: 0, sm: 1, md: 1, lg: 2, xl:
 
 const FALLBACK_COLORS: Record<ColorToken, Color> = {
   canvas: 'default', surface: 'default', surfaceAlt: 'default', overlay: 'default',
-  border: 'default', borderStrong: 'default', borderSubtle: 'default',
+  border: 'default', borderStrong: 'default', borderSubtle: 'default', divider: 'default',
   text: 'default', muted: 'default', subtle: 'default', inverted: 'default',
   accent: 'default', primary: 'default', secondary: 'default',
   success: 'default', warning: 'default', danger: 'default', info: 'default',
@@ -115,6 +116,10 @@ export class Themes implements ThemeRegistry {
     let spacing = { ...DEFAULT_SPACING };
     let glyphOverrides: Partial<ThemeGlyphs> = {};
     let border: BorderStyle = 'single';
+    let divider: DividerStyle = 'single';
+    // Undefined means "leave the terminal's own setting alone", which is the
+    // right default: a theme that says nothing should not restyle the caret.
+    let cursorStyle: CursorStyle | undefined;
     let density: Density = 'normal';
     const components: Record<string, Record<string, Style>> = {};
     let syntaxOverrides: Partial<Record<SyntaxScope, StyleColor>> = {};
@@ -142,6 +147,8 @@ export class Themes implements ThemeRegistry {
       if (def.spacing) spacing = { ...spacing, ...def.spacing };
       if (def.glyphs) glyphOverrides = { ...glyphOverrides, ...def.glyphs };
       if (def.border) border = def.border;
+      if (def.divider) divider = def.divider;
+      if (def.cursor) cursorStyle = def.cursor;
       if (def.density) density = def.density;
       for (const [name, variants] of Object.entries(def.components ?? {})) {
         components[name] = { ...components[name], ...variants };
@@ -172,6 +179,7 @@ export class Themes implements ThemeRegistry {
 
     const glyphs: ThemeGlyphs = { ...glyphsFor(caps.unicode), ...glyphOverrides };
     const charCache = new Map<BorderStyle, BorderChars>();
+    const ruleCache = new Map<DividerStyle, DividerChars>();
 
     const resolved: ResolvedTheme = {
       id: leaf.id,
@@ -181,6 +189,8 @@ export class Themes implements ThemeRegistry {
       spacing,
       glyphs,
       border,
+      divider,
+      cursor: cursorStyle,
       density,
       components,
       syntax,
@@ -199,6 +209,18 @@ export class Themes implements ThemeRegistry {
           const custom = leaf.borderChars?.[s];
           chars = custom ? { ...base, ...custom } : base;
           charCache.set(s, chars);
+        }
+        return chars;
+      },
+
+      dividerChars(style?: DividerStyle): DividerChars {
+        const s = style ?? divider;
+        let chars = ruleCache.get(s);
+        if (!chars) {
+          const base = dividerCharsFor(s, caps.unicode);
+          const custom = leaf.dividerChars?.[s];
+          chars = custom ? { ...base, ...custom } : base;
+          ruleCache.set(s, chars);
         }
         return chars;
       },

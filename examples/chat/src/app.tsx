@@ -57,7 +57,7 @@ const Header = defineComponent<Record<string, never>>('ChatHeader', () => {
   const decoded = decodeStatus(status);
 
   return (
-    <Row gap={1} padding={[0, 1]}>
+    <Row gap={1}>
       <text content="Assistant" bold fg="accent" />
       <text content={theme.glyphs.separator} fg="subtle" />
       {session ? (

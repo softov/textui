@@ -1,5 +1,5 @@
 import type { Color } from './cells.js';
-import type { BorderChars, BorderStyle, ColorToken, Density, Style, StyleColor } from './style.js';
+import type { BorderChars, BorderStyle, ColorToken, CursorStyle, Density, DividerChars, DividerStyle, Style, StyleColor } from './style.js';
 import type { SyntaxScope } from './syntax.js';
 import type { Disposable } from './disposable.js';
 import type { TerminalCapabilities } from './capabilities.js';
@@ -80,6 +80,14 @@ export interface ThemeDefinition {
   /** Default border style for chrome. `'none'` gives the borderless look. */
   border?: BorderStyle;
   borderChars?: Partial<Record<BorderStyle, BorderChars>>;
+  /**
+   * Default rule style. Independent of `border`, so a borderless theme can
+   * still separate with a line.
+   */
+  divider?: DividerStyle;
+  dividerChars?: Partial<Record<DividerStyle, DividerChars>>;
+  /** The caret's shape. The terminal's own setting is the default. */
+  cursor?: CursorStyle;
   density?: Density;
   /** Per-component style overrides, keyed by component name then variant. */
   components?: Record<string, Record<string, Style>>;
@@ -100,6 +108,8 @@ export interface ResolvedTheme {
   spacing: ThemeSpacing;
   glyphs: ThemeGlyphs;
   border: BorderStyle;
+  divider: DividerStyle;
+  cursor: CursorStyle | undefined;
   density: Density;
   components: Record<string, Record<string, Style>>;
   /** Every syntax scope, resolved to a colour. */
@@ -107,6 +117,7 @@ export interface ResolvedTheme {
   /** Resolve a token (or pass a literal colour through). */
   color(token: string): Color;
   borderChars(style?: BorderStyle): BorderChars;
+  dividerChars(style?: DividerStyle): DividerChars;
   /** Component style for a name + variant list, merged in order. */
   styleFor(component: string, variants?: string[]): Style;
 }

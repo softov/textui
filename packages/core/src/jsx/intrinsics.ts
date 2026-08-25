@@ -42,8 +42,26 @@ export interface BaseProps extends Style {
   onKey?(event: KeyEvent): boolean | void;
   onFocus?(): void;
   onBlur?(): void;
+  /**
+   * Every mouse action on this node, innermost first.
+   *
+   * Returning `true` stops it going any further - and on a `down`, **claims
+   * the rest of the gesture**: the `drag`s and the `up` that follow come here
+   * whatever they are over, until the button comes back up. Dispatch is
+   * otherwise a hit test, so without that a drag would stop at the edge of the
+   * node it started in, which is where a drag starts being worth having.
+   */
   onMouse?(event: MouseEvent): boolean | void;
+  /** The left button going down - a third of a gesture. `onMouse` for the rest. */
   onClick?: Action | ((event: MouseEvent) => void);
+  /**
+   * The pointer entered or left this node. Called once each way, not per cell.
+   *
+   * Hover is inherited the way it is in a browser: a row is hovered while the
+   * pointer is over the label inside it, because the label is what a hit test
+   * finds. A `style` with a `hover` overlay needs nothing else - this is for
+   * the cases where something other than a colour has to happen.
+   */
   onHover?(hovering: boolean): void;
 
   /** OSC 8 link target, where the terminal supports hyperlinks. */

@@ -1,5 +1,5 @@
 import type { BoxProps, RenderOutput } from '@textui/core';
-import { defineComponent, useTheme } from '@textui/core';
+import { defineComponent, useState, useTheme } from '@textui/core';
 import type { ListItem } from '@textui/widgets';
 import { Column, Divider, List, TextArea } from '@textui/widgets';
 import { ComposerBar } from './controls.js';
@@ -38,6 +38,18 @@ export interface ChatComposerProps extends BoxProps {
   placeholder?: string;
   /** Offered when the draft starts with a slash. */
   commands?: { id: string; title: string; description?: string }[];
+  /**
+   * One of `commands` was chosen from the slash menu.
+   *
+   * Not `onSubmit`. A slash command of ours is *ours*: it opens a screen,
+   * changes a setting or picks a theme, and none of that is a message. Sending
+   * it down the session channel puts "/theme" in the transcript and asks the
+   * agent to make sense of it.
+   *
+   * A slash the menu does not match is left alone and sent, because that is
+   * how a command the *agent* offers reaches it.
+   */
+  onCommand?(id: string): void;
   autoFocus?: boolean;
   focusId?: string;
 }
@@ -46,7 +58,7 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
   defineComponent<ChatComposerProps>('ChatComposer', (props) => {
     const {
       value, onChange, onSubmit, onCancel, onHistory, onLeave, running, queued = 0,
-      options = [], onOption, placeholder, commands = [], autoFocus,
+      options = [], onOption, placeholder, commands = [], onCommand, autoFocus,
       focusId = 'chat.composer', ...rest
     } = props;
     const theme = useTheme();
@@ -63,6 +75,26 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
         meta: command.title,
       }));
 
+    // Which completion is under the cursor. Clamped rather than reset, so a
+    // list that shrinks as more is typed keeps a valid row instead of
+    // snapping back to the top on every keystroke.
+    const [highlight, setHighlight] = useState(0);
+    const index = Math.max(0, Math.min(highlight, matches.length - 1));
+    const chosen = matches[index];
+
+    /**
+     * Up and down, while the menu is open.
+     *
+     * They arrive as `onOverflow` - the field reports the key rather than
+     * handling it once there is no row above or below the caret, which for a
+     * `/word` draft is immediately. The same pair walks the history when there
+     * is no menu, and the menu is the nearer of the two things they could
+     * mean.
+     */
+    const step = (direction: -1 | 1): void => {
+      setHighlight((matches.length + index + direction) % matches.length);
+    };
+
     return (
       <Column {...rest} gap={0}>
         {matches.length > 0 ? (
@@ -71,17 +103,36 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
           // do either, and an airy theme gets a line it deliberately does not
           // draw anywhere else.
           <Column border={theme.border} padding={[0, 1]}>
-            <List items={matches} focusable={false} emptyMessage="no command" />
+            <List
+              items={matches}
+              focusable={false}
+              selectedId={chosen?.id}
+              marker
+              // Not focusable, so this is the click: a completion clicked is a
+              // completion chosen, and there is nowhere for a merely
+              // highlighted row to lead.
+              onSelect={(id: string) => onCommand?.(id)}
+              emptyMessage="no command"
+            />
           </Column>
         ) : null}
 
-        <Column border={theme.border} padding={[0, 1]}>
+        <Column border={theme.border}>
+          <Divider dim />
           <TextArea
             value={value}
             onChange={onChange}
-            onSubmit={onSubmit}
+            // A slash the menu matched runs here; anything else is a message,
+            // which is what lets a command the agent offers through.
+            onSubmit={(next: string) => {
+              if (chosen && onCommand) { onCommand(chosen.id); return; }
+              onSubmit(next);
+            }}
             {...(onCancel ? { onCancel } : {})}
-            {...(onHistory ? { onOverflow: onHistory } : {})}
+            onOverflow={(direction: -1 | 1) => {
+              if (matches.length > 0) { step(direction); return; }
+              onHistory?.(direction);
+            }}
             {...(onLeave ? { onEdge: (edge: 'start' | 'end') => { if (edge === 'start') onLeave(); } } : {})}
             placeholder={placeholder
               ?? (running ? 'The agent is working. Type to queue a message.' : 'Ask the agent anything…')}
@@ -93,7 +144,7 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
           />
           {/* Inside the same frame, so the field and what it will be sent as
               read as one control rather than two stacked boxes. */}
-          <Divider />
+          <Divider dim />
           <ComposerBar
             options={options}
             onOpen={(option, anchorId) => onOption?.(option, anchorId)}

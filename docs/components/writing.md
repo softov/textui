@@ -5,13 +5,11 @@ nav_order: 9
 ---
 
 <!-- docs:setup
-declare const app: import('@textui/core').TextUIApp;
--->
+declare const app: import('@textui/core').TextUIApp; -->
 
 # Writing a component
 
-A component is a function that returns nodes. Give it a name so the registry and
-the inspector can talk about it:
+A component is a function that returns nodes. Give it a name so the registry and the inspector can talk about it:
 
 ```tsx
 import { defineComponent, useTheme, type BoxProps } from '@textui/core';
@@ -35,9 +33,7 @@ export const ServerStatus = defineComponent<ServerStatusProps>('ServerStatus', (
 Then register it, so a graph can name it:
 
 <!-- docs:local
-import type { RenderOutput } from '@textui/core';
-declare function ServerStatus(): RenderOutput;
--->
+import type { RenderOutput } from '@textui/core'; declare function ServerStatus(): RenderOutput; -->
 
 ```ts
 app.components.register({
@@ -54,6 +50,4 @@ Three rules, learned the hard way:
 - **Set `role` on the node you render**, not only in the registration - the inspector and the test harness read the node.
 - **Namespace anything an application owns** (`Advisor.ServerStatus`). The registry is flat and shared.
 
-A component can also be registered as `{ kind: 'lazy', load }` - the catalog then
-costs a name until something mounts it - or as `{ kind: 'template' }`, a
-component defined as data all the way down.
+A component can also be registered as `{ kind: 'lazy', load }` - the catalog then costs a name until something mounts it - or as `{ kind: 'template' }`, a component defined as data all the way down.

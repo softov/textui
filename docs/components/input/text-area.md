@@ -40,40 +40,17 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `textbox`.
 
-The caret **marks the cell it is on** - an underline under the character by
-default, or a filled cell with `caretStyle="block"`. It does not occupy a cell
-of its own: as a glyph pushed in between the text before and after it, every
-character to its right sat one column from where it would be once the caret
-moved on, and the row came out a cell wider than its own text. Past the last
-character there is nothing to mark and a space stands in, which is the one
-place the caret adds a column - at the end, where nothing moves.
+The caret **marks the cell it is on** - an underline under the character by default, or a filled cell with `caretStyle="block"`. It does not occupy a cell of its own: as a glyph pushed in between the text before and after it, every character to its right sat one column from where it would be once the caret moved on, and the row came out a cell wider than its own text. Past the last character there is nothing to mark and a space stands in, which is the one place the caret adds a column - at the end, where nothing moves.
 
-Long lines **soft-wrap**. A logical line can take several rows, and everything
-that counts rows counts rows: `maxRows` is a budget of screen, `up` and `down`
-move to the row above and below rather than jumping a whole paragraph, and the
-scroll offset follows the caret's row. The inherited `wrap` prop chooses how a
-line breaks, and its `truncate-*` values ask for one row per line with an
-ellipsis instead.
+Long lines **soft-wrap**. A logical line can take several rows, and everything that counts rows counts rows: `maxRows` is a budget of screen, `up` and `down` move to the row above and below rather than jumping a whole paragraph, and the scroll offset follows the caret's row. The inherited `wrap` prop chooses how a line breaks, and its `truncate-*` values ask for one row per line with an ellipsis instead.
 
-A newline is `ctrl+enter`, with `alt+enter` as the one that cannot fail -
-**never `shift+enter`**, which no terminal can tell apart from plain `enter`.
-Passing `onSubmit` is what makes enter mean "done"; without it enter is a
-newline like any other key.
+A newline is `ctrl+enter`, with `alt+enter` as the one that cannot fail - **never `shift+enter`**, which no terminal can tell apart from plain `enter`. Passing `onSubmit` is what makes enter mean "done"; without it enter is a newline like any other key.
 
-`ctrl+enter` is three different byte sequences depending on the terminal, and
-`@textui/terminal` decodes all of them: the kitty protocol's `CSI 13;5u`,
-xterm's `modifyOtherKeys` `CSI 27;5;13~`, and a bare LF. The last is the
-common one, and it is not the Return key: in raw mode Return sends CR, so LF
-reaching an application is `ctrl+Return`.
+`ctrl+enter` is three different byte sequences depending on the terminal, and `@textui/terminal` decodes all of them: the kitty protocol's `CSI 13;5u`, xterm's `modifyOtherKeys` `CSI 27;5;13~`, and a bare LF. The last is the common one, and it is not the Return key: in raw mode Return sends CR, so LF reaching an application is `ctrl+Return`.
 
-It also settles the question a single-letter keybinding raises. The focused
-node is offered a key *before* any keybinding, so while a text field has the
-keyboard, `q` is a letter. That is what lets an application with a composer in
-it keep `n`, `r` and `d` as commands - and why a global `q` for quit only
-works where nothing happens to be reading it.
+It also settles the question a single-letter keybinding raises. The focused node is offered a key *before* any keybinding, so while a text field has the keyboard, `q` is a letter. That is what lets an application with a composer in it keep `n`, `r` and `d` as commands - and why a global `q` for quit only works where nothing happens to be reading it.
 
-`onOverflow` fires when the cursor tries to leave the top or the bottom,
-which is how a composer inside a list hands focus back.
+`onOverflow` fires when the cursor tries to leave the top or the bottom, which is how a composer inside a list hands focus back.
 
 ## See also
 

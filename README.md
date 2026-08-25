@@ -1,9 +1,6 @@
 # TextUI
 
-[![npm](https://img.shields.io/npm/v/@textui/kit?label=%40textui%2Fkit)](https://www.npmjs.com/package/@textui/kit)
-[![node](https://img.shields.io/node/v/@textui/kit)](https://nodejs.org)
-[![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)](#zero-dependencies)
-[![license](https://img.shields.io/npm/l/@textui/kit)](LICENSE)
+[![npm](https://img.shields.io/npm/v/@textui/kit?label=%40textui%2Fkit)](https://www.npmjs.com/package/@textui/kit) [![node](https://img.shields.io/node/v/@textui/kit)](https://nodejs.org) [![dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)](#zero-dependencies) [![license](https://img.shields.io/npm/l/@textui/kit)](LICENSE)
 
 A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is one way to write them.
 
@@ -48,8 +45,7 @@ await waitUntilExit();
 
 TextUI can go from a small interactive prompt to a full-screen terminal application.
 
-&rarr; **[Get started](docs/getting-started.md)**
-&rarr; **[Read the documentation](https://softov.github.io/textui/)**
+&rarr; **[Get started](docs/getting-started.md)** &rarr; **[Read the documentation](https://softov.github.io/textui/)**
 
 ## The one idea
 
@@ -276,7 +272,7 @@ Then by subsystem:
   <img src="./media/print-theme-paper-dark.svg" alt="TextUI paper-dark theme" />
 </p>
 
-### `paper-light`
+### `paper`
 
 <p align="center">
   <img src="./media/print-theme-paper-light.svg" alt="TextUI paper-light theme" />

@@ -39,12 +39,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `radio`.
 
-The whole group is one stop in the tab order and the arrow keys move within
-it, which is what a group of radios is supposed to do and what a row of
-checkboxes cannot.
+The whole group is one stop in the tab order and the arrow keys move within it, which is what a group of radios is supposed to do and what a row of checkboxes cannot.
 
-`inline` lays them along a row. Past about four options a
-[`Select`](select.md) costs one row instead of four and is easier to scan.
+`inline` lays them along a row. Past about four options a [`Select`](select.md) costs one row instead of four and is easier to scan.
 
 ## See also
 

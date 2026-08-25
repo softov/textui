@@ -27,11 +27,9 @@ const app = createApp({
 _No props of its own._
 <!-- props:end -->
 
-Tight spacing and borders everywhere - for a screen watched continuously,
-where density beats airiness and a boundary between panes matters.
+Tight spacing and borders everywhere - for a screen watched continuously, where density beats airiness and a boundary between panes matters.
 
-Same surfaces as [`PlainShell`](plain-shell.md) plus `panel`. The mounts do
-not change; only the frame does.
+Same surfaces as [`PlainShell`](plain-shell.md) plus `panel`. The mounts do not change; only the frame does.
 
 ## See also
 

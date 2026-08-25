@@ -32,12 +32,9 @@ import { ResourceExplorer } from '@textui/documents';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Lists children lazily through the provider for `root`, so a directory is read
-when it is expanded rather than up front.
+Lists children lazily through the provider for `root`, so a directory is read when it is expanded rather than up front.
 
-`onSelect` fires as the cursor moves and `onOpen` on enter - the same split
-[`List`](../display/list.md) makes, and for the same reason: a preview pane
-should follow the cursor, and opening should not.
+`onSelect` fires as the cursor moves and `onOpen` on enter - the same split [`List`](../display/list.md) makes, and for the same reason: a preview pane should follow the cursor, and opening should not.
 
 ## See also
 

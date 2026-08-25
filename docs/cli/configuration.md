@@ -18,5 +18,4 @@ nav_order: 2
 }
 ```
 
-The `alias` is what makes the copy fit your project: a file copied into a repo
-that imports the runtime as `~/textui` gets that import, not `@textui/core`.
+The `alias` is what makes the copy fit your project: a file copied into a repo that imports the runtime as `~/textui` gets that import, not `@textui/core`.

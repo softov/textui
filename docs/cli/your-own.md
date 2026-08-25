@@ -5,15 +5,11 @@ nav_order: 3
 ---
 
 <!-- docs:setup
-declare const restart: (service: string) => Promise<void>;
-declare const startTui: () => Promise<void>;
--->
+declare const restart: (service: string) => Promise<void>; declare const startTui: () => Promise<void>; -->
 
 # Building your own CLI
 
-`@textui/cli/app` is the argument parser, help renderer and prompts, separated so
-an application can combine plain commands with interactive screens without a
-second framework and a second idea of what an argument is.
+`@textui/cli/app` is the argument parser, help renderer and prompts, separated so an application can combine plain commands with interactive screens without a second framework and a second idea of what an argument is.
 
 ```ts
 import { Cli, promptConfirm } from '@textui/cli/app';
@@ -43,7 +39,4 @@ const cli = new Cli({
 process.exit(await cli.run(process.argv.slice(2)));
 ```
 
-It supports `--flag`, `--no-flag`, `--key value`, `--key=value`, `-k value`,
-bundled short flags, repeatable options, choices, and `--` to stop parsing. An
-unknown option is an error rather than a positional, because a typo silently
-becoming a filename is how a CLI deletes the wrong thing.
+It supports `--flag`, `--no-flag`, `--key value`, `--key=value`, `-k value`, bundled short flags, repeatable options, choices, and `--` to stop parsing. An unknown option is an error rather than a positional, because a typo silently becoming a filename is how a CLI deletes the wrong thing.

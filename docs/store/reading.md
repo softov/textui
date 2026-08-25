@@ -5,17 +5,11 @@ nav_order: 2
 ---
 
 <!-- docs:setup
-import type { ReactiveStore } from '@textui/core';
-declare const store: ReactiveStore;
-declare const fn: (value: unknown) => unknown;
-type Service = { id: string; name: string; status: string };
-declare const services: Service[];
--->
+import type { ReactiveStore } from '@textui/core'; declare const store: ReactiveStore; declare const fn: (value: unknown) => unknown; type Service = { id: string; name: string; status: string }; declare const services: Service[]; -->
 
 # Reading and writing
 
-The store's own API, for code outside a component. Inside one, use the hooks in
-[In components](in-components.md) instead - they subscribe for you.
+The store's own API, for code outside a component. Inside one, use the hooks in [In components](in-components.md) instead - they subscribe for you.
 
 ```ts
 store.set('$/services/list', services);
@@ -44,5 +38,4 @@ store.subscribe('$/services/*/status', (value) => {});                // wildcar
 store.subscribe('$/theme', fn, { immediate: true });                  // fire now too
 ```
 
-An exact subscriber also fires when something below it changes, because a write
-to `$/a/b` does change the object at `$/a`.
+An exact subscriber also fires when something below it changes, because a write to `$/a/b` does change the object at `$/a`.

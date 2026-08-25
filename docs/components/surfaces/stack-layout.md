@@ -27,9 +27,7 @@ const stack = BUILTIN_LAYOUTS.find((layout) => layout.name === 'stack');
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-All mounts visible, in order, down the surface. What a sidebar of collapsible
-sections wants, and what a surface holding a single mount degrades to
-harmlessly.
+All mounts visible, in order, down the surface. What a sidebar of collapsible sections wants, and what a surface holding a single mount degrades to harmlessly.
 
 ## See also
 

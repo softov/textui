@@ -5,19 +5,11 @@ nav_order: 1
 ---
 
 <!-- docs:setup
-import { useCommand } from '@textui/core';
-import { notify } from '@textui/widgets';
-import type { SemanticVariant } from '@textui/core';
-declare const app: import('@textui/core').TextUIApp;
-declare const restart: (id: string) => Promise<void>;
-declare const setSearching: (value: boolean) => void;
--->
+import { useCommand } from '@textui/core'; import { notify } from '@textui/widgets'; import type { SemanticVariant } from '@textui/core'; declare const app: import('@textui/core').TextUIApp; declare const restart: (id: string) => Promise<void>; declare const setSearching: (value: boolean) => void; -->
 
 # Commands
 
-A command is the only way an action should be spelled. A button that calls an
-API directly and a palette entry that calls the same API are two implementations
-that will drift; a button that runs a registered command cannot.
+A command is the only way an action should be spelled. A button that calls an API directly and a palette entry that calls the same API are two implementations that will drift; a button that runs a registered command cannot.
 
 ```ts
 app.commands.register({
@@ -40,9 +32,7 @@ app.commands.register({
 
 ## A command that is a switch
 
-`checked` is a clause like `when`, and it makes a command a toggle. A menu
-draws the mark, and `keepOpen` leaves the list up so a run of switches can be
-walked rather than reopened one at a time.
+`checked` is a clause like `when`, and it makes a command a toggle. A menu draws the mark, and `keepOpen` leaves the list up so a run of switches can be walked rather than reopened one at a time.
 
 ```ts
 app.commands.register({
@@ -57,11 +47,7 @@ app.commands.register({
 });
 ```
 
-A clause rather than a boolean because the definition is registered once and
-the state changes under it - and absent rather than `false` because a menu has
-to tell "not a switch" from "a switch that is off". `app.commands.isChecked(id)`
-returns `undefined` for the first and `false` for the second, which is what
-keeps the mark's column out of a menu that has no toggles in it.
+A clause rather than a boolean because the definition is registered once and the state changes under it - and absent rather than `false` because a menu has to tell "not a switch" from "a switch that is off". `app.commands.isChecked(id)` returns `undefined` for the first and `false` for the second, which is what keeps the mark's column out of a menu that has no toggles in it.
 
 ## The palette
 
@@ -74,17 +60,11 @@ app.layers.open({
 });
 ```
 
-That is the whole wiring. The palette searches the registry itself and **runs
-what it finds**, so choosing "Open a dialog" there and pressing the button that
-opens a dialog are the same act reaching the same code. Pass `execute={false}`
-to make it a picker that only reports the choice.
+That is the whole wiring. The palette searches the registry itself and **runs what it finds**, so choosing "Open a dialog" there and pressing the button that opens a dialog are the same act reaching the same code. Pass `execute={false}` to make it a picker that only reports the choice.
 
-It shows what it knows about each command - category, keybinding, and the
-description of the highlighted row - and rules between categories, so a registry
-of forty commands reads as a few groups rather than a wall.
+It shows what it knows about each command - category, keybinding, and the description of the highlighted row - and rules between categories, so a registry of forty commands reads as a few groups rather than a wall.
 
-**Sub-items come from the command, not from the palette.** A command that
-declares an argument with `choices` is asked about rather than run:
+**Sub-items come from the command, not from the palette.** A command that declares an argument with `choices` is asked about rather than run:
 
 ```ts
 app.commands.register({
@@ -102,24 +82,18 @@ app.commands.register({
 });
 ```
 
-Choosing it opens a second level listing the tones - filterable, with escape
-going back a level rather than closing - and picking one runs the command with
-that argument. `choices` may be a function, and may be async, so a list can come
-from a registry:
+Choosing it opens a second level listing the tones - filterable, with escape going back a level rather than closing - and picking one runs the command with that argument. `choices` may be a function, and may be async, so a list can come from a registry:
 
 <!-- docs:nocheck -->
 ```ts
 choices: () => app.themes.list().map((t) => t.id),
 ```
 
-Nothing in the command knows the palette exists. It states what it needs; the
-palette is one of the things that can ask.
+Nothing in the command knows the palette exists. It states what it needs; the palette is one of the things that can ask.
 
 ## Scopes
 
-A command may be registered at `app`, `screen`, `region` or `component` scope,
-and resolution walks from the most specific outward. That is how `table.search`
-can mean whichever table is focused without every table inventing its own id.
+A command may be registered at `app`, `screen`, `region` or `component` scope, and resolution walks from the most specific outward. That is how `table.search` can mean whichever table is focused without every table inventing its own id.
 
 ```tsx
 useCommand({

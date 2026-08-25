@@ -29,12 +29,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `alert`.
 
-Four tones only - `info`, `success`, `warning`, `danger` - rather than the
-full semantic scale, because an alert that is `muted` or `secondary` is not
-an alert.
+Four tones only - `info`, `success`, `warning`, `danger` - rather than the full semantic scale, because an alert that is `muted` or `secondary` is not an alert.
 
-`title` alone is a single line; adding `message` makes it a block. Children
-are laid out below both, for an alert that needs an action in it.
+`title` alone is a single line; adding `message` makes it a block. Children are laid out below both, for an alert that needs an action in it.
 
 ## See also
 

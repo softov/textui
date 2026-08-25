@@ -5,14 +5,11 @@ permalink: /
 ---
 
 <!-- docs:setup
-import type { RenderOutput } from '@textui/core';
-declare function Dashboard(): RenderOutput;
--->
+import type { RenderOutput } from '@textui/core'; declare function Dashboard(): RenderOutput; -->
 
 # TextUI
 
-A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is
-one way to write them.
+A dependency-free TypeScript terminal UI runtime. Screens are plain data; JSX is one way to write them.
 
 ```tsx
 import { createApp } from '@textui/core';
@@ -33,15 +30,9 @@ await app.start();
 
 ## The one idea
 
-**JSX compiles to data.** `<Row gap={1}/>` and `{ component: 'Row', gap: 1 }` are
-the same value, and the runtime mounts either. A screen can be written in
-TypeScript, loaded from JSON, generated, edited or sent over a wire without the
-runtime changing - and components are resolved by name at mount time, so what
-renders is a registration rather than an import.
+**JSX compiles to data.** `<Row gap={1}/>` and `{ component: 'Row', gap: 1 }` are the same value, and the runtime mounts either. A screen can be written in TypeScript, loaded from JSON, generated, edited or sent over a wire without the runtime changing - and components are resolved by name at mount time, so what renders is a registration rather than an import.
 
-Everything else follows from that: one reactive store addressed by paths, typed
-registries for components, commands, themes, shells and resources, and a renderer
-that diffs cells rather than redrawing frames.
+Everything else follows from that: one reactive store addressed by paths, typed registries for components, commands, themes, shells and resources, and a renderer that diffs cells rather than redrawing frames.
 
 ## Where to start
 
@@ -74,7 +65,7 @@ that diffs cells rather than redrawing frames.
 | `@textui/testing` | Headless harness: semantic queries, input, resizing, time |
 | `@textui/cli` | `textui init / add / create / doctor`, and primitives for your own CLI |
 | `components/` | The source-copy registry - components you own, not import |
-| `playground/` | The showcase, fourteen focused playgrounds, and a filesystem explorer |
+| `playground/` | The showcase, thirteen focused playgrounds, and a filesystem explorer |
 
 ## Development
 
@@ -87,5 +78,4 @@ pnpm dev --list     # the playgrounds
 pnpm dev gallery    # open one
 ```
 
-Node ≥ 22, pnpm 10. The source is on
-[GitHub](https://github.com/softov/textui).
+Node ≥ 22, pnpm 10. The source is on [GitHub](https://github.com/softov/textui).

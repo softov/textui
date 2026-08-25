@@ -27,12 +27,9 @@ const app = createApp({
 _No props of its own._
 <!-- props:end -->
 
-The largest of the four, and the one worth starting from for an application
-with more than one thing on screen at once.
+The largest of the four, and the one worth starting from for an application with more than one thing on screen at once.
 
-Every region is a surface, so which of them are visible is store state: a
-sidebar can be collapsed, a panel toggled, an aside opened, all by writing a
-path rather than by re-rendering a tree.
+Every region is a surface, so which of them are visible is store state: a sidebar can be collapsed, a panel toggled, an aside opened, all by writing a path rather than by re-rendering a tree.
 
 ## See also
 

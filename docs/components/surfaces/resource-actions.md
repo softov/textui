@@ -27,11 +27,9 @@ import { ResourceActions } from '@textui/documents';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Reads the action registry rather than a list you pass, so an extension adding
-an action to a kind appears here without anything being rewired.
+Reads the action registry rather than a list you pass, so an extension adding an action to a kind appears here without anything being rewired.
 
-`slot` selects where the actions were registered to appear - `context` for a
-menu, other slots for a toolbar or a header.
+`slot` selects where the actions were registered to appear - `context` for a menu, other slots for a toolbar or a header.
 
 ## See also
 

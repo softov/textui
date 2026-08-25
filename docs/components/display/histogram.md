@@ -30,11 +30,9 @@ import { Histogram } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Give it the raw values, not counts - the bucketing is the component's job, and
-doing it outside means two places decide what a bucket is.
+Give it the raw values, not counts - the bucketing is the component's job, and doing it outside means two places decide what a bucket is.
 
-`buckets` defaults to twelve. Fewer than the chart is wide wastes the space;
-more than that cannot be drawn.
+`buckets` defaults to twelve. Fewer than the chart is wide wastes the space; more than that cannot be drawn.
 
 ## See also
 

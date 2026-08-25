@@ -29,13 +29,9 @@ import { FormActions } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Inside a [`Form`](form.md) it wires itself to the form's submit and disables
-the button while the form is invalid or submitting - which is why the initial
-values are validated immediately, so `form.valid` is usable from the first
-frame rather than only after a keystroke.
+Inside a [`Form`](form.md) it wires itself to the form's submit and disables the button while the form is invalid or submitting - which is why the initial values are validated immediately, so `form.valid` is usable from the first frame rather than only after a keystroke.
 
-`requireDirty` additionally disables submit until something has changed, for a
-settings screen where saving an unedited form is a pointless write.
+`requireDirty` additionally disables submit until something has changed, for a settings screen where saving an unedited form is a pointless write.
 
 ## See also
 

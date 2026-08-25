@@ -39,26 +39,13 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `list`.
 
-The one between [`List`](list.md) and
-[`ScrollView`](../layout/scroll-view.md), and it is neither: a list is
-fixed-height rows with a selection, a scroll view is a viewport that knows
-nothing about its contents, and a feed is entries of unequal height with a
-cursor that moves between them.
+The one between [`List`](list.md) and [`ScrollView`](../layout/scroll-view.md), and it is neither: a list is fixed-height rows with a selection, a scroll view is a viewport that knows nothing about its contents, and a feed is entries of unequal height with a cursor that moves between them.
 
-A transcript, an activity stream, search results with snippets, and a diff
-whose files expand are all this component.
+A transcript, an activity stream, search results with snippets, and a diff whose files expand are all this component.
 
-Like the other data components it is sized by its props, not by
-\`visibleRows\`: given \`flex\`, a \`height\` or a \`maxHeight\` it fills that and
-scrolls; given none of them it draws every entry and lets the box grow. The
-second case matters more here than elsewhere, because clamping to a measurement
-inside a box sized *by* its own content clamps to nothing and the feed comes
-out empty.
+Like the other data components it is sized by its props, not by \`visibleRows\`: given \`flex\`, a \`height\` or a \`maxHeight\` it fills that and scrolls; given none of them it draws every entry and lets the box grow. The second case matters more here than elsewhere, because clamping to a measurement inside a box sized *by* its own content clamps to nothing and the feed comes out empty.
 
-Its heights are **measured, not computed**. What a paragraph wraps to is
-decided by the layout, so each entry reports its height once laid out and the
-feed scrolls by summing them. That is one frame behind, which is invisible, and
-it is the only answer that is not a guess.
+Its heights are **measured, not computed**. What a paragraph wraps to is decided by the layout, so each entry reports its height once laid out and the feed scrolls by summing them. That is one frame behind, which is invisible, and it is the only answer that is not a guess.
 
 ## See also
 

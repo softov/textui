@@ -29,10 +29,7 @@ import { Card } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Where [`Panel`](../layout/panel.md) draws a region, a card groups by spacing
-and weight alone. Use a panel when the boundary matters - a pane you can focus,
-resize or scroll - and a card when several of them sit in a
-[`Grid`](../layout/grid.md) and a border each would be a cage.
+Where [`Panel`](../layout/panel.md) draws a region, a card groups by spacing and weight alone. Use a panel when the boundary matters - a pane you can focus, resize or scroll - and a card when several of them sit in a [`Grid`](../layout/grid.md) and a border each would be a cage.
 
 ## See also
 

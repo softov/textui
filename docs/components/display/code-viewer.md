@@ -42,16 +42,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `document`.
 
-A viewport, not a column of lines: it renders the rows it was laid out into,
-slices each one to the visible columns rather than claiming the width of the
-longest, and expands tabs to real tab stops. **Opening a ten-thousand-line file
-costs what opening a ten-line one costs.**
+A viewport, not a column of lines: it renders the rows it was laid out into, slices each one to the visible columns rather than claiming the width of the longest, and expands tabs to real tab stops. **Opening a ten-thousand-line file costs what opening a ten-line one costs.**
 
-Colour comes from asking the highlighter registry what opens the `kind` it was
-given; pass `tokens` directly to bypass that and highlight it yourself.
+Colour comes from asking the highlighter registry what opens the `kind` it was given; pass `tokens` directly to bypass that and highlight it yourself.
 
-`line` and `onLineChange` hold the cursor, and `onPosition` reports line and
-column together for a status bar.
+`line` and `onLineChange` hold the cursor, and `onPosition` reports line and column together for a status bar.
 
 ## See also
 

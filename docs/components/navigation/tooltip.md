@@ -29,12 +29,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `tooltip`.
 
-A terminal has no hover for most inputs, so this shows on focus rather than on
-pointer - which means it only ever appears on something focusable.
+A terminal has no hover for most inputs, so this shows on focus rather than on pointer - which means it only ever appears on something focusable.
 
-That makes it weaker than a tooltip on the web, and a
-[`KeyHints`](key-hints.md) line or a `description` prop is often the better
-answer.
+That makes it weaker than a tooltip on the web, and a [`KeyHints`](key-hints.md) line or a `description` prop is often the better answer.
 
 ## See also
 

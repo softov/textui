@@ -26,10 +26,7 @@ import { ResourceOpenWith } from '@textui/documents';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-More than one viewer can claim a kind - JSON opens in a syntax-highlighted
-view or a collapsible tree, and neither is always right. This lists the
-candidates; pass the chosen id back as
-[`ResourceView`](resource-view.md)'s `viewerId`.
+More than one viewer can claim a kind - JSON opens in a syntax-highlighted view or a collapsible tree, and neither is always right. This lists the candidates; pass the chosen id back as [`ResourceView`](resource-view.md)'s `viewerId`.
 
 ## See also
 

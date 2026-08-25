@@ -27,13 +27,9 @@ const app = createApp({
 _No props of its own._
 <!-- props:end -->
 
-A shell decides where the surfaces go and nothing else. Switching between the
-four shipped ones changes the frame without touching a single mount, which is
-the property the whole surface system exists to give you.
+A shell decides where the surfaces go and nothing else. Switching between the four shipped ones changes the frame without touching a single mount, which is the property the whole surface system exists to give you.
 
-`plain` places `header`, `main` and `status`. Anything opened into a surface
-it does not place simply does not appear - which is worth knowing when a mount
-seems to vanish.
+`plain` places `header`, `main` and `status`. Anything opened into a surface it does not place simply does not appear - which is worth knowing when a mount seems to vanish.
 
 ## See also
 

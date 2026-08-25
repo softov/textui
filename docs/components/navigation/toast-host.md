@@ -25,12 +25,9 @@ import { ToastHost } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Mount one, once, near the root - or let a [shell](../surfaces/plain-shell.md)
-do it, which the shipped ones already do by giving the notification layer a
-home.
+Mount one, once, near the root - or let a [shell](../surfaces/plain-shell.md) do it, which the shipped ones already do by giving the notification layer a home.
 
-It listens for notifications and renders them on the notification layer, above
-everything except debug. `anchor` decides the corner.
+It listens for notifications and renders them on the notification layer, above everything except debug. `anchor` decides the corner.
 
 ## See also
 

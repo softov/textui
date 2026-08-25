@@ -28,12 +28,9 @@ import { Pagination } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-`page` is 1-based. `total` is the row count rather than the page count, and
-is optional - it is there so the control can say "412 items" instead of only
-"2 / 9".
+`page` is 1-based. `total` is the row count rather than the page count, and is optional - it is there so the control can say "412 items" instead of only "2 / 9".
 
-Pagination is a control, not a data source: it reports where the reader wants
-to be and something else fetches it.
+Pagination is a control, not a data source: it reports where the reader wants to be and something else fetches it.
 
 ## See also
 

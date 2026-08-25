@@ -5,8 +5,7 @@ grand_parent: Components
 ---
 
 <!-- docs:setup
-declare const save: (values: unknown) => void;
--->
+declare const save: (values: unknown) => void; -->
 
 # Form
 {: .no_toc }
@@ -44,14 +43,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `form`.
 
-`Form` carries the `FormApi` from `useForm` down to the
-[`Field`](field.md)s inside it, so a field can find its own error and touched
-state by name.
+`Form` carries the `FormApi` from `useForm` down to the [`Field`](field.md)s inside it, so a field can find its own error and touched state by name.
 
-Validation runs over the **whole values object** rather than per field, because
-the rules people actually need are cross-field - a confirmation that must match
-a password, a date that must follow another date. Errors show after a field is
-touched, or after a submit attempt.
+Validation runs over the **whole values object** rather than per field, because the rules people actually need are cross-field - a confirmation that must match a password, a date that must follow another date. Errors show after a field is touched, or after a submit attempt.
 
 ## See also
 

@@ -33,13 +33,9 @@ The container. Flex layout, background, border, title and footer - and the only 
 Plus everything on [`BaseProps`](../base-props.md).
 <!-- props:end -->
 
-A `box` is a flex container: `direction`, `gap`, `padding`, `align`,
-`justify`, `flex` and the rest of [the style keys](../base-props.md) all
-land here. `title` and `footer` are drawn *into* the border, so they need one
-to land on - without a border they are dropped rather than drawn as rows.
+A `box` is a flex container: `direction`, `gap`, `padding`, `align`, `justify`, `flex` and the rest of [the style keys](../base-props.md) all land here. `title` and `footer` are drawn *into* the border, so they need one to land on - without a border they are dropped rather than drawn as rows.
 
-Because every node takes `role`, `label` and `onKey`, a bare box is already
-enough to build an interactive element:
+Because every node takes `role`, `label` and `onKey`, a bare box is already enough to build an interactive element:
 
 ```tsx
 <box role="button" label="Restart" focusable onClick={() => {}}>
@@ -47,8 +43,7 @@ enough to build an interactive element:
 </box>
 ```
 
-That is a working, focusable, queryable button. [`Button`](../input/button.md)
-exists because it also draws a ring, carries a tone and inverts when focused.
+That is a working, focusable, queryable button. [`Button`](../input/button.md) exists because it also draws a ring, carries a tone and inverts when focused.
 
 ## See also
 

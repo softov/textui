@@ -27,9 +27,7 @@ const split = BUILTIN_LAYOUTS.find((layout) => layout.name === 'split');
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-The surface-level [`Splitter`](../layout/splitter.md). Where the divide sits
-is surface state rather than a prop, so it survives the mounts changing and can
-be moved by a command.
+The surface-level [`Splitter`](../layout/splitter.md). Where the divide sits is surface state rather than a prop, so it survives the mounts changing and can be moved by a command.
 
 More than two mounts and the extras are stacked into the second pane.
 

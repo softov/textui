@@ -26,9 +26,7 @@ import { FallbackViewer } from '@textui/documents';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Shows what is known - the URI, the kind, the size - and says plainly that
-there is no viewer for it. It exists so an unknown kind is a readable message
-rather than an empty pane or a crash.
+Shows what is known - the URI, the kind, the size - and says plainly that there is no viewer for it. It exists so an unknown kind is a readable message rather than an empty pane or a crash.
 
 Registering a viewer for the kind is what replaces it.
 

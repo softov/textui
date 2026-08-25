@@ -6,9 +6,7 @@ nav_order: 1
 
 # Paths and scopes
 
-A path names a place in the tree. Its first segment is a **scope**, and scopes
-are lifetimes rather than folders - which is what makes tearing one down a
-single call instead of a cascade of resets.
+A path names a place in the tree. Its first segment is a **scope**, and scopes are lifetimes rather than folders - which is what makes tearing one down a single call instead of a cascade of resets.
 
 ## Paths
 
@@ -20,8 +18,7 @@ $/services/*/status      a wildcard, in subscriptions only
 $/rows/{{ $/active/id }} another path's value, substituted first
 ```
 
-`..` is forbidden. Escape to the root with `$/` instead, so a node's meaning
-never depends on where it was pasted.
+`..` is forbidden. Escape to the root with `$/` instead, so a node's meaning never depends on where it was pasted.
 
 ## Scopes are lifetimes
 
@@ -38,5 +35,4 @@ never depends on where it was pasted.
 | `layout` | surfaces, mounts, the active shell |
 | `modus` | the environment: size, capabilities, locale |
 
-`clearScope('session')` is what makes signing out one call rather than a
-cascade of resets.
+`clearScope('session')` is what makes signing out one call rather than a cascade of resets.

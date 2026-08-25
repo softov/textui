@@ -42,12 +42,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `combobox`.
 
-Closed it is one row; open it is a panel on the floating
-[layer](../../platform/layers.md), so it draws over what is beneath it instead
-of pushing the form down.
+Closed it is one row; open it is a panel on the floating [layer](../../platform/layers.md), so it draws over what is beneath it instead of pushing the form down.
 
-`open` makes that controlled, for a screen that wants to open the list from a
-command. `visibleRows` caps the panel and the rest scrolls.
+`open` makes that controlled, for a screen that wants to open the list from a command. `visibleRows` caps the panel and the rest scrolls.
 
 ## See also
 

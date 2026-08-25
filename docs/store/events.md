@@ -5,15 +5,11 @@ nav_order: 6
 ---
 
 <!-- docs:setup
-import type { EventBus } from '@textui/core';
-declare const events: EventBus;
-declare const handler: (payload: unknown) => void;
--->
+import type { EventBus } from '@textui/core'; declare const events: EventBus; declare const handler: (payload: unknown) => void; -->
 
 # Events
 
-Transient, addressed the same way as store paths, and deliberately a different
-mechanism.
+Transient, addressed the same way as store paths, and deliberately a different mechanism.
 
 ```ts
 events.emit('@/agent/restart', { id: 'billing' });
@@ -22,5 +18,4 @@ events.on('@/agent', handler, { subtree: true });
 await events.next('@/dialog/confirm', 5000);
 ```
 
-An event has no value to read back. If something needs to be *read* later, it
-is state and belongs in the store.
+An event has no value to read back. If something needs to be *read* later, it is state and belongs in the store.

@@ -35,13 +35,9 @@ import { LineChart } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Plotted on a 2×4 braille grid, so a 40×8 chart really has 80×32 plot
-positions. Where braille is unavailable it falls back to block levels and still
-reads.
+Plotted on a 2×4 braille grid, so a 40×8 chart really has 80×32 plot positions. Where braille is unavailable it falls back to block levels and still reads.
 
-Several `series` overlay on shared axes; each carries its own `label` and
-`tone`. `min` and `max` fix the scale, which matters whenever two charts sit
-side by side.
+Several `series` overlay on shared axes; each carries its own `label` and `tone`. `min` and `max` fix the scale, which matters whenever two charts sit side by side.
 
 ## See also
 

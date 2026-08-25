@@ -5,15 +5,12 @@ nav_order: 1
 ---
 
 <!-- docs:setup
-declare const app: import('@textui/core').TextUIApp;
-declare const save: () => void;
--->
+declare const app: import('@textui/core').TextUIApp; declare const save: () => void; -->
 
 # Nodes
 {: .no_toc }
 
-A node is a plain object with a `component` name and props. JSX produces
-exactly this, so the two lines below are the same value:
+A node is a plain object with a `component` name and props. JSX produces exactly this, so the two lines below are the same value:
 
 ```tsx
 import type { ComponentNode } from '@textui/core';
@@ -23,14 +20,11 @@ const fromJsx = <Row gap={1} />;
 const fromData: ComponentNode = { component: 'Row', gap: 1 };
 ```
 
-Nothing in a node is a module reference - `'Row'` is a name the registry
-resolves at mount time, not an import. That is what lets a screen be persisted,
-generated or sent, and it is why the component pages document both forms.
+Nothing in a node is a module reference - `'Row'` is a name the registry resolves at mount time, not an import. That is what lets a screen be persisted, generated or sent, and it is why the component pages document both forms.
 
 ## Reserved keys
 
-Four keys are structural. Everything else on the object is props, and props are
-the component's business.
+Four keys are structural. Everything else on the object is props, and props are the component's business.
 
 | Key | Means |
 | --- | --- |
@@ -57,8 +51,7 @@ const row: ComponentNode = {
 };
 ```
 
-Or as one instance of a template per item at a store path, which is how a list
-of unknown length is expressed without a loop:
+Or as one instance of a template per item at a store path, which is how a list of unknown length is expressed without a loop:
 
 ```ts
 import type { ComponentNode } from '@textui/core';
@@ -72,18 +65,13 @@ const list: ComponentNode = {
 };
 ```
 
-Inside a template, a relative path like `/name` is read against the current
-item - each expansion is given a data context of `$/services/list/0`, `/1` and
-so on. `$/` escapes back to the root of the store.
+Inside a template, a relative path like `/name` is read against the current item - each expansion is given a data context of `$/services/list/0`, `/1` and so on. `$/` escapes back to the root of the store.
 
-Reconciliation keys come from the item, not the template: an item with an `id`
-is keyed by it, and one without is keyed by its index. Giving rows a stable
-`id` is what stops a reorder from being read as an edit to every row.
+Reconciliation keys come from the item, not the template: an item with an `id` is keyed by it, and one without is keyed by its index. Giving rows a stable `id` is what stops a reorder from being read as an edit to every row.
 
 ## Props that are not values
 
-A prop can hold data describing where its value comes from, or what should
-happen, instead of the value itself. Three shapes, distinguished by their keys.
+A prop can hold data describing where its value comes from, or what should happen, instead of the value itself. Three shapes, distinguished by their keys.
 
 ### A binding reads the store
 
@@ -96,9 +84,7 @@ const title: ComponentNode = {
 };
 ```
 
-The runtime reads the path, subscribes to exactly it, and re-renders this node
-when it changes. Nothing else re-renders, and the component needs no support
-for any of it. See [Paths and scopes](../store/paths.md).
+The runtime reads the path, subscribes to exactly it, and re-renders this node when it changes. Nothing else re-renders, and the component needs no support for any of it. See [Paths and scopes](../store/paths.md).
 
 ### A function call returns a value
 
@@ -113,9 +99,7 @@ const count: ComponentNode = {
 
 ### An action describes what to run
 
-Three forms, on any prop named `on` followed by a capital - `onPress`,
-`onSelect`, `onChange`, and so on. `once` and `only` are not handler props;
-the capital is what the runtime tests for.
+Three forms, on any prop named `on` followed by a capital - `onPress`, `onSelect`, `onChange`, and so on. `once` and `only` are not handler props; the capital is what the runtime tests for.
 
 ```ts
 import type { ComponentNode } from '@textui/core';
@@ -133,22 +117,13 @@ const buttons: ComponentNode[] = [
 | `{ functionCall }` | A registered command | Yes |
 | `{ emit }` | Publishes on an event path | Yes |
 
-A bare function works too - `onPress: save` - because the resolver passes
-functions through untouched. The library wraps closures in `{ handler }` when
-it builds nodes as objects, to keep the three forms symmetric.
+A bare function works too - `onPress: save` - because the resolver passes functions through untouched. The library wraps closures in `{ handler }` when it builds nodes as objects, to keep the three forms symmetric.
 
-The runtime turns whichever you wrote into a callable *before the component
-sees it*, so a component receives a function in every case and never inspects
-which form was used. This is keyed on the prop's name, not on a list of known
-props, so it works on components you write without you doing anything.
+The runtime turns whichever you wrote into a callable *before the component sees it*, so a component receives a function in every case and never inspects which form was used. This is keyed on the prop's name, not on a list of known props, so it works on components you write without you doing anything.
 
 ## What survives being turned into JSON
 
-`{ functionCall }` and `{ emit }` name what to run rather than holding it, so
-they are ordinary JSON. A closure is not, and `JSON.stringify` drops it - which
-is the whole of the difference between the two, and the reason to prefer a
-[command](../platform/commands.md) for anything a user can also reach from a
-keybinding or the palette.
+`{ functionCall }` and `{ emit }` name what to run rather than holding it, so they are ordinary JSON. A closure is not, and `JSON.stringify` drops it - which is the whole of the difference between the two, and the reason to prefer a [command](../platform/commands.md) for anything a user can also reach from a keybinding or the palette.
 
 ## See also
 

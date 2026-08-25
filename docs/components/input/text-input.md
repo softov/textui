@@ -38,17 +38,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `textbox`.
 
-It publishes a **real cursor position** when the terminal has a cursor, so the
-caret is where typing lands rather than a drawn approximation. That means
-counting the label and any glyph before it, and scrolling the value sideways to
-keep the caret in view on a field narrower than its contents.
+It publishes a **real cursor position** when the terminal has a cursor, so the caret is where typing lands rather than a drawn approximation. That means counting the label and any glyph before it, and scrolling the value sideways to keep the caret in view on a field narrower than its contents.
 
-`hideLabel` keeps the label as the field's accessible name without drawing it,
-for a form or a dialog that already shows it.
+`hideLabel` keeps the label as the field's accessible name without drawing it, for a form or a dialog that already shows it.
 
-`focusId` is worth setting. Without one the focus id is derived from the
-instance, which nothing outside the render can know - so a command meaning
-"focus the filter" has nothing to name.
+`focusId` is worth setting. Without one the focus id is derived from the instance, which nothing outside the render can know - so a command meaning "focus the filter" has nothing to name.
 
 ## See also
 

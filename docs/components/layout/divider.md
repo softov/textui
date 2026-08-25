@@ -30,10 +30,7 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `separator`.
 
-`direction` is `'horizontal'` by default; `'vertical'` draws a column rule
-for splitting a row. `char` overrides the glyph, which matters on a terminal
-that cannot draw box-drawing characters - though the theme already downgrades
-that for you.
+`direction` is `'horizontal'` by default; `'vertical'` draws a column rule for splitting a row. `char` overrides the glyph, which matters on a terminal that cannot draw box-drawing characters - though the theme already downgrades that for you.
 
 `labelAlign` takes `'left'` (the default), `'center'` or `'right'`.
 

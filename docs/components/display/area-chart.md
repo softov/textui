@@ -21,12 +21,9 @@ import { AreaChart } from '@textui/widgets';
 _No props of its own._
 <!-- props:end -->
 
-Identical to [`LineChart`](line-chart.md) but with `area` on - it takes the
-same props and is the same component underneath.
+Identical to [`LineChart`](line-chart.md) but with `area` on - it takes the same props and is the same component underneath.
 
-Filling reads as volume, which is right for a quantity accumulating and wrong
-for a rate that can fall - a filled dip looks like a hole rather than a lower
-number.
+Filling reads as volume, which is right for a quantity accumulating and wrong for a rate that can fall - a filled dip looks like a hole rather than a lower number.
 
 ## See also
 

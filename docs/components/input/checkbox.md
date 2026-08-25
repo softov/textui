@@ -30,14 +30,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `checkbox`.
 
-Space toggles it. `indeterminate` is the "some of the children" state for a
-parent checkbox; it is a display state only, and the next toggle resolves to
-checked.
+Space toggles it. `indeterminate` is the "some of the children" state for a parent checkbox; it is a display state only, and the next toggle resolves to checked.
 
-Use a checkbox when the options are independent. When exactly one of several
-must be chosen, that is a [`RadioGroup`](radio-group.md), and when the thing
-takes effect immediately rather than on submit it reads better as a
-[`Switch`](switch.md).
+Use a checkbox when the options are independent. When exactly one of several must be chosen, that is a [`RadioGroup`](radio-group.md), and when the thing takes effect immediately rather than on submit it reads better as a [`Switch`](switch.md).
 
 ## See also
 

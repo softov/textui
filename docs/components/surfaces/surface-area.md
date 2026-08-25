@@ -27,21 +27,13 @@ import { SurfaceArea } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-A surface is a named region that mounts are opened into. `SurfaceArea` is
-where one appears on screen, and how it arranges what is in it comes from the
-surface's own layout state rather than from here - so a pane can switch from
-tabs to a split at runtime without the markup changing.
+A surface is a named region that mounts are opened into. `SurfaceArea` is where one appears on screen, and how it arranges what is in it comes from the surface's own layout state rather than from here - so a pane can switch from tabs to a split at runtime without the markup changing.
 
-**The name is yours to invent.** `SurfaceName` suggests the nine the shells
-use, but the registry never checks a name against a list; the first time it
-sees one it hands out default state. An application placing its own surfaces
-needs no shell at all.
+**The name is yours to invent.** `SurfaceName` suggests the nine the shells use, but the registry never checks a name against a list; the first time it sees one it hands out default state. An application placing its own surfaces needs no shell at all.
 
-Surfaces nest: a mount target is a node and this is a component, so a
-`SurfaceArea` inside another needs no support from anywhere.
+Surfaces nest: a mount target is a node and this is a component, so a `SurfaceArea` inside another needs no support from anywhere.
 
-`layout` pins the arrangement instead of reading it from state. `fallback`
-renders when nothing is mounted.
+`layout` pins the arrangement instead of reading it from state. `fallback` renders when nothing is mounted.
 
 ## See also
 

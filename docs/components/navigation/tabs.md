@@ -39,16 +39,11 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `tablist`.
 
-Tabs draw the strip and report the choice; they do not hold the panels. What
-is below them is the screen's business, which is what lets the same strip drive
-a surface, a router or a plain conditional.
+Tabs draw the strip and report the choice; they do not hold the panels. What is below them is the screen's business, which is what lets the same strip drive a surface, a router or a plain conditional.
 
-For panels that are *mounts* rather than markup, the surface system already
-has this: [`TabsLayout`](../surfaces/tabs-layout.md) arranges a surface's
-mounts as tabs and needs no strip of your own.
+For panels that are *mounts* rather than markup, the surface system already has this: [`TabsLayout`](../surfaces/tabs-layout.md) arranges a surface's mounts as tabs and needs no strip of your own.
 
-`badge` puts a count on a tab, which is the usual reason a reader looks at one
-they were not already on.
+`badge` puts a count on a tab, which is the usual reason a reader looks at one they were not already on.
 
 ## See also
 

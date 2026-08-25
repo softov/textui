@@ -32,11 +32,7 @@ Every glyph has three tiers - the theme's in [`glyphs.ts`](https://github.com/so
 
 ## Groups
 
-A group is a strip of tabs and which of them is showing. One group looks like
-an ordinary tab bar. Two groups is a split - side by side or one above the
-other - and **each half keeps its own strip**, because a split whose halves
-share one strip is two panes showing whatever the last click did rather than
-two places to be.
+A group is a strip of tabs and which of them is showing. One group looks like an ordinary tab bar. Two groups is a split - side by side or one above the other - and **each half keeps its own strip**, because a split whose halves share one strip is two panes showing whatever the last click did rather than two places to be.
 
 ```
 Editor Layout  ▸  tabs | split | stack
@@ -44,47 +40,21 @@ Split Editor      the file you are on moves into a group beside the one you were
 f6                the other group, keyboard and all
 ```
 
-Choosing an arrangement that needs two groups makes the second one, so the
-layout command is also how a split opens. Splitting creates nothing and
-merging destroys nothing: a group is a list of URIs, so closing a split cannot
-lose an edit, and two panes on one file share a buffer and a history because
-the buffer is the document and not the pane.
+Choosing an arrangement that needs two groups makes the second one, so the layout command is also how a split opens. Splitting creates nothing and merging destroys nothing: a group is a list of URIs, so closing a split cannot lose an edit, and two panes on one file share a buffer and a history because the buffer is the document and not the pane.
 
-Two rules fall out of that and are worth stating. A file the *other* group
-already has moves the keyboard there rather than opening a second copy - two
-tabs on one file in two groups is a split nobody can reason about. And a group
-whose last tab closes goes away, because a group with nothing in it is not a
-pane, it is a hole.
+Two rules fall out of that and are worth stating. A file the *other* group already has moves the keyboard there rather than opening a second copy - two tabs on one file in two groups is a split nobody can reason about. And a group whose last tab closes goes away, because a group with nothing in it is not a pane, it is a hole.
 
 ## Keys that are chords on purpose
 
-Switching file is `alt+←`, `alt+→` and `alt+1`…`alt+9` rather than something
-you reach by tabbing to the strip. Both of the alternatives cost you the
-keyboard: tab leaves the strip for the menu bar, and an arrow *inside* the
-strip changes the tab but leaves focus in the strip rather than in what you
-were doing.
+Switching file is `alt+←`, `alt+→` and `alt+1`…`alt+9` rather than something you reach by tabbing to the strip. Both of the alternatives cost you the keyboard: tab leaves the strip for the menu bar, and an arrow *inside* the strip changes the tab but leaves focus in the strip rather than in what you were doing.
 
-Moving the highlight in the explorer opens nothing: **enter opens**. It used
-to open whatever the highlight landed on, so rolling past a folder of fifteen
-files opened fifteen tabs and read fifteen files off the disk. Moving through
-a tree is how you look *for* something.
+Moving the highlight in the explorer opens nothing: **enter opens**. It used to open whatever the highlight landed on, so rolling past a folder of fifteen files opened fifteen tabs and read fifteen files off the disk. Moving through a tree is how you look *for* something.
 
-A chord costs nothing, because a control only takes a key that is not chorded.
-The caret takes a plain arrow and leaves `alt+←` alone, so one pair of keys
-means "a character" inside a file and "a file" across them, and whatever had
-focus still has it afterwards. `chorded()` in the runtime is that rule written
-once, and every navigating control asks it.
+A chord costs nothing, because a control only takes a key that is not chorded. The caret takes a plain arrow and leaves `alt+←` alone, so one pair of keys means "a character" inside a file and "a file" across them, and whatever had focus still has it afterwards. `chorded()` in the runtime is that rule written once, and every navigating control asks it.
 
-`alt+9` with three files open does nothing, deliberately. A key that always
-does *something* teaches you nothing about how many files you have open, and
-`alt+9` quietly meaning `alt+3` is worse than `alt+9` meaning nothing.
+`alt+9` with three files open does nothing, deliberately. A key that always does *something* teaches you nothing about how many files you have open, and `alt+9` quietly meaning `alt+3` is worse than `alt+9` meaning nothing.
 
-The footer has room for five keys and there are thirty, so **`f1` opens the
-sheet** (`alt+?` and `alt+/` do too, when the terminal agrees about which of
-those a held shift produces - `f1` is the one that always arrives). It is built from the keybindings rather than from the palette,
-because a key bound to a command nobody put in a list is exactly the key
-nobody can otherwise find - and a command bound to nine keys is one row saying
-`alt+1 .. alt+9`, not nine rows saying it nine times.
+The footer has room for five keys and there are thirty, so **`f1` opens the sheet** (`alt+?` and `alt+/` do too, when the terminal agrees about which of those a held shift produces - `f1` is the one that always arrives). It is built from the keybindings rather than from the palette, because a key bound to a command nobody put in a list is exactly the key nobody can otherwise find - and a command bound to nine keys is one row saying `alt+1 .. alt+9`, not nine rows saying it nine times.
 
 ## Reloading while it runs
 
@@ -92,36 +62,17 @@ nobody can otherwise find - and a command bound to nine keys is one row saying
 pnpm dev:watch      # rebuild on save, and swap it into the running editor
 ```
 
-A save rebuilds and the editor re-registers itself; f5 does the same on
-demand. **Nothing in the store is touched**, which is the whole point: the
-files you have open, the buffer you have not saved, where you had scrolled to
-and which pane had focus all live there, and navigating back to them is most
-of what quit-and-run actually costs.
+A save rebuilds and the editor re-registers itself; f5 does the same on demand. **Nothing in the store is touched**, which is the whole point: the files you have open, the buffer you have not saved, where you had scrolled to and which pane had focus all live there, and navigating back to them is most of what quit-and-run actually costs.
 
-What that takes is ownership. `registerTextide` returns one bag, the entry
-point keeps it, and a reload disposes exactly that bag before calling the new
-module's `registerTextide` - dispose too little and there are two `file.save`
-commands and two viewers claiming `file.markdown`; dispose too much and a host
-application loses its own registrations. Every layer is closed on the way
-through, because an open palette is a node built by the module that is about
-to stop existing.
+What that takes is ownership. `registerTextide` returns one bag, the entry point keeps it, and a reload disposes exactly that bag before calling the new module's `registerTextide` - dispose too little and there are two `file.save` commands and two viewers claiming `file.markdown`; dispose too much and a host application loses its own registrations. Every layer is closed on the way through, because an open palette is a node built by the module that is about to stop existing.
 
-A build that fails never reaches the swap. The running editor keeps working
-and the status bar says `reload failed` - a toast would land on the frame you
-are looking at, which is the frame the reload exists to preserve.
+A build that fails never reaches the swap. The running editor keeps working and the status bar says `reload failed` - a toast would land on the frame you are looking at, which is the frame the reload exists to preserve.
 
-Only textide's own sources reload. The runtime is bundled to its own file that
-both the host and the reloaded module import by URL, so they hold the *same*
-[`@textui/core`](https://www.npmjs.com/package/@textui/core) - a second copy would build components whose hooks read a
-`currentInstance` the first copy's renderer never sets, and every one of them
-would throw on its first render. The price is that a change under
-`packages/core` still needs the process restarted.
+Only textide's own sources reload. The runtime is bundled to its own file that both the host and the reloaded module import by URL, so they hold the *same* [`@textui/core`](https://www.npmjs.com/package/@textui/core) - a second copy would build components whose hooks read a `currentInstance` the first copy's renderer never sets, and every one of them would throw on its first render. The price is that a change under `packages/core` still needs the process restarted.
 
 ## The workspace
 
-A directory is a workspace. `.textide.json` in its root configures it, and a
-workspace without one uses the defaults - an editor that will not open a
-directory until it is configured is an editor nobody opens.
+A directory is a workspace. `.textide.json` in its root configures it, and a workspace without one uses the defaults - an editor that will not open a directory until it is configured is an editor nobody opens.
 
 ```json
 {
@@ -138,11 +89,7 @@ directory until it is configured is an editor nobody opens.
 
 ## Extensions
 
-An extension is a module that exports `activate(app, context)` and returns a
-`Disposable`. That is the whole contract, and it is the same one
-`registerTextide` follows: the registries are already late-binding, so
-registering *is* the activation - there is no manifest, no activation event and
-no lifecycle to learn.
+An extension is a module that exports `activate(app, context)` and returns a `Disposable`. That is the whole contract, and it is the same one `registerTextide` follows: the registries are already late-binding, so registering *is* the activation - there is no manifest, no activation event and no lifecycle to learn.
 
 ```js
 export function activate(app, context) {
@@ -155,15 +102,9 @@ export function activate(app, context) {
 }
 ```
 
-`extensions` in `.textide.json` names them: a path relative to the workspace,
-or a package resolved from the workspace's own `node_modules` - which is where
-a project's extensions belong, rather than beside the editor. One that fails to
-load is reported and skipped; an editor that will not open because a plugin is
-missing has made the plugin mandatory.
+`extensions` in `.textide.json` names them: a path relative to the workspace, or a package resolved from the workspace's own `node_modules` - which is where a project's extensions belong, rather than beside the editor. One that fails to load is reported and skipped; an editor that will not open because a plugin is missing has made the plugin mandatory.
 
-[`@textui/textide-git`](https://github.com/softov/textui/tree/main/packages/textide-git) is the one that exists, and it is the
-proof the boundary is in the right place: git arrives as an adapter, some
-commands, a component and a mount, and unloading it leaves nothing behind.
+[`@textui/textide-git`](https://github.com/softov/textui/tree/main/packages/textide-git) is the one that exists, and it is the proof the boundary is in the right place: git arrives as an adapter, some commands, a component and a mount, and unloading it leaves nothing behind.
 
 ## What is here
 
@@ -184,13 +125,9 @@ commands, a component and a mount, and unloading it leaves nothing behind.
 
 ## Why it is a package
 
-textide is where the library gets used in anger. Everything it needs and
-cannot find is a gap in TextUI, and the point of building it early is to find
-those gaps by hitting them rather than by guessing.
+textide is where the library gets used in anger. Everything it needs and cannot find is a gap in TextUI, and the point of building it early is to find those gaps by hitting them rather than by guessing.
 
-`registerTextide(app, { workspace })` takes an application rather than making
-one, so the whole editor can be mounted by a test today and hosted inside
-another application later - the same way it will host git.
+`registerTextide(app, { workspace })` takes an application rather than making one, so the whole editor can be mounted by a test today and hosted inside another application later - the same way it will host git.
 
 <!-- family -->
 

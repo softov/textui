@@ -28,13 +28,9 @@ import { Badge } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-A badge is inline and stays one row, which is why its `outline` variant is
-brackets rather than a box: a drawn frame would make it three rows and it would
-stop sitting inside a line of text.
+A badge is inline and stays one row, which is why its `outline` variant is brackets rather than a box: a drawn frame would make it three rows and it would stop sitting inside a line of text.
 
-Otherwise it shares [`Button`](../input/button.md)'s vocabulary - the same
-`tone` scale, the same `variant` names - because a reader should not have to
-learn two.
+Otherwise it shares [`Button`](../input/button.md)'s vocabulary - the same `tone` scale, the same `variant` names - because a reader should not have to learn two.
 
 ## See also
 

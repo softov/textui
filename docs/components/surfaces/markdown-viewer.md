@@ -21,13 +21,9 @@ import { MarkdownViewer } from '@textui/documents';
 _No props of its own._
 <!-- props:end -->
 
-The scrolling counterpart to
-[`MarkdownView`](../display/markdown-view.md): it lays the document out once
-with `layoutMarkdown`, owns the viewport, and hands the view a `window` of
-rows to paint.
+The scrolling counterpart to [`MarkdownView`](../display/markdown-view.md): it lays the document out once with `layoutMarkdown`, owns the viewport, and hands the view a `window` of rows to paint.
 
-That split is why a message in a transcript and a document in a pane can share
-one renderer while only one of them scrolls.
+That split is why a message in a transcript and a document in a pane can share one renderer while only one of them scrolls.
 
 ## See also
 

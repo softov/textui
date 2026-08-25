@@ -5,12 +5,7 @@ nav_order: 4
 ---
 
 <!-- docs:setup
-import { readFileSync, writeFileSync } from 'node:fs';
-import type { ReactiveStore } from '@textui/core';
-declare const store: ReactiveStore;
-declare const path: string;
-declare const fetchServices: () => Promise<unknown>;
--->
+import { readFileSync, writeFileSync } from 'node:fs'; import type { ReactiveStore } from '@textui/core'; declare const store: ReactiveStore; declare const path: string; declare const fetchServices: () => Promise<unknown>; -->
 
 # Providers and persistence
 
@@ -18,8 +13,7 @@ Where a namespace gets its values from, and which of them survive a restart.
 
 ## Data providers
 
-A namespace and the code that fills it. Lazy by default: nothing loads until
-something reads or subscribes below it.
+A namespace and the code that fills it. Lazy by default: nothing loads until something reads or subscribes below it.
 
 ```ts
 store.registerDataProvider({
@@ -56,5 +50,4 @@ store.registerPersistence({
 await store.hydrate();   // once, at boot
 ```
 
-Schemas are optional and dynamic paths stay legal either way - the point is to
-catch a wrong write where it happens, not to make the store typed.
+Schemas are optional and dynamic paths stay legal either way - the point is to catch a wrong write where it happens, not to make the store typed.

@@ -27,13 +27,9 @@ console.log(BUILTIN_LAYOUTS.map((layout) => layout.name));
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-A layout is not mounted directly - it is registered, and a surface names it.
-`registerBuiltins` registers all seven, and a surface picks one through its
-layout state.
+A layout is not mounted directly - it is registered, and a surface names it. `registerBuiltins` registers all seven, and a surface picks one through its layout state.
 
-`single` shows the active mount and draws nothing for the others. It is the
-right choice for a surface that holds one thing at a time and does not need a
-strip of tabs to say so.
+`single` shows the active mount and draws nothing for the others. It is the right choice for a surface that holds one thing at a time and does not need a strip of tabs to say so.
 
 ## See also
 

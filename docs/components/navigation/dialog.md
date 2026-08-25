@@ -39,13 +39,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `dialog`.
 
-Rendered on the modal [layer](../../platform/layers.md), which is what traps
-focus inside it and dismisses it on escape - the dialog does not implement
-either, and neither should anything else that needs them.
+Rendered on the modal [layer](../../platform/layers.md), which is what traps focus inside it and dismisses it on escape - the dialog does not implement either, and neither should anything else that needs them.
 
-Actions are laid out for you, so OK and Cancel line up regardless of order -
-see [`Button`](../input/button.md) on why `solid` and `outline` are the same
-height.
+Actions are laid out for you, so OK and Cancel line up regardless of order - see [`Button`](../input/button.md) on why `solid` and `outline` are the same height.
 
 ## See also
 

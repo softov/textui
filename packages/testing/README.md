@@ -1,10 +1,8 @@
 # @textui/testing
 
-[![npm](https://img.shields.io/npm/v/@textui/testing?label=%40textui%2Ftesting)](https://www.npmjs.com/package/@textui/testing)
-[![license](https://img.shields.io/npm/l/@textui/testing)](https://github.com/softov/textui/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/@textui/testing?label=%40textui%2Ftesting)](https://www.npmjs.com/package/@textui/testing) [![license](https://img.shields.io/npm/l/@textui/testing)](https://github.com/softov/textui/blob/main/LICENSE)
 
-A headless harness for TextUI applications. No terminal, no timers, no
-snapshots of a screen nobody looked at.
+A headless harness for TextUI applications. No terminal, no timers, no snapshots of a screen nobody looked at.
 
 ```bash
 npm install --save-dev @textui/testing
@@ -23,9 +21,7 @@ expect(t.text()).toContain('Saved');
 
 ## Query by what it is, not where it is
 
-Every component declares a semantic role, so a test asks the way a person would
-- the Save button, the row labelled `api` - rather than by index into a tree
-that changes the moment the layout does.
+Every component declares a semantic role, so a test asks the way a person would - the Save button, the row labelled `api` - rather than by index into a tree that changes the moment the layout does.
 
 | | |
 |---|---|
@@ -35,21 +31,17 @@ that changes the moment the layout does.
 | `text()`, `line(y)`, `lines()` | What is actually on the screen |
 | `tree()` | The instance tree, for when the pixels are not the question |
 
-An `Element` is a description - role, label, text, rect, focus, props - not a
-handle. You act on the application with keys, the way a person does.
+An `Element` is a description - role, label, text, rect, focus, props - not a handle. You act on the application with keys, the way a person does.
 
 `get*` throws with the near misses listed; `query*` returns null.
 
 ## Drive it, then let it settle
 
-`press('ctrl+s')`, `pressAll('down', 'down', 'enter')`, `type('hello')`, and
-`resize(w, h)`. Effects and re-renders are asynchronous, so `await t.settle()`
-is what separates "I sent the key" from "the screen caught up".
+`press('ctrl+s')`, `pressAll('down', 'down', 'enter')`, `type('hello')`, and `resize(w, h)`. Effects and re-renders are asynchronous, so `await t.settle()` is what separates "I sent the key" from "the screen caught up".
 
 ## Test at two sizes
 
-A single fixed size skips every breakpoint and hides the layout break you were
-trying to catch. `resize` is cheap, and a loop over two sizes costs one line:
+A single fixed size skips every breakpoint and hides the layout break you were trying to catch. `resize` is cheap, and a loop over two sizes costs one line:
 
 ```ts
 for (const size of [{ width: 100, height: 30 }, { width: 60, height: 18 }]) {
@@ -59,8 +51,7 @@ for (const size of [{ width: 100, height: 30 }, { width: 60, height: 18 }]) {
 
 ## Runtime
 
-Depends on [`@textui/core`](https://www.npmjs.com/package/@textui/core) and [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal). No `node:` imports - it runs
-on the virtual terminal, so there is no tty to have. Node 22+ and Bun.
+Depends on [`@textui/core`](https://www.npmjs.com/package/@textui/core) and [`@textui/terminal`](https://www.npmjs.com/package/@textui/terminal). No `node:` imports - it runs on the virtual terminal, so there is no tty to have. Node 22+ and Bun.
 
 ## Documentation
 

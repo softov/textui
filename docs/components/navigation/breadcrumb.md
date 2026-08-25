@@ -36,11 +36,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `navigation`.
 
-`maxItems` collapses the middle when the trail is longer than the width -
-first and last survive, since those are the two a reader actually uses.
+`maxItems` collapses the middle when the trail is longer than the width - first and last survive, since those are the two a reader actually uses.
 
-The last item is where you are and is not selectable. `onSelect` fires for the
-others.
+The last item is where you are and is not selectable. `onSelect` fires for the others.
 
 ## See also
 

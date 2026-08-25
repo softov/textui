@@ -30,16 +30,11 @@ import { ResourceView } from '@textui/documents';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-The entry point to the whole resource system: give it a URI and it resolves
-the provider, reads the resource, asks the viewer registry what opens that kind
-and renders it.
+The entry point to the whole resource system: give it a URI and it resolves the provider, reads the resource, asks the viewer registry what opens that kind and renders it.
 
-`viewerId` pins one instead - what a screen passes after the reader has chosen
-from [`ResourceOpenWith`](resource-open-with.md). `mode="edit"` asks for an
-editor rather than a viewer where one is registered.
+`viewerId` pins one instead - what a screen passes after the reader has chosen from [`ResourceOpenWith`](resource-open-with.md). `mode="edit"` asks for an editor rather than a viewer where one is registered.
 
-`uri` accepts `null` so a pane can render its own empty state while nothing
-is open.
+`uri` accepts `null` so a pane can render its own empty state while nothing is open.
 
 ## See also
 

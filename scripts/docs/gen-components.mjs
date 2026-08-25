@@ -280,7 +280,7 @@ ${entry.role && entry.role !== 'presentation' ? `\nRole: \`${entry.role}\`.\n` :
       ? PRIMITIVE_SECTION
       : SECTIONS[OVERRIDES[entry.component] ?? entry.category])?.dir;
 
-    let table = `\n${CATALOG.length} components. Every one has a page.\n`;
+    let table = `\n~${CATALOG.length} components, and growing.\n`;
     const filed = new Set();
     for (const [heading, match] of CATALOG_GROUPS) {
       // A primitive's registry category is `layout` or `display`, so without

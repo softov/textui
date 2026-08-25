@@ -8,18 +8,15 @@ permalink: /components/
 # Components
 {: .no_toc }
 
-Most of these are importable from `@textui/core`; the resource and document
-components come from `@textui/documents` and are marked as such below. Calling
-`registerBuiltins(app)` puts the core catalog into the component registry,
-which is what lets a node graph name `'Table'` and get one.
+Most of these are importable from `@textui/widgets`; the resource and document components come from `@textui/documents` and are marked as such below. The four primitives are the exception - they are built into `@textui/core` and always available.
 
-Two pages apply to all of them: [Base props](base-props.md) for what every node
-accepts, and [Nodes](nodes.md) for writing one as data rather than as JSX.
+Imported directly, a component works as it is. Calling `registerBuiltins(app)` is what lets a node graph *name* `'Table'` as data and get one.
+
+Two pages apply to all of them: [Base props](base-props.md) for what every node accepts, and [Nodes](nodes.md) for writing one as data rather than as JSX.
 
 ## The four primitives
 
-The layout engine and the painter only ever see these, which is why adding a
-component costs a function rather than a case in the engine.
+The layout engine and the painter only ever see these, which is why adding a component costs a function rather than a case in the engine.
 
 | Primitive | What it is |
 | --- | --- |
@@ -28,15 +25,13 @@ component costs a function rather than a case in the engine.
 | `canvas` | Direct cell painting. The escape hatch charts use |
 | `spacer` | Empty space, greedy when given `flex` |
 
-Every node also accepts `role`, `label`, `focusable`, `onKey`, `onClick`,
-`disabled` and `selected` - so a bare `box` can take focus and handle keys
-without a hook.
+Every node also accepts `role`, `label`, `focusable`, `onKey`, `onClick`, `disabled` and `selected` - so a bare `box` can take focus and handle keys without a hook.
 
 ## The catalog
 
 <!-- props:start -->
 
-96 components. Every one has a page.
+~96 components, and growing.
 
 ### The four primitives
 

@@ -30,12 +30,9 @@ import { Grid } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-`columns` is required and fixed: this is not a responsive grid, and it will
-not drop to fewer columns on a narrow terminal by itself. Change `columns`
-from a [breakpoint](../base-props.md) or from measured width when that matters.
+`columns` is required and fixed: this is not a responsive grid, and it will not drop to fewer columns on a narrow terminal by itself. Change `columns` from a [breakpoint](../base-props.md) or from measured width when that matters.
 
-Every column is the same width. For columns that are not, use a
-[Row](row.md) and give each child its own `flex` or `width`.
+Every column is the same width. For columns that are not, use a [Row](row.md) and give each child its own `flex` or `width`.
 
 ## See also
 

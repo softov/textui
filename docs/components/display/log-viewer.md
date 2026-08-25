@@ -38,13 +38,9 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 Role: `log`.
 
-It follows the tail until the reader scrolls, then stops. That single
-behaviour is the difference between a log you can read and one that yanks
-itself away the moment you find something.
+It follows the tail until the reader scrolls, then stops. That single behaviour is the difference between a log you can read and one that yanks itself away the moment you find something.
 
-`follow` and `onFollowChange` expose that state, so a status bar can say
-"following" and a key can turn it back on. Turn `showTime` or `showLevel`
-off when the lines already carry their own.
+`follow` and `onFollowChange` expose that state, so a status bar can say "following" and a key can turn it back on. Turn `showTime` or `showLevel` off when the lines already carry their own.
 
 ## See also
 

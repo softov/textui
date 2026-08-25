@@ -31,18 +31,11 @@ Plus everything on [`TextProps`](../base-props.md).
 
 Role: `marquee`.
 
-Only ever a last resort for text that genuinely cannot fit. It moves, and
-movement in a terminal is expensive attention - so `active` gates it, and the
-usual thing to gate it on is whether the row has the cursor. A list of twenty
-sliding labels is unreadable; one sliding label under the selection is useful.
+Only ever a last resort for text that genuinely cannot fit. It moves, and movement in a terminal is expensive attention - so `active` gates it, and the usual thing to gate it on is whether the row has the cursor. A list of twenty sliding labels is unreadable; one sliding label under the selection is useful.
 
-`speed` is cells per second, `dwell` the pause at each end in milliseconds,
-and `fps` how often it repaints. Lowering `fps` costs smoothness and saves
-redraws, which matters over ssh.
+`speed` is cells per second, `dwell` the pause at each end in milliseconds, and `fps` how often it repaints. Lowering `fps` costs smoothness and saves redraws, which matters over ssh.
 
-Where truncation is acceptable it is nearly always the better answer -
-[`text`](../primitives/text.md) with `truncate="middle"` keeps both ends of a
-path visible and never moves.
+Where truncation is acceptable it is nearly always the better answer - [`text`](../primitives/text.md) with `truncate="middle"` keeps both ends of a path visible and never moves.
 
 ## See also
 

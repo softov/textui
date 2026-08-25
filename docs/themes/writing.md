@@ -5,13 +5,11 @@ nav_order: 4
 ---
 
 <!-- docs:setup
-declare const app: import('@textui/core').TextUIApp;
--->
+declare const app: import('@textui/core').TextUIApp; -->
 
 # Writing a theme
 
-A theme extends another and restates only what changes, so a house style is a
-handful of overrides rather than a whole palette.
+A theme extends another and restates only what changes, so a house style is a handful of overrides rather than a whole palette.
 
 ```ts
 app.themes.register({
@@ -32,5 +30,4 @@ app.themes.register({
 app.setTheme('midnight');
 ```
 
-`components` is keyed by component name, then by variant - the variant keys a
-component understands come from its `variant`, `tone` and `size` props.
+`components` is keyed by component name, then by variant - the variant keys a component understands come from its `variant`, `tone` and `size` props.

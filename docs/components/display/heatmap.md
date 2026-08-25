@@ -34,13 +34,9 @@ import { Heatmap } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-`data` is rows of columns. `ramp` overrides the glyphs used for intensity,
-which is the escape hatch for a terminal or a palette where the default does
-not separate cleanly.
+`data` is rows of columns. `ramp` overrides the glyphs used for intensity, which is the escape hatch for a terminal or a palette where the default does not separate cleanly.
 
-The usual warning applies harder here than anywhere else in the catalog: on a
-sixteen-colour session the ramp has very little to work with, so the default
-varies glyph as well as colour.
+The usual warning applies harder here than anywhere else in the catalog: on a sixteen-colour session the ramp has very little to work with, so the default varies glyph as well as colour.
 
 ## See also
 

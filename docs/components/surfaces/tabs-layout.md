@@ -27,12 +27,9 @@ const tabs = BUILTIN_LAYOUTS.find((layout) => layout.name === 'tabs');
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-One mount visible, a strip naming the others. Each tab's label comes from the
-mount's `display` metadata, so opening a mount is all it takes to add a tab.
+One mount visible, a strip naming the others. Each tab's label comes from the mount's `display` metadata, so opening a mount is all it takes to add a tab.
 
-This is the surface-level counterpart to [`Tabs`](../navigation/tabs.md).
-Use that one for panels you are laying out yourself; use this when the panels
-are mounts and their set changes at runtime.
+This is the surface-level counterpart to [`Tabs`](../navigation/tabs.md). Use that one for panels you are laying out yourself; use this when the panels are mounts and their set changes at runtime.
 
 ## See also
 

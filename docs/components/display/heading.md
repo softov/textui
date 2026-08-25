@@ -27,12 +27,9 @@ Plus everything on [`TextProps`](../base-props.md).
 
 Role: `heading`.
 
-Three levels. What each one looks like is the theme's business - bold, a
-colour, a rule underneath - and a terminal has no font sizes to fall back on,
-so the difference between `1` and `3` is weight and colour rather than height.
+Three levels. What each one looks like is the theme's business - bold, a colour, a rule underneath - and a terminal has no font sizes to fall back on, so the difference between `1` and `3` is weight and colour rather than height.
 
-`Heading` extends [`TextProps`](../base-props.md), so `truncate`,
-`textAlign` and `wrap` all work.
+`Heading` extends [`TextProps`](../base-props.md), so `truncate`, `textAlign` and `wrap` all work.
 
 ## See also
 

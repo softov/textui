@@ -17,5 +17,4 @@ nav_order: 1
 | `diff` | What has drifted from upstream |
 | `doctor` | What this terminal can do, and what the project looks like |
 
-Useful flags: `--dry-run` on `add` shows what would be written and writes
-nothing; `--json` on `list` and `doctor` gives machine-readable output.
+Useful flags: `--dry-run` on `add` shows what would be written and writes nothing; `--json` on `list` and `doctor` gives machine-readable output.

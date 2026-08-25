@@ -15,5 +15,4 @@ nav_order: 3
 | `workbench` | dark | round | normal |
 | `mono` | dark | ascii | normal |
 
-`console`, `paper` and `workbench` are the three house styles, and each is a
-handful of overrides on `dark` or `light` rather than a whole palette.
+`console`, `paper` and `workbench` are the three house styles, and each is a handful of overrides on `dark` or `light` rather than a whole palette.

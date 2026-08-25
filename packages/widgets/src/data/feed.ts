@@ -101,7 +101,17 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
   const [internalTop, setInternalTop] = useState<number | null>(null);
   const [internalIndex, setInternalIndex] = useState(0);
 
-  const entries = (Array.isArray(children) ? children : [children]).filter((c) => c != null);
+  /*
+   * Flattened, because a feed counts entries and JSX groups them.
+   *
+   * `{caption}{items.map(...)}` arrives as `[caption, [a, b, c]]` - two
+   * children, one of which is an array - so a feed of twenty entries with
+   * anything written beside the map counted two. The cursor then clamped to
+   * the second, every key after the first did nothing, and the scroll never
+   * moved. It reads as a dead list and is an arity bug.
+   */
+  const entries = (Array.isArray(children) ? children.flat(Infinity) : [children])
+    .filter((c) => c != null);
   const count = entries.length;
   const selects = onSelect !== undefined || selectedIndex !== undefined;
   const index = Math.max(0, Math.min(count - 1, selectedIndex ?? internalIndex));

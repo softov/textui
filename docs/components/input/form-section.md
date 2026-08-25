@@ -34,5 +34,6 @@ Worth reaching for once a form is long enough that a reader scrolls it. Below ab
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
 - [Field](field.md) - the rows inside it
 - [Panel](../layout/panel.md) - when the group wants a frame

@@ -38,5 +38,6 @@ Plus everything on [`BoxProps`](../base-props.md).
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
 - [Form](form.md) - the context it reads from
 - [TextInput](text-input.md), [Select](select.md) - what usually goes inside

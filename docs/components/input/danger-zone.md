@@ -40,5 +40,6 @@ Put it last. A destructive action among ordinary fields is one mis-aimed keystro
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
 - [Dialog](../navigation/dialog.md) - confirming something less final
 - [FormActions](form-actions.md) - the ordinary submit row

@@ -45,5 +45,6 @@ The whole group is one stop in the tab order and the arrow keys move within it, 
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
 - [Select](select.md) - the same choice, collapsed
 - [Checkbox](checkbox.md) - when more than one may be true

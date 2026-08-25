@@ -40,5 +40,6 @@ A terminal slider is coarse: `trackWidth` cells for the whole range, so 20 cells
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
 - [Progress](../display/progress.md) - reporting a value rather than setting one
 - [TextInput](text-input.md) - when the precise number matters

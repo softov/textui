@@ -36,6 +36,7 @@ Use a checkbox when the options are independent. When exactly one of several mus
 
 ## See also
 
+- [Editing keys and selection](editing.md) - the keys, the selection and the clipboard
 - [Switch](switch.md) - the same boolean, different promise
 - [RadioGroup](radio-group.md) - one of several
 - [Field](field.md) - wrapping it in a form

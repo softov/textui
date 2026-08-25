@@ -13,11 +13,11 @@ import {
   useStoreValue,
   useTheme,
 } from '@textui/core';
-import { Badge, Column, EmptyState, Panel, RadioGroup, Row, SearchBox, argumentOf } from '@textui/widgets';
+import { Badge, Column, Divider, EmptyState, Panel, RadioGroup, Row, SearchBox, argumentOf } from '@textui/widgets';
 import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE, settingCommand } from './control.js';
 import {
   ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, FOCUS, HISTORY, HOST, INPUT, MODEL, OPEN,
-  PROVIDER, QUEUE, SELECTED, SESSIONS, SETTINGS, TURNS, WORKSPACE,
+  CHAT_URI, PROVIDER, QUEUE, SELECTED, SESSIONS, SETTINGS, TURNS, WORKSPACE,
   openSession, visibleSessions, workspaceName,
 } from './state.js';
 import type { HostState } from './state.js';
@@ -28,6 +28,7 @@ import type {
 import { decodeStatus } from './ahp/status.js';
 import { ChatTranscript } from './view/transcript.js';
 import { ChatComposer } from './view/composer.js';
+import { ChatSessionHead } from './view/sessionhead.js';
 import { Creature } from './view/creature.js';
 import { settingIcon, valueIcon } from './view/icons.js';
 import { ChatHitl } from './view/hitl.js';
@@ -353,6 +354,8 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
     const [cursor, setCursor] = useStore<number>('$/screen.chat/cursor' as BindingPath, 0);
 
     const session = openSession(app.store);
+    const model = useStoreValue<string>(MODEL, '') ?? '';
+    const chat = useStoreValue<string | null>(CHAT_URI, null) ?? null;
     const running = turns.some((turn) => turn.state === 'running');
     const blocks = toBlocks(turns, queued);
     const options = useComposerOptions();
@@ -363,6 +366,14 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
 
     return (
       <Column flex={1} gap={1}>
+        {/* Outside the feed, so it does not scroll away with the first reply.
+            What it says is true of the whole conversation, not of a point in
+            it. */}
+        <Column>
+          <ChatSessionHead session={session} {...(model ? { model } : {})} {...(chat ? { chat } : {})} />
+          <Divider dim />
+        </Column>
+
         <ChatTranscript
           flex={1}
           blocks={blocks}

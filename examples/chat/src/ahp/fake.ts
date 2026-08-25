@@ -34,6 +34,14 @@ export interface FakeHost extends HostConnection {
   /** Everything the script can emit without being answered. */
   drain(limit?: number): void;
   pending(): number;
+  /**
+   * Retitle a session, the way a host does once it has read the first message.
+   *
+   * Not on `HostConnection`: a client never renames a session, it is told.
+   * Here so that "the host changed something about a session nobody is
+   * watching" is a thing a test can make happen.
+   */
+  rename(uri: SessionUri, title: string): void;
 }
 
 type Step = () => void;
@@ -108,6 +116,15 @@ export function fakeHost(): FakeHost {
     return activity | (flags.get(uri) ?? 0);
   };
 
+  /**
+   * Watchers of the catalogue itself, as opposed to of one session.
+   *
+   * A real host says this on its root channel; here it is said by whatever
+   * changed a summary, which is the same thing from the outside.
+   */
+  const catalogue = new Set<() => void>();
+  const moved = (): void => { for (const listener of catalogue) listener(); };
+
   /** Recompute, and tell anyone watching if it moved. */
   const touch = (uri: SessionUri): void => {
     const summary = summaries.get(uri);
@@ -115,6 +132,7 @@ export function fakeHost(): FakeHost {
     const status = statusOf(uri);
     summaries.set(uri, { ...summary, status, modifiedAt: AT });
     emit(uri, { type: 'status', status });
+    moved();
   };
 
   const setFlag = (uri: SessionUri, flag: number, on: boolean): void => {
@@ -632,11 +650,13 @@ export function fakeHost(): FakeHost {
         title: 'New session',
         dir: workingDirectory ? `file://${workingDirectory}` : '',
       });
+      moved();
       return uri;
     },
 
     disposeSession: async (uri) => {
       summaries.delete(uri);
+      moved();
       turns.delete(uri);
       active.delete(uri);
       inputs.delete(uri);
@@ -647,6 +667,18 @@ export function fakeHost(): FakeHost {
 
     setArchived: (uri, archived) => setFlag(uri, SessionFlag.IsArchived, archived),
     setRead: (uri, read) => setFlag(uri, SessionFlag.IsRead, read),
+
+    rename: (uri, title) => {
+      const summary = summaries.get(uri);
+      if (!summary) return;
+      summaries.set(uri, { ...summary, title });
+      moved();
+    },
+
+    onSessions: (observer) => {
+      catalogue.add(observer);
+      return { close: () => { catalogue.delete(observer); } };
+    },
 
     subscribe: (uri, observer) => {
       let set = observers.get(uri);

@@ -34,6 +34,11 @@ export const ChatTranscript: (props: ChatTranscriptProps) => RenderOutput =
     return (
       <Feed
         focusId={focusId}
+        // Page up from the composer means the conversation above it. There is
+        // nothing else on this screen those keys could be for, and taking the
+        // keyboard off the field to use them is what a reader is avoiding.
+        pageKeys="always"
+
         {...(cursor !== undefined ? { selectedIndex: cursor } : {})}
         {...(onCursor ? { onSelect: onCursor } : {})}
         onActivate={(index: number) => {

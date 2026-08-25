@@ -6,6 +6,16 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+### A catalogue is only as fresh as what it was last told
+
+The client subscribed to one session's channel and to nothing else, so a session appearing, finishing or starting to wait was invisible until somebody navigated away and came back - a reader doing by hand what the host had already said. `HostConnection.onSessions` is the catalogue moving, as opposed to one session's channel; the live client raises it from the root channel it was already draining for something else.
+
+The header had the other half of it: `openSession` is a plain read, so a title or a status arriving changed the store and left the row showing what it said when the session was opened.
+
+### `pageKeys: 'always'` on a Feed
+
+For the feed that *is* the screen, with a text field under it. Somebody typing a message who presses page up means the conversation above them, and taking the keyboard off the field to use those keys is the thing they are avoiding. Only those two keys, and only after the focused node has declined them - so a field that pages its own content keeps them.
+
 ### Hover works on things that are not focusable
 
 `onHover` was declared on every node and called from nowhere, and the `hover` style overlay was driven by comparing a focus id against `props.id` - so only a focusable node could ever be hovered. A row that is clicked rather than focused, which is most of them, had a `hover` style nothing could trigger.

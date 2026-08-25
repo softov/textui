@@ -45,6 +45,15 @@ export const RUNNING = '$/chat/conv/running' as BindingPath;
  */
 export const PROVIDER = '$/chat/compose/provider' as BindingPath;
 export const MODEL = '$/chat/compose/model' as BindingPath;
+/**
+ * The chat the open session dispatches to.
+ *
+ * A session is not a conversation - it holds chats - and the uri of the one
+ * being read is what gets pasted into a shell or a bug report. Held because
+ * only `detail` knows it, and asking again to draw a caption is a round trip
+ * for something that does not change.
+ */
+export const CHAT_URI = '$/chat/conv/chat' as BindingPath;
 export const WORKSPACE = '$/chat/compose/workspace' as BindingPath;
 /**
  * Everything else the host asks about, keyed by the host's own keys.

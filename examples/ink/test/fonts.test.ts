@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { stringWidth } from '@textui/core';
 import { FONTS, banner, fontAt, heightOf, inkGlyphs } from '../src/fonts.js';
 
 /**
@@ -110,7 +111,9 @@ describe('the transforms', () => {
     // Nine rows in the table so every glyph agrees where the baseline is, but
     // a line of capitals is five: `banner` trims the blank rows off a finished
     // line, and capitals do not use the two above or the two below.
-    expect(heightOf(gard)).toBe(9);
+    // Every glyph the same height, or they do not agree where the baseline is.
+    const heights = [...new Set(Object.values(gard.glyphs).map((g) => g.length))];
+    expect(heights, `gard glyph heights: ${heights.join(', ')}`).toEqual([9]);
     expect(rows('ABC', gard)).toHaveLength(5);
     // A descender is not a taller letter, it is a letter sitting lower - `g`
     // on its own is five rows like any other, and only shows what it does when
@@ -240,14 +243,14 @@ describe('every character, in every font', () => {
   }
 
   it('draws a missing character as itself, on the line', () => {
-    // `gard` has the marks its own hand implies and not the ornate rest, so
-    // an `@` is one it genuinely does not have.
-    expect(fontAt('gard').glyphs['@']).toBeUndefined();
-    const drawn = rows('A@', fontAt('gard'));
-    expect(drawn.join('')).toContain('@');
-    // On the baseline, so it sits on the line with the letter rather than
-    // under it - which for this font is not the last row of the box.
-    expect(drawn[drawn.length - 1]).toContain('@');
+    // `mini` has no `$`: at three rows there is no stroke that says dollar
+    // rather than S-with-a-line, so it is left to the stand-in on purpose.
+    const mini = fontAt('mini');
+    expect(mini.glyphs['$']).toBeUndefined();
+    const drawn = rows('A$', mini);
+    expect(drawn.join('')).toContain('$');
+    // On the baseline, so it sits on the line with the letter beside it.
+    expect(drawn[drawn.length - 1]).toContain('$');
   });
 
   it('does not mistake a drawn character for a placeholder', () => {
@@ -268,6 +271,65 @@ describe('every character, in every font', () => {
     // Both were drawn as the same zigzag, so `(a)` and `<a>` were one string.
     expect(banner('(', fontAt('block'), PEN)).not.toBe(banner('<', fontAt('block'), PEN));
     expect(banner(')', fontAt('block'), PEN)).not.toBe(banner('>', fontAt('block'), PEN));
+  });
+});
+
+describe('text that arrives by paste', () => {
+  const block = fontAt('block');
+  const at = (cp: number): string => String.fromCodePoint(cp);
+
+  // Every one of these turns up in a copy-paste and none of them is visible in
+  // the field it was pasted into.
+  const NOTHING = [
+    ['a zero-width space', 0x200b],
+    ['a zero-width joiner', 0x200d],
+    ['a byte-order mark', 0xfeff],
+    ['a left-to-right mark', 0x200e],
+    ['a soft hyphen', 0x00ad],
+    ['a tab', 0x09],
+    ['an escape', 0x1b],
+    ['a combining accent', 0x0301],
+  ] as const;
+
+  for (const [name, cp] of NOTHING) {
+    it(`draws ${name} as nothing, not as a word gap`, () => {
+      // It used to get the treatment a character with no glyph gets, which is
+      // a word gap - so `AB` pasted with one of these between the letters came
+      // out as `A B`, with a word break the field never showed.
+      expect(banner(`A${at(cp)}B`, block, PEN)).toBe(banner('AB', block, PEN));
+    });
+  }
+
+  it('draws a non-breaking space as the space it is', () => {
+    // The other half of the same mistake: this one *is* a space, and it was
+    // rendering as one blank cell rather than as a gap between words.
+    expect(banner(`A${at(0x00a0)}B`, block, PEN)).toBe(banner('A B', block, PEN));
+  });
+
+  it('measures a stand-in by the cells it takes, not by its length', () => {
+    // A wide character is one string index and two columns. Measured by index
+    // it was reckoned a column narrower than it drew, so everything after it
+    // sat a column to the left of where the wrap thought it was.
+    const drawn = banner(`A${at(0x4e16)}B`, block, PEN);
+    const widest = Math.max(...drawn.split('\n').map((line) => stringWidth(line)));
+    // The measuring and the drawing agree: it fits a panel of exactly its own
+    // width, and not one column less.
+    expect(banner(`A${at(0x4e16)}B`, block, PEN, widest)).toBe(drawn);
+    expect(banner(`A${at(0x4e16)}B`, block, PEN, widest - 1)).not.toBe(drawn);
+  });
+
+  it('leaves the fonts themselves free of anything invisible', () => {
+    // The tables are typed and pasted like anything else. A zero-width
+    // character in one of them would shift a single row of a single glyph and
+    // be very hard to find by eye.
+    for (const font of FONTS) {
+      for (const [key, rows] of Object.entries(font.glyphs)) {
+        for (const row of rows) {
+          expect(stringWidth(row), `${font.id} ${JSON.stringify(key)}: ${JSON.stringify(row)}`)
+            .toBe(row.length);
+        }
+      }
+    }
   });
 });
 

@@ -22,6 +22,7 @@
  * proportional rather than a fixed pitch.
  */
 
+import { graphemeWidth, stringWidth } from '@textui/core';
 import { GARD } from './gard.js';
 import { PAGGA } from './pagga.js';
 
@@ -662,6 +663,7 @@ export function heightOf(font: Font): number {
  * is wrong by however much they disagree.
  */
 function glyphOf(font: Font, char: string): Grid | undefined {
+  if (invisible(char)) return undefined;
   const found = font.glyphs[char]
     ?? font.glyphs[char.toUpperCase()]
     ?? font.glyphs[char.toLowerCase()];
@@ -684,13 +686,46 @@ function glyphOf(font: Font, char: string): Grid | undefined {
 function standIn(font: Font, char: string): Grid {
   const height = heightOf(font);
   const line = font.baseline ?? height - 1;
-  return Array.from({ length: height }, (_, y) => (y === line ? char : ' '));
+  // Padded to the cells it actually occupies. A wide character is one string
+  // index and two columns, and a stand-in measured by index put every letter
+  // after it one column to the left of where it was drawn.
+  const width = Math.max(1, stringWidth(char));
+  return Array.from({ length: height }, (_, y) => (y === line ? char : ' '.repeat(width)));
 }
+
+/**
+ * A character that draws nothing and takes no room, because it is not there.
+ *
+ * Zero-width and control characters arrive by paste - a byte-order mark off a
+ * web page, a zero-width space out of a code block - and they used to come out
+ * as a *word gap*, because a character with no glyph gets one. So `AB` pasted
+ * with a joiner between the letters rendered as `A B`, and the banner had a
+ * word break in it that the field it was typed in did not.
+ *
+ * Invisible in the text, invisible in the banner. It is the only reading that
+ * cannot surprise anyone.
+ */
+const INVISIBLE = /^[\p{Cf}\p{Cc}\p{Mn}\p{Me}]$/u;
+
+function invisible(char: string): boolean {
+  return graphemeWidth(char) === 0 || INVISIBLE.test(char);
+}
+
+/**
+ * A character that is a space, whatever its code point.
+ *
+ * A non-breaking space is a space: it arrives by paste out of anything that
+ * has ever been near a web page, and it was drawing as a stand-in - one blank
+ * cell where a word gap belonged, so the words either side ran together.
+ */
+const SPACE = /^\p{Zs}$/u;
 
 /** The columns a character takes, not counting the gap before it. */
 function widthOf(font: Font, char: string): number {
+  if (invisible(char)) return 0;
+  if (SPACE.test(char)) return font.space;
   const glyph = glyphOf(font, char);
-  return char === ' ' || !glyph ? font.space : (glyph[0] as string).length;
+  return glyph ? stringWidth(glyph[0] as string) : font.space;
 }
 
 /**
@@ -803,6 +838,7 @@ function wrapToWidth(text: string, font: Font, width: number): string[] {
 
   for (const word of text.split(' ')) {
     const cost = costOf(word, font);
+    if (cost === 0) continue;
     if (cost <= width) { add(word, cost, font.space, ' '); continue; }
     // Wider than a whole line even on its own, so it is spent a character at a
     // time - starting in whatever room is left on this line rather than on a
@@ -820,7 +856,10 @@ function wrapToWidth(text: string, font: Font, width: number): string[] {
 
 /** The columns a word takes, letters and the tracking between them. */
 function costOf(word: string, font: Font): number {
-  const chars = Array.from(word);
+  // Invisible characters are dropped before the tracking is counted, or a
+  // word of nothing but a byte-order mark would still be charged for the gaps
+  // between the letters it does not have.
+  const chars = Array.from(word).filter((char) => !invisible(char));
   return chars.reduce((total, char, i) => total + (i === 0 ? 0 : font.tracking) + widthOf(font, char), 0);
 }
 
@@ -829,10 +868,11 @@ function bannerLine(text: string, font: Font, height: number, ink: InkGlyphs): s
   let first = true;
 
   for (const char of Array.from(text)) {
+    if (invisible(char)) continue;
     // A space is a gap unless the font draws one. `pagga` does: its ground has
     // to run through the gap between two words, and a gap would be a hole in
     // it - so the table has a glyph for `' '` and that glyph wins.
-    const glyph = char === ' '
+    const glyph = SPACE.test(char)
       ? (font.glyphs[' '] === undefined ? undefined : trim(font.glyphs[' ']))
       : glyphOf(font, char);
     if (!glyph) {

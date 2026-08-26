@@ -518,6 +518,44 @@ describe('the catalogue', () => {
     await t.unmount();
   });
 
+  /**
+   * The key somebody reaches for without being told.
+   *
+   * `d` is the letter the footer has room to name and `delete` is the guess,
+   * and a catalogue that answers only the first is a catalogue where dismissing
+   * a session is something you have to be shown. Both confirm, because ending
+   * somebody else's conversation is not an undo.
+   */
+  it('dismisses a session with the delete key too', async () => {
+    const { t } = await catalogue();
+    t.app.store.set('$/chat/ui/selected', 'ahp-session:/9c74');
+    await t.settle();
+
+    t.press('delete');
+    for (let i = 0; i < 4; i++) await t.settle();
+    expect(t.hasText('Dispose session')).toBe(true);
+
+    t.press('enter');
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(t.hasText('Why does the composer')).toBe(false);
+    await t.unmount();
+  });
+
+  it('keeps the session when the confirm is declined', async () => {
+    const { t } = await catalogue();
+    t.app.store.set('$/chat/ui/selected', 'ahp-session:/9c74');
+    await t.settle();
+
+    t.press('delete');
+    for (let i = 0; i < 4; i++) await t.settle();
+    t.press('escape');
+    for (let i = 0; i < 6; i++) await t.settle();
+    // Still there. Without this the test above passes on a confirm that
+    // disposes whatever is answered.
+    expect(t.hasText('Why does the composer')).toBe(true);
+    await t.unmount();
+  });
+
   it('focuses the filter by name, which is what a key needs to exist', async () => {
     const { t } = await catalogue();
     await t.app.execute('session.filter');

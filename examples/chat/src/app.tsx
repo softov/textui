@@ -18,7 +18,8 @@ import {
 import type { HostState } from './state.js';
 import { decodeStatus } from './ahp/status.js';
 import {
-  ChangesScreen, ChatScreen, HostsScreen, NewSessionScreen, SessionsScreen, SettingsScreen,
+  ChangesScreen, ChatScreen, HostsScreen, McpScreen, NewSessionScreen, SessionsScreen,
+  SettingsScreen, SkillsScreen,
 } from './screens.js';
 import { ChatBubble, ReasoningBlock, StreamingText } from './view/bubble.js';
 import { ChatComposer } from './view/composer.js';
@@ -170,6 +171,7 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
             { keys: 'i', label: 'write' },
             { keys: 'G', label: 'follow' },
             { keys: 'c', label: 'changes' },
+            { keys: 'k', label: 'skills' },
             { keys: 'esc', label: 'back' },
             // The same key, and it says which: while a turn is running it
             // stops it, and when none is it leaves. A hint that always read
@@ -189,6 +191,23 @@ const Hints = defineComponent<BoxProps>('ChatHints', (props) => {
           { keys: newline, label: 'newline' },
           { keys: 'tab', label: 'options' },
           { keys: 'esc', label: 'sessions' },
+          { keys: 'ctrl+c', label: 'quit' },
+        ]}
+      />
+    );
+  }
+
+  // The three list screens. `tab move` is a form's answer and these are
+  // lists: what moves is the cursor, and enter is what a row is for.
+  if (screen === 'changes' || screen === 'skills' || screen === 'mcp') {
+    return (
+      <KeyHints
+        {...props}
+        hints={[
+          { keys: upDown, label: 'move' },
+          { keys: 'enter', label: screen === 'changes' ? 'open' : 'on / off' },
+          { keys: 'esc', label: 'back' },
+          { keys: 'ctrl+p', label: 'commands' },
           { keys: 'ctrl+c', label: 'quit' },
         ]}
       />
@@ -296,6 +315,8 @@ export function registerChat(app: TextUIApp, options: ChatOptions = {}): Disposa
     ['ChangesScreen', ChangesScreen],
     ['SettingsScreen', SettingsScreen],
     ['HostsScreen', HostsScreen],
+    ['SkillsScreen', SkillsScreen],
+    ['McpScreen', McpScreen],
     ['ChatHeader', Header],
     ['ChatStatus', Status],
     ['ChatHints', Hints],
@@ -320,6 +341,8 @@ export function registerChat(app: TextUIApp, options: ChatOptions = {}): Disposa
     { id: 'changes', component: 'ChangesScreen' },
     { id: 'settings', component: 'SettingsScreen' },
     { id: 'hosts', component: 'HostsScreen' },
+    { id: 'skills', component: 'SkillsScreen' },
+    { id: 'mcp', component: 'McpScreen' },
   ]) {
     bag.add(app.screens.register(screen));
   }

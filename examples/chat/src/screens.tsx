@@ -1,4 +1,4 @@
-import type { BindingPath, RenderOutput, SemanticVariant } from '@textui/core';
+import type { BindingPath, RenderOutput, SemanticVariant, TextUIApp } from '@textui/core';
 import {
   defineComponent,
   useApp,
@@ -14,16 +14,19 @@ import {
   useTheme,
 } from '@textui/core';
 import { Badge, Column, Divider, EmptyState, Panel, RadioGroup, Row, SearchBox, argumentOf } from '@textui/widgets';
-import { CHAT_SCOPE, CONTROLLER, SESSIONS_SCOPE, settingCommand } from './control.js';
 import {
-  ARCHIVED, CHANGES, DRAFT, EXPANDED, FILTER, FOCUS, HISTORY, HOST, INPUT, MODEL, OPEN,
-  CHAT_URI, PROVIDER, QUEUE, SELECTED, SESSIONS, SETTINGS, SIDEBAR, SPLIT_AT, SPLIT_DEFAULT,
-  TURNS, WORKSPACE, openSession, visibleSessions, workspaceName,
+  CHAT_SCOPE, CONTROLLER, MCP_SCOPE, SESSIONS_SCOPE, SKILLS_SCOPE, settingCommand,
+} from './control.js';
+import {
+  ARCHIVED, CHANGES, CUSTOMIZATIONS, DRAFT, EXPANDED, FILTER, FOCUS, HISTORY, HOST, INPUT,
+  MODEL, OPEN, OPEN_FILE, CHAT_URI, PROVIDER, QUEUE, SELECTED, SESSIONS, SETTINGS, SIDEBAR,
+  SPLIT_AT, SPLIT_DEFAULT, TURNS, WORKSPACE, openSession, visibleSessions, workspaceName,
 } from './state.js';
 import type { HostState } from './state.js';
 import { toBlocks } from './blocks.js';
 import type {
-  Agent, Changeset, PendingInput, SessionConfig, SessionDetail, SessionSummary, Turn,
+  Agent, Changeset, ContentRef, Customization, FileContent, PendingInput, SessionConfig,
+  SessionDetail, SessionSummary, SlashCommand, Turn,
 } from './ahp/types.js';
 import { decodeStatus } from './ahp/status.js';
 import { ChatTranscript } from './view/transcript.js';
@@ -33,6 +36,9 @@ import { Creature } from './view/creature.js';
 import { settingIcon, valueIcon } from './view/icons.js';
 import { ChatHitl } from './view/hitl.js';
 import { ChangesList } from './view/changes.js';
+import { CustomizationList } from './view/customizations.js';
+import { FileDiff } from './view/filediff.js';
+import { diffLines } from './diff.js';
 import { ConnectionBadge, SessionList } from './view/sessions.js';
 import { SessionDetails } from './view/details.js';
 import type { DetailField } from './view/details.js';
@@ -43,9 +49,10 @@ import type { ComposerOption } from './view/controls.js';
 /**
  * The screens.
  *
- * Six, and each is a different question: which conversation, the conversation
- * itself, starting one, what it changed, how it is configured, and which host
- * any of it is on. Anything else that came up - a tool call's full output, the
+ * Eight, and each is a different question: which conversation, the
+ * conversation itself, starting one, what it changed, how it is configured,
+ * which host any of it is on, what the host handed it, and which of its tools
+ * are answering. Anything else that came up - a tool call's full output, the
  * command palette, a confirm - is a layer or an expansion inside one of these,
  * because none of them is a place you navigate *to*.
  *
@@ -372,6 +379,44 @@ function useComposerOptions(): ComposerOption[] {
 
 // -------------------------------------------------------------------- 2. chat
 
+/**
+ * What goes after a slash, from both places it can come from.
+ *
+ * The client's own commands are the palette's, so a slash is a second way into
+ * the same list rather than a list of its own. The session's are the skills
+ * and prompts the host contributed - filtered to the ones a person may invoke,
+ * because a skill can be marked as the agent's alone and offering one is
+ * offering something the host will refuse.
+ *
+ * Disabled customizations are left out entirely rather than shown greyed. A
+ * menu is a list of what can be done, and a row that cannot be chosen is a row
+ * that has to be read to find that out.
+ */
+function slashCommands(app: TextUIApp, contributed: Customization[]): SlashCommand[] {
+  const session: SlashCommand[] = contributed
+    .filter((item) => (item.kind === 'skill' || item.kind === 'prompt')
+      && item.enabled
+      && item.userInvocable !== false)
+    .map((item) => ({
+      id: item.name,
+      kind: 'session' as const,
+      title: item.name,
+      ...(item.description ? { description: item.description } : {}),
+      ...(item.from ? { from: item.from } : {}),
+    }));
+
+  const client: SlashCommand[] = app.commands.list({ slot: 'palette', enabledOnly: true })
+    .map((command) => ({
+      id: command.id,
+      kind: 'client' as const,
+      title: command.title,
+      ...(command.description ? { description: command.description } : {}),
+    }));
+
+  return [...session, ...client];
+}
+
+
 export const ChatScreen: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('ChatScreen', () => {
     const app = useApp();
@@ -396,6 +441,10 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
     const running = turns.some((turn) => turn.state === 'running');
     const blocks = toBlocks(turns, queued);
     const options = useComposerOptions();
+    // Read here as well as on the panel, because the slash menu is the other
+    // place a skill is reached from and this is the screen it is reached on.
+    // The store is shared, so a session already looked at costs nothing.
+    const { items: skills } = useCustomizations();
     // The same answers the chips are showing, with the question beside each -
     // read off one source rather than asked for a second time.
     const settingRows = options
@@ -459,20 +508,36 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
           onOption={(option, anchorId) => {
             if (option.commandId) openPicker(app, { commandId: option.commandId, anchorId });
           }}
-          commands={app.commands.list({ slot: 'palette', enabledOnly: true })
-            .map((command) => ({ id: command.id, title: command.title, ...(command.description ? { description: command.description } : {}) }))}
+          commands={slashCommands(app, skills)}
           onChange={(value: string) => app.store.set(DRAFT, value)}
-          onCommand={(id: string) => {
+          onCommand={(picked: SlashCommand) => {
+            /*
+             * A skill is typed, not run.
+             *
+             * There is no "invoke this skill" in the protocol: a host
+             * contributes skills as customizations and a person invokes one by
+             * sending its name as the message, exactly as they would have
+             * typed it. So choosing one completes the draft rather than
+             * dispatching anything - and leaves the trailing space, because
+             * most of them take an argument and the alternative is a person
+             * pressing enter on a bare `/review` to find out.
+             */
+            if (picked.kind === 'session') {
+              app.store.set(DRAFT, `/${picked.id} `);
+              app.focus.focus('chat.composer');
+              return;
+            }
+
             app.store.set(DRAFT, '');
-            const command = app.commands.get(id);
+            const command = app.commands.get(picked.id);
             // A command that still has a question to ask cannot just be run -
             // `execute` refuses a missing required argument, loudly - so it
             // gets its picker, the same one the chip above would have opened.
             if (command && argumentOf(command)) {
-              openPicker(app, { commandId: id, anchorId: 'chat.composer' });
+              openPicker(app, { commandId: picked.id, anchorId: 'chat.composer' });
               return;
             }
-            void app.execute(id, undefined, 'palette');
+            void app.execute(picked.id, undefined, 'palette');
           }}
           onSubmit={(value: string) => { controller.send(value); setRecall(history.length + 1); }}
           onCancel={() => app.focus.focus('chat.transcript')}
@@ -524,9 +589,23 @@ export const NewSessionScreen: (props: Record<string, never>) => RenderOutput =
           onOption={(option, anchorId) => {
             if (option.commandId) openPicker(app, { commandId: option.commandId, anchorId });
           }}
-          commands={app.commands.list({ slot: 'palette', enabledOnly: true })
-            .map((command) => ({ id: command.id, title: command.title, ...(command.description ? { description: command.description } : {}) }))}
+          // Ours only. There is no session yet, so there is nothing that has
+          // been handed a skill - and a menu that offered one would be
+          // offering something with nowhere to send it.
+          commands={slashCommands(app, [])}
           onChange={(value: string) => app.store.set(DRAFT, value)}
+          // Chosen here rather than sent. Without this the menu listed the
+          // client's own commands and pressing enter on one created a session
+          // whose first message was the literal text `/theme`.
+          onCommand={(picked: SlashCommand) => {
+            app.store.set(DRAFT, '');
+            const command = app.commands.get(picked.id);
+            if (command && argumentOf(command)) {
+              openPicker(app, { commandId: picked.id, anchorId: 'chat.composer' });
+              return;
+            }
+            void app.execute(picked.id, undefined, 'palette');
+          }}
           // The message *is* the session. Nothing is created until there is
           // something to say, which is why there is no Start button to leave
           // pressed by mistake - and why the provider being lazy costs nothing:
@@ -563,17 +642,202 @@ export const NewSessionScreen: (props: Record<string, never>) => RenderOutput =
 
 // ----------------------------------------------------------------- 4. changes
 
+/**
+ * The changeset, and one file out of it.
+ *
+ * Two states of one screen rather than two screens, because opening a file is
+ * not somewhere you navigate to: escape goes back to the list and then out,
+ * the way it does everywhere else here. Which file is in the store so that
+ * leaving for the conversation and coming back arrives where it was.
+ *
+ * The content is fetched when a row opens and never before. A changeset is a
+ * list of names the host sends up front and a pile of bytes it does not, and
+ * a screen that read both together would download a session's whole diff to
+ * draw a list of filenames.
+ */
 export const ChangesScreen: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('ChangesScreen', () => {
     const app = useApp();
-    const changes = useStoreValue<Changeset>(CHANGES, { status: 'complete', files: [] });
+    const controller = useRequiredService(CONTROLLER);
+    const changes = useStoreValue<Changeset>(CHANGES, { status: 'complete', files: [] })
+      ?? { status: 'complete', files: [] };
+    const open = useStoreValue<string | null>(OPEN_FILE, null) ?? null;
     const session = openSession(app.store);
+    const file = changes.files.find((found) => found.uri === open) ?? null;
+
+    const [loaded, setLoaded] = useState<{
+      uri: string; before: string; after: string; binary?: { bytes: number; contentType?: string };
+    } | null>(null);
+    const [failure, setFailure] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (!file) { setLoaded(null); setFailure(null); return; }
+      // Both sides at once. They are two fetches and one answer, and rendering
+      // half a diff while the other half is in flight makes every line of a
+      // file look added for as long as the second request takes.
+      let live = true;
+      setLoaded(null);
+      setFailure(null);
+      const side = async (ref: ContentRef | undefined): Promise<FileContent> =>
+        (ref ? controller.content(ref) : { text: '' });
+      void Promise.all([side(file.content?.before), side(file.content?.after)])
+        .then(([before, after]) => {
+          if (!live) return;
+          setLoaded({
+            uri: file.uri,
+            before: before.text,
+            after: after.text,
+            ...(before.binary ?? after.binary
+              ? { binary: (before.binary ?? after.binary) as { bytes: number; contentType?: string } }
+              : {}),
+          });
+        })
+        .catch((error: unknown) => {
+          if (!live) return;
+          // The host's own words. A blank pane over a ref that expired is the
+          // client looking broken for something the host said plainly.
+          setFailure(error instanceof Error ? error.message : String(error));
+        });
+      return () => { live = false; };
+    }, [file?.uri ?? '']);
+
+    const title = `Changes ${session ? `- ${session.title}` : ''}`;
+
+    if (file) {
+      const kind = !file.before ? 'new' : !file.after ? 'deleted' : 'edited';
+      return (
+        <Panel title={title} flex={1}>
+          {failure !== null ? (
+            <EmptyState title="The host would not send it" message={failure} flex={1} />
+          ) : !loaded ? (
+            <EmptyState title="Reading the file" flex={1} />
+          ) : (
+            <FileDiff
+              path={file.uri.replace(/^file:\/\//, '')}
+              kind={kind}
+              diff={diffLines(loaded.before, loaded.after)}
+              {...(loaded.binary ? { binary: loaded.binary } : {})}
+              flex={1}
+            />
+          )}
+        </Panel>
+      );
+    }
 
     return (
-      <Panel title={`Changes ${session ? `- ${session.title}` : ''}`} flex={1}>
-        <ChangesList changes={changes ?? { status: 'complete', files: [] }} flex={1} />
+      <Panel title={title} flex={1}>
+        <ChangesList
+          changes={changes}
+          onOpen={(uri: string) => app.store.set(OPEN_FILE, uri)}
+          flex={1}
+        />
       </Panel>
     );
+  });
+
+// ------------------------------------------------------------------ 7. skills
+
+/**
+ * What the host handed this session, in two panels.
+ *
+ * Two rather than one with a filter, because they answer different questions.
+ * "What can I ask for" is a list of skills and prompts and it is read while
+ * composing; "why is that tool missing" is a list of MCP servers and their
+ * states and it is read when something did not work. A single list sorted by
+ * kind makes each of those a scroll past the other.
+ */
+function useCustomizations(): { items: Customization[]; loading: boolean } {
+  const app = useApp();
+  const controller = useRequiredService(CONTROLLER);
+  const uri = useStoreValue<string>(OPEN, '') ?? '';
+  const items = useStoreValue<Customization[] | null>(CUSTOMIZATIONS, null);
+
+  useEffect(() => {
+    if (!uri) return;
+    void controller.customizations(uri)
+      .then((found) => app.store.set(CUSTOMIZATIONS, found))
+      .catch((error: unknown) => controller.report(error));
+  }, [uri]);
+
+  return { items: items ?? [], loading: items === null };
+}
+
+/** A panel over one slice of the list, with the switch on each row live. */
+function CustomizationPanel(props: {
+  title: string;
+  scopeId: string;
+  empty: { title: string; message: string };
+  keep(item: Customization): boolean;
+}): RenderOutput {
+  const app = useApp();
+  const controller = useRequiredService(CONTROLLER);
+  const uri = useStoreValue<string>(OPEN, '') ?? '';
+  const { items, loading } = useCustomizations();
+  const shown = items.filter(props.keep);
+
+  if (!uri) {
+    return <EmptyState title="No session open" message="Open one from the catalogue." flex={1} />;
+  }
+  if (loading) return <EmptyState title="Asking the host" flex={1} />;
+  if (shown.length === 0) {
+    return <EmptyState title={props.empty.title} message={props.empty.message} flex={1} />;
+  }
+
+  return (
+    <Panel title={props.title} flex={1}>
+      <CustomizationList
+        items={shown}
+        autoFocus
+        focusId="customizations.list"
+        onToggle={(item: Customization) => {
+          controller.setCustomizationEnabled(uri, item.id, !item.enabled);
+          // Answered locally as well as dispatched. The host tells every
+          // client when it has decided, but the row under the cursor should
+          // not sit on the old answer while that arrives.
+          app.store.set(CUSTOMIZATIONS, items.map((found) => (
+            found.id === item.id ? { ...found, enabled: !item.enabled }
+              : found.from === item.name ? { ...found, enabled: !item.enabled }
+                : found
+          )));
+        }}
+        flex={1}
+      />
+    </Panel>
+  );
+}
+
+export const SkillsScreen: (props: Record<string, never>) => RenderOutput =
+  defineComponent<Record<string, never>>('SkillsScreen', () => {
+    useFocusScope({ id: SKILLS_SCOPE });
+    return CustomizationPanel({
+      title: 'Skills and commands',
+      scopeId: SKILLS_SCOPE,
+      empty: {
+        title: 'Nothing contributed',
+        message: 'No plugin or directory gave this session a skill, a prompt or an agent.',
+      },
+      // The containers too, because turning a plugin off is how you turn off
+      // the six skills it brought, and a list of only the leaves offers six
+      // switches where the host has one.
+      keep: (item) => item.kind === 'skill' || item.kind === 'prompt' || item.kind === 'agent'
+        || item.kind === 'plugin' || item.kind === 'directory',
+    });
+  });
+
+// --------------------------------------------------------------------- 8. mcp
+
+export const McpScreen: (props: Record<string, never>) => RenderOutput =
+  defineComponent<Record<string, never>>('McpScreen', () => {
+    useFocusScope({ id: MCP_SCOPE });
+    return CustomizationPanel({
+      title: 'MCP servers',
+      scopeId: MCP_SCOPE,
+      empty: {
+        title: 'No MCP servers',
+        message: 'This session was given none, by the host or by a plugin.',
+      },
+      keep: (item) => item.kind === 'mcpServer',
+    });
   });
 
 // ---------------------------------------------------------------- 5. settings

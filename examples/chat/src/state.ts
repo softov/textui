@@ -22,6 +22,17 @@ export const SESSIONS = '$/chat/sessions' as BindingPath;
 export const TURNS = '$/chat/conv/turns' as BindingPath;
 export const INPUT = '$/chat/conv/input' as BindingPath;
 export const CHANGES = '$/chat/conv/changes' as BindingPath;
+/**
+ * What the host handed the open session: plugins, skills, MCP servers.
+ *
+ * On the conversation rather than the catalogue, because that is where the
+ * protocol puts it - two sessions on the same host, opened in different
+ * directories, are given different skills, so there is no host-wide answer to
+ * cache. Read when a panel that shows them opens.
+ */
+export const CUSTOMIZATIONS = '$/chat/conv/customizations' as BindingPath;
+/** Which file of the changeset is open, by uri. Null is the list. */
+export const OPEN_FILE = '$/chat/conv/file' as BindingPath;
 export const STATUS = '$/chat/conv/status' as BindingPath;
 /**
  * Is there a turn to stop, as a `when` clause can ask it.

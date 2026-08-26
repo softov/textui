@@ -8,13 +8,16 @@ import type {
 import { createBag, serviceKey } from '@textui/core';
 import { confirm } from '@textui/widgets';
 import type { HostConnection } from './ahp/connection.js';
-import type { Agent, Answer, SessionConfig, SessionDetail, SessionUri, Turn } from './ahp/types.js';
+import type {
+  Agent, Answer, ContentRef, Customization, FileContent, SessionConfig, SessionDetail,
+  SessionUri, Turn,
+} from './ahp/types.js';
 import { SessionFlag } from './ahp/types.js';
 import { valueIcon } from './view/icons.js';
 import {
-  ARCHIVED, CHAT_URI, DRAFT, EXPANDED, FILTER, HOST, HOST_ERROR, INPUT, MODEL, OPEN, PROVIDER,
-  MARKDOWN, QUEUE, RUNNING, SCREEN, SELECTED, SETTINGS, SIDEBAR, SPLIT_AT, SPLIT_DEFAULT, TURNS,
-  WORKSPACE,
+  ARCHIVED, CHAT_URI, CUSTOMIZATIONS, DRAFT, EXPANDED, FILTER, HOST, HOST_ERROR, INPUT, MODEL,
+  OPEN, OPEN_FILE, PROVIDER, MARKDOWN, QUEUE, RUNNING, SCREEN, SELECTED, SETTINGS, SIDEBAR,
+  SPLIT_AT, SPLIT_DEFAULT, TURNS, WORKSPACE,
   applyEvent, pendingInput, queue, sessions, turns, writeSessions, writeStatus,
 } from './state.js';
 
@@ -64,6 +67,12 @@ export interface Controller {
   /** The session channel's own state: its chat, its lifecycle, its settings. */
   detail(uri: SessionUri): Promise<SessionDetail>;
   config(uri: SessionUri): Promise<SessionConfig>;
+  /** What the host handed this session: plugins, skills, MCP servers. */
+  customizations(uri: SessionUri): Promise<Customization[]>;
+  /** Turn one on or off. The host decides and tells everyone watching. */
+  setCustomizationEnabled(uri: SessionUri, id: string, enabled: boolean): void;
+  /** One file out of a changeset, fetched. Nothing calls it until a row opens. */
+  content(ref: ContentRef): Promise<FileContent>;
   /**
    * What the host will answer questions about, here and now.
    *
@@ -99,6 +108,8 @@ export const settingCommand = (key: string): string => `compose.set.${key}`;
  */
 export const SESSIONS_SCOPE = 'chat.sessions';
 export const CHAT_SCOPE = 'chat.conversation';
+export const SKILLS_SCOPE = 'chat.skills';
+export const MCP_SCOPE = 'chat.mcp';
 
 export function createController(
   app: TextUIApp,
@@ -289,6 +300,12 @@ export function createController(
       app.store.set(OPEN, uri);
       app.store.set(TURNS, []);
       app.store.set(INPUT, null);
+      // Null rather than empty: the skills are this session's, and two
+      // sessions on the same host in different directories are handed
+      // different ones. An empty list would say "the host gave it none",
+      // which is an answer, and this is "nobody has asked yet".
+      app.store.set(CUSTOMIZATIONS, null);
+      app.store.set(OPEN_FILE, null);
       subscription = host.subscribe(uri, (event) => {
         model = applyEvent(app.store, event, model);
         // The open session's own status still refreshes the list here: the
@@ -323,6 +340,8 @@ export function createController(
       app.store.set(OPEN, null);
       app.store.set(TURNS, []);
       app.store.set(INPUT, null);
+      app.store.set(CUSTOMIZATIONS, null);
+      app.store.set(OPEN_FILE, null);
       // Idle, because nothing is open. A status that outlived the conversation
       // it described is a header saying "running" over an empty screen.
       writeStatus(app.store, 1);
@@ -424,6 +443,9 @@ export function createController(
     agents: () => host.agents(),
     detail: (uri) => host.detail(uri),
     config: (uri) => host.config(uri),
+    customizations: (uri) => host.customizations(uri),
+    setCustomizationEnabled: (uri, id, enabled) => host.setCustomizationEnabled(uri, id, enabled),
+    content: (ref) => host.content(ref),
 
     async settings() {
       const uri = app.store.get<SessionUri>(OPEN) ?? null;
@@ -609,7 +631,38 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       description: 'Show the files',
       slots: ['palette'],
       when: `${OPEN}`,
-      run: () => app.screens.push('changes'),
+      // Always the list, never wherever it was left. A screen that reopens on
+      // the one file somebody read an hour ago hides the other nineteen.
+      run: () => { app.store.set(OPEN_FILE, null); app.screens.push('changes'); },
+    },
+    {
+      id: 'go.skills',
+      title: 'Skills and commands',
+      category: 'Screens',
+      description: 'What plugins and directories gave this session',
+      slots: ['palette'],
+      when: `${OPEN}`,
+      run: () => app.screens.push('skills'),
+    },
+    {
+      id: 'go.mcp',
+      title: 'MCP servers',
+      category: 'Screens',
+      description: 'Which servers this session has, and whether they answered',
+      slots: ['palette'],
+      when: `${OPEN}`,
+      run: () => app.screens.push('mcp'),
+    },
+    {
+      id: 'changes.close',
+      title: 'Back to the file list',
+      category: 'Screens',
+      description: 'Close the open file',
+      // Not in the palette: it is what escape does on one screen, and a
+      // palette entry for it would be offering "go back" as a command.
+      slots: [],
+      when: `${OPEN_FILE}`,
+      run: () => app.store.set(OPEN_FILE, null),
     },
     {
       id: 'go.settings',
@@ -1058,6 +1111,7 @@ function keys(): {
   scopeId?: string;
   when?: string;
   args?: Record<string, unknown>;
+  priority?: number;
 }[] {
   return [
     // Global: nothing types these, so they are safe wherever focus is.
@@ -1102,6 +1156,11 @@ function keys(): {
     { keys: 'u', commandId: 'session.read', scopeId: SESSIONS_SCOPE },
     { keys: 'x', commandId: 'session.toggleArchived', scopeId: SESSIONS_SCOPE },
     { keys: 'd', commandId: 'session.dispose', scopeId: SESSIONS_SCOPE },
+    // The key somebody reaches for without being told, beside the letter they
+    // had to be. Both, because `delete` is the guess and `d` is what the
+    // footer has room to name. It confirms either way - ending somebody
+    // else's conversation is not an undo.
+    { keys: 'delete', commandId: 'session.dispose', scopeId: SESSIONS_SCOPE },
     { keys: '/', commandId: 'session.filter', scopeId: SESSIONS_SCOPE },
     // Scoped, not global, and after the focused node has had its turn: while
     // the filter box has the keyboard these two are caret movement, and the
@@ -1114,5 +1173,22 @@ function keys(): {
     { keys: 'c', commandId: 'go.changes', scopeId: CHAT_SCOPE },
     { keys: 's', commandId: 'go.settings', scopeId: CHAT_SCOPE },
     { keys: 't', commandId: 'chat.stop', scopeId: CHAT_SCOPE },
+    { keys: 'k', commandId: 'go.skills', scopeId: CHAT_SCOPE },
+    { keys: 'p', commandId: 'go.mcp', scopeId: CHAT_SCOPE },
+
+    /**
+     * An open file closes before the screen does.
+     *
+     * Two bindings on `escape`, and the priority is what decides between
+     * them rather than the order they happen to be written in - the registry
+     * sorts by priority and leaves ties in insertion order, which is a rule
+     * about this array that nothing in this array says.
+     *
+     * The clause is on the binding as well as on the command, for the reason
+     * given above `ctrl+c`: a binding that matches has handled the key even
+     * when the command declines, so an escape with no file open would be
+     * swallowed here and never reach `go.back`.
+     */
+    { keys: 'escape', commandId: 'changes.close', when: `${OPEN_FILE}`, priority: 10 },
   ];
 }

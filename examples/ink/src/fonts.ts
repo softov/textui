@@ -22,6 +22,8 @@
  * proportional rather than a fixed pitch.
  */
 
+import { GARD } from './gard.js';
+
 type Grid = string[];
 
 /**
@@ -525,6 +527,15 @@ export const FONTS: Font[] = [
     cases: 'both',
   },
   {
+    id: 'gard',
+    title: 'gard',
+    note: 'Quotes, pipes and dots, transcribed glyph for glyph - the only font here with two cases of its own rather than a fold, and the only one with letters that hang below the baseline.',
+    glyphs: GARD,
+    tracking: 1,
+    space: 3,
+    cases: 'both',
+  },
+  {
     id: 'tmplt',
     title: 'tmplt',
     note: 'Three rows of heavy box-drawing, transcribed capital for capital. One case, and the only font here with nothing to fall back to on an ascii terminal - it borrows mini there.',
@@ -579,15 +590,23 @@ function widthOf(font: Font, char: string): number {
   return char === ' ' || !glyph ? font.space : (glyph[0] as string).length;
 }
 
-/** Blank edge columns removed, so a `1` is narrow and an `M` is wide. */
+/**
+ * Blank edge columns removed, so a `1` is narrow and an `M` is wide.
+ *
+ * The width is the widest row and not the first one. A table written by hand
+ * has rows of whatever length they happened to be typed at, and `gard` has a
+ * blank first row on every letter - so taking row zero's length trimmed every
+ * one of them to nothing at all.
+ */
 function trim(rows: Grid): Grid {
-  const width = (rows[0] as string).length;
+  const width = rows.reduce((w, row) => Math.max(w, row.length), 0);
+  const padded = rows.map((row) => row.padEnd(width, ' '));
   let start = 0;
   let end = width - 1;
-  const blank = (x: number): boolean => rows.every((row) => row[x] === ' ');
+  const blank = (x: number): boolean => padded.every((row) => row[x] === ' ');
   while (start < width && blank(start)) start++;
   while (end >= start && blank(end)) end--;
-  return rows.map((row) => row.slice(start, end + 1));
+  return padded.map((row) => row.slice(start, end + 1));
 }
 
 /**

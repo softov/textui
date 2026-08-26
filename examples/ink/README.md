@@ -54,7 +54,7 @@ The first two are data and would survive being written in a JSON screen. The
 third would not, and that is the trade: it is the same one `canvas` makes with
 `draw`.
 
-## Nine fonts, three tables
+## Ten fonts, four tables
 
 `block` is hand-drawn: five rows, one cell to a stroke, and **both cases on one
 baseline** - lowercase sits on the bottom four rows and the ascenders reach up
@@ -62,7 +62,7 @@ into the fifth, so a cap is visibly taller than an x. Nothing descends below
 the baseline, because five rows is not enough to put a tail under a `g` and
 keep the line spacing honest, so `g` and `y` hook left instead.
 
-Six of the nine are that table, transformed - which is the other thing worth
+Six of the ten are that table, transformed - which is the other thing worth
 showing: a bitmap font is a grid of characters, and a grid of characters can be
 sheared, doubled, halved or re-inked in about fifteen lines. None of them can
 lose a case, because the table has both.
@@ -83,7 +83,23 @@ that needs a character the theme has no name for - there is no token for half a
 cell - so it is also the only place this example asks what the terminal can
 show, and on an ascii one it is drawn in `"` and `_` instead.
 
-`tmplt` is the second table: **three rows of heavy box-drawing**, transcribed
+`gard` is the second table, and the biggest: **sixty-two glyphs of quotes,
+pipes and dots**, transcribed from a font Softov brought. It is the only one
+here with two cases of its own rather than a fold, and the only one whose
+letters hang below the baseline - `J`, `g`, `j`, `p`, `q` and `y` all do. Every
+glyph is stored nine rows tall so they agree where that baseline is; `banner`
+trims the blank rows off a finished line, so a line of capitals comes out five
+rows, one with a `g` in it six, and one with a digit seven.
+
+Two things about it are worth knowing. **Its digits are not in the same hand as
+its letters** - a script numeral beside a pipe-and-quote capital is what the
+source has, and inventing a matching set would be replacing the font rather
+than transcribing it. All that was edited is where they sit: they were two rows
+lower than the letters, so `Gard 42` had its number sunk below its word. And
+**it has no punctuation**, because the source had none - a `!` renders as the
+gap any unknown character does.
+
+`tmplt` is the third table: **three rows of heavy box-drawing**, transcribed
 capital for capital from a font Softov brought - which is why its `X` is four
 cells wide and its `I` is one, and why they are not going to be tidied into a
 grid. Its digits and punctuation are drawn to match rather than transcribed,
@@ -91,7 +107,7 @@ because the source had none. It is also the only font here with nothing to
 degrade to: box-drawing has no `#` the way a block does, so on an ascii
 terminal it borrows `mini` - the same three rows, in characters a teletype has.
 
-`mini` is the third table: **three rows, drawn in strokes rather than in
+`mini` is the fourth table: **three rows, drawn in strokes rather than in
 cells.** Three rows of solid cells cannot hold an alphabet - at that size a
 solid `A` and a solid `M` are the same three-by-three block, and so are `G` and
 `O`. The way out is the one every small figlet font takes: stop filling cells

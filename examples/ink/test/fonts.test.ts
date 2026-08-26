@@ -104,6 +104,37 @@ describe('the transforms', () => {
     expect(drawn.replace(/[* \n]/g, '')).toBe('');
   });
 
+  it('draws gard with two cases of its own, and a real descender', () => {
+    const gard = fontAt('gard');
+    expect(gard.cases).toBe('both');
+    // Nine rows in the table so every glyph agrees where the baseline is, but
+    // a line of capitals is five: `banner` trims the blank rows off a finished
+    // line, and capitals do not use the two above or the two below.
+    expect(heightOf(gard)).toBe(9);
+    expect(rows('ABC', gard)).toHaveLength(5);
+    // A descender is not a taller letter, it is a letter sitting lower - `g`
+    // on its own is five rows like any other, and only shows what it does when
+    // there is a capital beside it to be lower *than*.
+    expect(rows('ggg', gard)).toHaveLength(5);
+    expect(rows('Ag', gard)).toHaveLength(6);
+    // And a digit is drawn from two rows higher, so it shows the same way at
+    // the other end.
+    expect(rows('A4', gard)).toHaveLength(7);
+  });
+
+  it('has every letter of both cases and every digit in gard', () => {
+    const gard = fontAt('gard');
+    const seen = new Map<string, string>();
+    for (const char of 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') {
+      const drawn = banner(char, gard);
+      expect(drawn, char).not.toBe('');
+      // Two glyphs collapsing into one is the mistake a transcription of
+      // sixty-two makes, and nothing else here would notice.
+      expect(seen.get(drawn), `${char} is the same as ${seen.get(drawn) ?? ''}`).toBeUndefined();
+      seen.set(drawn, char);
+    }
+  });
+
   it('draws tmplt from the transcribed table, with every capital distinct', () => {
     const tmplt = fontAt('tmplt');
     expect(heightOf(tmplt)).toBe(3);

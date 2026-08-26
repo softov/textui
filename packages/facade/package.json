@@ -1,6 +1,6 @@
 {
   "name": "@textui/kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "One install for TextUI - the runtime, a terminal, and render",
   "keywords": [
     "terminal",

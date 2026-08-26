@@ -1,6 +1,6 @@
 {
   "name": "@textui/widgets",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The TextUI component catalog - layout, display, controls, data, overlays and charts",
   "keywords": [
     "terminal",

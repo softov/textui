@@ -1,6 +1,6 @@
 {
   "name": "@textui/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TextUI developer CLI - init, add, create, doctor - and primitives for building your own",
   "keywords": [
     "terminal",

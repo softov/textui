@@ -148,7 +148,7 @@ const REST: Record<string, string> = {
   '|': '#|#|#|#|#',
   '}': '##  |  # |  ##|  # |##  ',
   '~': '     | ##  |#  ##|     |     ',
-  _: '    |    |    |    |####',
+  '_': '    |    |    |    |####',
 };
 
 /** The one hand-drawn table: every glyph, in both cases. */
@@ -221,7 +221,7 @@ const MINI: Record<string, Grid> = {
   "'": ['| ', '  ', '  '],
   '(': [' /', '| ', ' \\'],
   ')': ['\\ ', ' |', '/ '],
-  _: ['   ', '   ', '___'],
+  '_': ['   ', '   ', '___'],
 
   // The rest of printable ascii, in the same strokes. `$ % & @` are not here:
   // at three rows there is no stroke that says "dollar" rather than "S with a
@@ -309,9 +309,7 @@ const TMPLT: Record<string, Grid> = {
   "'": ["┃", " ", " "],
   '(': ["┏", "┃", "┗"],
   ')': ["┓", "┃", "┛"],
-  // `[` and `]` are the square pair: same strokes, drawn with the corner
-  // turned the other way, so they are not the round pair over again.
-  _: ["  ", "  ", "━━"],
+  '_': ["  ", "  ", "━━"],
 
   // Also drawn to match. `$ % & @ *` are left out: box-drawing has no stroke
   // for any of them, and a `╋` standing in for a `*` is a plus sign lying.
@@ -319,6 +317,8 @@ const TMPLT: Record<string, Grid> = {
   '#': ["╋╋", "╋╋", "  "],
   '<': [" ┏", "┫ ", " ┗"],
   '>': ["┓ ", " ┣", "┛ "],
+  // The square pair takes a bar off each corner, so it is not the round pair
+  // drawn a second time - which is what it was until a test said so.
   '[': ["┏━", "┃ ", "┗━"],
   ']': ["━┓", " ┃", "━┛"],
   '{': ["┏", "┫", "┗"],

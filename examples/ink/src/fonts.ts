@@ -178,7 +178,7 @@ const MINI: Record<string, Grid> = {
   R: [' _ ', '|_)', '| \\'],
   S: [' _ ', '(_ ', '._)'],
   T: ['___', ' | ', ' | '],
-  U: ['   ', '| |', '|_|'],
+  U: ['   ', '| |', '╰─╯'],
   V: ['    ', '\\  /', ' \\/ '],
   W: ['    ', '|  |', '|\\/|'],
   X: ['   ', '\\ /', '/ \\'],
@@ -210,6 +210,74 @@ const MINI: Record<string, Grid> = {
   _: ['   ', '   ', '___'],
 };
 
+
+/**
+ * A third table: three rows of heavy box-drawing.
+ *
+ * The capitals are transcribed from a font Softov brought, character for
+ * character - which is why `X` is four cells wide and `I` is one, and why they
+ * are not going to be tidied into a grid. The digits and the punctuation are
+ * drawn to match rather than transcribed, because the source had none.
+ *
+ * One case, and it is the only font here that cannot be drawn at all on an
+ * ascii terminal - box-drawing has no `#` to fall back to the way a block does,
+ * so this one names `mini` as what to use instead. Same three rows, same
+ * stroke-drawn idea, characters a teletype could manage.
+ */
+const TMPLT: Record<string, Grid> = {
+  A: ["┏┓", "┣┫", "┛┗"],
+  B: ["┳┓", "┣┫", "┻┛"],
+  C: ["┏┓", "┃ ", "┗┛"],
+  D: ["┳┓", "┃┃", "┻┛"],
+  E: ["┏┓", "┣ ", "┗┛"],
+  F: ["┏┓", "┣ ", "┻ "],
+  G: ["┏┓", "┃┓", "┗┛"],
+  H: ["┓┏", "┣┫", "┛┗"],
+  I: ["┳", "┃", "┻"],
+  J: ["┏┳", " ┃", "┗┛"],
+  K: ["┓┏┓", "┃┫ ", "┛┗┛"],
+  L: ["┓ ", "┃ ", "┗┛"],
+  M: ["┳┳┓", "┃┃┃", "┛ ┗"],
+  N: ["┳┓", "┃┃", "┛┗"],
+  O: ["┏┓", "┃┃", "┗┛"],
+  P: ["┏┓", "┃┃", "┣┛"],
+  Q: ["┏┓", "┃┃", "┗┻"],
+  R: ["┳┓", "┣┫", "┛┗"],
+  S: ["┏┓", "┗┓", "┗┛"],
+  T: ["┏┳┓", " ┃ ", " ┻ "],
+  U: ["┳┳", "┃┃", "┗┛"],
+  V: ["┓┏", "┃┃", "┗┛"],
+  W: ["┓ ┏", "┃┃┃", "┗┻┛"],
+  X: ["┏┓┏┓", " ┃┃ ", "┗┛┗┛"],
+  Y: ["┓┏", "┗┫", "┗┛"],
+  Z: ["┏┓", "┏┛", "┗┛"],
+  // Drawn to match, not transcribed. `0` keeps `O`'s shape, which is what a
+  // font this small usually does with them.
+  0: ["┏┓", "┃┃", "┗┛"],
+  1: [" ┓", " ┃", " ┻"],
+  2: ["┏┓", "┏┛", "┗┻"],
+  3: ["┏┓", " ┫", "┗┛"],
+  4: ["┓┏", "┗╋", " ┃"],
+  5: ["┏┳", "┗┓", "┗┛"],
+  6: ["┏┓", "┣┓", "┗┛"],
+  7: ["┳┳", " ┃", " ┛"],
+  8: ["┏┓", "┣┫", "┗┛"],
+  9: ["┏┓", "┗┫", "┗┛"],
+  '.': [" ", " ", "•"],
+  ',': [" ", "•", "┛"],
+  ':': [" ", "•", "•"],
+  ';': [" ", "•", "┛"],
+  '!': ["┃", "┃", "•"],
+  '?': ["┏┓", " ┛", " •"],
+  '-': ["  ", "━━", "  "],
+  '+': ["  ", "╋ ", "  "],
+  '=': ["  ", "━━", "━━"],
+  '/': [" ┏", "┏┛", "┛ "],
+  "'": ["┃", " ", " "],
+  '(': ["┏", "┃", "┗"],
+  ')': ["┓", "┃", "┛"],
+  _: ["  ", "  ", "━━"],
+};
 
 // ------------------------------------------------------------- transforms
 
@@ -381,6 +449,15 @@ export interface Font {
    * rows there is no room under a cap for an x-height.
    */
   cases: 'both' | 'folded';
+  /**
+   * The font to draw instead where this one's characters do not exist.
+   *
+   * Only `tmplt` needs one. Every other font here is made of placeholders the
+   * theme fills in, or of characters a teletype has - box-drawing is neither,
+   * and there is no `#` to downgrade a `┏` to. So it names a stand-in of the
+   * same height rather than putting a row of question marks on the screen.
+   */
+  fallback?: string;
 }
 
 export const FONTS: Font[] = [
@@ -446,6 +523,16 @@ export const FONTS: Font[] = [
     tracking: 2,
     space: 4,
     cases: 'both',
+  },
+  {
+    id: 'tmplt',
+    title: 'tmplt',
+    note: 'Three rows of heavy box-drawing, transcribed capital for capital. One case, and the only font here with nothing to fall back to on an ascii terminal - it borrows mini there.',
+    glyphs: TMPLT,
+    tracking: 1,
+    space: 2,
+    cases: 'folded',
+    fallback: 'mini',
   },
   {
     id: 'mini',

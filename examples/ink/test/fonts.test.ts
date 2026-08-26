@@ -104,6 +104,31 @@ describe('the transforms', () => {
     expect(drawn.replace(/[* \n]/g, '')).toBe('');
   });
 
+  it('draws tmplt from the transcribed table, with every capital distinct', () => {
+    const tmplt = fontAt('tmplt');
+    expect(heightOf(tmplt)).toBe(3);
+    const seen = new Map<string, string>();
+    for (const cap of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+      const drawn = banner(cap, tmplt);
+      expect(drawn, cap).not.toBe('');
+      // A transcription is easy to fat-finger into two letters that are the
+      // same glyph, and nothing else here would notice.
+      expect(seen.get(drawn), `${cap} is the same as ${seen.get(drawn) ?? ''}`).toBeUndefined();
+      seen.set(drawn, cap);
+    }
+    for (const digit of '0123456789') expect(banner(digit, tmplt), digit).not.toBe('');
+  });
+
+  it('gives tmplt a stand-in for the terminal that cannot draw it', () => {
+    // Box-drawing has no `#` to degrade to, so this is the one font that names
+    // another rather than a character.
+    const tmplt = fontAt('tmplt');
+    expect(tmplt.fallback).toBe('mini');
+    expect(heightOf(fontAt(tmplt.fallback as string))).toBe(heightOf(tmplt));
+    // And every other font stands on its own.
+    expect(FONTS.filter((f) => f.fallback !== undefined).map((f) => f.id)).toEqual(['tmplt']);
+  });
+
   it('draws mini in strokes rather than in cells, so three rows can hold an alphabet', () => {
     const mini = fontAt('mini');
     expect(heightOf(mini)).toBe(3);

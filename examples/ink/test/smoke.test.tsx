@@ -191,6 +191,16 @@ describe('the ink example', () => {
       expect(t.text(), row).toContain(row);
     }
     expect(t.text()).not.toContain('▀');
+
+    // `tmplt` is box-drawing, which an ascii terminal has none of, so it draws
+    // its stand-in instead - the same three rows in characters a teletype has.
+    t.app.store.set(FONT, 'tmplt');
+    await t.settle();
+    expect(t.errors()).toEqual([]);
+    expect(t.text()).not.toContain('┏');
+    for (const row of banner('T', fontAt('mini'), ASCII_PEN).split('\n')) {
+      expect(t.text(), row).toContain(row);
+    }
     await t.unmount();
   });
 });

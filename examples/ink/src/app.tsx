@@ -54,7 +54,11 @@ const Subject = defineComponent<Record<string, never>>('InkSubject', () => {
   const plain = useStoreValue<boolean>(PLAIN, false) ?? false;
   const wrap = useStoreValue<boolean>(WRAP, true) ?? true;
   const preset = presetAt(useStoreValue<string>(PRESET, FIRST_INK) ?? FIRST_INK);
-  const font = fontAt(useStoreValue<string>(FONT, FIRST_FONT) ?? FIRST_FONT);
+  // The font that was picked, or its stand-in where the terminal cannot draw
+  // it. `tmplt` is box-drawing and there is no ascii character a `┏` degrades
+  // to, so it borrows one of the same height rather than drawing nothing.
+  const picked = fontAt(useStoreValue<string>(FONT, FIRST_FONT) ?? FIRST_FONT);
+  const font = !unicode && picked.fallback ? fontAt(picked.fallback) : picked;
 
   // What the panel gave this last frame. A banner cannot wrap the way a
   // paragraph does - a line of block letters cut at column sixty is a line of
@@ -132,6 +136,9 @@ const Swatch = defineComponent<{ width: number }>('InkSwatch', ({ width }) => {
 /** What the selected ink and font are doing, spelled out. */
 const Note = defineComponent<Record<string, never>>('InkNote', () => {
   const preset = presetAt(useStoreValue<string>(PRESET, FIRST_INK) ?? FIRST_INK);
+  // The font that was picked, not the one that got drawn. This line says what
+  // the reader chose; whether the terminal could manage it is the panel's
+  // business and it is already visible up there.
   const font = fontAt(useStoreValue<string>(FONT, FIRST_FONT) ?? FIRST_FONT);
   const plain = useStoreValue<boolean>(PLAIN, false) ?? false;
 

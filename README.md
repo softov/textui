@@ -43,9 +43,7 @@ await waitUntilExit();
   <img src="./media/print-theme-dark.svg" alt="TextUI dark theme" />
 </p>
 
-TextUI can go from a `small` interactive prompt to a full-screen terminal application.
-
-New line testing
+TextUI can go from a small interactive prompt to a full-screen terminal application.
 
 &rarr; **[Get started](docs/getting-started.md)** &rarr; **[Read the documentation](https://softov.github.io/textui/)**
 

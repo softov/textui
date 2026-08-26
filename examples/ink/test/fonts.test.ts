@@ -120,9 +120,13 @@ describe('the transforms', () => {
     // there is a capital beside it to be lower *than*.
     expect(rows('ggg', gard)).toHaveLength(5);
     expect(rows('Ag', gard)).toHaveLength(6);
-    // And a digit is drawn from two rows higher, so it shows the same way at
-    // the other end.
-    expect(rows('A4', gard)).toHaveLength(7);
+    // A digit is cap-height here rather than taller, so `A4` is the five rows
+    // a capital already was.
+    expect(rows('A4', gard)).toHaveLength(5);
+    // The two rows above the capitals are not spare, though - a bracket and a
+    // dollar reach into them, which is what makes them worth keeping in the
+    // table when a line of capitals never touches them.
+    expect(rows('A$', gard)).toHaveLength(7);
   });
 
   it('has every letter of both cases and every digit in gard', () => {

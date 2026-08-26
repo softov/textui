@@ -6,7 +6,7 @@ import type { BindingPath } from '../types/graph.js';
 import type { Disposable } from '../types/disposable.js';
 import { toDisposable } from '../util/disposable.js';
 import {
-  ancestorKeys, hasWildcard, isDescendantKey, matchKey, pathKey, PathError,
+  hasWildcard, isDescendantKey, keysTouch, matchKey, pathKey, PathError,
 } from '../util/paths.js';
 
 interface Subscription {
@@ -222,12 +222,7 @@ export class Store implements ReactiveStore {
 
   private subMatches(sub: Subscription, changedKey: string): boolean {
     if (sub.wildcard) return matchKey(changedKey, sub.key, sub.subtree);
-    if (sub.key === changedKey) return true;
-    // A write below an exact subscription still changes that object's contents.
-    if (isDescendantKey(changedKey, sub.key)) return true;
-    // A write above it may have replaced the subtree the subscriber reads.
-    if (isDescendantKey(sub.key, changedKey)) return true;
-    return sub.subtree && ancestorKeys(changedKey).includes(sub.key);
+    return keysTouch(changedKey, sub.key);
   }
 
   // ---------------------------------------------------------- subscriptions

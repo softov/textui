@@ -6,6 +6,14 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+### A subscription check that allocated on every miss
+
+`Store.notify` asks every subscription whether a write touches it, so the check runs per subscription per changed key - and its last clause built the changed key's whole ancestor list and scanned it. That clause could never say yes: `ancestorKeys(k).includes(subKey)` is the same set as `isDescendantKey(k, subKey)`, which had already returned `true` two lines above. So the array was built, scanned, and thrown away on every subscription a write did *not* touch, which is nearly all of them.
+
+`keysTouch(a, b)` is what is left - the relation is symmetric, and there is nothing to allocate. Around 2x on a screen's worth of subscriptions. `ancestorKeys` had no other caller and is gone.
+
+`layoutBox` partitioned its children with two `filter` passes, one per frame per box; it is one loop now.
+
 ### A catalogue is only as fresh as what it was last told
 
 The client subscribed to one session's channel and to nothing else, so a session appearing, finishing or starting to wait was invisible until somebody navigated away and came back - a reader doing by hand what the host had already said. `HostConnection.onSessions` is the catalogue moving, as opposed to one session's channel; the live client raises it from the root channel it was already draining for something else.

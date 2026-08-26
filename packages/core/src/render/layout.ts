@@ -465,8 +465,13 @@ function layoutBox(box: LayoutBox, rect: Rect): void {
     return;
   }
 
-  const flow = box.children.filter((c) => !isAbsolute(c) && !isHidden(c));
-  const absolute = box.children.filter((c) => isAbsolute(c) && !isHidden(c));
+  const flow: LayoutBox[] = [];
+  const absolute: LayoutBox[] = [];
+  for (const child of box.children) {
+    if (isHidden(child)) continue;
+    if (isAbsolute(child)) absolute.push(child);
+    else flow.push(child);
+  }
 
   if (flow.length > 0) layoutFlow(box, flow);
   for (const child of absolute) layoutAbsolute(box, child);

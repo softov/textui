@@ -51,7 +51,7 @@ export function segments(path: string): string[] {
  * Canonical map key for a path: segments joined, no sigil.
  *
  * The segments are re-escaped on the way out. Everything downstream - the
- * store's own walk, `ancestorKeys`, `matchKey` - splits a key on `/`, so a
+ * store's own walk, `keysTouch`, `matchKey` - splits a key on `/`, so a
  * segment that legitimately contains one (a URI used as a key, a filename with
  * a slash) has to stay escaped or it silently becomes several segments and the
  * value lands somewhere nobody looks.
@@ -98,23 +98,20 @@ export function parentKey(key: string): string | null {
   return i === -1 ? (key === '' ? null : '') : key.slice(0, i);
 }
 
-/** Every ancestor key of `key`, closest first, including `''` for the root. */
-export function ancestorKeys(key: string): string[] {
-  const out: string[] = [];
-  let cur = key;
-  for (;;) {
-    const p = parentKey(cur);
-    if (p === null) break;
-    out.push(p);
-    cur = p;
-    if (p === '') break;
-  }
-  return out;
-}
-
 export function isDescendantKey(key: string, ancestor: string): boolean {
   if (ancestor === '') return key !== '';
   return key.startsWith(ancestor + '/');
+}
+
+/**
+ * Whether two concrete keys can affect the same subscribed value.
+ *
+ * A write to a descendant changes the ancestor object a subscriber reads, and a
+ * write to an ancestor may replace the whole subtree below it. This relation is
+ * symmetric and avoids building ancestor lists in hot subscription checks.
+ */
+export function keysTouch(a: string, b: string): boolean {
+  return a === b || isDescendantKey(a, b) || isDescendantKey(b, a);
 }
 
 export function hasWildcard(path: string): boolean {

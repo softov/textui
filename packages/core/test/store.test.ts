@@ -69,6 +69,15 @@ describe('subscriptions', () => {
     expect(seen).toHaveBeenCalledTimes(1);
   });
 
+  it('fires when an ancestor write replaces the subscribed subtree', () => {
+    const store = createStore();
+    const seen = vi.fn();
+    store.subscribe('$/a/b', seen);
+    store.set('$/a', { b: 1 });
+    expect(seen).toHaveBeenCalledTimes(1);
+    expect(seen.mock.calls[0]![0]).toBe(1);
+  });
+
   it('fires a subtree subscriber for anything below', () => {
     const store = createStore();
     const seen = vi.fn();

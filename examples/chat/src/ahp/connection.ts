@@ -1,6 +1,6 @@
 import type {
-  Agent, Answer, Changeset, ContentRef, Customization, FileContent, PendingInput, SessionConfig,
-  SessionDetail, SessionSummary, SessionUri, ToolCall, Turn,
+  Agent, Answer, Changeset, ContentRef, Customization, FileContent, PendingInput, QueuedMessage,
+  SessionConfig, SessionDetail, SessionSummary, SessionUri, ToolCall, Turn,
 } from './types.js';
 
 /**
@@ -92,6 +92,18 @@ export interface HostConnection {
   /** Begin a turn. Any turn - this is not only how the first one starts. */
   say(uri: SessionUri, text: string, model?: string): void;
   stopTurn(uri: SessionUri): void;
+  /**
+   * Say it *after* the turn that is running.
+   *
+   * Not `say` with a wait in front of it. The queue is the host's - it starts
+   * the next turn from the head the moment it goes idle, and every client
+   * watching the chat sees the same list - so a client that held the message
+   * itself would be the only thing that could ever send it, and would not,
+   * because nothing in a client is watching for the turn to end.
+   */
+  queue(uri: SessionUri, text: string, model?: string): void;
+  /** Take one back, while it is still waiting. */
+  unqueue(uri: SessionUri, id: string): void;
 
   /** Answer a tool confirmation. */
   confirmToolCall(uri: SessionUri, toolCallId: string, approved: boolean, optionId?: string): void;
@@ -158,13 +170,15 @@ export interface HostConnection {
  * `chat/delta` to `appendToBubble` would have written the UI into the wire.
  */
 export type HostEvent =
-  | { type: 'snapshot'; turns: Turn[]; active?: Turn; input?: PendingInput; status: number }
+  | { type: 'snapshot'; turns: Turn[]; active?: Turn; input?: PendingInput; status: number; queued: QueuedMessage[] }
   | { type: 'turnStarted'; turn: Turn }
   | { type: 'delta'; partId: string; kind: 'markdown' | 'reasoning'; text: string }
   | { type: 'toolCall'; call: ToolCall }
   | { type: 'inputNeeded'; input: PendingInput }
   | { type: 'inputResolved' }
   | { type: 'turnComplete'; turn: Turn }
+  /** The whole queue, as the host now has it. */
+  | { type: 'queued'; messages: QueuedMessage[] }
   | { type: 'status'; status: number }
   | { type: 'changes'; changes: Changeset }
   /**

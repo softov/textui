@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { HostConnection, HostEvent } from './connection.js';
 import type {
   Agent, Answer, Changeset, ConfigProperty, ContentRef, Customization, CustomizationKind,
-  FileContent, FileEdit, McpState, PendingInput, Question, QuestionKind,
+  FileContent, FileEdit, McpState, PendingInput, QueuedMessage, Question, QuestionKind,
   ResponsePart, SessionConfig, SessionDetail, SessionSummary, SessionUri, ToolCall,
   ToolCallStatus, Turn,
 } from './types.js';
@@ -517,6 +517,21 @@ function customizations(value: unknown): Customization[] {
   return out;
 }
 
+/**
+ * The queue, as the host has it.
+ *
+ * `queuedMessages` is on the chat, so it arrives through the same reducer as
+ * everything else and needs no bookkeeping here - which is the point of
+ * queueing through the protocol rather than in the client: a message queued
+ * from an editor shows up in this list too.
+ */
+function queued(chat: Bag): QueuedMessage[] {
+  return list(chat.queuedMessages).map((entry) => {
+    const found = bag(entry);
+    return { id: str(found.id) ?? '', text: str(bag(found.message).text) ?? '' };
+  }).filter((message) => message.id !== '');
+}
+
 /** The typed answer the protocol wants, built from the question that was asked. */
 function answerValue(answer: Answer): unknown {
   return { state: 'submitted', value: { kind: answer.kind, value: answer.value } };
@@ -769,6 +784,7 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
           ...(active ? { active } : {}),
           ...(pendingInput(session, chat) ? { input: pendingInput(session, chat) as PendingInput } : {}),
           status: typeof session.status === 'number' ? session.status : 1,
+          queued: queued(chat),
         };
         observer(event);
       };
@@ -832,6 +848,32 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
           ...(model ? { model: { id: model } } : {}),
         },
       });
+    },
+
+    /*
+     * Appended to the host's queue, not held here.
+     *
+     * `chat/pendingMessageSet` with a fresh id appends; the same id again
+     * would edit the one already there. The host starts a turn from the head
+     * as soon as it is idle - and if it is idle *now* it consumes this
+     * immediately, which is the protocol saying so, and is why this does not
+     * need to know whether a turn is running.
+     */
+    queue: (uri, text, model) => {
+      dispatch(uri, {
+        type: 'chat/pendingMessageSet',
+        kind: 'queued',
+        id: randomUUID(),
+        message: {
+          text,
+          origin: { kind: 'user' },
+          ...(model ? { model: { id: model } } : {}),
+        },
+      });
+    },
+
+    unqueue: (uri, id) => {
+      dispatch(uri, { type: 'chat/pendingMessageRemoved', kind: 'queued', id });
     },
 
     stopTurn: (uri) => {

@@ -1,5 +1,5 @@
 import type { BindingPath, BoxProps, RenderOutput } from '@textui/core';
-import { defineComponent, useFocusScope, useInput, useStore, useTheme } from '@textui/core';
+import { defineComponent, useApp, useFocusScope, useInput, useStore, useTheme } from '@textui/core';
 import {
   Button,
   Checkbox,
@@ -8,6 +8,7 @@ import {
   Panel,
   RadioGroup,
   Row,
+  TextArea,
   TextInput,
 } from '@textui/widgets';
 import type { Answer, PendingInput, Question } from '../ahp/types.js';
@@ -135,6 +136,7 @@ const QuestionForm = defineComponent<{
   onEscape?(): void;
 }>('QuestionForm', ({ input, onAnswer, onEscape }) => {
   const theme = useTheme();
+  const app = useApp();
   // Draft answers live in the store, not in this component: AHP has an action
   // for a draft answer precisely because another client may be looking at the
   // same question, and a value only this box knows is one nobody else can see.
@@ -149,21 +151,44 @@ const QuestionForm = defineComponent<{
   };
 
   const missing = input.questions.filter((question) => question.required && !answers[question.id]);
+  const send = (): void => { if (missing.length === 0) onAnswer(answers, true); };
 
   useInput((event) => {
     if (event.name === 'escape') { onEscape?.(); return true; }
+    // Enter sends, which is what the hint row under this says while a question
+    // is up - but only from inside the block. A reader who has deliberately
+    // tabbed down to the composer to queue a message is pressing enter at the
+    // composer, and answering the question with it would be the same mistake
+    // in the other direction. The fields that consume enter themselves - a
+    // text input, a checkbox, the Send button - never reach this.
+    if (event.name === 'enter') {
+      const at = app.focus.focused();
+      if (at === null || app.focus.scopeOf(at) !== 'chat.hitl') return false;
+      send();
+      return true;
+    }
     return false;
   }, { global: true });
 
   return (
     <Column gap={1}>
       <MarkdownView content={input.message} />
-      {input.questions.map((question) => (
+      {input.questions.map((question, i) => (
         <QuestionField
           key={question.id}
           question={question}
           answer={answers[question.id] ?? null}
+          // The first field takes the keyboard, and the scope asking for it is
+          // not enough: a scope's `autoFocus` only claims focus when nothing
+          // holds any, and while a question is up the composer holds it. So a
+          // question rendered its field, put `required` beside it, disabled
+          // Send until it was answered - and every key typed at it went into
+          // the composer behind. A control that says it wants focus is the one
+          // thing that takes it off another scope, which is why the
+          // confirmation's Approve button works and this did not.
+          autoFocus={i === 0}
           onChange={(answer) => set(question.id, answer)}
+          onSubmit={send}
         />
       ))}
 
@@ -190,8 +215,12 @@ const QuestionForm = defineComponent<{
 const QuestionField = defineComponent<{
   question: Question;
   answer: Answer | null;
+  /** Passed to whichever control this kind renders, and to only one of them. */
+  autoFocus?: boolean;
   onChange(answer: Answer | null): void;
-}>('QuestionField', ({ question, answer, onChange }) => {
+  /** Enter, from a field that reads it before anything else does. */
+  onSubmit(): void;
+}>('QuestionField', ({ question, answer, autoFocus, onChange, onSubmit }) => {
   const theme = useTheme();
   const options = question.options ?? [];
   const selectedMany = answer?.kind === 'selected-many' ? answer.value : [];
@@ -206,6 +235,7 @@ const QuestionField = defineComponent<{
       {question.kind === 'boolean' ? (
         <Checkbox
           label="yes"
+          autoFocus={autoFocus === true}
           checked={answer?.kind === 'boolean' ? answer.value : false}
           onChange={(checked: boolean) => onChange({ kind: 'boolean', value: checked })}
         />
@@ -213,6 +243,7 @@ const QuestionField = defineComponent<{
 
       {question.kind === 'single-select' ? (
         <RadioGroup
+          autoFocus={autoFocus === true}
           options={options.map((option, i) => ({ value: option.id, label: `${i + 1}. ${option.label}` }))}
           {...(answer?.kind === 'selected' ? { value: answer.value } : {})}
           onChange={(value: string) => onChange({ kind: 'selected', value })}
@@ -237,15 +268,44 @@ const QuestionField = defineComponent<{
         </Column>
       ) : null}
 
-      {question.kind === 'text' || question.kind === 'number' || question.kind === 'integer' ? (
+      {/*
+        * Prose, in a field that looks like one.
+        *
+        * A `TextArea` rather than a `TextInput` because what a host asks for
+        * in words is answered in words: "which file, and why" is two lines
+        * more often than one, and a single-line field silently makes the
+        * second one impossible. Enter sends - the hint row under this says so
+        * - and `alt+enter` (or `ctrl+enter`) is the newline, which is the
+        * composer's bargain in the same screen.
+        *
+        * The placeholder is not decoration. An empty bordered box with no
+        * caret in it is not obviously somewhere you can type, and a question
+        * whose field reads as a gap in the layout is a question that looks
+        * unanswerable.
+        */}
+      {question.kind === 'text' ? (
+        <TextArea
+          value={answer?.kind === 'text' ? answer.value : ''}
+          autoFocus={autoFocus === true}
+          maxRows={6}
+          border={theme.border}
+          placeholder="Type your answer · enter sends · alt+enter for a new line"
+          caretTone="accent"
+          onSubmit={onSubmit}
+          onChange={(value: string) => onChange(value === '' ? null : { kind: 'text', value })}
+        />
+      ) : null}
+
+      {question.kind === 'number' || question.kind === 'integer' ? (
         <TextInput
           value={answer && 'value' in answer ? String(answer.value) : ''}
-          label={question.kind === 'text' ? 'answer' : 'number'}
+          autoFocus={autoFocus === true}
+          label="number"
           hideLabel
+          placeholder="A number"
+          onSubmit={onSubmit}
           onChange={(value: string) => onChange(
-            value === '' ? null
-              : question.kind === 'text' ? { kind: 'text', value }
-                : { kind: 'number', value: Number(value) },
+            value === '' ? null : { kind: 'number', value: Number(value) },
           )}
         />
       ) : null}
@@ -259,7 +319,10 @@ const QuestionField = defineComponent<{
           <TextInput
             value={answer?.kind === 'text' ? answer.value : ''}
             label="or say it in words"
+            placeholder="or say it in words"
+            hideLabel
             flex={1}
+            onSubmit={onSubmit}
             onChange={(value: string) => onChange(value === '' ? null : { kind: 'text', value })}
           />
         </Row>

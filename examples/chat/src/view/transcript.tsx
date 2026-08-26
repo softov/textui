@@ -145,9 +145,11 @@ const BlockView = defineComponent<{
       // and nothing happened" is the complaint that follows.
       return (
         <Row gap={1}>
-          <text content={theme.glyphs.chevronRight} fg="subtle" />
+          <text content={theme.glyphs.chevronRight} fg={active ? 'accent' : 'subtle'} />
           <text content={block.text} fg="subtle" italic wrap="word" flex={1} />
-          <text content="queued" fg="warning" />
+          {/* What the cursor being here is *for*. A queue you cannot take
+              anything out of is a list of messages you have to let happen. */}
+          <text content={active ? 'enter drops it' : 'queued'} fg="warning" />
         </Row>
       );
     default:

@@ -1,6 +1,8 @@
 import type { BindingPath, ReactiveStore } from '@textui/core';
 import type { HostEvent } from './ahp/connection.js';
-import type { Changeset, PendingInput, SessionSummary, SessionUri, Turn } from './ahp/types.js';
+import type {
+  Changeset, PendingInput, QueuedMessage, SessionSummary, SessionUri, Turn,
+} from './ahp/types.js';
 import { byUrgency, decodeStatus } from './ahp/status.js';
 
 /**
@@ -154,6 +156,7 @@ export function applyEvent(store: ReactiveStore, event: HostEvent, model: Turn[]
       const next = [...event.turns, ...(event.active ? [event.active] : [])];
       writeTurns(store, next);
       store.set(INPUT, event.input ?? null);
+      store.set(QUEUE, event.queued);
       writeStatus(store, event.status);
       // A snapshot arrived, so whatever the host last refused is not what is
       // on screen any more.
@@ -176,6 +179,12 @@ export function applyEvent(store: ReactiveStore, event: HostEvent, model: Turn[]
       writeTurns(store, next);
       return next;
     }
+    case 'queued':
+      // The host's list, replacing whatever this client thought it was. Two
+      // clients queueing into the same chat is the ordinary case, not the
+      // exotic one, and the only list that is right is the one the host has.
+      store.set(QUEUE, event.messages);
+      return model;
     case 'inputNeeded':
       store.set(INPUT, event.input);
       return model;
@@ -263,8 +272,8 @@ export function activeTurn(store: ReactiveStore): Turn | null {
   return turns(store).find((turn) => turn.state === 'running') ?? null;
 }
 
-export function queue(store: ReactiveStore): string[] {
-  return store.get<string[]>(QUEUE) ?? [];
+export function queue(store: ReactiveStore): QueuedMessage[] {
+  return store.get<QueuedMessage[]>(QUEUE) ?? [];
 }
 
 /** A short name for a `file://` working directory. */

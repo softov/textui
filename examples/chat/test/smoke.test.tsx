@@ -64,6 +64,11 @@ async function catalogue(size?: { width: number; height: number }): Promise<Moun
   return m;
 }
 
+/** What is waiting to be sent, in order. */
+function queuedText(m: Mounted): string[] {
+  return (m.t.store.get<{ text: string }[]>(QUEUE) ?? []).map((message) => message.text);
+}
+
 /** How many turns the open session has, which is what "sent" looks like. */
 function turnsIn(m: Mounted): number {
   return (m.t.store.get<Turn[]>(TURNS) ?? []).length;
@@ -224,8 +229,87 @@ describe('when the agent is waiting', () => {
     await m.t.unmount();
   });
 
-  it('will not send while a required question is unanswered', async () => {
+  it('gives the keyboard to the question, not the composer behind it', async () => {
+    const m = await idle();
+    const controller = m.t.app.services.require(CONTROLLER);
+    // A question with nothing to choose from: the one kind that has to be
+    // typed at, and the one the arrow keys cannot answer.
+    controller.send('go look at it');
+    await run(m);
+
+    expect(m.t.hasText('Which specific bug, failing test, or file')).toBe(true);
+    // Whatever holds focus, it is in the block that is waiting - not the
+    // composer, which is what a typed answer used to end up in.
+    const focused = m.t.app.focus.focused();
+    expect(focused).not.toBeNull();
+    expect(m.t.app.focus.scopeOf(focused as string)).toBe('chat.hitl');
+
+    m.t.type('examples/ink/src/fonts.ts');
+    await m.t.settle();
+
+    const answers = m.t.store.get<Record<string, Record<string, unknown>>>('$/chat/ui/answers') ?? {};
+    const request = m.t.store.get<{ id: string }>(INPUT) as { id: string };
+    expect(answers[request.id]?.q1).toEqual({ kind: 'text', value: 'examples/ink/src/fonts.ts' });
+    // And not into the composer, which is where every one of those keys went.
+    expect(m.t.store.get(DRAFT) ?? '').toBe('');
+
+    // Which is the point of typing it: the answer is now sendable.
+    m.t.press('enter');
+    await run(m);
+    expect(m.t.store.get(INPUT)).toBeNull();
+    await m.t.unmount();
+  });
+
+  it('takes a second line of an answer, and sends on a bare enter', async () => {
+    const m = await idle();
+    const controller = m.t.app.services.require(CONTROLLER);
+    controller.send('go look at it');
+    await run(m);
+
+    m.t.type('the fonts example');
+    // What a host asks for in words is answered in words, and an answer worth
+    // two lines was impossible in a field that had only one.
+    m.t.press('alt+enter');
+    m.t.type('and the ink one');
+    await m.t.settle();
+
+    const request = m.t.store.get<{ id: string }>(INPUT) as { id: string };
+    const answers = m.t.store.get<Record<string, Record<string, unknown>>>('$/chat/ui/answers') ?? {};
+    expect(answers[request.id]?.q1).toEqual({
+      kind: 'text', value: 'the fonts example\nand the ink one',
+    });
+
+    // The newline is the modified key; the bare one still sends.
+    m.t.press('enter');
+    await run(m);
+    expect(m.t.store.get(INPUT)).toBeNull();
+    await m.t.unmount();
+  });
+
+  it('answers a choice with the arrow keys', async () => {
     const m = await conversation();
+    const controller = m.t.app.services.require(CONTROLLER);
+    controller.send('run the tests');
+    await run(m);
+    controller.approve();
+    await run(m);
+
+    // The first field is the one that has it, so `down` is a choice rather
+    // than a scroll of the transcript underneath.
+    m.t.press('down');
+    await m.t.settle();
+    const answers = m.t.store.get<Record<string, Record<string, unknown>>>('$/chat/ui/answers') ?? {};
+    const request = m.t.store.get<{ id: string }>(INPUT) as { id: string };
+    expect(answers[request.id]?.q1).toEqual({ kind: 'selected', value: 'composer-escape' });
+    await m.t.unmount();
+  });
+
+  it('will not send while a required question is unanswered', async () => {
+    // `idle`, not `conversation`: the seeded session is blocked on a
+    // confirmation, so a message sent at it is queued on the host and starts a
+    // turn of its own the moment this one ends - which is correct, and is a
+    // second confirmation arriving in the middle of a test about a question.
+    const m = await idle();
     const controller = m.t.app.services.require(CONTROLLER);
     controller.send('run the tests');
     await run(m);
@@ -417,10 +501,66 @@ describe('the composer', () => {
     controller.send('and another thing');
     await m.t.settle();
 
-    expect(m.t.store.get<string[]>(QUEUE)).toEqual(['and another thing']);
+    expect(queuedText(m)).toEqual(['and another thing']);
     const running = (m.t.store.get<Turn[]>(TURNS) ?? []).filter((turn) => turn.state === 'running');
     expect(running).toHaveLength(1);
     expect(m.t.hasText('queued')).toBe(true);
+    await m.t.unmount();
+  });
+
+  it('sends what was queued once the turn it was waiting on ends', async () => {
+    const m = await idle();
+    const controller = m.t.app.services.require(CONTROLLER);
+    // Three messages that run to the end on their own. "run the tests" stops
+    // at a confirmation, and a turn that never finishes is a queue that never
+    // gets its go-ahead - which is the fixture's business, not the bug's.
+    controller.send('the build fails');
+    await run(m, 6);
+
+    controller.send('the linker is broken too');
+    controller.send('and this error as well');
+    await m.t.settle();
+    expect(queuedText(m)).toEqual(['the linker is broken too', 'and this error as well']);
+
+    // A queue held in the client was a list that only ever grew: nothing here
+    // was watching for the turn to end, so a message typed while the agent was
+    // working sat under the transcript saying `queued` until the session was
+    // closed. It is the host's queue now, and the host starts the next turn
+    // from the head as soon as it goes idle.
+    await run(m);
+    expect(queuedText(m)).toEqual([]);
+    const said = (m.t.store.get<Turn[]>(TURNS) ?? [])
+      .filter((turn) => turn.role === 'user')
+      .map((turn) => turn.message);
+    // In order, and each its own turn: they were written as separate messages
+    // and joining them into one is the other way to get a queue wrong.
+    expect(said.slice(-3)).toEqual([
+      'the build fails', 'the linker is broken too', 'and this error as well',
+    ]);
+    await m.t.unmount();
+  });
+
+  it('takes a queued message back before it is sent', async () => {
+    const m = await idle();
+    const controller = m.t.app.services.require(CONTROLLER);
+    controller.send('the build fails');
+    await run(m, 6);
+
+    controller.send('never mind this broken one');
+    controller.send('but send this error');
+    await m.t.settle();
+
+    const [first] = m.t.store.get<{ id: string }[]>(QUEUE) ?? [];
+    controller.unqueue((first as { id: string }).id);
+    await m.t.settle();
+    expect(queuedText(m)).toEqual(['but send this error']);
+
+    await run(m);
+    const said = (m.t.store.get<Turn[]>(TURNS) ?? [])
+      .filter((turn) => turn.role === 'user')
+      .map((turn) => turn.message);
+    expect(said).not.toContain('never mind this broken one');
+    expect(said).toContain('but send this error');
     await m.t.unmount();
   });
 

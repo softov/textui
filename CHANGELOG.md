@@ -6,6 +6,16 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+### The chat example's queue never sent anything
+
+A message typed while the agent was working went into a list in the client, and nothing in the client was watching for the turn to end - so it sat under the transcript saying `queued` until the session was closed. The queue is the host's: `queuedMessages` is on the chat, `chat/pendingMessageSet` appends to it, and the server starts the next turn from the head as soon as it goes idle. Which also means a message queued from an editor shows up here, and one queued here shows up there.
+
+One turn each, in order - not all of them at once, and not joined into one message. `chat/pendingMessageRemoved` takes one back while it is still waiting: the cursor stops on a queued row now, and enter drops the one it is on.
+
+### The chat example answers a question in words
+
+A free-text answer is a `TextArea` rather than a `TextInput`, because what a host asks for in words is answered in words: enter sends, `alt+enter` (or `ctrl+enter`) is the newline, and the placeholder says so - an empty bordered box with no caret in it is not obviously somewhere you can type.
+
 ### A subscription check that allocated on every miss
 
 `Store.notify` asks every subscription whether a write touches it, so the check runs per subscription per changed key - and its last clause built the changed key's whole ancestor list and scanned it. That clause could never say yes: `ancestorKeys(k).includes(subKey)` is the same set as `isDescendantKey(k, subKey)`, which had already returned `true` two lines above. So the array was built, scanned, and thrown away on every subscription a write did *not* touch, which is nearly all of them.

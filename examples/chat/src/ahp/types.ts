@@ -177,6 +177,21 @@ export interface ChatInputRequest {
 
 export type PendingInput = ToolConfirmation | ChatInputRequest;
 
+/**
+ * A message waiting for the running turn to finish.
+ *
+ * The host's, not the client's: `queuedMessages` is on the chat, a client
+ * appends to it with `chat/pendingMessageSet` and withdraws one with
+ * `chat/pendingMessageRemoved`, and the host starts the next turn from the
+ * head as soon as it is idle. A client that kept its own list instead would
+ * be showing a queue nothing was ever going to send, and hiding one that
+ * another client had already filled.
+ */
+export interface QueuedMessage {
+  id: string;
+  text: string;
+}
+
 /** Keyed by question id. The value names its own kind. */
 export type Answer =
   | { kind: 'text'; value: string }

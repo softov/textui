@@ -25,8 +25,8 @@ import {
 import type { HostState } from './state.js';
 import { toBlocks } from './blocks.js';
 import type {
-  Agent, Changeset, ContentRef, Customization, FileContent, PendingInput, SessionConfig,
-  SessionDetail, SessionSummary, SlashCommand, Turn,
+  Agent, Changeset, ContentRef, Customization, FileContent, PendingInput, QueuedMessage,
+  SessionConfig, SessionDetail, SessionSummary, SlashCommand, Turn,
 } from './ahp/types.js';
 import { decodeStatus } from './ahp/status.js';
 import { ChatTranscript } from './view/transcript.js';
@@ -425,7 +425,7 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
 
     const turns = useStoreValue<Turn[]>(TURNS, []) ?? [];
     const input = useStoreValue<PendingInput | null>(INPUT, null) ?? null;
-    const queued = useStoreValue<string[]>(QUEUE, []) ?? [];
+    const queued = useStoreValue<QueuedMessage[]>(QUEUE, []) ?? [];
     const draft = useStoreValue<string>(DRAFT, '') ?? '';
     const expanded = useStoreValue<Record<string, boolean>>(EXPANDED, {}) ?? {};
     const history = useStoreValue<string[]>(HISTORY, []) ?? [];
@@ -475,7 +475,14 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
           expanded={expanded}
           cursor={cursor ?? 0}
           onCursor={setCursor}
-          onToggle={(id: string) => app.store.set(EXPANDED, { ...expanded, [id]: !expanded[id] })}
+          onToggle={(id: string) => {
+            // A queued message is not something to expand. Enter on one takes
+            // it back, which is the only thing there is to do to a message
+            // that has not been sent yet.
+            const waiting = id.startsWith('queued:') ? id.slice('queued:'.length) : null;
+            if (waiting !== null) { controller.unqueue(waiting); return; }
+            app.store.set(EXPANDED, { ...expanded, [id]: !expanded[id] });
+          }}
         />
 
         {/* The block that is waiting on a person sits between the conversation

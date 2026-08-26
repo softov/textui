@@ -1,4 +1,4 @@
-import type { ToolCall, Turn } from './ahp/types.js';
+import type { QueuedMessage, ToolCall, Turn } from './ahp/types.js';
 
 /**
  * A conversation, flattened into the rows a viewport scrolls.
@@ -20,14 +20,16 @@ export type Block =
   | { kind: 'reasoning'; id: string; turnId: string; content: string; streaming: boolean }
   | { kind: 'notice'; id: string; turnId: string; content: string }
   | { kind: 'tool'; id: string; turnId: string; call: ToolCall }
-  | { kind: 'queued'; id: string; text: string };
+  | { kind: 'queued'; id: string; messageId: string; text: string };
 
 /** Blocks the cursor stops on: the ones that do something when activated. */
 export function selectable(block: Block): boolean {
-  return block.kind === 'tool' || block.kind === 'reasoning';
+  // A queued message among them, because taking one back is something you do
+  // to it - and the cursor is how anything in the transcript is reached.
+  return block.kind === 'tool' || block.kind === 'reasoning' || block.kind === 'queued';
 }
 
-export function toBlocks(turns: Turn[], queued: string[] = []): Block[] {
+export function toBlocks(turns: Turn[], queued: QueuedMessage[] = []): Block[] {
   const blocks: Block[] = [];
 
   for (const turn of turns) {
@@ -69,7 +71,12 @@ export function toBlocks(turns: Turn[], queued: string[] = []): Block[] {
 
   // What the person typed while the agent was busy. Below the conversation
   // because that is when it will be said, and visibly not sent yet.
-  queued.forEach((text, i) => blocks.push({ kind: 'queued', id: `queued:${i}`, text }));
+  // Keyed by the host's own id, not by position: the queue is the host's, the
+  // head leaves it whenever the running turn ends, and an index would name a
+  // different message every time one did.
+  for (const message of queued) {
+    blocks.push({ kind: 'queued', id: `queued:${message.id}`, messageId: message.id, text: message.text });
+  }
 
   return blocks;
 }

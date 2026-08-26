@@ -1,8 +1,8 @@
 import type { HostConnection, HostEvent } from './connection.js';
 import type {
   Agent, Changeset, ChatInputRequest, ContentRef, Customization, FileContent, FileEdit,
-  PendingInput, ResponsePart, SessionConfig, SessionDetail, SessionSummary, SessionUri,
-  ToolCall, Turn,
+  PendingInput, QueuedMessage, ResponsePart, SessionConfig, SessionDetail, SessionSummary,
+  SessionUri, ToolCall, Turn,
 } from './types.js';
 import { SessionFlag } from './types.js';
 
@@ -86,6 +86,14 @@ export function fakeHost(): FakeHost {
   const active = new Map<SessionUri, Turn>();
   const inputs = new Map<SessionUri, PendingInput>();
   const changesets = new Map<SessionUri, Changeset>();
+  /**
+   * What is waiting for the running turn to end.
+   *
+   * The host's, because on a real one it is: `queuedMessages` is on the chat
+   * and the server starts the next turn from the head. The fake has to drain
+   * it for the same reason, or a queue is a list that only ever grows.
+   */
+  const queues = new Map<SessionUri, QueuedMessage[]>();
   const configs = new Map<SessionUri, Record<string, string>>();
   const observers = new Map<SessionUri, Set<(event: HostEvent) => void>>();
   const chats = new Map<SessionUri, string>();
@@ -560,6 +568,26 @@ export function fakeHost(): FakeHost {
     });
   }
 
+  /**
+   * Start the next queued turn, if one is waiting and nothing is running.
+   *
+   * One, not the lot. The queue is a list of turns to take in order, and a
+   * host that started them together would be interleaving turns in one chat -
+   * which is the thing queueing exists to prevent. Sending them as one joined
+   * message would be the other way to get it wrong: they were written as
+   * separate messages, and the agent reading them is entitled to see that.
+   */
+  function drain(uri: SessionUri): void {
+    if (active.has(uri)) return;
+    const waiting = queues.get(uri) ?? [];
+    const next = waiting[0];
+    if (!next) return;
+    const rest = waiting.slice(1);
+    queues.set(uri, rest);
+    emit(uri, { type: 'queued', messages: rest });
+    reply(uri, next.text);
+  }
+
   function finish(uri: SessionUri, closing: string, options: { failed?: boolean; changes?: Changeset } = {}): void {
     if (closing) prose(uri, 'markdown', closing);
     script.push(() => {
@@ -573,9 +601,14 @@ export function fakeHost(): FakeHost {
       emit(uri, { type: 'turnComplete', turn });
       touch(uri);
 
-      if (!options.changes) return;
-      changesets.set(uri, options.changes);
-      emit(uri, { type: 'changes', changes: options.changes });
+      if (options.changes) {
+        changesets.set(uri, options.changes);
+        emit(uri, { type: 'changes', changes: options.changes });
+      }
+
+      // The turn is over, so whatever was waiting on it goes now. Appending to
+      // `script` from inside a step is safe: `pump` shifts one and runs it.
+      drain(uri);
     });
   }
 
@@ -649,6 +682,30 @@ export function fakeHost(): FakeHost {
         });
         return;
 
+      case 'name':
+        /*
+         * A question with nothing to choose from.
+         *
+         * The other elicitation is a choice, and a choice is answerable with
+         * the arrow keys - so a fixture that only ever asks one hides the kind
+         * that needs the keyboard. This is what a real host sends when it
+         * wants a file, a symbol or a sentence back, and it is the shape that
+         * was unanswerable: the field was drawn and what was typed at it went
+         * into the composer behind.
+         */
+        elicits(uri, {
+          message: 'I can look, but not at all of it at once.',
+          questions: [
+            {
+              id: 'q1',
+              kind: 'text',
+              message: 'Which specific bug, failing test, or file should I investigate?',
+              required: true,
+            },
+          ],
+        });
+        return;
+
       case 'fail':
         prose(uri, 'reasoning', 'Check the host answered at all before blaming the harness. ');
         tool(uri, {
@@ -675,13 +732,16 @@ export function fakeHost(): FakeHost {
    * "hello" from being the same conversation every time.
    */
   let rotation = 0;
-  function pick(said: string): 'run' | 'ask' | 'fail' | 'short' {
+  function pick(said: string): 'run' | 'ask' | 'name' | 'fail' | 'short' {
     const text = said.toLowerCase();
     // Failure first: "the build fails" names both, and the interesting half of
     // it is the failure.
     if (/\b(fail|fails|error|broken|ssh|dev82|timeout)\b/.test(text)) return 'fail';
     if (/\b(run|test|tests|build|compile|pnpm|make)\b/.test(text)) return 'run';
     if (/\b(which|choose|option|options|prefer)\b/.test(text)) return 'ask';
+    // Before the rotation, and after the rest: a question with nothing to
+    // choose from is the elicitation that has to be typed at.
+    if (/\b(look|find|investigate|somewhere|anything)\b/.test(text)) return 'name';
     return (['short', 'run', 'ask', 'fail'] as const)[rotation++ % 4] ?? 'short';
   }
 
@@ -813,6 +873,7 @@ export function fakeHost(): FakeHost {
         ...(active.get(uri) ? { active: active.get(uri) as Turn } : {}),
         ...(inputs.get(uri) ? { input: inputs.get(uri) as PendingInput } : {}),
         status: statusOf(uri),
+        queued: queues.get(uri) ?? [],
       });
       const changes = changesets.get(uri);
       if (changes) observer({ type: 'changes', changes });
@@ -823,6 +884,21 @@ export function fakeHost(): FakeHost {
     },
 
     say: (uri, text) => { reply(uri, text); },
+
+    queue: (uri, text) => {
+      const waiting = [...(queues.get(uri) ?? []), { id: nextId('q'), text }];
+      queues.set(uri, waiting);
+      emit(uri, { type: 'queued', messages: waiting });
+      // Idle already: the protocol says a host consumes a queued message
+      // immediately rather than holding it for a turn that is not running.
+      drain(uri);
+    },
+
+    unqueue: (uri, id) => {
+      const waiting = (queues.get(uri) ?? []).filter((message) => message.id !== id);
+      queues.set(uri, waiting);
+      emit(uri, { type: 'queued', messages: waiting });
+    },
 
     stopTurn: (uri) => {
       script.length = 0;

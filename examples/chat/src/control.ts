@@ -40,6 +40,8 @@ export interface Controller {
   close(): void;
   /** Send, or queue when a turn is already running. */
   send(text: string): void;
+  /** Take a queued message back, while it is still waiting. */
+  unqueue(id: string): void;
   stop(): void;
   approve(optionId?: string): void;
   deny(): void;
@@ -356,18 +358,32 @@ export function createController(
       const history = app.store.get<string[]>('$/chat/ui/history') ?? [];
       app.store.set('$/chat/ui/history', [...history, trimmed]);
 
-      // A turn is already running: this is a queued message, not a second
-      // turn. Sending it anyway is how two turns end up interleaved in one
-      // chat, and the host is not the thing that stops you.
-      if (turns(app.store).some((turn) => turn.state === 'running')) {
-        app.store.set(QUEUE, [...queue(app.store), trimmed]);
-        return;
-      }
       // The model rides on the turn, not on the session: AHP hangs it on the
       // message, so the composer's choice is applied here rather than being
       // set on the session once.
       const chosen = app.store.get<string>(MODEL);
+
+      // A turn is already running: this is a queued message, not a second
+      // turn. Sending it anyway is how two turns end up interleaved in one
+      // chat, and the host is not the thing that stops you.
+      //
+      // Queued *on the host*, which is the whole difference between a queue
+      // and a list. Held here it was never sent - nothing in this client was
+      // watching for the turn to end, so a message typed while the agent was
+      // working sat under the transcript saying `queued` until the session was
+      // closed. The host starts the next turn from the head as soon as it goes
+      // idle, and every client watching this chat sees the same queue.
+      if (turns(app.store).some((turn) => turn.state === 'running')) {
+        host.queue(uri, trimmed, chosen || undefined);
+        return;
+      }
       host.say(uri, trimmed, chosen || undefined);
+    },
+
+    unqueue(id) {
+      const uri = app.store.get<SessionUri>(OPEN);
+      if (!uri) return;
+      host.unqueue(uri, id);
     },
 
     stop() {
@@ -1069,7 +1085,13 @@ function commands(app: TextUIApp, controller: Controller): CommandDefinition[] {
       description: 'Drop queued messages',
       slots: ['palette'],
       when: `${QUEUE}`,
-      run: () => app.store.set(QUEUE, []),
+      // One dispatch each, because that is what the protocol offers - and the
+      // list comes back from the host rather than being emptied here, so a
+      // message another client queued in the meantime is not silently dropped
+      // by a client that never knew about it.
+      run: () => {
+        for (const message of queue(app.store)) controller.unqueue(message.id);
+      },
     },
     {
       id: 'chat.expand',

@@ -144,7 +144,13 @@ describe('the transforms', () => {
 
   it('draws tmplt from the transcribed table, with every capital distinct', () => {
     const tmplt = fontAt('tmplt');
-    expect(heightOf(tmplt)).toBe(3);
+    // Three rows of letter and a fourth the tails hang into, so a line of
+    // capitals is three rows and one with a `g` in it is four.
+    expect(heightOf(tmplt)).toBe(4);
+    expect(banner('ABC', tmplt).split('\n')).toHaveLength(3);
+    expect(banner('Ag', tmplt).split('\n')).toHaveLength(4);
+    // An x-height letter starts a row below a capital and ends level with it.
+    expect(banner('ao', tmplt).split('\n')).toHaveLength(2);
     const seen = new Map<string, string>();
     for (const cap of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
       const drawn = banner(cap, tmplt);
@@ -162,7 +168,10 @@ describe('the transforms', () => {
     // another rather than a character.
     const tmplt = fontAt('tmplt');
     expect(tmplt.fallback).toBe('mini');
-    expect(heightOf(fontAt(tmplt.fallback as string))).toBe(heightOf(tmplt));
+    // Near enough the same height to stand in for it - within the row `tmplt`
+    // keeps for its descenders.
+    expect(heightOf(fontAt(tmplt.fallback as string)))
+      .toBeGreaterThanOrEqual(heightOf(tmplt) - 1);
     // And every other font stands on its own.
     expect(FONTS.filter((f) => f.fallback !== undefined).map((f) => f.id).sort())
       .toEqual(['pagga', 'tmplt']);

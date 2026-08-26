@@ -297,12 +297,151 @@ const TMPLT: Record<string, Grid> = {
   7: ["┳┳", " ┃", " ┛"],
   8: ["┏┓", "┣┫", "┗┛"],
   9: ["┏┓", "┗┫", "┗┛"],
+  'a': [
+    "",
+    "┏┓",
+    "┗┻"
+    // "   ", 
+    // "┏┓ ", 
+    // "┗┻┛"
+  ],
+  'b': [
+    "┓ ",
+    "┣┓",
+    "┗┛"
+  ],
+  'c': [
+    "",
+    "┏",
+    "┗"
+  ],
+  'd': [
+    " ┓",
+    "┏┫",
+    "┗┻"
+  ],
+  'e': [
+    "",
+    "┏┓",
+    "┗"
+  ],
+  'f': [
+    " ┏",
+    " ╋",
+    " ┛"
+  ],
+  'g': [
+    "",
+    "┏┓",
+    "┗┫",
+    " ┛"
+  ],
+  'h': [
+    "┓ ",
+    "┣┓ ",
+    "┛┗ ",
+  ],
+  'i': [
+    "•",
+    "┓ ",
+    "┗ ",
+  ],
+  'j': [
+    "• ",
+    "┓ ",
+    "┃ ",
+    "┛ ",
+  ],
+  'k': [
+    "┓ ",
+    "┃┏",
+    "┛┗",
+  ],
+  'l': [
+    "┓ ",
+    "┃ ",
+    "┗ ",
+  ],
+  'm': [
+    "",
+    "┏┳┓",
+    "┛┗┗",
+  ],
+  'n': [
+    "",
+    "┏┓ ",
+    "┛┗ ",
+  ],
+  'o': [
+    "",
+    "┏┓",
+    "┗┛",
+  ],
+  'p': [
+    "",
+    "┏┓",
+    "┣┛",
+    "┛ ",
+  ],
+  'q': [
+    "",
+    "┏┓",
+    "┗┫",
+    " ┗",
+  ],
+  'r': [
+    "",
+    "┏┓",
+    "┛ ",
+  ],
+  's': [
+    "",
+    "┏ ",
+    "┛ ",
+  ],
+  't': [
+    "",
+    "╋ ",
+    "┗ ",
+  ],
+  'u': [
+    "",
+    "┓┏",
+    "┗┻",
+  ],
+  'v': [
+    "",
+    "┓┏",
+    "┗┛",
+  ],
+  'w': [
+    "",
+    "┓┏┏",
+    "┗┻┛",
+  ],
+  'x': [
+    "",
+    "┓┏",
+    "┛┗",
+  ],
+  'y': [
+    " ",
+    "┓┏",
+    "┗┫",
+    " ┛"
+  ],
+  'z': [
+    "",
+    "┓",
+    "┗",
+  ],
   '.': [" ", " ", "•"],
   ',': [" ", " ", "┛"],
   ':': [" ", "•", "•"],
   ';': [" ", "•", "┛"],
   '!': ["┃", "┃", "•"],
   '?': ["┏┓", " ┛", " •"],
+  '@': ["┏━┓", "┃┗┛", "┗━┛"],
   '-': ["  ", "━━", "  "],
   '+': ["  ", "╋ ", "  "],
   '=': ["  ", "━━", "━━"],
@@ -623,11 +762,15 @@ export const FONTS: Font[] = [
   {
     id: 'tmplt',
     title: 'tmplt',
-    note: 'Three rows of heavy box-drawing, transcribed capital for capital. One case, and the only font here with nothing to fall back to on an ascii terminal - it borrows mini there.',
+    note: 'Heavy box-drawing, transcribed capital for capital, with a lowercase drawn to match - three rows and a fourth for the tails of g, j, p, q and y. Nothing to fall back to on an ascii terminal, so it borrows mini there.',
     glyphs: TMPLT,
     tracking: 1,
     space: 2,
-    cases: 'folded',
+    // Row two, not row three: the box grew a fourth row for the descenders
+    // and a stand-in belongs on the line the letters sit on, not on the one
+    // their tails reach down to.
+    baseline: 2,
+    cases: 'both',
     fallback: 'mini',
   },
   {
@@ -880,11 +1023,18 @@ function bannerLine(text: string, font: Font, height: number, ink: InkGlyphs): s
       first = true;
       continue;
     }
-    // Bottom-aligned: a font whose glyphs are not all the same height - the
-    // shadow one is a row taller - has to agree about where the baseline is.
-    const drop = height - glyph.length;
+    // Top-aligned: row nought of a glyph is row nought of the line, and a
+    // glyph shorter than the font is short at the *bottom*.
+    //
+    // Which is what lets a descender be written as one row taller than
+    // everything else and nothing else be touched. An `a` says where it starts
+    // with a blank first row; a `g` says where it ends by having a fourth. Line
+    // them up from the bottom instead and adding a tail to `g` silently pushes
+    // every three-row capital down a row, so `A` comes to rest on the same line
+    // as the tail rather than on the same line as the `g` itself.
+    const width = glyph.reduce((w, row) => Math.max(w, row.length), 0);
     for (let y = 0; y < height; y++) {
-      const row = y < drop ? ' '.repeat((glyph[0] as string).length) : (glyph[y - drop] as string);
+      const row = y < glyph.length ? (glyph[y] as string) : ' '.repeat(width);
       rows[y] += (first ? '' : ' '.repeat(font.tracking)) + row;
     }
     first = false;

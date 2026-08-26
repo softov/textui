@@ -1,6 +1,6 @@
 # Examples
 
-Two of these run with no build step at all, and four are applications with one.
+Three of these run with no build step at all, and seven are applications with one.
 
 ## No build: `hello` and `counter`
 
@@ -54,7 +54,7 @@ Bigger programs, bundled by esbuild because they are many files rather than
 because textui needs it.
 
 ```bash
-pnpm example todo        # or arcade, chat, surfaces, ink
+pnpm example todo        # or arcade, chat, surfaces, ink, flipbook
 ```
 
 | | |
@@ -65,3 +65,4 @@ pnpm example todo        # or arcade, chat, surfaces, ink
 | [`surfaces`](surfaces) | An application with no shell, arranging its own chrome |
 | [`ink`](ink) | `ColorText`: a colour per cell, over a banner and over prose |
 | [`showcase`](showcase) | The catalog on one screen, as a row that wraps. Writes its own screenshot |
+| [`flipbook`](flipbook) | An ASCII Motion document, played on its own timeline and edited in place |

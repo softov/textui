@@ -94,7 +94,7 @@ const LOWER: Record<string, string> = {
   q: '    | ###|#  #| ###|   #',
   r: '    |# ##|##  |#   |#   ',
   s: '    | ###|##  |  ##|### ',
-  t: ' #  |### | #  | #  |  ##',
+  t: ' #  |### | #  | #  | #  ',
   u: '    |#  #|#  #|#  #| ###',
   v: '    |#  #|#  #| ## |  # ',
   w: '     |#   #|# # #|# # #| # # ',
@@ -318,16 +318,31 @@ function half(rows: Grid): Grid {
 /**
  * Drawn in dots and colons rather than in blocks.
  *
- * A colon where the cell has a lit neighbour above or below and a full stop
- * where it does not, so a vertical stroke reads as a line and a horizontal one
- * reads as a row of dots. The letters are the same letters - this is a change
- * of pen, not of hand, which is the whole reason it is fifteen lines.
+ * A cell takes the character of the stroke it is *part of*, and **across wins**
+ * - a full stop where it has a lit neighbour left or right, a colon where it
+ * only has one above or below. Which way round that goes is the whole font: a
+ * rule that asked about the vertical first put a colon in the middle of the top
+ * bar of a `T`, because the stem hangs off it there. The bar is a bar; the stem
+ * meeting it does not make that one cell part of the stem.
+ *
+ * The letters are the same letters. This is a change of pen, not of hand, which
+ * is why it is fifteen lines.
  */
 function dots(rows: Grid): Grid {
+  // Both bounds, on both axes. Indexing a string past its end gives
+  // `undefined`, and `undefined !== ' '` reads as lit - so the last column of
+  // every row believed it had a neighbour to the right.
   const lit = (y: number, x: number): boolean =>
-    y >= 0 && y < rows.length && (rows[y] as string)[x] !== ' ';
+    y >= 0 && y < rows.length
+    && x >= 0 && x < (rows[y] as string).length
+    && (rows[y] as string)[x] !== ' ';
+
   return rows.map((row, y) => Array.from(row)
-    .map((cell, x) => (cell === ' ' ? ' ' : lit(y - 1, x) || lit(y + 1, x) ? ':' : '.'))
+    .map((cell, x) => {
+      if (cell === ' ') return ' ';
+      if (lit(y, x - 1) || lit(y, x + 1)) return '.';
+      return lit(y - 1, x) || lit(y + 1, x) ? ':' : '.';
+    })
     .join(''));
 }
 

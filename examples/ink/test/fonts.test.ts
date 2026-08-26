@@ -63,16 +63,22 @@ describe('the transforms', () => {
     expect([...drawn].sort()).toEqual(['"', '#', '_']);
   });
 
-  it('draws dots with a colon wherever the stroke runs down', () => {
-    // `I` is a bar, a stem and a bar: the stem is the part with a lit
-    // neighbour above and below, and it is the only part drawn in colons.
+  it('draws dots across and colons down, and lets across win', () => {
+    // `I` is a bar, a stem and a bar. A whole bar of dots, including the cell
+    // the stem hangs off: that cell is part of the bar, and a colon there was
+    // the bug - the middle of a `T` came out as `..:..` rather than `.....`.
     const drawn = rows('I', fontAt('dots'));
-    // The bar is dots, except where the stem meets it - that cell has a lit
-    // neighbour below, so it joins the stroke running down rather than the one
-    // running across, which is the whole rule.
-    expect(drawn[0]).toBe('..:..');
+    expect(drawn[0]).toBe('.....');
     expect(drawn[2]).toBe('  :');
-    expect(drawn[4]).toBe('..:..');
+    expect(drawn[4]).toBe('.....');
+  });
+
+  it('draws a stroke that is a single cell as a dot, not as a colon', () => {
+    // The last column of a row used to read its own end-of-string as a
+    // neighbour, so a cell with nothing beside it looked joined.
+    const drawn = rows('T', fontAt('dots'));
+    expect(drawn[0]).toBe('.....');
+    expect(drawn.slice(1).every((line) => line.trim() === ':')).toBe(true);
   });
 
   it('spaces stars out, and draws nothing else', () => {

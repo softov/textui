@@ -129,7 +129,18 @@ export class Focus implements FocusManager {
     // the screen this is for - pushed over whatever had focus, which the push
     // unmounted, leaving none - and a dialog, which opens while its opener
     // still holds focus and whose own controls say which of them wants it.
-    if (!existing && options.disabled !== true && this.current === null) {
+    //
+    // And only onto something a person could have tabbed to. A `global`
+    // handler registers as a focusable - that is how a layer reads escape
+    // without holding focus - and it is `skipTab`, so it is not a place focus
+    // can land. Handed it anyway, focus sat on a node that consumes nothing:
+    // the keys fell through to whatever was behind, and every real control's
+    // own `autoFocus` stood down, because it claims focus only when the scope
+    // does not already hold it. A question with a text field in it was
+    // therefore unanswerable - the field was drawn, `required` beside it, and
+    // what was typed at it went into the composer underneath.
+    const focusable = options.disabled !== true && options.skipTab !== true && options.global !== true;
+    if (!existing && focusable && this.current === null) {
       const scopeId = options.scopeId ?? GLOBAL_SCOPE;
       if (this.scopes.get(scopeId)?.autoFocus === true && this.stack.includes(scopeId)) {
         this.focus(options.id);

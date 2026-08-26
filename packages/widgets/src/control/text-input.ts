@@ -1,4 +1,4 @@
-import type { KeyEvent } from '@textui/core';
+import type { KeyEvent, MouseEvent } from '@textui/core';
 import {
   defineComponent,
   graphemes,
@@ -126,9 +126,46 @@ export const TextInput = defineComponent<TextInputProps>('TextInput', (props) =>
     { focusId: focus.id },
   );
 
+  /**
+   * A click takes the keyboard and puts the caret where it landed.
+   *
+   * Without it the field was the one control on the screen that did nothing
+   * when it was clicked - and an empty one has nothing in it to say it is a
+   * field, so what it looked like was a gap in the layout. `TextArea` has had
+   * this from the start; the two disagreeing is what made a form built out of
+   * the single-line one unusable with a mouse.
+   *
+   * `onMouse` rather than `onClick`, the same as there: a field that is not
+   * focused has to take the keyboard before the caret moves, or the caret is
+   * somewhere the next keystroke will not go.
+   *
+   * `measured` is the *content* rect - inside the border and the padding - so
+   * the value starts at `lead` cells into it, and `start` is what the field
+   * has scrolled past.
+   */
+  const onMouse = (event: MouseEvent): boolean => {
+    if (disabled || event.button !== 'left' || event.action !== 'down') return false;
+    if (measured.width <= 0) return false;
+    if (event.x < measured.x || event.y < measured.y) return false;
+    if (!focus.focused) focus.focus();
+
+    // Cells to characters. A wide glyph is two columns, and a click on its
+    // second column means the same character as a click on its first.
+    const column = event.x - measured.x - lead + start;
+    let index = 0;
+    for (let width = 0; index < chars.length; index++) {
+      const next = width + stringWidth(chars[index] as string);
+      if (next > column) break;
+      width = next;
+    }
+    move(index);
+    return true;
+  };
+
   return h('box', {
     id: focus.id,
     role: search ? 'searchbox' : 'textbox',
+    onMouse,
     label,
     direction: 'row',
     gap: 1,

@@ -24,6 +24,7 @@ import { Checkbox } from '@textui/widgets';
 | `checked` | `boolean` | `false` |  |
 | `indeterminate` | `boolean` |  | Neither checked nor unchecked - a parent of mixed children. |
 | `onChange` | `(checked: boolean) => void` |  |  |
+| `autoFocus` | `boolean` |  | Take the keyboard on arrival. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

@@ -7,12 +7,14 @@ export interface CheckboxProps extends BoxProps {
   /** Neither checked nor unchecked - a parent of mixed children. */
   indeterminate?: boolean;
   onChange?(checked: boolean): void;
+  /** Take the keyboard on arrival. */
+  autoFocus?: boolean;
 }
 
 export const Checkbox = defineComponent<CheckboxProps>('Checkbox', (props) => {
   const theme = useTheme();
-  const { label, checked = false, indeterminate, onChange, disabled, ...rest } = props;
-  const focus = useFocus({ disabled });
+  const { label, checked = false, indeterminate, onChange, disabled, autoFocus, ...rest } = props;
+  const focus = useFocus({ disabled, autoFocus });
 
   useInput(
     (event) => {

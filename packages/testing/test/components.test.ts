@@ -1289,3 +1289,48 @@ describe('a menu with switches in it', () => {
     await t.unmount();
   });
 });
+
+/**
+ * A single-line field answers the mouse.
+ *
+ * It did not, and an empty one has nothing in it to say it is a field - so
+ * what a form built out of them looked like was a stack of gaps that ignored
+ * every click. `TextArea` has had this from the start; the two disagreeing is
+ * what made the elicitation block in the chat example unanswerable.
+ */
+describe('TextInput and the mouse', () => {
+  it('takes the keyboard when it is clicked', async () => {
+    let value = 'abc';
+    const t = await render(
+      h('TextInput', { value, onChange: (next: string) => { value = next; } }),
+      { width: 30, height: 3 },
+    );
+    const field = t.getByRole('textbox');
+    expect(t.app.focus.focused()).not.toBe(field.id);
+
+    t.clickOn(field);
+    await t.settle();
+    expect(t.app.focus.focused()).toBe(field.id);
+
+    // And the keyboard is really there, not merely registered as focused.
+    t.type('d');
+    expect(value).toBe('abcd');
+    await t.unmount();
+  });
+
+  it('puts the caret where the click landed', async () => {
+    let value = 'abcdef';
+    const t = await render(
+      h('TextInput', { value, onChange: (next: string) => { value = next; } }),
+      { width: 30, height: 3 },
+    );
+    const field = t.getByRole('textbox');
+    // Inside the border and the padding, on the second character.
+    const rect = field.rect as { x: number; y: number };
+    t.click(rect.x + 2 + 1, rect.y + 1);
+    await t.settle();
+    t.type('X');
+    expect(value).toBe('aXbcdef');
+    await t.unmount();
+  });
+});

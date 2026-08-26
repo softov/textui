@@ -33,6 +33,7 @@ import { RadioGroup } from '@textui/widgets';
 | `onChange` | `(value: string) => void` |  |  |
 | `label` | `string` |  |  |
 | `inline` | `boolean` |  | Lay the options out in a row instead of a column. |
+| `autoFocus` | `boolean` |  | Take the keyboard on arrival. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

@@ -14,6 +14,18 @@ This file records the set. Anything package-specific says which package.
 
 `layoutBox` partitioned its children with two `filter` passes, one per frame per box; it is one loop now.
 
+### `TextInput` ignored the mouse
+
+Clicking it did nothing - no focus, no caret. An empty one has nothing in it to say it is a field, so what a form built out of them looked like was a stack of gaps that ignored every click. `TextArea` has answered the mouse from the start; the two disagreeing is what made a form built out of the single-line one unusable with a mouse.
+
+### A control that asked for focus did not get it
+
+A scope that asks for `autoFocus` takes focus as its first control arrives - and a `global` key handler registers as a focusable, because that is how a layer reads escape without holding focus. It is `skipTab`, so it is not a place focus can land, and handed it anyway focus sat on a node that consumes nothing: the keys fell through to whatever was behind, and every real control's own `autoFocus` then stood down, because it claims focus only when the scope does not already hold it.
+
+So a dialog that drew a text field, put `required` beside it and disabled its Send button until the field was filled in was one where every key typed at the field went to whatever was on the screen underneath. The scope's claim now passes over anything that is not somewhere focus can land.
+
+`Checkbox` and `RadioGroup` take `autoFocus`, which they had no way to say before.
+
 ### A catalogue is only as fresh as what it was last told
 
 The client subscribed to one session's channel and to nothing else, so a session appearing, finishing or starting to wait was invisible until somebody navigated away and came back - a reader doing by hand what the host had already said. `HostConnection.onSessions` is the catalogue moving, as opposed to one session's channel; the live client raises it from the root channel it was already draining for something else.

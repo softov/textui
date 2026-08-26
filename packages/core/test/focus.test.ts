@@ -74,6 +74,24 @@ describe('closing a scope', () => {
     expect(focus.scopeOf('first')).toBe('screen:detail');
   });
 
+  it('passes over a handler that is not somewhere focus can land', () => {
+    const focus = createFocus();
+    focus.registerScope({ id: 'screen:detail', autoFocus: true });
+    focus.activateScope('screen:detail');
+
+    // A `global` handler is a focusable - that is how a layer reads escape
+    // without holding focus - and it registers before the controls, because
+    // it belongs to the component that contains them. Handed the focus it
+    // consumes nothing, so the keys fall through to whatever is behind, and
+    // every real control's own `autoFocus` then stands down: it claims focus
+    // only when the scope does not already hold it.
+    focus.register({ id: 'keys', scopeId: 'screen:detail', skipTab: true, global: true });
+    expect(focus.focused()).toBeNull();
+
+    focus.register({ id: 'field', scopeId: 'screen:detail' });
+    expect(focus.focused()).toBe('field');
+  });
+
   it('does not take focus from something that already has it', () => {
     const focus = createFocus();
     focus.register({ id: 'opener' });

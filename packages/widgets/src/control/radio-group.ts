@@ -15,12 +15,14 @@ export interface RadioGroupProps extends BoxProps {
   label?: string;
   /** Lay the options out in a row instead of a column. */
   inline?: boolean;
+  /** Take the keyboard on arrival. */
+  autoFocus?: boolean;
 }
 
 export const RadioGroup = defineComponent<RadioGroupProps>('RadioGroup', (props) => {
   const theme = useTheme();
-  const { options, value, onChange, label, inline, disabled, ...rest } = props;
-  const focus = useFocus({ disabled });
+  const { options, value, onChange, label, inline, disabled, autoFocus, ...rest } = props;
+  const focus = useFocus({ disabled, autoFocus });
   const index = Math.max(0, options.findIndex((o) => o.value === value));
 
   useInput(

@@ -21,8 +21,8 @@ import { defineHat, definePersona } from './persona.js';
 
 /** Feet mid-stride, which is the whole of the walk cycle for most of these. */
 const STRIDE = { 
-  normal: [' ⅃ L ', ' ⅃  ⅃', ' ⅃ L ', '⅃  ⅃ '],
-  left: [' ⅃ ⅃ ', '⅃ ⅃ ', ' ⅃⅃ '],
+  normal: [' J L ', ' J  J', ' J L ', 'J  J '],
+  left: [' J J ', 'J J ', ' JJ '],
   right: [' L L ', '  L L', '  LL ']
 };
 
@@ -118,7 +118,7 @@ export const bot = definePersona({
   label: 'Bot',
   // Turns both ways at once: the head is drawn per side *and* the eyes are.
   // A `q` becoming a `(` is the ear the figure has turned away from.
-  head: { normal: [' q   p '], left: [' (   p ', ' (   p♪ '], right: [' q   ) ', '♪q   ) '] },
+  head: { normal: [' q   p '], left: [' (   p ', ' (   p♪'], right: [' q   ) ', '♪q   ) '] },
   eyes: {
     normal: { normal: ['o O'], left: ['OO '], right: [' OO'] },
     happy: { normal: ['^ ^'] },
@@ -142,11 +142,11 @@ export const pip = definePersona({
     sleepy: { normal: ['__'] },
   },
   eyeAt: EYES_AT,
-  middle: { normal: ['==\\o/=='], left: [' =o/=()', ' =o/= ()'], right: ['() =\\o=', ' ()=\\o='] },
+  middle: { normal: ['==\\o/=='], left: [' =o/=()', '=o/= ()'], right: ['() =\\o=', ' ()=\\o='] },
   foot: { 
     normal: [' ()() ', '()  ()', ' ()() ', '()  ()'],
     left: [' ()() ', '() ()', '()() ', '() () '],
-    right: ['  ()() ', ' () ()', '  () () ', ' () () ']
+    right: ['  ()() ', ' () ()', '  () ()', ' () () ']
   }
 });
 

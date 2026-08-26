@@ -122,15 +122,22 @@ describe('the persona in the scene', () => {
   /**
    * Where the feet are.
    *
-   * `J.{1,2}L` rather than `J\s{1,2}L`: the cell between the feet is not
-   * painted at all, so whatever is behind the figure shows through it - a
-   * cloud, a flower, the sky. Matching a space there asserts that the figure
-   * carries an opaque rectangle around with it, which is the thing it was
-   * changed to stop doing.
+   * A foot is a `J` or an `L` - the two directions one points - so the pattern
+   * has to take either at either end: a figure that walked right holds its
+   * right-facing stride after it stops, which is `L L` and not `J L`. Nothing
+   * else in the scene draws those letters, so one match is the feet.
+   *
+   * `.` rather than `\s` between them, and `{0,2}` rather than `{1,2}`: the
+   * cells between the feet are not painted at all, so whatever is behind the
+   * figure shows through them - a cloud, a flower, the sky. Matching a space
+   * there asserts the figure carries an opaque rectangle around with it, which
+   * is the thing it was changed to stop doing. And mid-stride the feet come
+   * together, with nothing between them at all.
    */
+  const FEET = /[JL].{0,2}[JL]/;
   const feet = (t: Awaited<ReturnType<typeof mount>>): { x: number; y: number } => {
-    const y = t.lines().findIndex((line) => /J.{1,2}L/.test(line));
-    return { x: (t.lines()[y] ?? '').search(/J/), y };
+    const y = t.lines().findIndex((line) => FEET.test(line));
+    return { x: (t.lines()[y] ?? '').search(/[JL]/), y };
   };
 
   it('stands on the ground until it is sent somewhere', async () => {
@@ -169,6 +176,11 @@ describe('the persona in the scene', () => {
     for (let i = 0; i < 80; i++) { t.advance(90); await t.settle(); }
 
     const at = feet(t);
+    // Without this the whole assertion is vacuous: two cells nobody found are
+    // two `undefined`s, and `undefined === undefined`. It has caught the feet
+    // pattern going stale once already.
+    expect(at.y).toBeGreaterThanOrEqual(0);
+
     const buf = t.app.buffer();
     const sky = buf.get(2, at.y)?.bg;
     // The cell the figure occupies has the sky's background, not the

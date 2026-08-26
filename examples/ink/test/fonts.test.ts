@@ -215,23 +215,53 @@ describe('every character, in every font', () => {
     });
   }
 
+  for (const font of FONTS) {
+    it(`gives ${font.id} no two characters the same glyph`, () => {
+      // The mistake that put the same zigzag on `(` and `<`, and the same
+      // chevron on `{` and `<` after that. Two characters drawing the same
+      // thing is always a bug and never a decision, so it is worth an
+      // assertion rather than an eye.
+      // The whole grid, not what one character renders to on its own: `-` and
+      // `_` are the same bar and differ only in the row they sit on, and a
+      // banner of one character trims the blank rows away and loses that.
+      const seen = new Map<string, string>();
+      const clashes: string[] = [];
+      for (const char of Object.keys(font.glyphs)) {
+        if (char === ' ') continue;
+        const drawn = (font.glyphs[char] as string[]).join('\n').trimEnd();
+        const already = seen.get(drawn);
+        if (already !== undefined && already.toLowerCase() !== char.toLowerCase()) {
+          clashes.push(`${already}=${char}`);
+        }
+        seen.set(drawn, char);
+      }
+      expect(clashes, `${font.id}: ${clashes.join(' ')}`).toEqual([]);
+    });
+  }
+
   it('draws a missing character as itself, on the line', () => {
-    // `gard` has no punctuation at all: its source had none.
-    const drawn = rows('A!', fontAt('gard'));
-    expect(drawn.join('')).toContain('!');
+    // `gard` has the marks its own hand implies and not the ornate rest, so
+    // an `@` is one it genuinely does not have.
+    expect(fontAt('gard').glyphs['@']).toBeUndefined();
+    const drawn = rows('A@', fontAt('gard'));
+    expect(drawn.join('')).toContain('@');
     // On the baseline, so it sits on the line with the letter rather than
     // under it - which for this font is not the last row of the box.
-    expect(drawn[drawn.length - 1]).toContain('!');
+    expect(drawn[drawn.length - 1]).toContain('@');
   });
 
   it('does not mistake a drawn character for a placeholder', () => {
     // `#` is what a block glyph is written in, and `mini` draws a literal one.
     // Running the substitution over a hand-drawn table turned it into a wall.
-    // A pen whose fill is not itself a `#`, or this could not tell them apart.
     const blocks = inkGlyphs({ progressFull: '█', progressEmpty: '░' });
-    expect(banner('#', fontAt('mini'), blocks)).toContain('#');
-    expect(banner('#', fontAt('block'), blocks)).not.toContain('#');
-    expect(banner('#', fontAt('block'), blocks)).toContain('█');
+    // The five-row table is written in `#`, so a `|` drawn there comes out in
+    // whatever the theme fills with...
+    expect(fontAt('block').placeholders).toBe(true);
+    expect(banner('|', fontAt('block'), blocks)).toBe('█\n█\n█\n█\n█');
+    // ...and a hand-drawn table comes out exactly as it was written, which is
+    // what stops a literal `#` or `v` in one of them being swapped for a cell.
+    expect(fontAt('mini').placeholders).toBeUndefined();
+    expect(banner('|', fontAt('mini'), blocks)).toBe('|\n|\n|');
   });
 
   it('tells a bracket from an angle', () => {

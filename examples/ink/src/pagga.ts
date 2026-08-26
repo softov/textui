@@ -14,13 +14,16 @@
  *
  * One case: the source has one set of letters and lowercase folds to it.
  *
- * Fifteen punctuation marks are mapped and five are not. The source lists them
- * with nothing saying which is which, and most of the shapes say it themselves
- * - a `▄█▄█▄` stacked twice is a `#` and nothing else - but five are a pair of
- * brackets and a pair of slashes whose direction is a guess. Guessing there
- * would put a `{` where a `/` belongs and look deliberate; leaving them out
- * makes them render as their own ascii character, which is visible, obviously
- * not part of the font, and says exactly what is absent.
+ * The punctuation comes from two places and the table says which is which. The
+ * marks above the divider are transcribed - and the brackets among them took a
+ * correction, because the source lists three pairs with nothing saying which is
+ * which and shape alone does not settle it: the square-cornered pair reads as
+ * `(` `)` just as happily as `[` `]`, and it was the wrong one of the two.
+ *
+ * The marks below it are drawn to match, because the source has none of them
+ * at all - no full stop, no comma, no slash. Which is worth knowing when one
+ * of them looks out of place: it is not a transcription error, it is a
+ * judgement, and a paste would replace it.
  */
 export const PAGGA: Record<string, string[]> = {
   0: ["░▄▀▄","░█/█","░░▀░"],
@@ -66,12 +69,34 @@ export const PAGGA: Record<string, string[]> = {
   "%": ["░▀░█","░▄▀░","░▀░▀"],
   "&": ["░▄▀░","░▄█▀","░░▀▀"],
   "*": ["░▄░▄","░▄█▄","░▄▀▄"],
-  "(": ["░█▀░","░█░░","░▀▀░"],
-  ")": ["░▀█░","░░█░","░▀▀░"],
+  "[": ["░█▀░","░█░░","░▀▀░"],
+  "]": ["░▀█░","░░█░","░▀▀░"],
   "_": ["░░░░","░░░░","░▀▀▀"],
   "+": ["░░░░","░▄█▄","░░▀░"],
   "-": ["░░░░","░▄▄▄","░░░░"],
   "=": ["░░░░","░▀▀▀","░▀▀▀"],
   "\"": ["░▀░▀","░░░░","░░░░"],
   "'": ["░▀","░░","░░"],
-  " ": ["░░░░","░░░░","░░░░"],};
+  "(": ["░▄▀░","░█░░","░░▀░"],
+  ")": ["░▀▄░","░░█░","░▀░░"],
+  "{": ["░░█▀","░▀▄░","░░▀▀"],
+  "}": ["░▀█░","░░▄▀","░▀▀░"],
+  "<": ["░░▄▀","░▀▄░","░░░▀"],
+  ">": ["░▀▄░","░░▄▀","░▀░░"],
+  " ": ["░░░░","░░░░","░░░░"],
+
+  // Drawn to match, not transcribed: the source has none of these. A period
+  // is the top half of the last cell, sitting on the line, and a comma is the
+  // bottom half of it, hanging below - which is what those two marks are.
+  ".": ["░░","░░","░▀"],
+  ",": ["░░","░░","░▄"],
+  ":": ["░░","░▀","░▀"],
+  ";": ["░░","░▀","░▄"],
+  "/": ["░░▄▀","░▄▀░","░▀░░"],
+  "\\": ["░▀▄░","░░▀▄","░░░▀"],
+  "@": ["░▄▀▄","░█▄█","░░▀▀"],
+  "^": ["░▄▀▄","░░░░","░░░░"],
+  "`": ["░▀▄","░░░","░░░"],
+  "|": ["░█","░█","░▀"],
+  "~": ["░░░░","░▄▀▄","░░░░"],
+};

@@ -84,4 +84,19 @@ export const GARD: Record<string, string[]> = {
   w: ["","","","... ... ..."," ||  ||  |","  ||| |||","   |   |","",""],
   x: ["","","","... ..."," '|..'","  .|.",".|  ||.","",""],
   y: ["","","",".... ..."," '|.  |","  '|.|","   '|",".. |"," ''"],
-  z: ["","","","......","'  .|'"," .|'","||....|","",""],};
+  z: ["","","","......","'  .|'"," .|'","||....|","",""],
+  // Drawn to match, not transcribed: the source is letters and digits only.
+  // These are the marks its vocabulary of pipes, dots and quotes makes on its
+  // own terms - a full stop is the foot of a letter with no letter over it.
+  // The ornate rest of ascii is not here on purpose: imitating this hand is
+  // guesswork, and a stand-in that says `@` beats a shape that says nothing.
+  '!': ["", "", "'||'", " || ", " || ", "", ".||.", "", ""],
+  '.': ["", "", "", "", "", "", ".||.", "", ""],
+  ',': ["", "", "", "", "", "", ".||.", " ''", ""],
+  ':': ["", "", "", ".||.", "", "", ".||.", "", ""],
+  ';': ["", "", "", ".||.", "", "", ".||.", " ''", ""],
+  "'": ["", "", "'||'", " ''", "", "", "", "", ""],
+  '"': ["", "", "'||'  '||'", " ''    ''", "", "", "", "", ""],
+  '-': ["", "", "", "", "......", "", "", "", ""],
+  '_': ["", "", "", "", "", "", "", "......", ""],
+};

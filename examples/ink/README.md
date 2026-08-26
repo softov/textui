@@ -130,15 +130,27 @@ unknown origin - so nothing in this directory came from one.
 
 ## A missing character is visible
 
-No font here has every character, and two of them are transcriptions of a
-source that simply had none - `gard` has no punctuation at all. **A character a
-font is missing is drawn as itself**, one cell, on the baseline.
+Eight of the eleven fonts now draw every printable ascii character. The three
+that do not are the ones whose idiom will not carry the rest: at three rows
+there is no stroke that says *dollar* rather than *S with a line through it*,
+box-drawing has nothing that says *ampersand*, and `gard` is an ornate hand
+that would be guesswork to imitate past the marks it already implies.
+
+So for those: **a character a font is missing is drawn as itself**, one cell,
+on the baseline.
 
 The alternative was a gap, and a gap is indistinguishable from a space: in a
 font with no punctuation, `hello, world!` came out as `hello  world` and looked
-like it had worked. A literal `!` sitting on the line is legible, obviously not
+like it had worked. A literal `@` sitting on the line is legible, obviously not
 part of the font, and says exactly which character is absent - which is also
 what makes it worth pressing every key in the field and seeing what shows up.
+
+Two invariants keep this honest, one test per font each: **nothing draws
+nothing**, and **no two characters share a glyph**. The second one is the
+useful one. It caught `(` and `<` drawn as the same zigzag in the five-row
+table, `{` and `<` as the same chevron in `mini` right after, `,` and `;` as
+the same mark in `tmplt`, and a `0` that was the letter `O` in two fonts at
+once. Every one of those was a pair that looked fine on its own.
 
 ## What the flags are for
 

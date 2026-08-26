@@ -54,7 +54,7 @@ The first two are data and would survive being written in a JSON screen. The
 third would not, and that is the trade: it is the same one `canvas` makes with
 `draw`.
 
-## Ten fonts, four tables
+## Eleven fonts, five tables
 
 `block` is hand-drawn: five rows, one cell to a stroke, and **both cases on one
 baseline** - lowercase sits on the bottom four rows and the ascenders reach up
@@ -62,7 +62,7 @@ into the fifth, so a cap is visibly taller than an x. Nothing descends below
 the baseline, because five rows is not enough to put a tail under a `g` and
 keep the line spacing honest, so `g` and `y` hook left instead.
 
-Six of the ten are that table, transformed - which is the other thing worth
+Six of the eleven are that table, transformed - which is the other thing worth
 showing: a bitmap font is a grid of characters, and a grid of characters can be
 sheared, doubled, halved or re-inked in about fifteen lines. None of them can
 lose a case, because the table has both.
@@ -83,7 +83,16 @@ that needs a character the theme has no name for - there is no token for half a
 cell - so it is also the only place this example asks what the terminal can
 show, and on an ascii one it is drawn in `"` and `_` instead.
 
-`gard` is the second table, and the biggest: **sixty-two glyphs of quotes,
+`pagga` is the second table: **three rows of half cells on a `░` ground.** That
+ground is the difference between it and `half`, and the point of it - `half`
+draws letters and leaves the space around them empty, this draws them *on*
+something, so a banner is a block of texture with the letters knocked out of it.
+It is why its glyphs are four columns rather than three (the first is the
+gutter, so letters butt together and the ground runs unbroken between them) and
+why its space is a glyph of its own rather than a gap, which would be a hole in
+it.
+
+`gard` is the third table, and the biggest: **sixty-two glyphs of quotes,
 pipes and dots**, transcribed from a font Softov brought. It is the only one
 here with two cases of its own rather than a fold, and the only one whose
 letters hang below the baseline - `J`, `g`, `j`, `p`, `q` and `y` all do. Every
@@ -99,7 +108,7 @@ lower than the letters, so `Gard 42` had its number sunk below its word. And
 **it has no punctuation**, because the source had none - a `!` renders as the
 gap any unknown character does.
 
-`tmplt` is the third table: **three rows of heavy box-drawing**, transcribed
+`tmplt` is the fourth table: **three rows of heavy box-drawing**, transcribed
 capital for capital from a font Softov brought - which is why its `X` is four
 cells wide and its `I` is one, and why they are not going to be tidied into a
 grid. Its digits and punctuation are drawn to match rather than transcribed,
@@ -107,7 +116,7 @@ because the source had none. It is also the only font here with nothing to
 degrade to: box-drawing has no `#` the way a block does, so on an ascii
 terminal it borrows `mini` - the same three rows, in characters a teletype has.
 
-`mini` is the fourth table: **three rows, drawn in strokes rather than in
+`mini` is the fifth table: **three rows, drawn in strokes rather than in
 cells.** Three rows of solid cells cannot hold an alphabet - at that size a
 solid `A` and a solid `M` are the same three-by-three block, and so are `G` and
 `O`. The way out is the one every small figlet font takes: stop filling cells
@@ -118,6 +127,18 @@ The fonts here are hand-drawn rather than converted from figlet `.flf` files on
 purpose. FIGlet's own font licensing is [a long-standing muddle](https://github.com/pwaller/pyfiglet/issues/89) -
 the original notice covers copying but not modification, and many fonts have
 unknown origin - so nothing in this directory came from one.
+
+## A missing character is visible
+
+No font here has every character, and two of them are transcriptions of a
+source that simply had none - `gard` has no punctuation at all. **A character a
+font is missing is drawn as itself**, one cell, on the baseline.
+
+The alternative was a gap, and a gap is indistinguishable from a space: in a
+font with no punctuation, `hello, world!` came out as `hello  world` and looked
+like it had worked. A literal `!` sitting on the line is legible, obviously not
+part of the font, and says exactly which character is absent - which is also
+what makes it worth pressing every key in the field and seeing what shows up.
 
 ## What the flags are for
 

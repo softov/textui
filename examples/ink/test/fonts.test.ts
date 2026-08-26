@@ -157,7 +157,8 @@ describe('the transforms', () => {
     expect(tmplt.fallback).toBe('mini');
     expect(heightOf(fontAt(tmplt.fallback as string))).toBe(heightOf(tmplt));
     // And every other font stands on its own.
-    expect(FONTS.filter((f) => f.fallback !== undefined).map((f) => f.id)).toEqual(['tmplt']);
+    expect(FONTS.filter((f) => f.fallback !== undefined).map((f) => f.id).sort())
+      .toEqual(['pagga', 'tmplt']);
   });
 
   it('draws mini in strokes rather than in cells, so three rows can hold an alphabet', () => {
@@ -196,6 +197,73 @@ describe('the transforms', () => {
     // The triangle above the crossbar of an `A` is enclosed, so nothing falls
     // into it - the bug that turned a capital into a smudge.
     expect(shadowed[1]).toBe('#   #');
+  });
+});
+
+describe('every character, in every font', () => {
+  const ALL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    + "!?.,:;-+=*/\\()'\"#@&<>_";
+
+  for (const font of FONTS) {
+    it(`draws something for all of them in ${font.id}`, () => {
+      // Not "has a glyph for" - "draws something". A font that is missing a
+      // glyph renders the character as itself, so nothing comes out as a gap:
+      // a gap is indistinguishable from a space, and `hello, world!` in a font
+      // with no punctuation looked like it had worked.
+      const blank = [...ALL].filter((c) => banner(c, font, PEN).trim() === '');
+      expect(blank, `${font.id} draws nothing for ${blank.join(' ')}`).toEqual([]);
+    });
+  }
+
+  it('draws a missing character as itself, on the line', () => {
+    // `gard` has no punctuation at all: its source had none.
+    const drawn = rows('A!', fontAt('gard'));
+    expect(drawn.join('')).toContain('!');
+    // On the baseline, so it sits on the line with the letter rather than
+    // under it - which for this font is not the last row of the box.
+    expect(drawn[drawn.length - 1]).toContain('!');
+  });
+
+  it('does not mistake a drawn character for a placeholder', () => {
+    // `#` is what a block glyph is written in, and `mini` draws a literal one.
+    // Running the substitution over a hand-drawn table turned it into a wall.
+    // A pen whose fill is not itself a `#`, or this could not tell them apart.
+    const blocks = inkGlyphs({ progressFull: '█', progressEmpty: '░' });
+    expect(banner('#', fontAt('mini'), blocks)).toContain('#');
+    expect(banner('#', fontAt('block'), blocks)).not.toContain('#');
+    expect(banner('#', fontAt('block'), blocks)).toContain('█');
+  });
+
+  it('tells a bracket from an angle', () => {
+    // Both were drawn as the same zigzag, so `(a)` and `<a>` were one string.
+    expect(banner('(', fontAt('block'), PEN)).not.toBe(banner('<', fontAt('block'), PEN));
+    expect(banner(')', fontAt('block'), PEN)).not.toBe(banner('>', fontAt('block'), PEN));
+  });
+});
+
+describe('the pagga table', () => {
+  const pagga = fontAt('pagga');
+
+  it('is three rows on a ground, and folds its case', () => {
+    expect(heightOf(pagga)).toBe(3);
+    expect(pagga.cases).toBe('folded');
+    expect(banner('A', pagga)).toBe(banner('a', pagga));
+  });
+
+  it('runs its ground through a word space', () => {
+    // The space is a glyph rather than a gap. A gap would be a hole in it.
+    const drawn = banner('a a', pagga).split('\n');
+    expect(drawn.every((line) => !line.includes('  '))).toBe(true);
+    expect(pagga.glyphs[' ']).toBeDefined();
+  });
+
+  it('has every letter and digit, each one distinct', () => {
+    const seen = new Map<string, string>();
+    for (const char of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') {
+      const drawn = banner(char, pagga);
+      expect(seen.get(drawn), `${char} is the same as ${seen.get(drawn) ?? ''}`).toBeUndefined();
+      seen.set(drawn, char);
+    }
   });
 });
 

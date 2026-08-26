@@ -23,6 +23,7 @@
  */
 
 import { GARD } from './gard.js';
+import { PAGGA } from './pagga.js';
 
 type Grid = string[];
 
@@ -128,8 +129,8 @@ const REST: Record<string, string> = {
   '*': '     |# # | ### |# # |     ',
   '/': '    #|   # |  #  | #   |#    ',
   '\\': '#    | #   |  #  |   # |    #',
-  '(': '  #| # |#  |# # | #',
-  ')': '#  | # |  #| # |#  ',
+  '(': '  #| # | # | # |  #',
+  ')': '#  | # | # | # |#  ',
   "'": ' # | # |   |   |   ',
   '"': '# #|# #|   |   |   ',
   '#': ' # # |#####| # # |#####| # # ',
@@ -452,6 +453,25 @@ export interface Font {
    */
   cases: 'both' | 'folded';
   /**
+   * Whether this font's glyphs are written in placeholders.
+   *
+   * The ones off the five-row table are: `#` and `%` and the two halves, filled
+   * in from the theme at paint time. The hand-drawn tables are not - they are
+   * already what they look like - and it matters, because a literal `#` in one
+   * of them would otherwise be swapped for a full block, which is how the
+   * character `#` would come out as a solid bar.
+   */
+  placeholders?: boolean;
+  /**
+   * Which row of the glyph box the letters sit on.
+   *
+   * Only needed where it is not the last one: `gard` keeps two blank rows
+   * under its baseline for the descenders, so a character drawn on the last
+   * row would hang below every letter beside it. Used for the stand-in a
+   * missing character gets, which has to land on the line like anything else.
+   */
+  baseline?: number;
+  /**
    * The font to draw instead where this one's characters do not exist.
    *
    * Only `tmplt` needs one. Every other font here is made of placeholders the
@@ -470,6 +490,7 @@ export const FONTS: Font[] = [
     glyphs: BLOCK,
     tracking: 1,
     space: 3,
+    placeholders: true,
     cases: 'both',
   },
   {
@@ -479,6 +500,7 @@ export const FONTS: Font[] = [
     glyphs: mapGlyphs(BLOCK, wide),
     tracking: 2,
     space: 4,
+    placeholders: true,
     cases: 'both',
   },
   {
@@ -488,6 +510,7 @@ export const FONTS: Font[] = [
     glyphs: mapGlyphs(BLOCK, slant),
     tracking: 1,
     space: 3,
+    placeholders: true,
     cases: 'both',
   },
   {
@@ -497,6 +520,7 @@ export const FONTS: Font[] = [
     glyphs: mapGlyphs(BLOCK, shadow),
     tracking: 1,
     space: 3,
+    placeholders: true,
     cases: 'both',
   },
   {
@@ -506,6 +530,7 @@ export const FONTS: Font[] = [
     glyphs: mapGlyphs(BLOCK, half),
     tracking: 1,
     space: 3,
+    placeholders: true,
     cases: 'both',
   },
   {
@@ -527,12 +552,23 @@ export const FONTS: Font[] = [
     cases: 'both',
   },
   {
+    id: 'pagga',
+    title: 'pagga',
+    note: 'Three rows of half cells on a shaded ground - the difference from half, and the point of it: the letters are knocked out of a block of texture rather than floating on the terminal.',
+    glyphs: PAGGA,
+    tracking: 0,
+    space: 4,
+    cases: 'folded',
+    fallback: 'mini',
+  },
+  {
     id: 'gard',
     title: 'gard',
     note: 'Quotes, pipes and dots, transcribed glyph for glyph - the only font here with two cases of its own rather than a fold, and the only one with letters that hang below the baseline.',
     glyphs: GARD,
     tracking: 1,
     space: 3,
+    baseline: 6,
     cases: 'both',
   },
   {
@@ -581,7 +617,26 @@ function glyphOf(font: Font, char: string): Grid | undefined {
   const found = font.glyphs[char]
     ?? font.glyphs[char.toUpperCase()]
     ?? font.glyphs[char.toLowerCase()];
-  return found === undefined ? undefined : trim(found);
+  if (found !== undefined) return trim(found);
+  return char === ' ' ? undefined : standIn(font, char);
+}
+
+/**
+ * A character the font has no glyph for, drawn as itself.
+ *
+ * Not a gap. A gap is indistinguishable from a space, so a font missing its
+ * punctuation renders `hello, world!` as `hello  world` and looks like it
+ * worked - the reader has no way to tell a missing glyph from a word break.
+ * One cell with the character in it is legible, obviously not part of the
+ * font, and says exactly which character is absent.
+ *
+ * On the baseline, so it sits on the line with the letters beside it rather
+ * than under them.
+ */
+function standIn(font: Font, char: string): Grid {
+  const height = heightOf(font);
+  const line = font.baseline ?? height - 1;
+  return Array.from({ length: height }, (_, y) => (y === line ? char : ' '));
 }
 
 /** The columns a character takes, not counting the gap before it. */
@@ -726,7 +781,12 @@ function bannerLine(text: string, font: Font, height: number, ink: InkGlyphs): s
   let first = true;
 
   for (const char of Array.from(text)) {
-    const glyph = char === ' ' ? undefined : glyphOf(font, char);
+    // A space is a gap unless the font draws one. `pagga` does: its ground has
+    // to run through the gap between two words, and a gap would be a hole in
+    // it - so the table has a glyph for `' '` and that glyph wins.
+    const glyph = char === ' '
+      ? (font.glyphs[' '] === undefined ? undefined : trim(font.glyphs[' ']))
+      : glyphOf(font, char);
     if (!glyph) {
       for (let y = 0; y < height; y++) rows[y] += ' '.repeat(font.space);
       first = true;
@@ -746,12 +806,14 @@ function bannerLine(text: string, font: Font, height: number, ink: InkGlyphs): s
   // letters is four rows rather than five with a gap over it. Per line, which
   // is the unit that is stacked - the letters inside one still share a
   // baseline, and that is the alignment that has to hold.
-  const drawn = rows.map((row) => row
-    .replace(/#/g, ink.fill)
-    .replace(/%/g, ink.shade)
-    .replace(/\^/g, ink.top)
-    .replace(/v/g, ink.bottom)
-    .trimEnd());
+  // Only where the font said its glyphs are placeholders. A hand-drawn table
+  // is already what it looks like, and running this over one would turn its
+  // literal `#` into a full block and its `v` into half a cell.
+  const ink_ = (row: string): string => (font.placeholders
+    ? row.replace(/#/g, ink.fill).replace(/%/g, ink.shade)
+      .replace(/\^/g, ink.top).replace(/v/g, ink.bottom)
+    : row);
+  const drawn = rows.map((row) => ink_(row).trimEnd());
   while (drawn.length > 0 && drawn[0] === '') drawn.shift();
   while (drawn.length > 0 && drawn[drawn.length - 1] === '') drawn.pop();
   return drawn.join('\n');

@@ -63,22 +63,39 @@ describe('the transforms', () => {
     expect([...drawn].sort()).toEqual(['"', '#', '_']);
   });
 
-  it('draws dots across and colons down, and lets across win', () => {
-    // `I` is a bar, a stem and a bar. A whole bar of dots, including the cell
-    // the stem hangs off: that cell is part of the bar, and a colon there was
-    // the bug - the middle of a `T` came out as `..:..` rather than `.....`.
-    const drawn = rows('I', fontAt('dots'));
-    expect(drawn[0]).toBe('.....');
-    expect(drawn[2]).toBe('  :');
-    expect(drawn[4]).toBe('.....');
-  });
-
-  it('draws a stroke that is a single cell as a dot, not as a colon', () => {
-    // The last column of a row used to read its own end-of-string as a
-    // neighbour, so a cell with nothing beside it looked joined.
+  // A `T` and an `I` are the same two strokes and they settle the junction
+  // differently, which is the whole rule: a stem hanging below a bar does not
+  // take a cell out of it, and a stem landing on one shows where it lands.
+  it('leaves a bar whole where a stem only hangs below it', () => {
     const drawn = rows('T', fontAt('dots'));
     expect(drawn[0]).toBe('.....');
     expect(drawn.slice(1).every((line) => line.trim() === ':')).toBe(true);
+  });
+
+  it('marks a bar where a stem lands on it', () => {
+    const drawn = rows('I', fontAt('dots'));
+    expect(drawn[0]).toBe('.....');
+    expect(drawn[2]).toBe('  :');
+    expect(drawn[4]).toBe('..:..');
+  });
+
+  it('keeps a stem running through the end of a bar', () => {
+    // `E` is one stem and three bars. Every bar starts on the stem, and the
+    // stem is what those three cells belong to.
+    const drawn = rows('E', fontAt('dots'));
+    // The top bar has nothing above it anywhere, so it is a bar all the way
+    // across - the stem has not started yet. The other two cross a stem that
+    // is already running, and the cell it passes through stays the stem's.
+    expect(drawn[0]).toBe('.....');
+    expect(drawn[2]).toBe(':...');
+    expect(drawn[4]).toBe(':....');
+  });
+
+  it('draws a stroke with nothing beside it as a dot', () => {
+    // The last column of a row used to read its own end-of-string as a
+    // neighbour, so a cell with nothing beside it looked joined. `X` is
+    // nothing but diagonals: no cell has an orthogonal neighbour at all.
+    expect(rows('X', fontAt('dots')).join('')).not.toContain(':');
   });
 
   it('spaces stars out, and draws nothing else', () => {

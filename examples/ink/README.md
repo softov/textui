@@ -73,7 +73,7 @@ lose a case, because the table has both.
 | `slant` | sheared half a column per row - an italic |
 | `shadow` | the letter, and a copy one cell down and right in a second glyph |
 | `half` | two rows to one row of half cells: five rows become **three** |
-| `dots` | a full stop where the stroke runs across, a colon where it runs down |
+| `dots` | a dot across, a colon down; the junction goes to whatever comes down into it |
 | `stars` | every lit cell a star with a gap after it |
 
 Two have a subtlety worth knowing. `shadow` keeps the shadow only *outside* the

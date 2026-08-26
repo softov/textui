@@ -318,15 +318,24 @@ function half(rows: Grid): Grid {
 /**
  * Drawn in dots and colons rather than in blocks.
  *
- * A cell takes the character of the stroke it is *part of*, and **across wins**
- * - a full stop where it has a lit neighbour left or right, a colon where it
- * only has one above or below. Which way round that goes is the whole font: a
- * rule that asked about the vertical first put a colon in the middle of the top
- * bar of a `T`, because the stem hangs off it there. The bar is a bar; the stem
- * meeting it does not make that one cell part of the stem.
+ * A cell takes the character of the stroke that owns it, and the two strokes
+ * that can both claim a cell are settled by one question: **does anything come
+ * down into it?**
+ *
+ *   * a neighbour across, and nothing above - the bar owns it, a dot;
+ *   * anything else with a neighbour above or below - a stem owns it, a colon;
+ *   * neither - a dot, which is what a diagonal and a full stop are made of.
+ *
+ * Both halves of that were learnt the hard way and neither is arbitrary. Ask
+ * about the vertical first and the top bar of a `T` comes out `..:..`, because
+ * the stem hangs off its middle - but a stem hanging *below* a bar does not
+ * take a cell out of the bar. Ask only about the horizontal and the bottom bar
+ * of an `I` comes out `.....`, because the stem is above it - and a stem
+ * landing *on* a bar does show where it lands. A `T` and an `I` are the same
+ * two strokes; which one wins depends on which way the stem runs.
  *
  * The letters are the same letters. This is a change of pen, not of hand, which
- * is why it is fifteen lines.
+ * is why it is twenty lines.
  */
 function dots(rows: Grid): Grid {
   // Both bounds, on both axes. Indexing a string past its end gives
@@ -340,7 +349,8 @@ function dots(rows: Grid): Grid {
   return rows.map((row, y) => Array.from(row)
     .map((cell, x) => {
       if (cell === ' ') return ' ';
-      if (lit(y, x - 1) || lit(y, x + 1)) return '.';
+      const across = lit(y, x - 1) || lit(y, x + 1);
+      if (across && !lit(y - 1, x)) return '.';
       return lit(y - 1, x) || lit(y + 1, x) ? ':' : '.';
     })
     .join(''));
@@ -422,7 +432,7 @@ export const FONTS: Font[] = [
   {
     id: 'dots',
     title: 'dots',
-    note: 'A colon where the cell has a lit neighbour above or below, a full stop where it does not. The same letters in a different pen - and the one font here that is legible over a phone line.',
+    note: 'A dot where a bar runs across, a colon where a stem runs down - and the junction goes to whichever one comes down into it. The same letters in a different pen.',
     glyphs: mapGlyphs(BLOCK, dots),
     tracking: 1,
     space: 3,

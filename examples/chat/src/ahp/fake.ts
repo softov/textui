@@ -1,7 +1,8 @@
 import type { HostConnection, HostEvent } from './connection.js';
 import type {
-  Agent, Changeset, ChatInputRequest, PendingInput, ResponsePart, SessionConfig, SessionDetail,
-  SessionSummary, SessionUri, ToolCall, Turn,
+  Agent, Changeset, ChatInputRequest, ContentRef, Customization, FileContent, FileEdit,
+  PendingInput, ResponsePart, SessionConfig, SessionDetail, SessionSummary, SessionUri,
+  ToolCall, Turn,
 } from './types.js';
 import { SessionFlag } from './types.js';
 
@@ -92,10 +93,60 @@ export function fakeHost(): FakeHost {
   /** `IsRead` and `IsArchived` only. Nothing about what the session is doing. */
   const flags = new Map<SessionUri, number>();
   const failed = new Set<SessionUri>();
+  /** What a `ContentRef` points at. Keyed by the ref's own uri. */
+  const contents = new Map<string, string>();
   const script: Step[] = [];
 
   const emit = (uri: SessionUri, event: HostEvent): void => {
     for (const observer of observers.get(uri) ?? []) observer(event);
+  };
+
+  /**
+   * A file, and where its two versions are.
+   *
+   * The rows carry pointers and the text goes in `contents`, which is the
+   * protocol's own arrangement rather than a convenience here: a changeset is
+   * a list a client wants up front and a pile of bytes it wants only for the
+   * row somebody opened. Building the fake the same way is what makes the
+   * fetch path something a test exercises rather than something only a real
+   * host ever takes.
+   */
+  const edited = (uri: string, before: string | null, after: string | null): FileEdit => {
+    const key = (side: string): string => `ahp-content:/${uri.split('/').pop() ?? 'f'}-${side}`;
+    if (before !== null) contents.set(key('before'), before);
+    if (after !== null) contents.set(key('after'), after);
+    const lines = (text: string | null): number => (text === null ? 0 : text.split('\n').length);
+    return {
+      uri,
+      ...(before !== null ? { before: uri } : {}),
+      ...(after !== null ? { after: uri } : {}),
+      diff: { added: lines(after), removed: lines(before) },
+      content: {
+        ...(before !== null ? { before: { uri: key('before'), contentType: 'text/plain' } } : {}),
+        ...(after !== null ? { after: { uri: key('after'), contentType: 'text/plain' } } : {}),
+      },
+    };
+  };
+
+  const EDITS: Changeset = {
+    status: 'complete',
+    files: [
+      edited(
+        'file:///brb_main/src/brb_backend/compileLinux.sh',
+        '#!/bin/sh\nset -e\nfor lib in libbrb_core libbrb_ev_kq; do\n  make -C "$lib" -f Makefile\ndone\n',
+        '#!/bin/sh\nset -e\nfor lib in libbrb_core libbrb_ev_kq libbrb_data; do\n  make -C "$lib" -f Makefile.linux\ndone\n',
+      ),
+      // A creation: no `before` at all, which is the case a viewer that
+      // assumes two sides renders as a diff against the empty string and
+      // labels wrongly.
+      edited(
+        'file:///brb_main/src/brb_backend/README.linux.md',
+        null,
+        '# Building on Linux\n\nNeeds libkqueue built from source with\n`-DCMAKE_INSTALL_PREFIX=/usr`.\n',
+      ),
+      // And a deletion, for the same reason in the other direction.
+      edited('file:///brb_main/src/brb_backend/build.old.sh', 'make all\n', null),
+    ],
   };
 
   /**
@@ -373,13 +424,85 @@ export function fakeHost(): FakeHost {
         ],
       },
     ],
-    changes: {
-      status: 'complete',
-      files: [
-        { uri: 'file:///brb_main/src/brb_backend/compileLinux.sh', before: 'x', after: 'y', diff: { added: 4, removed: 2 } },
-      ],
-    },
+    changes: EDITS,
   });
+
+  // ----------------------------------------------------- what the host handed it
+
+  /**
+   * The skills, the servers and where they came from.
+   *
+   * Not per-session here, though the protocol's is: the same list answers for
+   * every session, because what this is for is having something on screen with
+   * nothing installed. What it does reproduce is the *shape* - two containers
+   * with children, one MCP server contributed at the top level by the host
+   * itself, one plugin that failed to load, one skill the agent may use and a
+   * person may not, and a server waiting to be signed into.
+   */
+  const CUSTOMIZATIONS: Customization[] = [
+    {
+      id: 'c-plug-review', kind: 'plugin', name: 'code-review',
+      uri: 'https://plugins.example/code-review', enabled: true,
+      description: 'A review pass, and the checklist it runs',
+    },
+    {
+      id: 'c-skill-review', kind: 'skill', name: 'review', from: 'code-review',
+      uri: 'file:///home/softov/.claude/plugins/code-review/skills/review/SKILL.md',
+      enabled: true, userInvocable: true,
+      description: 'Read the diff and report what is wrong with it',
+    },
+    {
+      id: 'c-skill-verify', kind: 'skill', name: 'verify', from: 'code-review',
+      uri: 'file:///home/softov/.claude/plugins/code-review/skills/verify/SKILL.md',
+      // The agent's, not a person's: offering it in a slash menu offers
+      // something the host would refuse.
+      enabled: true, userInvocable: false,
+      description: 'Try to refute a finding before it is reported',
+    },
+    {
+      id: 'c-mcp-desk', kind: 'mcpServer', name: 'desk', from: 'code-review',
+      uri: 'https://plugins.example/code-review#mcpServers.desk',
+      enabled: true, state: 'ready',
+    },
+    {
+      id: 'c-dir-commands', kind: 'directory', name: '.claude/commands',
+      uri: 'file:///brb_main/src/brb_framework/.claude/commands', enabled: true,
+      description: 'Slash commands for this workspace',
+    },
+    {
+      id: 'c-skill-linux', kind: 'skill', name: 'linux-build', from: '.claude/commands',
+      uri: 'file:///brb_main/src/brb_framework/.claude/commands/linux-build.md',
+      enabled: true, userInvocable: true,
+      description: 'Build the framework with the GNU makefiles',
+    },
+    {
+      id: 'c-prompt-release', kind: 'prompt', name: 'release-notes', from: '.claude/commands',
+      uri: 'file:///brb_main/src/brb_framework/.claude/commands/release-notes.md',
+      enabled: true, description: 'Write the notes for what is on this branch',
+    },
+    {
+      id: 'c-skill-off', kind: 'skill', name: 'deploy', from: '.claude/commands',
+      uri: 'file:///brb_main/src/brb_framework/.claude/commands/deploy.md',
+      // Off on its own, inside a directory that is on. The pair is what makes
+      // "enabled is derived from both" something a screen can be checked on.
+      enabled: false, userInvocable: true,
+      description: 'Push to dev82 and restart the service',
+    },
+    {
+      id: 'c-mcp-tasker', kind: 'mcpServer', name: 'tasker',
+      uri: 'file:///home/softov/.mcp.json#tasker', enabled: true, state: 'ready',
+    },
+    {
+      id: 'c-mcp-drive', kind: 'mcpServer', name: 'google-drive',
+      uri: 'file:///home/softov/.mcp.json#google-drive', enabled: true,
+      state: 'authRequired', problem: 'required',
+    },
+    {
+      id: 'c-plug-broken', kind: 'plugin', name: 'notes-sync',
+      uri: 'https://plugins.example/notes-sync', enabled: true,
+      problem: 'manifest is not valid JSON: unexpected } at line 14',
+    },
+  ];
 
   // ------------------------------------------------------------------ scripts
 
@@ -746,6 +869,32 @@ export function fakeHost(): FakeHost {
     },
 
     changes: async (uri) => changesets.get(uri) ?? { status: 'complete', files: [] },
+
+    content: async (ref: ContentRef): Promise<FileContent> => {
+      const found = contents.get(ref.uri);
+      // A ref nobody registered is the shape a host answers with when the
+      // content has expired, and a viewer has to have something to say about
+      // it other than a blank pane.
+      if (found === undefined) throw new Error(`No content for ${ref.uri}`);
+      return { text: found };
+    },
+
+    customizations: async () => CUSTOMIZATIONS.map((entry) => ({ ...entry })),
+
+    setCustomizationEnabled: (uri, id, enabled) => {
+      const found = CUSTOMIZATIONS.find((entry) => entry.id === id);
+      if (!found) return;
+      found.enabled = enabled;
+      // A container carries its children with it, the way the host's own
+      // resolution does - turning a plugin off turns off everything it
+      // brought, whatever each child's own flag says.
+      if (found.kind === 'plugin' || found.kind === 'directory') {
+        for (const child of CUSTOMIZATIONS) {
+          if (child.from === found.name) child.enabled = enabled;
+        }
+      }
+      emit(uri, { type: 'status', status: statusOf(uri) });
+    },
 
     detail: async (uri): Promise<SessionDetail> => {
       const chat = chats.get(uri) ?? null;

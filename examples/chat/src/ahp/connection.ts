@@ -1,6 +1,6 @@
 import type {
-  Agent, Answer, Changeset, PendingInput, SessionConfig, SessionDetail, SessionSummary,
-  SessionUri, ToolCall, Turn,
+  Agent, Answer, Changeset, ContentRef, Customization, FileContent, PendingInput, SessionConfig,
+  SessionDetail, SessionSummary, SessionUri, ToolCall, Turn,
 } from './types.js';
 
 /**
@@ -99,6 +99,35 @@ export interface HostConnection {
   completeInput(uri: SessionUri, requestId: string, accepted: boolean, answers: Record<string, Answer>): void;
 
   changes(uri: SessionUri): Promise<Changeset>;
+
+  /**
+   * One file out of a changeset, fetched.
+   *
+   * Separate from `changes` on purpose: a changeset is a list of rows and this
+   * is one file's worth of bytes, and a client that returned both together
+   * would download a session's entire diff to draw a list of names. Nothing
+   * calls this until somebody opens a row.
+   */
+  content(ref: ContentRef): Promise<FileContent>;
+
+  /**
+   * What this session was given: plugins, directories, skills, MCP servers.
+   *
+   * Read from the session channel rather than the catalogue, because it is
+   * per-session - two sessions on the same host, in different directories,
+   * are handed different skills. Flattened on the way out; see
+   * `Customization`.
+   */
+  customizations(uri: SessionUri): Promise<Customization[]>;
+
+  /**
+   * Turn one on or off, by id.
+   *
+   * Fire-and-forget like the rest of the dispatches: the host decides, tells
+   * every client watching, and what comes back is the customization list
+   * having changed - not a return value here.
+   */
+  setCustomizationEnabled(uri: SessionUri, id: string, enabled: boolean): void;
 
   /**
    * The session channel's own state: its chat, its lifecycle, its settings.

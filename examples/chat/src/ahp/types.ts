@@ -191,6 +191,36 @@ export interface FileEdit {
   before?: string;
   after?: string;
   diff: { added: number; removed: number };
+  /**
+   * Where the two versions of the file actually are.
+   *
+   * `before` and `after` are the file's own URIs - what it is called on either
+   * side of the edit, which is how a rename shows. The content is somewhere
+   * else: the protocol keeps it out of the state tree behind a `ContentRef`,
+   * because a changeset of two hundred files is a list a client wants and four
+   * megabytes it does not. So a row is cheap and opening one is a fetch.
+   */
+  content?: { before?: ContentRef; after?: ContentRef };
+}
+
+/**
+ * A pointer to content the state tree does not carry.
+ *
+ * `sizeHint` is worth keeping rather than reading past: it is the only thing
+ * that says, before the fetch, that the answer is a hundred megabytes. A
+ * viewer that reads first and measures after is a viewer that reads first.
+ */
+export interface ContentRef {
+  uri: string;
+  sizeHint?: number;
+  contentType?: string;
+}
+
+/** What came back for a `ContentRef`, decoded. */
+export interface FileContent {
+  text: string;
+  /** Set instead of `text` when the bytes are not text this can show. */
+  binary?: { bytes: number; contentType?: string };
 }
 
 export interface Changeset {
@@ -241,4 +271,74 @@ export interface SessionConfig {
   properties: ConfigProperty[];
   /** What is in force. A change dispatches the one key, never the object. */
   values: Record<string, string>;
+}
+
+/**
+ * What a plugin, a directory or the host itself contributed to this session.
+ *
+ * One flat shape for eight `CustomizationType`s, because a reader wants a
+ * list. The protocol nests them - a plugin or a directory is a *container*
+ * whose `children` are the skills, prompts, rules, hooks, agents and MCP
+ * servers it brought - and an MCP server can also arrive at the top level,
+ * contributed by the host rather than by anything. Flattening keeps `from`
+ * so a panel can still say where a skill came from, which is the question
+ * somebody looking at a list of forty of them actually has.
+ *
+ * `enabled` is derived, not copied. A child's own flag is independent of its
+ * container's, and the effective answer is both: a disabled plugin disables
+ * everything it brought whatever each child says about itself. A panel that
+ * showed the child's flag alone would list a skill as on inside a plugin that
+ * is off.
+ */
+export type CustomizationKind =
+  | 'plugin' | 'directory' | 'agent' | 'skill' | 'prompt' | 'rule' | 'hook' | 'mcpServer';
+
+export interface Customization {
+  /** Session-unique and opaque. What every action targeting one sends. */
+  id: string;
+  kind: CustomizationKind;
+  name: string;
+  /** The file, directory or plugin URL it was read from. */
+  uri: string;
+  description?: string;
+  /** The container's and its own, resolved together. */
+  enabled: boolean;
+  /** The plugin or directory it came from. Absent at the top level. */
+  from?: string;
+  /**
+   * Whether a person may invoke it, for the kinds where that is a question.
+   *
+   * A skill can be marked as the agent's alone - `disable-user-invocation` in
+   * its frontmatter - and offering it in a slash menu is then offering
+   * something the host will refuse. The other direction, an agent-only skill
+   * hidden from the menu, is why this is a field rather than an assumption.
+   */
+  userInvocable?: boolean;
+  /** MCP servers: `starting`, `ready`, `authRequired`, `error` or `stopped`. */
+  state?: McpState;
+  /** Why it is not ready, in the host's own words. */
+  problem?: string;
+}
+
+export type McpState = 'starting' | 'ready' | 'authRequired' | 'error' | 'stopped';
+
+/**
+ * Something a person can put after a slash.
+ *
+ * Two sources that look alike and behave nothing alike, which is why `kind` is
+ * here rather than left to be guessed at the call site. A `client` command is
+ * one of ours: it opens a screen or changes a setting, and sending it down the
+ * session channel would put `/theme` in the transcript and ask an agent to
+ * make sense of it. A `session` command is a skill or a prompt the *host*
+ * contributed, and the only way to invoke one is to send its name as the
+ * message - which is exactly what the composer does with a slash it does not
+ * recognise.
+ */
+export interface SlashCommand {
+  id: string;
+  kind: 'client' | 'session';
+  title: string;
+  description?: string;
+  /** Where a session command came from: the plugin or directory. */
+  from?: string;
 }

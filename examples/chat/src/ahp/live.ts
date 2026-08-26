@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { HostConnection, HostEvent } from './connection.js';
 import type {
-  Agent, Answer, Changeset, ConfigProperty, FileEdit, PendingInput, Question, QuestionKind,
+  Agent, Answer, Changeset, ConfigProperty, ContentRef, Customization, CustomizationKind,
+  FileContent, FileEdit, McpState, PendingInput, Question, QuestionKind,
   ResponsePart, SessionConfig, SessionDetail, SessionSummary, SessionUri, ToolCall,
   ToolCallStatus, Turn,
 } from './types.js';
@@ -411,6 +412,12 @@ function changeset(value: unknown): Changeset {
       const before = str(bag(edit.before).uri);
       const after = str(bag(edit.after).uri);
       const diff = bag(edit.diff);
+      // The pointers, not the bytes. Kept so a row that is opened has
+      // somewhere to fetch from, and nothing is fetched until one is.
+      const refs = {
+        ...(contentRef(bag(edit.before).content) ? { before: contentRef(bag(edit.before).content) as ContentRef } : {}),
+        ...(contentRef(bag(edit.after).content) ? { after: contentRef(bag(edit.after).content) as ContentRef } : {}),
+      };
       return {
         uri: after ?? before ?? '',
         ...(before ? { before } : {}),
@@ -419,9 +426,95 @@ function changeset(value: unknown): Changeset {
           added: typeof diff.added === 'number' ? diff.added : 0,
           removed: typeof diff.removed === 'number' ? diff.removed : 0,
         },
+        ...(Object.keys(refs).length > 0 ? { content: refs } : {}),
       };
     }),
   };
+}
+
+function contentRef(value: unknown): ContentRef | undefined {
+  const found = bag(value);
+  const uri = str(found.uri);
+  if (!uri) return undefined;
+  return {
+    uri,
+    ...(typeof found.sizeHint === 'number' ? { sizeHint: found.sizeHint } : {}),
+    ...(str(found.contentType) ? { contentType: str(found.contentType) as string } : {}),
+  };
+}
+
+/**
+ * The customization tree, flattened.
+ *
+ * Containers come first and then what each one brought, so the list reads in
+ * the order somebody would draw it: the plugin, then its skills. An MCP server
+ * is the one kind that turns up at both levels - contributed by a plugin, or
+ * by the host directly - and it is the same shape either way, so it is decoded
+ * once and placed twice.
+ *
+ * `enablement[0]` is the decisive decision. The protocol requires producers to
+ * sort by descending specificity, so the session's answer is first when there
+ * is one and the global one is all there is otherwise. Reading past the head
+ * of that array would be preferring a broader scope to a narrower one.
+ */
+function customizations(value: unknown): Customization[] {
+  const out: Customization[] = [];
+
+  const decide = (entry: Bag, within: boolean): boolean => {
+    const explicit = list(entry.enablement).map(bag)[0];
+    const own = explicit !== undefined
+      ? explicit.enabled !== false
+      : typeof entry.enabled === 'boolean' ? entry.enabled : true;
+    // Both, never one: a child's own flag says nothing about whether the
+    // plugin that brought it is switched on.
+    return within && own;
+  };
+
+  const one = (entry: Bag, from: string | undefined, within: boolean): Customization | null => {
+    const kind = str(entry.type) as CustomizationKind | undefined;
+    const id = str(entry.id);
+    if (!kind || !id) return null;
+    const state = bag(entry.state);
+    return {
+      id,
+      kind,
+      name: str(entry.name) ?? id,
+      uri: str(entry.uri) ?? '',
+      enabled: decide(entry, within),
+      ...(from ? { from } : {}),
+      ...(plain(entry.description) ? { description: plain(entry.description) as string } : {}),
+      ...(kind === 'skill' || kind === 'agent'
+        ? { userInvocable: entry.disableUserInvocation !== true }
+        : {}),
+      ...(kind === 'mcpServer' && str(state.kind)
+        ? { state: str(state.kind) as McpState }
+        : {}),
+      // `message` on the degraded and error states, and the auth reason when a
+      // server is only waiting to be signed into. Either way it is the host
+      // saying why, which is the whole value of showing the row at all.
+      ...(plain(state.message) ?? str(state.reason)
+        ? { problem: (plain(state.message) ?? str(state.reason)) as string }
+        : {}),
+    };
+  };
+
+  for (const raw of list(value)) {
+    const entry = bag(raw);
+    const container = one(entry, undefined, true);
+    if (!container) continue;
+    // A container's own load failure is worth carrying: a plugin that did not
+    // parse contributes nothing, and a panel that showed it as merely empty
+    // would be hiding the reason.
+    const load = bag(entry.load);
+    if (plain(load.message)) container.problem = plain(load.message) as string;
+    out.push(container);
+
+    for (const rawChild of list(entry.children)) {
+      const child = one(bag(rawChild), container.name, container.enabled);
+      if (child) out.push(child);
+    }
+  }
+  return out;
 }
 
 /** The typed answer the protocol wants, built from the question that was asked. */
@@ -799,6 +892,44 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
       const template = str(entry?.uriTemplate);
       if (!template) return { status: 'complete', files: [] };
       return changeset(await snapshotOf(template) ?? {});
+    },
+
+    content: async (ref): Promise<FileContent> => {
+      // `resourceRead` is on the root channel whatever the content belongs to:
+      // a `ContentRef` uri is opaque and the host resolves it, so there is no
+      // session to address this to.
+      const answer = await client.request('resourceRead', {
+        channel: ROOT, uri: ref.uri, encoding: 'utf-8',
+      });
+      const data = str(answer.data) ?? '';
+      // A host may answer base64 for anything it decides is not text, and
+      // decoding that into a viewer produces a screenful of mojibake. Said
+      // plainly instead.
+      if (str(answer.encoding) === 'base64') {
+        return {
+          text: '',
+          binary: {
+            bytes: Math.floor(data.length * 3 / 4),
+            ...(str(answer.contentType) ? { contentType: str(answer.contentType) as string } : {}),
+          },
+        };
+      }
+      return { text: data };
+    },
+
+    customizations: async (uri) => customizations(bag(await snapshotOf(uri)).customizations),
+
+    setCustomizationEnabled: (uri, id, enabled) => {
+      try {
+        // Session scope. The other two are a decision about every session on
+        // this workspace or on this machine, and a panel inside one session is
+        // not where somebody means to make either.
+        client.dispatch(uri, {
+          type: 'session/customizationToggled',
+          id,
+          enablement: [{ kind: 'session', enabled }],
+        });
+      } catch (error) { options.onRefusal?.(uri, reason(error)); }
     },
 
     detail: async (uri): Promise<SessionDetail> => {

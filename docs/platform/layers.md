@@ -28,6 +28,8 @@ Positioning is `center`, `screen`, `point`, `cursor`, or `anchor` - anchored to 
 
 A component that opens a layer should not also consume the key that closes it. `Dialog` consumes escape only when it was given an `onClose`; otherwise it lets the layer manager dismiss it.
 
+A layer with `trapFocus` gets escape **before** any keybinding does, because it has claimed the keyboard and nothing behind it should be acting on keys. One without it is dismissed in the ordinary place, after bindings have declined. See [Keybindings](keybindings.md#order-of-dispatch).
+
 ## Asking a question
 
 Three helpers open a layer and return a promise, so the common cases do not need the block above:

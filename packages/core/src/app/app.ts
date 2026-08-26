@@ -945,6 +945,28 @@ export class App implements TextUIApp {
       return;
     }
 
+    /*
+     * A modal takes escape before any keybinding does.
+     *
+     * `dismissOnEscape` was unreachable in any application with a global
+     * escape binding, which most have: the binding matched first, the layer
+     * stayed open, and the key went to whatever "go back" means behind it.
+     * What that looks like is a confirm dialog you cannot leave, over a screen
+     * that has navigated somewhere else while you were reading it.
+     *
+     * The test is `trapFocus`, not `dismissOnEscape` alone. A layer that traps
+     * focus has claimed the keyboard, so nothing behind it should be acting on
+     * keys; a toast or a tooltip has not, and those keep the old order so that
+     * escape still reaches the application while one happens to be up.
+     */
+    if (event.name === 'escape') {
+      const top = this.layers.topmostDismissible();
+      if (top && top.trapFocus) {
+        this.layers.close(top.id, 'escape');
+        return;
+      }
+    }
+
     if (this.keybindings.handle(event) !== 'unhandled') {
       this.requestRender();
       return;

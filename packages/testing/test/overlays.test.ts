@@ -543,3 +543,108 @@ describe('a button and the palette are the same act', () => {
   });
 });
 
+
+/**
+ * Escape, when the application also wants it.
+ *
+ * `dismissOnEscape` was unreachable in any application with a global escape
+ * binding, which most have: the binding matched first, the layer stayed open,
+ * and the key went to whatever "go back" means behind it. What that looks like
+ * from the outside is a confirm dialog you cannot leave, over a screen that
+ * has navigated somewhere else while you were reading it.
+ */
+describe('a layer and a global escape binding', () => {
+  const withBinding = (open: (app: TextUIApp) => void) => (app: TextUIApp): void => {
+    let went = 0;
+    app.commands.register({ id: 'go.back', title: 'Back', run: () => { went += 1; } });
+    app.keybindings.register({ keys: 'escape', commandId: 'go.back' });
+    (app as unknown as { back(): number }).back = () => went;
+    open(app);
+  };
+
+  it('closes the modal rather than running the binding behind it', async () => {
+    let closed: string | null = null;
+    const t = await renderApp({
+      width: 60,
+      height: 16,
+      onBoot: withBinding((app) => {
+        app.layers.open({
+          id: 'confirm',
+          layer: 'modal',
+          trapFocus: true,
+          dismissOnEscape: true,
+          onClose: (reason) => { closed = reason; },
+          node: { component: 'Dialog', title: 'Dispose session', width: 40, actions: [] },
+        });
+      }),
+    });
+    await t.settle();
+    expect(t.hasText('Dispose session')).toBe(true);
+
+    t.press('escape');
+    await t.settle();
+
+    expect(closed).toBe('escape');
+    expect(t.hasText('Dispose session')).toBe(false);
+    // ...and the screen behind it did not go anywhere while the dialog was up.
+    expect((t.app as unknown as { back(): number }).back()).toBe(0);
+    await t.unmount();
+  });
+
+  it('gives the key back to the application once the layer has gone', async () => {
+    const t = await renderApp({
+      width: 60,
+      height: 16,
+      onBoot: withBinding((app) => {
+        app.layers.open({
+          id: 'confirm',
+          layer: 'modal',
+          trapFocus: true,
+          dismissOnEscape: true,
+          node: { component: 'Dialog', title: 'Dispose session', width: 40, actions: [] },
+        });
+      }),
+    });
+    await t.settle();
+
+    t.press('escape');
+    await t.settle();
+    t.press('escape');
+    await t.settle();
+
+    // Two escapes: out of the dialog, then back a screen. One key doing both
+    // at once is what the ordering exists to stop.
+    expect((t.app as unknown as { back(): number }).back()).toBe(1);
+    await t.unmount();
+  });
+
+  /**
+   * A toast has not claimed the keyboard.
+   *
+   * It appears without being asked for and takes no focus, so escape while one
+   * happens to be up is still the application's - the alternative is a key
+   * that silently does nothing for the three seconds a notification is
+   * on screen.
+   */
+  it('leaves escape to the application while a layer that traps nothing is up', async () => {
+    const t = await renderApp({
+      width: 60,
+      height: 16,
+      onBoot: withBinding((app) => {
+        app.layers.open({
+          id: 'saved',
+          layer: 'notification',
+          dismissOnEscape: true,
+          node: { component: 'text', content: 'Saved' },
+        });
+      }),
+    });
+    await t.settle();
+
+    t.press('escape');
+    await t.settle();
+
+    expect((t.app as unknown as { back(): number }).back()).toBe(1);
+    await t.unmount();
+  });
+});

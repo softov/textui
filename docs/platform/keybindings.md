@@ -23,6 +23,10 @@ A chord is a sequence: `ctrl+k` alone stays pending until the next stroke or a t
 
 The focused node sees a key **first**, then chords, then global handlers. This order is not an implementation detail - without it, typing `q` in a search box quits the application.
 
+Escape has one step ahead of the chords: a layer that traps focus and has `dismissOnEscape` closes before any binding is offered the key. A modal has claimed the keyboard, so nothing behind it should be acting on keys - without this, an application with a global `escape` binding, which most have, could never dismiss a dialog with escape. What that looks like is a confirm you cannot leave, over a screen that navigated somewhere else while you were reading it.
+
+A layer that does *not* trap focus - a toast, a tooltip - keeps the ordinary order, so escape still reaches the application while one happens to be up. See [Layers](layers.md).
+
 ## Shift, and what a terminal can tell you
 
 Shift is part of a stroke only when it is **not the only modifier**.

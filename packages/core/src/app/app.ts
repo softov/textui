@@ -304,6 +304,22 @@ export class App implements TextUIApp {
     this.store.set('$/layout/shell', id);
     const shell = this.shells.get(id);
     if (shell?.theme && this.themes.get(shell.theme)) this.setTheme(shell.theme);
+
+    // `root` reaches the screen two ways, and this is the moment it changes
+    // which. With no shell registered at boot it was never opened into `main` -
+    // `rootNode` wraps it directly, which is the path an application built out
+    // of primitives takes. A shell arriving afterwards makes `rootNode` return
+    // the shell instead, and the application's entire content was simply gone:
+    // a framed, themed, empty screen.
+    //
+    // `setRoot` has always handled both paths, and says why - "setting one and
+    // not the other works in exactly half of the programs that can exist". This
+    // is the other half of the same sentence. Opening the same key twice
+    // replaces the mount rather than stacking one, so no guard is needed.
+    if (this.options.root) {
+      this.surfaces.open({ surface: 'main', key: ROOT_KEY, target: this.options.root });
+    }
+
     this.buffer_.invalidate();
     this.requestRender(true);
   }

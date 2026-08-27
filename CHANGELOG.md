@@ -6,6 +6,16 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+### A shell registered after boot took the application off the screen
+
+`root` reaches the screen two ways. With a shell it is a mount like any other and the surface registry owns it; with no shell at all - which is every application built out of primitives - `rootNode` wraps it directly and the registry is never consulted. `setRoot` has always done both, and says why: setting one and not the other works in exactly half of the programs that can exist.
+
+`setShell` is the moment a program crosses from the second case to the first, and it did only half. `rootNode` began answering with the shell, nothing had ever put `root` into `main`, and what was left was a framed, themed, empty screen.
+
+### The sidebar is not a column of the document
+
+Sideways, the layout shrinks a child with a plain `width` before it clips anything - which is how terminals have always narrowed, and is right for content. Applied to chrome it meant a pane with one long line in it crushed twenty-four columns of file tree down to four. The workbench shell's sidebar is `shrink: 0` now, which the layout has always honoured; nothing in core changed.
+
 ### Nobody knew how long to wait for a frame
 
 Every example that writes a still ended the same way: `for (let i = 0; i < 8; i++) await sleep(4)`, then `flush`. Eight, mostly - four in the showcase, twelve in the chat - three numbers for one question, each arrived at by trying until the picture looked right. A number too small does not fail. It writes a half-drawn frame.

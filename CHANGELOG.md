@@ -6,6 +6,20 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+### Nobody knew how long to wait for a frame
+
+Every example that writes a still ended the same way: `for (let i = 0; i < 8; i++) await sleep(4)`, then `flush`. Eight, mostly - four in the showcase, twelve in the chat - three numbers for one question, each arrived at by trying until the picture looked right. A number too small does not fail. It writes a half-drawn frame.
+
+`flush` forces a frame; there was no way to ask whether the frame was *finished*. `TextUIApp.settled()` is that question. A frame settles in more than one pass by design - an effect marks something dirty, a measurement runs the layout again - so it is a loop that yields to the task queue and renders until a pass finds nothing pending. It answers `false` when the passes never stop, which is a render loop that does not converge rather than one that is merely busy: an application that animates settles *between* its frames, which is what makes a still of one possible at all.
+
+### `renderStill`, so a program that is piped has one line to write
+
+The eight lines either side of that sleep loop were also copied seven times: a virtual terminal, an app, a writer, start, flush, capture, stop. `renderStill({ width, height, ...appOptions })` is all of it, and hands back the text, the cells, and whether it settled.
+
+`before` drives the application to the moment worth photographing - push a screen, send a message, pump a scripted host. `after` reaches it once the frame is drawn and before it is captured, which is where the showcase crops four hundred rows down to the ones it used and both it and the chat read the theme's own two colours for an SVG export.
+
+All seven examples now use it, and each one's output is byte-for-byte what it was.
+
 ### 0.2.0 - the mouse, and the keys that reach a field
 
 Pre-1.0, and the surface is still moving. Nothing here is a rename, but a

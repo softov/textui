@@ -1,7 +1,7 @@
 import { WRITER_KEY, createApp } from '@textui/core';
 import type { CapabilityOverrides, UnicodeLevel } from '@textui/core';
 import {
-  captureBuffer, createNodeTerminal, createVirtualTerminal, createWriter,
+  createNodeTerminal, createWriter, renderStill,
 } from '@textui/terminal';
 import { Frame, registerSurfaces } from './app.js';
 
@@ -57,23 +57,15 @@ function overrides(options: Options): CapabilityOverrides {
 }
 
 async function still(options: Options): Promise<void> {
-  const terminal = createVirtualTerminal({
+  const { text } = await renderStill({
     width: options.width,
     height: options.height,
     capabilities: overrides(options),
-  });
-  const app = createApp({
-    terminal,
     theme: options.theme,
     root: { component: 'SurfacesFrame' },
     onBoot: (booted) => { registerSurfaces(booted); },
   });
-  app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
-  await app.start();
-  for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 4));
-  app.flush();
-  process.stdout.write(`${captureBuffer(app.buffer(), terminal.capabilities())}\n`);
-  await app.stop();
+  process.stdout.write(`${text}\n`);
 }
 
 async function main(): Promise<void> {

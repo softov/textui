@@ -1,7 +1,7 @@
 import { WRITER_KEY, createApp } from '@textui/core';
 import type { CapabilityOverrides, UnicodeLevel } from '@textui/core';
 import {
-  captureBuffer, createNodeTerminal, createVirtualTerminal, createWriter,
+  createNodeTerminal, createWriter, renderStill,
 } from '@textui/terminal';
 import { registerTodo } from './app.js';
 import { fileStore } from './storage.js';
@@ -60,26 +60,17 @@ function overrides(options: Options): CapabilityOverrides {
  * cell it painted.
  */
 async function still(options: Options): Promise<void> {
-  const terminal = createVirtualTerminal({
+  // `renderStill` settles it: a measured component only knows its size once it
+  // has been laid out, and what it draws next depends on that.
+  const { text } = await renderStill({
     width: options.width,
     height: options.height,
     capabilities: overrides(options),
-  });
-  const app = createApp({
-    terminal,
     theme: 'workbench',
     shell: 'workbench',
     onBoot: (booted) => { registerTodo(booted); },
   });
-  app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
-  await app.start();
-  // Settle: a measured component only knows its size once it has been laid
-  // out, and what it draws next depends on that.
-  for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 4));
-  app.flush();
-
-  process.stdout.write(`${captureBuffer(app.buffer(), terminal.capabilities())}\n`);
-  await app.stop();
+  process.stdout.write(`${text}\n`);
 }
 
 async function main(): Promise<void> {

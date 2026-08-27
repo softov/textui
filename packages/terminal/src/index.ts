@@ -2,6 +2,8 @@ export * as ansi from './ansi.js';
 export { Writer, createWriter } from './writer.js';
 export { captureBuffer } from './capture.js';
 export type { CaptureOptions } from './capture.js';
+export { renderStill } from './still.js';
+export type { Still, StillOptions } from './still.js';
 export { bufferToSvg } from './svg.js';
 export type { SvgOptions } from './svg.js';
 export {

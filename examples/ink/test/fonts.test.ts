@@ -163,6 +163,22 @@ describe('the transforms', () => {
     for (const digit of '0123456789') expect(banner(digit, tmplt), digit).not.toBe('');
   });
 
+  /**
+   * The ascenders reach, and the x-height letters do not.
+   *
+   * `t` was drawn with no ascender at all - a crossbar and a foot, sitting at
+   * x-height - so `test` had one letter of the four at the wrong height and
+   * `t` was indistinguishable from a `+`.
+   */
+  it('starts a tmplt ascender a row above an x-height letter', () => {
+    const tmplt = fontAt('tmplt');
+    // `o` is the reference: two rows, and nothing above them.
+    expect(banner('o', tmplt).split('\n')).toHaveLength(2);
+    for (const tall of 'bdfhklt') {
+      expect(banner(tall, tmplt).split('\n'), tall).toHaveLength(3);
+    }
+  });
+
   it('gives tmplt a stand-in for the terminal that cannot draw it', () => {
     // Box-drawing has no `#` to degrade to, so this is the one font that names
     // another rather than a character.

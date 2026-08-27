@@ -10,7 +10,7 @@ import { ColorText, KeyHints, registerBuiltins } from '@textui/widgets';
 import type { Cell, Frame as MovieFrame, Movie } from './motion.js';
 import { contentBox, key, serialise, totalMs, usedColors } from './motion.js';
 import type { Hex } from './palette.js';
-import { fromHex, hueIndex, hueRamp, stepHue, stepLight, toHex } from './palette.js';
+import { atHue, fromHex, hueAt, hueIndex, hueRamp, stepHue, stepLight } from './palette.js';
 
 /**
  * An ASCII Motion document, played and edited in a terminal.
@@ -59,16 +59,29 @@ const box = (): ReturnType<typeof contentBox> => (cachedBox ??= contentBox(movie
 /**
  * Lift a cell onto the brush.
  *
- * An empty cell is not a failure: it yields a blank, which is the erase brush.
- * It borrows the pen's colour so the brush always has one to show.
+ * `null` for an empty cell, which is not a failure: the brush becomes a blank,
+ * and a blank is the erase brush.
  */
-const copyFrom = (frame: MovieFrame, x: number, y: number, pen: Hex): Cell =>
-  frame.cells.get(key(x, y)) ?? { char: ' ', color: pen };
+const copyFrom = (frame: MovieFrame, x: number, y: number): Cell | null =>
+  frame.cells.get(key(x, y)) ?? null;
 
-/** Put the brush down. A blank clears the cell rather than painting a space. */
-function pasteInto(frame: MovieFrame, x: number, y: number, brush: Cell): void {
-  if (brush.char === ' ' || brush.char === '') frame.cells.delete(key(x, y));
-  else frame.cells.set(key(x, y), { ...brush });
+/**
+ * Put the brush down, in the ink.
+ *
+ * The brush is a *character*; the colour is the ink, and only the ink. It used
+ * to carry the colour it was lifted at, which made the swatch in the sidebar
+ * stay that colour while the ink moved underneath it - so changing the ink
+ * appeared to do nothing to the brush, and pasting put down the old colour.
+ *
+ * Nothing is lost by dropping it, because copying already sets the ink to the
+ * colour it found: a copy followed by a paste reproduces the cell exactly, and
+ * it is only changing the ink *afterwards* that now changes what goes down.
+ *
+ * A blank clears the cell rather than painting a space.
+ */
+function pasteInto(frame: MovieFrame, x: number, y: number, brush: string, ink: Hex): void {
+  if (brush === ' ' || brush === '') frame.cells.delete(key(x, y));
+  else frame.cells.set(key(x, y), { char: brush, color: ink });
 }
 
 // -------------------------------------------------------------------- stage
@@ -88,7 +101,10 @@ const Stage = defineComponent<Record<string, never>>('FlipStage', () => {
   const ink = inkValue ?? '#ffffff';
   // Read so an edit repaints; the number itself is only ever bumped.
   const [rev, setRev] = useStore<number>(REV, 0);
-  const [clip, setClip] = useStore<Cell | null>(CLIP, null);
+  const [clip, setClip] = useStore<string | null>(CLIP, null);
+  // A character or nothing: `useStore` answers `undefined` before anything is
+  // written, and `' '` - the erase brush - is a character like any other.
+  const brush: string | null = clip ?? null;
   const [cx, setCx] = useStore<number>(CX, box().x);
   const [cy, setCy] = useStore<number>(CY, box().y);
 
@@ -157,11 +173,13 @@ const Stage = defineComponent<Record<string, never>>('FlipStage', () => {
     if (mode !== 'edit') return true;
 
     if (event.ctrl) {
-      const picked = copyFrom(frame, x, y, ink);
-      setClip(picked);
-      if (picked.char !== ' ') setInk(picked.color);
-    } else if ((event.shift || event.alt) && clip) {
-      pasteInto(frame, x, y, clip);
+      const picked = copyFrom(frame, x, y);
+      setClip(picked?.char ?? ' ');
+      // Copy is the eyedropper too, which is what makes the brush carrying no
+      // colour of its own lossless: paste straight after reproduces the cell.
+      if (picked && picked.char !== ' ') setInk(picked.color);
+    } else if ((event.shift || event.alt) && brush !== null) {
+      pasteInto(frame, x, y, brush, ink);
       setRev((rev ?? 0) + 1);
     }
     return true;
@@ -238,7 +256,7 @@ const Sidebar = defineComponent<Record<string, never>>('FlipSidebar', () => {
   const ramp = hueRamp(current, HUE_STEPS);
   const at = hueIndex(current, HUE_STEPS);
 
-  const clip = useStoreValue<Cell | null>(CLIP, null) ?? null;
+  const clip = useStoreValue<string | null>(CLIP, null) ?? null;
   const used = usedColors(film).slice(0, 4).map((u) => ({ color: u.color, label: `${u.count}` }));
   const recent = film.recent.map((color) => ({ color }));
 
@@ -266,7 +284,10 @@ const Sidebar = defineComponent<Record<string, never>>('FlipSidebar', () => {
           * the ramp itself is never interrupted by the pointer that reads it. */}
         <box direction="row">
           {ramp.map((color, i) => (
-            <box key={color} onClick={() => setInk(toHex({ ...current, h: Math.round((i / HUE_STEPS) * 360) }))}>
+            // `atHue`, the same rule the cell was drawn with - so what a click
+            // paints in is the colour under the pointer rather than the ink's
+            // own saturation wearing a different hue.
+            <box key={color} onClick={() => setInk(atHue(current, hueAt(i, HUE_STEPS)))}>
               <text content="█" fg={color} />
             </box>
           ))}
@@ -277,13 +298,20 @@ const Sidebar = defineComponent<Record<string, never>>('FlipSidebar', () => {
 
       <box direction="column">
         <text content="brush" fg="muted" />
+        {/* In the ink, because that is what pasting puts down. Drawn in the
+          * colour it was lifted at, it sat there unchanged while the ink moved
+          * above it - so changing the colour looked like it had missed the
+          * brush, and the brush was the one thing about to use it. */}
         <box direction="row" gap={1}>
           <text
-            content={clip ? (clip.char === ' ' ? '␠' : clip.char) : '·'}
-            fg={clip && clip.char !== ' ' ? clip.color : 'subtle'}
+            content={clip === null ? '·' : clip === ' ' ? '␠' : clip}
+            fg={clip !== null && clip !== ' ' ? ink ?? '#ffffff' : 'subtle'}
             bold
           />
-          <text content={clip ? (clip.char === ' ' ? 'erase' : clip.color) : 'nothing copied'} fg="muted" />
+          <text
+            content={clip === null ? 'nothing copied' : clip === ' ' ? 'erase' : 'in the ink'}
+            fg="muted"
+          />
         </box>
         <text content="ctrl+insert  copy" fg="subtle" />
         <text content="shift+ins    paste" fg="subtle" />
@@ -309,7 +337,8 @@ export const Frame: (props: Record<string, never>) => RenderOutput =
   const [cy, setCy] = useStore<number>(CY, box().y);
   const [ink, setInk] = useStore<Hex>(INK, film.recent[0] ?? '#ffffff');
   const [rev, setRev] = useStore<number>(REV, 0);
-  const [clip, setClip] = useStore<Cell | null>(CLIP, null);
+  const [clip, setClip] = useStore<string | null>(CLIP, null);
+  const brush: string | null = clip ?? null;
   const [note, setNote] = useStore<string>('$/flip/note', '');
 
   const at = clamp(index ?? 0, 0, film.frames.length - 1);
@@ -384,12 +413,12 @@ export const Frame: (props: Record<string, never>) => RenderOutput =
     if (event.name === 'insert' && (event.ctrl || event.shift || event.alt)) {
       if (!frame) return true;
       if (event.ctrl) {
-        const picked = copyFrom(frame, cx ?? 0, cy ?? 0, ink ?? '#ffffff');
-        setClip(picked);
-        if (picked.char !== ' ') setInk(picked.color);
-        flash(picked.char === ' ' ? 'copied a blank - paste erases' : `copied ${picked.char}`);
-      } else if (clip) {
-        pasteInto(frame, cx ?? 0, cy ?? 0, clip);
+        const picked = copyFrom(frame, cx ?? 0, cy ?? 0);
+        setClip(picked?.char ?? ' ');
+        if (picked && picked.char !== ' ') setInk(picked.color);
+        flash(!picked || picked.char === ' ' ? 'copied a blank - paste erases' : `copied ${picked.char}`);
+      } else if (brush !== null) {
+        pasteInto(frame, cx ?? 0, cy ?? 0, brush, ink ?? '#ffffff');
         bump();
       } else {
         flash('nothing copied yet - ctrl+insert first');

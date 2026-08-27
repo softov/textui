@@ -3,7 +3,6 @@ import { render } from '@textui/testing';
 import type { InputEvent, MouseEvent } from '@textui/core';
 import { ATTR_UNDERLINE } from '@textui/core';
 import { CLIP, CX, CY, INK, loaded, registerFlipbook } from '../src/app.js';
-import type { Cell } from '../src/motion.js';
 import { key, parse } from '../src/motion.js';
 import type { MotionDocument } from '../src/motion.js';
 import { SAMPLE } from '../src/sample.js';
@@ -80,9 +79,10 @@ describe('ctrl+click copies', () => {
 
     clickWith(app, at.screenX, at.screenY, { ctrl: true });
 
-    expect(app.store.get(CLIP)).toEqual({ char: 'Q', color: '#ff0000' });
-    // Copying a cell also takes its colour as the pen, which is what makes
-    // ctrl+click double as an eyedropper.
+    // The brush is the character. The colour goes to the pen instead, which
+    // is what makes ctrl+click double as an eyedropper - and what lets the
+    // brush follow the ink afterwards without a copy losing anything.
+    expect(app.store.get(CLIP)).toBe('Q');
     expect(app.store.get(INK)).toBe('#ff0000');
   });
 
@@ -94,9 +94,85 @@ describe('ctrl+click copies', () => {
 
     clickWith(app, at.screenX, at.screenY, { ctrl: true });
 
-    expect((app.store.get(CLIP) as Cell).char).toBe(' ');
+    expect(app.store.get(CLIP)).toBe(' ');
     // A blank carries no colour worth adopting, so the pen is left alone.
     expect(app.store.get(INK)).toBe(penBefore);
+  });
+});
+
+describe('the brush follows the ink', () => {
+  /*
+   * What a person sees when they change the colour: the character sitting in
+   * the brush is the next thing about to use it, and it went on showing the
+   * colour it was lifted at. Carrying the colour on the brush is what did it,
+   * and dropping it costs nothing, because a copy sets the ink to what it
+   * found - so copy-then-paste still reproduces the cell exactly.
+   */
+  it('pastes in the colour chosen after the copy, not the one copied', async () => {
+    const app = await mount();
+    const at = locate(app);
+    film().frames[0]?.cells.set(key(at.cellX, at.cellY), { char: 'Q', color: '#ff0000' });
+
+    clickWith(app, at.screenX, at.screenY, { ctrl: true });
+    expect(app.store.get(INK)).toBe('#ff0000');
+
+    // The colour moves after the copy, which is the whole report. Settle so
+    // the handlers are the ones the new ink was rendered with - in the
+    // application a keystroke does that on its own.
+    app.store.set(INK, '#00ff00');
+    await app.settle();
+    clickWith(app, at.screenX + 4, at.screenY + 1, { shift: true });
+    const target = { x: app.store.get(CX) as number, y: app.store.get(CY) as number };
+
+    expect(film().frames[0]?.cells.get(key(target.x, target.y)))
+      .toEqual({ char: 'Q', color: '#00ff00' });
+  });
+
+  it('still reproduces the cell when nothing is changed in between', async () => {
+    const app = await mount();
+    const at = locate(app);
+    film().frames[0]?.cells.set(key(at.cellX, at.cellY), { char: 'Q', color: '#ff0000' });
+
+    clickWith(app, at.screenX, at.screenY, { ctrl: true });
+    clickWith(app, at.screenX + 4, at.screenY + 1, { shift: true });
+    const target = { x: app.store.get(CX) as number, y: app.store.get(CY) as number };
+
+    expect(film().frames[0]?.cells.get(key(target.x, target.y)))
+      .toEqual({ char: 'Q', color: '#ff0000' });
+  });
+
+  it('draws the held character in the ink, and repaints when it changes', async () => {
+    const app = await mount();
+    const at = locate(app);
+    film().frames[0]?.cells.set(key(at.cellX, at.cellY), { char: 'Q', color: '#ff0000' });
+    clickWith(app, at.screenX, at.screenY, { ctrl: true });
+    await app.settle();
+
+    // The sidebar is the right-hand `SIDEBAR` columns, so a `Q` found there is
+    // the brush's own swatch rather than the one on the canvas.
+    const swatchInk = (): unknown => {
+      const buffer = app.app.buffer();
+      for (let y = 0; y < 26; y++) {
+        for (let x = 96 - 26; x < 96; x++) {
+          const cell = buffer.get(x, y);
+          if (cell?.char === 'Q') return cell.fg;
+        }
+      }
+      return undefined;
+    };
+
+    const before = swatchInk();
+    expect(before).toBeDefined();
+
+    app.store.set(INK, '#00ff00');
+    await app.settle();
+
+    // The point of the report: the glyph in the sidebar is drawn in the ink
+    // now, so it moves with it rather than sitting at the colour it was
+    // lifted at.
+    const after = swatchInk();
+    expect(after).toBeDefined();
+    expect(after).not.toBe(before);
   });
 });
 
@@ -196,7 +272,7 @@ describe('the insert keys', () => {
     film().frames[0]?.cells.set(key(at.cellX, at.cellY), { char: 'Q', color: '#ff0000' });
 
     app.press('ctrl+insert');
-    expect(app.store.get(CLIP)).toEqual({ char: 'Q', color: '#ff0000' });
+    expect(app.store.get(CLIP)).toBe('Q');
 
     app.press('right');
     app.press('shift+insert');

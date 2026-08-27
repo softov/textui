@@ -467,6 +467,44 @@ export class App implements TextUIApp {
   }
 
   /**
+   * Render until there is nothing left to render.
+   *
+   * `flush` forces one frame; this is the other question - *has it finished?* -
+   * and there was no way to ask it. What a program wanting one true frame did
+   * instead was guess: every example that writes a still ended with a sleep
+   * loop of four milliseconds times a number somebody tried until the picture
+   * looked right. Eight, mostly. Four in one, twelve in another. A number too
+   * small does not fail; it writes a half-drawn frame.
+   *
+   * A frame settles in more than one pass by design - an effect may mark
+   * something dirty, and a measurement changing runs the layout again - so the
+   * answer is a loop rather than a flag. Each turn yields to the task queue
+   * first, because what has not run yet cannot have marked anything.
+   *
+   * It returns as soon as a pass finds nothing pending, so an application that
+   * animates settles *between* its frames - which is what makes a still of one
+   * possible at all, and why the answer is not "has it stopped moving".
+   *
+   * `false` is the other thing: passes that kept producing work until the
+   * limit ran out, which is a render loop that does not converge - an effect
+   * with no dependency list setting the state it reads. Worth reporting rather
+   * than hanging on, and worth a number rather than a promise a caller can
+   * wait on for ever.
+   */
+  async settled(options: { limit?: number } = {}): Promise<boolean> {
+    const limit = options.limit ?? 100;
+    for (let i = 0; i < limit; i++) {
+      // Deliberately not `unref`'d: this timer is what keeps the process alive
+      // while a still is being rendered, and one that lets it exit would leave
+      // the await unresolved and the frame unwritten.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (!this.frameScheduled && !this.isDirty()) return true;
+      this.flush();
+    }
+    return false;
+  }
+
+  /**
    * The tree the frame renders: the shell, always, when one is registered.
    *
    * `root` is an alternative to *screens*, not to the shell - it is mounted

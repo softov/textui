@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { WRITER_KEY, createApp } from '@textui/core';
 import type { CapabilityOverrides, UnicodeLevel } from '@textui/core';
 import {
-  bufferToSvg, captureBuffer, createNodeTerminal, createVirtualTerminal, createWriter,
+  bufferToSvg, createNodeTerminal, createWriter, renderStill,
 } from '@textui/terminal';
 import { registerShowcase } from './screen.js';
 
@@ -74,13 +74,11 @@ async function still(options: Options): Promise<void> {
   // The alternative is asking for a height and getting a picture with the last
   // row of panels missing, which is the shape of every screenshot mistake.
   const fit = options.height === undefined;
-  const terminal = createVirtualTerminal({
+
+  const { text } = await renderStill({
     width: options.width,
     height: options.height ?? 400,
     capabilities: overrides(options),
-  });
-  const app = createApp({
-    terminal,
     theme: options.theme,
     onBoot: (booted) => {
       registerShowcase(booted, {
@@ -89,35 +87,30 @@ async function still(options: Options): Promise<void> {
         ...(fit ? { fit: true } : {}),
       });
     },
+    // The crop, and the export, both want the application after the frame and
+    // before it goes away. `resize` keeps the top-left region, so shrinking it
+    // is a crop - and it runs before the capture, so `text` is the cropped
+    // picture rather than four hundred rows of mostly nothing.
+    after: async (app) => {
+      if (fit) app.buffer().resize(options.width, lastUsedRow(app.buffer()));
+      if (options.svg === undefined) return;
+      await writeFile(options.svg, `${bufferToSvg(app.buffer(), {
+        // The theme's own colours rather than the exporter's defaults: a cell
+        // left at the terminal default means "whatever the emulator is set
+        // to", and the honest answer for a picture of this screen is the
+        // background it was drawn against.
+        background: app.theme.colors.canvas,
+        foreground: app.theme.colors.text,
+        title: `textui - ${options.theme}`,
+      })}\n`, 'utf8');
+    },
   });
-  app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
-  await app.start();
-
-  // A frame or two, because a panel that measures itself is a frame behind by
-  // design - the layout decides the width and the content is drawn to it on
-  // the pass after. Without this the first still is the unwrapped one.
-  for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 4));
-  app.flush();
-
-  // `resize` keeps the top-left region, so shrinking it is a crop. Done to the
-  // app's own buffer because the next thing to happen to it is `stop`.
-  if (fit) app.buffer().resize(options.width, lastUsedRow(app.buffer()));
 
   if (options.svg !== undefined) {
-    await writeFile(options.svg, `${bufferToSvg(app.buffer(), {
-      // The theme's own colours rather than the exporter's defaults: a cell
-      // left at the terminal default means "whatever the emulator is set to",
-      // and the honest answer for a picture of this screen is the background
-      // it was drawn against.
-      background: app.theme.colors.canvas,
-      foreground: app.theme.colors.text,
-      title: `textui - ${options.theme}`,
-    })}\n`, 'utf8');
     process.stderr.write(`${options.svg}\n`);
-  } else {
-    process.stdout.write(`${captureBuffer(app.buffer(), terminal.capabilities())}\n`);
+    return;
   }
-  await app.stop();
+  process.stdout.write(`${text}\n`);
 }
 
 /**

@@ -69,6 +69,19 @@ export interface TextUIApp extends Disposable {
   stop(): Promise<void>;
   /** Force a frame now, outside the scheduler. Tests and screenshots use it. */
   flush(): void;
+  /**
+   * Render until nothing is left to render, and answer whether it went quiet.
+   *
+   * The question `flush` cannot answer. A frame settles in more than one pass -
+   * an effect marks something dirty, a measurement runs the layout again - so a
+   * program that wants one true frame has to wait rather than force one.
+   *
+   * It returns as soon as a pass finds nothing pending, so an animating
+   * application settles between its frames. `false` means the passes kept
+   * producing work until the limit ran out - a render loop that does not
+   * converge, rather than one that is merely busy.
+   */
+  settled(options?: { limit?: number }): Promise<boolean>;
   /** The last painted frame. */
   buffer(): CellBuffer;
 

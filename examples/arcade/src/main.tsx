@@ -1,7 +1,7 @@
 import { WRITER_KEY, createApp } from '@textui/core';
 import type { CapabilityOverrides, UnicodeLevel } from '@textui/core';
 import {
-  captureBuffer, createNodeTerminal, createVirtualTerminal, createWriter,
+  createNodeTerminal, createWriter, renderStill,
 } from '@textui/terminal';
 import { registerArcade } from './app.js';
 import { SEED } from './data.js';
@@ -60,28 +60,22 @@ function overrides(options: Options): CapabilityOverrides {
 
 /** One frame, to stdout: the cabinet, or a game with `--play`. */
 async function still(options: Options): Promise<void> {
-  const terminal = createVirtualTerminal({
+  const { text } = await renderStill({
     width: options.width,
     height: options.height,
     capabilities: overrides(options),
-  });
-  const app = createApp({
-    terminal,
     theme: 'console',
     shell: 'plain',
     onBoot: (booted) => {
       registerArcade(booted);
       if (options.seed !== undefined) booted.store.set(SEED, options.seed);
     },
+    // A game is worth a picture only once it is running.
+    before: async (app) => {
+      if (options.play) await app.execute('arcade.play', { gameId: options.play });
+    },
   });
-  app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
-  await app.start();
-  if (options.play) await app.execute('arcade.play', { gameId: options.play });
-  for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 4));
-  app.flush();
-
-  process.stdout.write(`${captureBuffer(app.buffer(), terminal.capabilities())}\n`);
-  await app.stop();
+  process.stdout.write(`${text}\n`);
 }
 
 async function main(): Promise<void> {

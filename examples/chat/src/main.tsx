@@ -2,7 +2,7 @@ import { WRITER_KEY, createApp } from '@textui/core';
 import type { CapabilityOverrides, UnicodeLevel } from '@textui/core';
 import { writeFile } from 'node:fs/promises';
 import {
-  bufferToSvg, captureBuffer, createNodeTerminal, createVirtualTerminal, createWriter,
+  bufferToSvg, createNodeTerminal, createWriter, renderStill,
 } from '@textui/terminal';
 import { registerChat } from './app.js';
 import { CONTROLLER } from './control.js';
@@ -148,62 +148,59 @@ async function connect(options: Options): Promise<HostConnection & { pump?(): bo
 
 /** One frame, to stdout. The same application, against a terminal that is a size. */
 async function still(options: Options): Promise<void> {
-  const terminal = createVirtualTerminal({
+  const host = await connect(options);
+
+  const { text } = await renderStill({
     width: options.width,
     height: options.height,
     capabilities: overrides(options),
-  });
-  const host = await connect(options);
-  const app = createApp({
-    terminal,
     theme: options.theme,
     shell: options.shell,
     onBoot: (booted) => { registerChat(booted, { host }); },
+
+    // A still of a turn mid-flight is what `--pump` is for: run a fixed number
+    // of scripted words rather than all of them, and the caret is wherever the
+    // agent had got to. `--settled` runs until the script has nothing left it
+    // can do without being answered, which is how the confirmation is reached.
+    before: (app) => {
+      const controller = app.services.require(CONTROLLER);
+      if (options.session) {
+        controller.open(options.session);
+        if (options.screen !== 'sessions') app.screens.push(options.screen);
+      }
+      if (options.say) controller.send(options.say);
+
+      const steps = options.pump ?? (options.settled ? 100_000 : 0);
+      for (let i = 0; i < steps; i++) if (host.pump?.() !== true) break;
+      if (options.approve) {
+        controller.approve();
+        for (let i = 0; i < 100_000; i++) if (host.pump?.() !== true) break;
+      }
+      if (options.answer) {
+        controller.answer({ q1: { kind: 'selected', value: 'transcript-scope' } }, true);
+        for (let i = 0; i < 100_000; i++) if (host.pump?.() !== true) break;
+      }
+    },
+
+    after: async (app) => {
+      if (options.svg === undefined) return;
+      // The theme's own two colours, not the exporter's defaults: a cell left
+      // at the terminal default means "whatever the emulator is set to", and
+      // the honest answer for a picture of *this* application is the
+      // background it was drawn against.
+      await writeFile(options.svg, `${bufferToSvg(app.buffer(), {
+        background: app.theme.colors.canvas,
+        foreground: app.theme.colors.text,
+        title: `chat - ${options.screen}`,
+      })}\n`, 'utf8');
+    },
   });
-  app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
-  await app.start();
-
-  const controller = app.services.require(CONTROLLER);
-  if (options.session) {
-    controller.open(options.session);
-    if (options.screen !== 'sessions') app.screens.push(options.screen);
-  }
-  if (options.say) controller.send(options.say);
-
-  // A still of a turn mid-flight is what `--pump` is for: run a fixed number
-  // of scripted words rather than all of them, and the caret is wherever the
-  // agent had got to. `--settled` runs until the script has nothing left it
-  // can do without being answered, which is how the confirmation is reached.
-  const steps = options.pump ?? (options.settled ? 100_000 : 0);
-  for (let i = 0; i < steps; i++) if (host.pump?.() !== true) break;
-  if (options.approve) {
-    controller.approve();
-    for (let i = 0; i < 100_000; i++) if (host.pump?.() !== true) break;
-  }
-  if (options.answer) {
-    controller.answer({ q1: { kind: 'selected', value: 'transcript-scope' } }, true);
-    for (let i = 0; i < 100_000; i++) if (host.pump?.() !== true) break;
-  }
-
-  for (let i = 0; i < 12; i++) await new Promise((r) => setTimeout(r, 4));
-  app.flush();
 
   if (options.svg !== undefined) {
-    // The theme's own two colours, not the exporter's defaults: a cell left at
-    // the terminal default means "whatever the emulator is set to", and the
-    // honest answer for a picture of *this* application is the background it
-    // was drawn against.
-    const theme = app.theme;
-    await writeFile(options.svg, `${bufferToSvg(app.buffer(), {
-      background: theme.colors.canvas,
-      foreground: theme.colors.text,
-      title: `chat - ${options.screen}`,
-    })}\n`, 'utf8');
     process.stderr.write(`${options.svg}\n`);
-  } else {
-    process.stdout.write(`${captureBuffer(app.buffer(), terminal.capabilities())}\n`);
+    return;
   }
-  await app.stop();
+  process.stdout.write(`${text}\n`);
 }
 
 async function main(): Promise<void> {

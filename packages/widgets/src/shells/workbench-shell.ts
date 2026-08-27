@@ -39,6 +39,12 @@ export const WorkbenchShell = defineComponent<ShellProps>('WorkbenchShell', (pro
       showSidebar
         ? h('box', {
             width: 24,
+            // Rigid. Sideways, the layout shrinks a child with a plain `width`
+            // before it clips anything - which is how terminals have always
+            // narrowed, and wrong for chrome: an overflowing pane beside it
+            // crushed twenty-four columns of tree down to four. A sidebar is a
+            // decision about the window, not a column of the document.
+            shrink: 0,
             border: { style: theme.border, sides: { right: true } },
             direction: 'column',
             padding: { left: 1 },

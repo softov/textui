@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '../src/index.js';
 import { h, defineComponent, useFocus, useScreen } from '@textui/core';
+import { registerBuiltins } from '@textui/widgets';
 
 /**
  * The acceptance test for the whole architecture.
@@ -552,4 +553,88 @@ describe('the sidebar with more than one panel in it', () => {
       await t.unmount();
     });
   }
+});
+
+/**
+ * `root` is a mount, and both ways it reaches the screen have to agree.
+ *
+ * With a shell registered it is opened into `main` and the surface registry
+ * owns it. With no shell at all - which is every application built out of
+ * primitives - `rootNode` wraps it directly and the registry is never
+ * consulted. `setRoot` has always handled both, and says why: setting one and
+ * not the other works in exactly half of the programs that can exist.
+ *
+ * `setShell` is the moment a program crosses from the second case to the
+ * first, and it did not.
+ */
+describe('a shell that arrives after boot', () => {
+  it('keeps what root was drawing', async () => {
+    const t = await renderApp({
+      width: 40, height: 6,
+      // No shell at boot: the harness registers the built-ins, shells and all,
+      // unless told not to.
+      builtins: false,
+      root: h('text', { content: 'THE-APPLICATION' }),
+    });
+    await t.settle();
+    expect(t.hasText('THE-APPLICATION')).toBe(true);
+
+    registerBuiltins(t.app);
+    t.app.setShell('workbench');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    // It used to be a framed, themed, empty screen: `rootNode` started
+    // answering with the shell, and nothing had ever put `root` into `main`.
+    expect(t.hasText('THE-APPLICATION')).toBe(true);
+    await t.unmount();
+  });
+
+  it('does not stack a second mount when the shell changes again', async () => {
+    const t = await renderApp({
+      width: 40, height: 6,
+      builtins: false,
+      root: h('text', { content: 'ONCE' }),
+    });
+    registerBuiltins(t.app);
+    t.app.setShell('workbench');
+    t.app.setShell('plain');
+    t.app.setShell('workbench');
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    // Opening the same key replaces the mount rather than stacking one, so the
+    // surface never grows a tab strip out of the same node three times over.
+    const lines = t.lines().join('\n');
+    expect(lines.split('ONCE')).toHaveLength(2);
+    await t.unmount();
+  });
+});
+
+/**
+ * The sidebar is a decision about the window, not a column of the document.
+ *
+ * Sideways, the layout shrinks a child with a plain `width` before it clips
+ * anything - which is how terminals have always narrowed, and is right for
+ * content. Applied to chrome it meant a pane with a long line in it could
+ * crush twenty-four columns of file tree down to four.
+ */
+describe('the sidebar holds its width', () => {
+  it('is not crushed by an overflowing pane beside it', async () => {
+    // Ninety columns or the shell hides the sidebar as too narrow to be worth
+    // the space, and the test would pass by drawing nothing.
+    const t = await renderApp({ width: 100, height: 6, shell: 'workbench' });
+    t.app.open({
+      surface: 'sidebar', key: 'tree',
+      target: { component: 'text', content: 'S'.repeat(24), wrap: 'none' },
+    });
+    // The pane beside it, with a line four hundred columns long in it.
+    t.app.open({
+      surface: 'main', key: 'wide',
+      target: { component: 'text', content: 'M'.repeat(400), wrap: 'none' },
+    });
+    for (let i = 0; i < 4; i++) await t.settle();
+
+    const row = t.lines().find((line) => line.includes('S')) ?? '';
+    expect(row).toContain('S'.repeat(20));
+    await t.unmount();
+  });
 });

@@ -6,6 +6,8 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+## 0.3.0
+
 ### A conversation got heavier to sit in the longer it got
 
 Three things, each invisible in a small tree and each the whole frame budget in a large one.

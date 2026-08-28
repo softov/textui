@@ -27,19 +27,19 @@ describe('resolving props', () => {
 
   it('hands back the same array when there was nothing in it to resolve', () => {
     const rows = [{ id: 'a' }, { id: 'b' }];
-    const out = resolveProps(ctx() as never, { rows });
+    const out = resolveProps(ctx() as never, { component: 'row', rows });
     expect(out.rows).toBe(rows);
   });
 
   it('hands back the same object too', () => {
     const expanded = { 'a:1': true };
-    const out = resolveProps(ctx() as never, { expanded });
+    const out = resolveProps(ctx() as never, { component: 'tree', expanded });
     expect(out.expanded).toBe(expanded);
   });
 
   it('still resolves a binding inside one, and says so with a new array', () => {
     const rows = [{ path: '$/who' }];
-    const out = resolveProps(ctx() as never, { rows });
+    const out = resolveProps(ctx() as never, { component: 'row', rows });
     expect(out.rows).not.toBe(rows);
     expect(out.rows).toEqual(['world']);
   });

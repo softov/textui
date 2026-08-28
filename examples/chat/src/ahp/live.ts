@@ -56,10 +56,18 @@ export interface LiveHostOptions {
 /**
  * Versions to offer, newest first.
  *
- * Offering one the installed library has no types for is safe: AHP is additive
- * within 0.x, and every command used here has been stable across all of them.
+ * Offering one the installed library has no types for is safe: every command
+ * used here has been stable across all of them, and 1.0.0 is the stabilised
+ * 0.8.0 rather than a new wire format - the host that speaks it gates no
+ * action behind a version newer than 0.8.0.
+ *
+ * This list is load-bearing, because there is no fallback behind it. The
+ * `0.9.0` it used to lead with was a guess at a host that never shipped, and
+ * when VS Code went 0.8.0 -> 1.0.0 the host - which accepts `^1.0.0` and
+ * nothing 0.x - refused all three entries with `-32005`, which arrives here
+ * looking like a host that is not there.
  */
-const VERSIONS = ['0.9.0', '0.8.0', '0.7.0'];
+const VERSIONS = ['1.0.0', '0.8.0', '0.7.0'];
 
 const ROOT = 'ahp-root://';
 

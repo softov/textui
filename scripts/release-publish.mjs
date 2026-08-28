@@ -18,6 +18,13 @@
  * The rewrite is destructive to the working tree, deliberately: this runs on
  * an ephemeral CI checkout, and refuses to run anywhere the tree is dirty
  * unless told otherwise.
+ *
+ * `--dry-run` is the exception, and has to be: a rehearsal that leaves the
+ * manifests rewritten is a rehearsal that changes what it was rehearsing.
+ * Worse, it leaves `workspace:^` replaced by a literal range in six files that
+ * look plausible in a diff - so the next person to commit ships a set that no
+ * longer links inside the workspace. So a dry run remembers what was there and
+ * puts it back on the way out, whichever way it leaves.
  */
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -39,9 +46,13 @@ for (const name of readdirSync(pkgRoot).sort()) {
   const dir = join(pkgRoot, name);
   const manifestPath = join(dir, 'package.json');
   if (!existsSync(manifestPath)) continue;
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  const original = readFileSync(manifestPath, 'utf8');
+  const manifest = JSON.parse(original);
   if (manifest.private) continue;
-  packages.push({ dir, manifestPath, manifest });
+  // The bytes as they were, not as they would be re-serialised: a rehearsal
+  // that put back a *reformatted* file would still be a rehearsal that
+  // changed the tree.
+  packages.push({ dir, manifestPath, manifest, original, written: false });
 }
 
 const names = new Set(packages.map((p) => p.manifest.name));
@@ -119,7 +130,19 @@ for (const p of ordered) {
       touched = true;
     }
   }
-  if (touched) writeFileSync(p.manifestPath, JSON.stringify(p.manifest, null, 2) + '\n');
+  if (touched) {
+    writeFileSync(p.manifestPath, JSON.stringify(p.manifest, null, 2) + '\n');
+    p.written = true;
+  }
+}
+
+// Registered rather than called: the checks below exit on failure, and a
+// rehearsal that restored only on success would leave the tree rewritten in
+// exactly the case somebody is most likely to walk away from.
+if (dryRun) {
+  process.on('exit', () => {
+    for (const p of ordered) if (p.written) writeFileSync(p.manifestPath, p.original);
+  });
 }
 
 // Nothing may reach the registry still speaking pnpm.
@@ -139,7 +162,7 @@ console.log(`${ordered.length} packages at ${version}, in order:`);
 for (const p of ordered) console.log(`  ${p.manifest.name}`);
 
 if (dryRun) {
-  console.log('\n--dry-run: manifests rewritten, nothing published');
+  console.log('\n--dry-run: the rewrite works, nothing published, manifests put back');
   process.exit(0);
 }
 

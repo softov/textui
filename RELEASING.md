@@ -81,10 +81,11 @@ Locally:
 ```bash
 pnpm build && pnpm check:exports              # what a consumer will resolve
 node scripts/release-publish.mjs 0.1.0 --dry-run   # order and version rewrite
-git checkout -- packages/                     # the dry run rewrites manifests
 ```
 
-The dry run edits manifests in place and does not put them back - outside CI, check out `packages/` afterwards. It refuses to run against a dirty tree unless given `--force`.
+The dry run rewrites the manifests, checks that nothing is left speaking `workspace:`, and puts them back - whichever way it exits, including the failures. So it leaves the tree as it found it and is safe to run mid-work; it is the *publish* that refuses a dirty tree, because that one rewrites in place and means to.
+
+It restores what was on disk rather than what is in `HEAD`: a rehearsal is not a way to discard your own edits.
 
 ## What the guards are for
 

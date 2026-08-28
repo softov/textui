@@ -94,13 +94,39 @@ export function resolveValue(ctx: ResolveContext, value: unknown): unknown {
   if (isComponentNode(value)) return value;
   if (isAction(value)) return value;
 
-  if (Array.isArray(value)) return value.map((v) => resolveValue(ctx, v));
+  /*
+   * The same array back when there was nothing in it to resolve.
+   *
+   * Identity is what the reconciler compares - a component whose props are
+   * all unchanged is not re-run, and neither is anything under it - so
+   * copying unconditionally made that test impossible to pass for exactly
+   * the props worth passing it for. A list of four hundred rows arrived as a
+   * new array on every pass, its holder re-rendered every frame whatever it
+   * had been told, and the memoisation callers wrote to prevent that could
+   * not reach this far.
+   *
+   * Copying at all is for the bindings: a `{ path }` inside an array has to
+   * become the value it names, and that is a different array. So the copy is
+   * kept and returned only when something in it actually changed.
+   */
+  if (Array.isArray(value)) {
+    let changed = false;
+    const items = value.map((v) => {
+      const resolved = resolveValue(ctx, v);
+      if (resolved !== v) changed = true;
+      return resolved;
+    });
+    return changed ? items : value;
+  }
 
+  let changed = false;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    out[k] = resolveValue(ctx, v);
+    const resolved = resolveValue(ctx, v);
+    if (resolved !== v) changed = true;
+    out[k] = resolved;
   }
-  return out;
+  return changed ? out : value;
 }
 
 /**

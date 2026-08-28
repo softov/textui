@@ -85,6 +85,20 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
   const measured = useMeasure();
   const extent = useScrollExtent();
   const heights = useRef<number[]>([]);
+  /**
+   * The width those heights were measured at.
+   *
+   * A height is a statement about a width - what a paragraph wrapped to in a
+   * pane this wide - so a resize does not make them stale, it makes them
+   * about a layout that no longer exists. Kept and compared rather than
+   * ignored, because the alternative is a feed that scrolls to the wrong
+   * place for ever after the window is dragged.
+   */
+  const heightsAt = useRef(-1);
+  /** One handler for every entry, so an entry's props do not change with it. */
+  const report = useRef((index: number, height: number): void => {
+    heights.current[index] = height;
+  });
 
   // The catalog's rule, and this has to follow it like every other viewport:
   // given `flex`, a `height`, a `maxHeight` or a `basis`, the layout decided
@@ -209,10 +223,52 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
     { global: true, enabled: pageKeys === 'always' },
   );
 
+  if (measured.width !== heightsAt.current) {
+    heightsAt.current = measured.width;
+    heights.current = [];
+  }
+
+  /*
+   * Which entries are far enough away not to be worth drawing.
+   *
+   * A feed lays out every entry it holds, and laying one out means wrapping
+   * its text - so a viewport thirty rows tall over a transcript of six
+   * hundred entries spent every frame measuring the five hundred and seventy
+   * nobody can see. That cost is paid per *frame*, not per change: a
+   * keystroke in a field elsewhere on the screen, a caret blinking, a
+   * spinner. It is why a long conversation is heavy to type into and a short
+   * one is not.
+   *
+   * An entry is skipped only once it has been measured, which is what keeps
+   * this honest: the first frame draws everything and learns every height,
+   * and from then on the ones outside the window are replaced by a box of
+   * exactly the height they had. Nothing is estimated, so the extent, the
+   * scrollbar and the position of every entry are what they would have been
+   * had all of them been drawn.
+   *
+   * A screenful either side, so scrolling and paging land on something that
+   * is already there rather than on a frame of blanks.
+   */
+  const view = Math.max(1, measured.height);
+  const skipped: boolean[] = [];
+  {
+    let y = 0;
+    for (let i = 0; i < count; i++) {
+      const height = heights.current[i];
+      // Zero is not a height that has been learned, whatever wrote it: an
+      // entry standing in for itself at nothing tall is one that can never
+      // be drawn again to find out how tall it is.
+      if (height === undefined || height <= 0) { skipped[i] = false; continue; }
+      skipped[i] = fills && (y + height < top - view || y > top + view + view);
+      y += height;
+    }
+  }
   const drawn = entries.map((entry, i) => h(FeedEntry, {
     key: i,
-    onHeight: (height: number) => { heights.current[i] = height; },
-  }, entry));
+    index: i,
+    onHeight: report.current,
+    ...(skipped[i] ? { placeholder: true, height: heights.current[i] as number } : {}),
+  }, skipped[i] ? null : entry));
 
   // Content-sized: draw everything and let the box grow. Clamping to a
   // measurement here would clamp to how tall this happened to be last frame,

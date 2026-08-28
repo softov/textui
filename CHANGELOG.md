@@ -6,6 +6,18 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+### A conversation got heavier to sit in the longer it got
+
+Three things, each invisible in a small tree and each the whole frame budget in a large one.
+
+A `Feed` laid out every entry it held. Laying one out means wrapping its text, and that was paid per *frame* rather than per change - a keystroke in the composer, a caret blinking, a spinner somewhere else on the screen - so a viewport thirty rows tall over a long transcript spent every frame measuring the hundreds of entries nobody could see. Entries more than a screenful outside the viewport now stand in as a box of the height they were measured at; nothing is estimated, so the extent, the scrollbar and every position are what they would have been.
+
+`useFrame` had no way to say *not now*. A ticker is a standing invalidation - it marks its component dirty `fps` times a second for as long as it is mounted - so the chat example's settled paragraphs each asked the application to redraw twice a second, for ever, because the caret they draw while streaming needed a frame counter. It takes `{ enabled }` now, like `useTicker` always has.
+
+And prop resolution copied every array and object on the way in. Identity is what the reconciler compares, so that made the "nothing changed, do not re-run this" test impossible to pass for exactly the props worth passing it for: a list of four hundred rows arrived as a new array on every pass and re-rendered the lot, whatever its caller had memoised. The copy is still made for the bindings inside one, and returned only when something actually changed.
+
+Typing into a three-hundred-turn conversation was about 650ms a keystroke and is about 34ms.
+
 ### A shell registered after boot took the application off the screen
 
 `root` reaches the screen two ways. With a shell it is a mount like any other and the surface registry owns it; with no shell at all - which is every application built out of primitives - `rootNode` wraps it directly and the registry is never consulted. `setRoot` has always done both, and says why: setting one and not the other works in exactly half of the programs that can exist.

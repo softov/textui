@@ -104,7 +104,12 @@ export const StreamingText: (props: StreamingTextProps) => RenderOutput =
   defineComponent<StreamingTextProps>('StreamingText', (props) => {
     const { content, streaming, quiet, maxLines, markdown, ...rest } = props;
     const theme = useTheme();
-    const frame = useFrame(2);
+    // Only while something is arriving. A ticker marks its component dirty
+    // whether or not the frame it produces differs, so an unconditional one
+    // here meant every settled paragraph in the transcript asked the
+    // application to redraw twice a second, for ever - a conversation that
+    // got heavier to sit in the longer it got.
+    const frame = useFrame(2, { enabled: streaming === true });
     const caret = streaming && frame % 2 === 0 ? theme.glyphs.caret : '';
     // Read unconditionally: `??` short-circuits, and a hook that is only
     // reached when a prop is absent is a hook that changes position between

@@ -5,6 +5,7 @@ import {
   useCapabilities,
   useEffect,
   useFocusScope,
+  useMemo,
   useRequiredService,
   useSize,
   useState,
@@ -417,17 +418,25 @@ function slashCommands(app: TextUIApp, contributed: Customization[]): SlashComma
 }
 
 
+const NO_TURNS: Turn[] = [];
+const NO_QUEUE: QueuedMessage[] = [];
+const NONE_EXPANDED: Record<string, boolean> = {};
+
 export const ChatScreen: (props: Record<string, never>) => RenderOutput =
   defineComponent<Record<string, never>>('ChatScreen', () => {
     const app = useApp();
     const controller = useRequiredService(CONTROLLER);
     useFocusScope({ id: CHAT_SCOPE });
 
-    const turns = useStoreValue<Turn[]>(TURNS, []) ?? [];
+    // The empties are shared rather than written out, and it matters: a
+    // fallback literal is a new object every render, so a path nothing has
+    // written yet reads as *changed* every time it is read. Everything
+    // derived from one then changes too, and the memos below never hold.
+    const turns = useStoreValue<Turn[]>(TURNS, NO_TURNS) ?? NO_TURNS;
     const input = useStoreValue<PendingInput | null>(INPUT, null) ?? null;
-    const queued = useStoreValue<QueuedMessage[]>(QUEUE, []) ?? [];
+    const queued = useStoreValue<QueuedMessage[]>(QUEUE, NO_QUEUE) ?? NO_QUEUE;
     const draft = useStoreValue<string>(DRAFT, '') ?? '';
-    const expanded = useStoreValue<Record<string, boolean>>(EXPANDED, {}) ?? {};
+    const expanded = useStoreValue<Record<string, boolean>>(EXPANDED, NONE_EXPANDED) ?? NONE_EXPANDED;
     const history = useStoreValue<string[]>(HISTORY, []) ?? [];
     const [recall, setRecall] = useState(history.length);
     // The cursor is state like everything else, and it lives in the screen's
@@ -439,7 +448,18 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
     const model = useStoreValue<string>(MODEL, '') ?? '';
     const chat = useStoreValue<string | null>(CHAT_URI, null) ?? null;
     const running = turns.some((turn) => turn.state === 'running');
-    const blocks = toBlocks(turns, queued);
+    /*
+     * Memoised, and the three below it with it, because of what the
+     * transcript does with them.
+     *
+     * A component whose props are all unchanged is not re-run, and neither is
+     * anything under it - so stable props here are what keep a keystroke in
+     * the composer from rebuilding every block of the conversation and
+     * reconciling the whole feed. Derived fresh they were new objects every
+     * time, which is a change as far as anything can tell, and a screen that
+     * re-renders for the draft dragged four hundred blocks along with it.
+     */
+    const blocks = useMemo(() => toBlocks(turns, queued), [turns, queued]);
     const options = useComposerOptions();
     // Read here as well as on the panel, because the slash menu is the other
     // place a skill is reached from and this is the screen it is reached on.
@@ -451,6 +471,36 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
       .filter((option) => option.title !== undefined)
       .map((option) => ({ label: option.title as string, value: option.label }));
 
+    // What the caption is made of, as one value that can be compared. The
+    // parts are rebuilt every render and the caption they describe is not.
+    const headSignature = JSON.stringify([session, model, chat, settingRows]);
+    const head = useMemo(() => (
+      <Column padding={[0, 0, 1, 0]}>
+        {session ? (
+          <ChatSessionHead
+            session={session}
+            {...(model ? { model } : {})}
+            {...(chat ? { chat } : {})}
+            settings={settingRows}
+          />
+        ) : null}
+        <Divider dim />
+      </Column>
+    ), [headSignature]);
+
+    const onToggle = useMemo(() => (id: string) => {
+      // A queued message is not something to expand. Enter on one takes it
+      // back, which is the only thing there is to do to a message that has
+      // not been sent yet.
+      const waiting = id.startsWith('queued:') ? id.slice('queued:'.length) : null;
+      if (waiting !== null) { controller.unqueue(waiting); return; }
+      app.store.set(EXPANDED, { ...expanded, [id]: !expanded[id] });
+    }, [expanded, controller, app]);
+
+    // `useStore` hands back a fresh setter every render, which is a changed
+    // prop every render.
+    const onCursor = useMemo(() => (next: number) => setCursor(next), []);
+
     if (!session) {
       return <EmptyState title="No session open" message="Open one from the catalogue." flex={1} />;
     }
@@ -459,30 +509,13 @@ export const ChatScreen: (props: Record<string, never>) => RenderOutput =
       <Column flex={1} gap={1}>
         <ChatTranscript
           // The top of the conversation, inside it. See `head`.
-          head={(
-            <Column padding={[0, 0, 1, 0]}>
-              <ChatSessionHead
-                session={session}
-                {...(model ? { model } : {})}
-                {...(chat ? { chat } : {})}
-                settings={settingRows}
-              />
-              <Divider dim />
-            </Column>
-          )}
+          head={head}
           flex={1}
           blocks={blocks}
           expanded={expanded}
           cursor={cursor ?? 0}
-          onCursor={setCursor}
-          onToggle={(id: string) => {
-            // A queued message is not something to expand. Enter on one takes
-            // it back, which is the only thing there is to do to a message
-            // that has not been sent yet.
-            const waiting = id.startsWith('queued:') ? id.slice('queued:'.length) : null;
-            if (waiting !== null) { controller.unqueue(waiting); return; }
-            app.store.set(EXPANDED, { ...expanded, [id]: !expanded[id] });
-          }}
+          onCursor={onCursor}
+          onToggle={onToggle}
         />
 
         {/* The block that is waiting on a person sits between the conversation

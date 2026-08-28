@@ -1001,14 +1001,25 @@ export function useTicker(
   }, [enabled, options.fps]);
 }
 
-/** A frame counter, for spinners and marquees. Frozen when animation is off. */
-export function useFrame(fps = 10): number {
+/**
+ * A frame counter, for spinners and marquees. Frozen when animation is off.
+ *
+ * `enabled` is not a convenience. A ticker is a standing invalidation - it
+ * marks its component dirty `fps` times a second for as long as it is
+ * mounted - so a component that animates only sometimes and calls this
+ * unconditionally keeps the whole application rendering while it sits still.
+ * That is invisible in a small tree and is the entire frame budget in a large
+ * one, which is the case nobody tests. Frozen at 0 while off, so a caret or a
+ * spinner drawn from it is steady rather than absent.
+ */
+export function useFrame(fps = 10, options: { enabled?: boolean } = {}): number {
   const instance = currentInstance();
   const [frame, setFrame] = useState(0);
   const disabled = instance.runtime.animation.disabled;
+  const running = (options.enabled ?? true) && !disabled;
 
-  useTicker(() => setFrame((f) => f + 1), { fps, enabled: !disabled });
-  return disabled ? 0 : frame;
+  useTicker(() => setFrame((f) => f + 1), { fps, enabled: running });
+  return running ? frame : 0;
 }
 
 /** A value that eases towards its target. Snaps when animation is off. */

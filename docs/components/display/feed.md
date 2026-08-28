@@ -48,6 +48,10 @@ Like the other data components it is sized by its props, not by \`visibleRows\`:
 
 Its heights are **measured, not computed**. What a paragraph wraps to is decided by the layout, so each entry reports its height once laid out and the feed scrolls by summing them. That is one frame behind, which is invisible, and it is the only answer that is not a guess.
 
+Those heights are also what lets it stop drawing. Laying an entry out means wrapping its text, and a feed pays that for every entry it holds on every *frame* - not on every change, but on a keystroke in a field elsewhere on the screen, on a caret blinking, on a spinner. So an entry more than a screenful outside the viewport is replaced by a box of exactly the height it was measured at. Nothing is estimated: the first frame draws everything and learns every height, so the extent, the scrollbar and the position of every entry are what they would have been had all of them been drawn, and a resize throws the heights away and learns them again.
+
+Two things follow from it. An entry far out of view is not mounted, so anything holding its own state - rather than taking it from the caller - loses it and starts again when the reader scrolls back. And an entry whose content changes while it is out of view keeps the height it last had until it is drawn again, which is right for a transcript that grows at the end and wrong for one that rewrites its middle.
+
 ## See also
 
 - [List](list.md) - when every row is the same height

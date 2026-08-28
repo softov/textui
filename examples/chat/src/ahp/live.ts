@@ -1021,7 +1021,11 @@ export async function liveHost(options: LiveHostOptions): Promise<HostConnection
     },
 
     close: async () => {
-      moveTo('offline');
+      // Set, not announced. `onState` means something happened *to* the
+      // connection, and hanging up on purpose is not that - reporting it
+      // sends somebody to check their network over a program that simply
+      // finished.
+      state = 'offline';
       await client.shutdown();
     },
   };

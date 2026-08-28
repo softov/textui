@@ -8,8 +8,9 @@ import { registerChat } from './app.js';
 import { CONTROLLER } from './control.js';
 import { fakeHost } from './ahp/fake.js';
 import { MissingProtocolPackage, liveHost } from './ahp/live.js';
+import { MissingAgentSdk, claudeHost } from './ahp/claude.js';
 import type { HostConnection } from './ahp/connection.js';
-import { HOST_ERROR } from './state.js';
+import { HOST_ERROR, WORKSPACE } from './state.js';
 
 /**
  * The entry point.
@@ -61,7 +62,65 @@ interface Options {
    */
   host?: string;
   token?: string;
+  /**
+   * Claude Code, in this process, through the Agent SDK.
+   *
+   * The third host. `--host` is somebody else's editor and this is the agent
+   * itself, and the seam is what makes them the same application.
+   */
+  claude: boolean;
+  /**
+   * Where the agent works.
+   *
+   * **A path on the host, not on this machine** - the same thing the
+   * `compose.workspace` command says, and the reason there is one flag rather
+   * than two. Against `--claude` the host *is* this machine, so it defaults to
+   * the current directory. Against `--host` it defaults to nothing at all: the
+   * host is somewhere else, its filesystem is not this one, and a client that
+   * sent its own cwd would be naming a directory that does not exist there.
+   */
+  path?: string;
+  help: boolean;
 }
+
+const USAGE = `chat - an agent chat client
+
+  pnpm example chat [options]
+
+The host
+  --claude              Claude Code in this process, through the Agent SDK
+  --host <url>          A live agent host, ws://host:port
+  --token <tkn>         A bearer token for it
+  (none of these)       The scripted host, which needs nothing installed
+
+Where the agent works
+  --path <dir>          A path on the host, not on this machine.
+                        With --claude the host is this machine, so it
+                        defaults to the current directory. With --host it
+                        defaults to nothing - the host decides.
+
+Appearance
+  --theme <name>        workbench, paper-light, ...
+  --shell <name>        The shell layout
+  --screen <name>       Which screen to open on
+  --session <uri>       Open this session
+
+Stills, for a README or a test
+  --static, -s          One frame to stdout instead of running
+  --width, -w <n>       Columns
+  --height <n>          Rows
+  --unicode <level>     ascii, bmp, full
+  --colors <n>          0, 4, 8 or 24
+  --svg <file>          Write the still as SVG here
+  --tick <ms>           Milliseconds per scripted word
+  --settled             Run the script out before the frame
+  --pump <n>            Or exactly this many scripted words
+  --say <text>          Say this on the open session first
+  --approve             Answer the confirmation the script stops at
+  --answer              ...and then the question
+
+  --help, -h            This
+`;
 
 function parse(argv: string[]): Options {
   const options: Options = {
@@ -75,6 +134,8 @@ function parse(argv: string[]): Options {
     shell: 'workbench',
     approve: false,
     answer: false,
+    claude: false,
+    help: false,
   };
   for (let i = 0; i < argv.length; i++) {
     switch (argv[i]) {
@@ -96,7 +157,17 @@ function parse(argv: string[]): Options {
       case '--session': options.session = String(argv[++i]); break;
       case '--host': options.host = String(argv[++i]); break;
       case '--token': options.token = String(argv[++i]); break;
-      default: break;
+      case '--claude': options.claude = true; break;
+      case '--path': options.path = String(argv[++i]); break;
+      case '--help': case '-h': options.help = true; break;
+      // A flag nobody reads is a flag nobody can rely on: an unknown one is
+      // said so rather than silently doing what the defaults would have done.
+      default:
+        if (argv[i]?.startsWith('-')) {
+          process.stderr.write(`Unknown option ${argv[i]}. Try --help.\n`);
+          process.exit(2);
+        }
+        break;
     }
   }
   return options;
@@ -128,6 +199,23 @@ const sink: { report(message: string): void } = {
 };
 
 async function connect(options: Options): Promise<HostConnection & { pump?(): boolean }> {
+  if (options.claude) {
+    try {
+      return await claudeHost({
+        // The SDK spawns the CLI as a child of this process, so the host's
+        // filesystem is this one and its cwd is the only truthful default.
+        path: options.path ?? process.cwd(),
+        onRefusal: (_uri, message) => sink.report(message),
+      });
+    } catch (error) {
+      if (error instanceof MissingAgentSdk) {
+        process.stderr.write(`${error.message}\n`);
+        process.exit(1);
+      }
+      process.stderr.write(`Could not start Claude in ${options.path ?? process.cwd()}: ${String(error)}\n`);
+      process.exit(1);
+    }
+  }
   if (!options.host) return fakeHost();
   try {
     return await liveHost({
@@ -164,6 +252,7 @@ async function still(options: Options): Promise<void> {
     // can do without being answered, which is how the confirmation is reached.
     before: (app) => {
       const controller = app.services.require(CONTROLLER);
+      if (options.path) app.store.set(WORKSPACE, options.path);
       if (options.session) {
         controller.open(options.session);
         if (options.screen !== 'sessions') app.screens.push(options.screen);
@@ -196,6 +285,12 @@ async function still(options: Options): Promise<void> {
     },
   });
 
+  // The frame is drawn, so let the host go. A live one is a socket and a
+  // local one is a subprocess, and either keeps the event loop alive after
+  // `main` has returned - a still that renders correctly and then hangs for
+  // ever, which is what every `--host` still did.
+  await host.close?.();
+
   if (options.svg !== undefined) {
     process.stderr.write(`${options.svg}\n`);
     return;
@@ -205,6 +300,10 @@ async function still(options: Options): Promise<void> {
 
 async function main(): Promise<void> {
   const options = parse(process.argv.slice(2));
+  if (options.help) {
+    process.stdout.write(USAGE);
+    return;
+  }
   if (options.static_ || !process.stdout.isTTY) {
     await still(options);
     return;
@@ -243,6 +342,10 @@ async function main(): Promise<void> {
 
   app.services.provide(WRITER_KEY, createWriter(terminal.capabilities()));
   sink.report = (message) => app.store.set(HOST_ERROR, message);
+  // One flag, one store path - the same one `compose.workspace` writes, so
+  // what `--path` seeds and what the palette sets are the same answer and
+  // both hosts read it from the same place.
+  if (options.path) app.store.set(WORKSPACE, options.path);
   await app.start();
 
   /**

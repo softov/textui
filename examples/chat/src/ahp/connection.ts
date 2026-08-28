@@ -160,6 +160,19 @@ export interface HostConnection {
    * another client changed while the page had it on screen.
    */
   setConfig(uri: SessionUri, key: string, value: string): void;
+
+  /**
+   * Let go of whatever the connection is holding.
+   *
+   * Optional because not every host holds anything: the scripted one is a
+   * pile of objects and ends when the process does. A socket and a
+   * subprocess are the opposite - they keep the event loop alive on their
+   * own, so a program that has finished drawing and returned from `main`
+   * still does not exit. That is what this is for, and the reason it is on
+   * the seam rather than only on the implementations that need it: the caller
+   * cannot know which kind it was handed.
+   */
+  close?(): void | Promise<void>;
 }
 
 /**

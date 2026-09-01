@@ -202,6 +202,16 @@ export const Select = defineComponent<SelectProps>('Select', (props) => {
     direction: 'column',
     border: { style: theme.border, color: focus.focused ? 'focus' : 'border' },
     padding: [0, 1],
+    /*
+     * The terminal cursor, parked at the start of the value.
+     *
+     * There is nothing to type here, so this is not a caret - it is the
+     * strongest "you are here" a terminal has, and a control that gives it up
+     * on focus is one whose only remaining signal is the colour of its border.
+     * Tabbing from a text field used to look like the focus had stayed behind
+     * in the field, because the cursor had.
+     */
+    cursor: focus.focused ? 0 : undefined,
     ...rest,
   },
     h('box', {

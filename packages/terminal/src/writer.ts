@@ -23,10 +23,22 @@ interface WriterState {
   x: number;
   y: number;
   valid: boolean;
+  /**
+   * Whether the terminal is currently showing its cursor.
+   *
+   * Tracked because a frame can need the cursor *taken away* without painting
+   * anything: focus moving from a text field to a control that has no caret
+   * changes no cell the field did not already own, and the cursor was left
+   * sitting in the field somebody had just tabbed out of.
+   */
+  cursorShown: boolean;
 }
 
 function freshState(): WriterState {
-  return { fg: COLOR_DEFAULT, bg: COLOR_DEFAULT, attrs: 0, link: undefined, x: -1, y: -1, valid: false };
+  return {
+    fg: COLOR_DEFAULT, bg: COLOR_DEFAULT, attrs: 0, link: undefined,
+    x: -1, y: -1, valid: false, cursorShown: false,
+  };
 }
 
 export function fgSequence(color: number, depth: TerminalCapabilities['colorDepth']): string {
@@ -85,7 +97,9 @@ export class Writer {
 
   /** Encode a frame. Returns an empty string when nothing changed. */
   write(frame: Frame): string {
-    if (frame.runs.length === 0 && !frame.cursor) return '';
+    // Nothing to paint, nowhere to put the caret, and none on screen to take
+    // away. A frame that has to *hide* one still has work to do.
+    if (frame.runs.length === 0 && !frame.cursor && !this.state.cursorShown) return '';
 
     const out: string[] = [];
     const sync = this.capabilities.synchronizedOutput;
@@ -93,8 +107,12 @@ export class Writer {
 
     // A frame is painted with the cursor hidden; showing it once at the end
     // is the difference between a steady caret and one that streaks.
-    const hideForPaint = this.capabilities.cursor && frame.runs.length > 0;
-    if (hideForPaint) out.push(ansi.cursorHide);
+    const hideForPaint = this.capabilities.cursor
+      && (frame.runs.length > 0 || (this.state.cursorShown && !frame.cursor));
+    if (hideForPaint) {
+      out.push(ansi.cursorHide);
+      this.state.cursorShown = false;
+    }
 
     for (const run of frame.runs) out.push(this.encodeRun(run));
 
@@ -107,7 +125,10 @@ export class Writer {
       out.push(ansi.cursorTo(frame.cursor.x, frame.cursor.y));
       this.state.x = frame.cursor.x;
       this.state.y = frame.cursor.y;
-      if (frame.cursor.visible) out.push(ansi.cursorShow);
+      if (frame.cursor.visible) {
+        out.push(ansi.cursorShow);
+        this.state.cursorShown = true;
+      }
     }
 
     if (sync) out.push(ansi.syncEnd);

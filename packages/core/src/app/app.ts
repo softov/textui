@@ -816,7 +816,21 @@ export class App implements TextUIApp {
     walkInstances(this.root, (instance) => {
       if (position) return;
       const cursor = instance.props.cursor;
-      if (!cursor || !instance.box) return;
+      /*
+       * Absent, not falsy.
+       *
+       * `cursor` is a column, and column 0 is a real one - it is where the
+       * caret sits in an empty field, and where it sits at the start of any
+       * field. `!cursor` treated that as "no caret here", so a text input
+       * published no cursor position at all until its first character was
+       * typed: the terminal cursor stayed hidden, and the only thing marking
+       * the focused control was its border colour.
+       *
+       * `true` still means "here, at offset 0", which is what the `typeof`
+       * below is for - so this rejects the three ways of saying nothing and
+       * nothing else.
+       */
+      if (cursor === undefined || cursor === null || cursor === false || !instance.box) return;
       const id = typeof instance.props.id === 'string' ? instance.props.id : instance.id;
       if (id !== focused && `${instance.id}:focus` !== focused) return;
 

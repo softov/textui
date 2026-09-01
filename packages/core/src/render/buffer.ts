@@ -2,6 +2,16 @@ import type { Rect } from '../types/geometry.js';
 import type { Cell, CellBuffer } from '../types/cells.js';
 import { COLOR_DEFAULT, packColor, type PackedColor } from './color.js';
 
+/**
+ * A character no cell can hold, for the previous frame when it must not match.
+ *
+ * `put` refuses the empty string and every real glyph is one the terminal can
+ * print, so NUL is a value that never arrives from a render and never leaves
+ * one: `diffFrame` reads `chars`, never `prevChars`, so this is only ever a
+ * comparison and is never written out.
+ */
+const NEVER = '\u0000';
+
 /** One cell as it is stored: colours packed, nothing allocated to read it. */
 export interface PackedCell {
   char: string;
@@ -238,7 +248,7 @@ export class Buffer implements CellBuffer {
 
     // A resize invalidates the previous frame entirely.
     const n = width * height;
-    this.prevChars = new Array<string>(n).fill(' ');
+    this.prevChars = new Array<string>(n).fill(NEVER);
     this.prevFg = new Int32Array(n).fill(COLOR_DEFAULT);
     this.prevBg = new Int32Array(n).fill(COLOR_DEFAULT);
     this.prevAttrs = new Uint16Array(n);
@@ -282,9 +292,25 @@ export class Buffer implements CellBuffer {
     this.committed = true;
   }
 
-  /** Force the next diff to repaint everything. After a resize or a redraw. */
+  /**
+   * Force the next diff to repaint everything. After a resize or a redraw.
+   *
+   * Both halves, and the second one is the one that was missing. Clearing
+   * `committed` makes `dirtyRows` return every row, but `diffFrame` still
+   * skips each cell that matches the previous frame - and a blank cell in the
+   * new frame matched the reset previous frame exactly, so it was never
+   * written. Under a theme with an opaque canvas nothing showed, because every
+   * cell carries a background colour and therefore differs anyway. Under a
+   * theme with a transparent one the blanks are default-on-default, and the
+   * terminal kept whatever the old layout had left in them: a resize scattered
+   * the previous frame across the new one and it never cleared.
+   *
+   * So the previous frame is filled with a character no cell can hold, which
+   * is a comparison that cannot come out equal.
+   */
   invalidate(): void {
     this.committed = false;
+    this.prevChars.fill(NEVER);
   }
 
   toText(rect?: Rect): string {

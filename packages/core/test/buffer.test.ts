@@ -182,3 +182,42 @@ describe('frame diff', () => {
     expect(diffFrame(b).full).toBe(true);
   });
 });
+
+describe('a frame that has to be repainted whole', () => {
+  /**
+   * A resize scattered the old frame across the new one, and only on a theme
+   * with a transparent canvas.
+   *
+   * `invalidate` cleared `committed`, which makes `dirtyRows` return every row
+   * - and `diffFrame` still skips each cell that matches the previous frame.
+   * A blank cell in the new frame matched the reset previous frame exactly, so
+   * it was never written and the terminal kept the glyph the old layout left
+   * there. An opaque canvas hid it: every cell carries a background colour, so
+   * every cell differs anyway and gets painted over.
+   */
+  it('writes even the blank default cells', () => {
+    const buffer = createBuffer(20, 2);
+    for (let x = 0; x < 16; x++) buffer.put(x, 0, 'X', packColor('red'));
+    diffFrame(buffer);
+    buffer.commit();
+
+    // What a render does: the terminal changed size, and the frame that gets
+    // painted into the new one is blank where the old one had content.
+    buffer.resize(24, 2);
+    buffer.invalidate();
+    buffer.clear();
+
+    const written = diffFrame(buffer).runs.map((run) => run.text).join('');
+    expect(written).toHaveLength(24 * 2);
+    expect(written.trim()).toBe('');
+  });
+
+  /** And a committed frame that did not change still costs nothing. */
+  it('still writes nothing when nothing moved', () => {
+    const buffer = createBuffer(10, 2);
+    buffer.put(0, 0, 'a');
+    diffFrame(buffer);
+    buffer.commit();
+    expect(diffFrame(buffer).runs).toHaveLength(0);
+  });
+});

@@ -1,5 +1,5 @@
 import type { BoxProps } from '@textui/core';
-import { defineComponent, h, useEffect, useMeasure, useTheme } from '@textui/core';
+import { defineComponent, h, useEffect, useMeasure } from '@textui/core';
 
 /**
  * An entry that reports how tall it turned out to be.
@@ -15,31 +15,15 @@ import { defineComponent, h, useEffect, useMeasure, useTheme } from '@textui/cor
  */
 export const FeedEntry = defineComponent<BoxProps & {
   index: number;
-  /**
-   * Standing in for an entry that is not drawn, at the height it had.
-   *
-   * A stand-in must not answer the question it is an answer to. Its height is
-   * one the feed already knows - it is where it came from - and reporting it
-   * back is how a measurement gets to depend on itself: a round where a
-   * stand-in came out any shorter would teach the feed that it *was* shorter,
-   * and the next round would place the rest of them on top of each other.
-   */
-  placeholder?: boolean;
   onHeight(index: number, height: number): void;
 }>(
   'FeedEntry',
   (props) => {
-    const { index, placeholder, onHeight, children, ...rest } = props;
+    const { index, onHeight, children, ...rest } = props;
     const measured = useMeasure();
     useEffect(() => {
-      if (placeholder) return;
       onHeight(index, measured.height);
-    }, [measured.height, placeholder]);
+    }, [measured.height]);
     return h('box', { direction: 'column', ...rest }, children);
   },
 );
-
-export const FeedScrollbar = defineComponent<Record<string, never>>('FeedScrollbar', () => {
-  const theme = useTheme();
-  return h('box', { width: 1, fill: theme.borderChars().left, fg: 'borderSubtle' });
-});

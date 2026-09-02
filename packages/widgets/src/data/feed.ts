@@ -11,7 +11,8 @@ import {
   useState,
 } from '@textui/core';
 import { sizedByLayout } from '../viewport.js';
-import { FeedEntry, FeedScrollbar } from './shared.js';
+import { FeedEntry } from './shared.js';
+import { ScrollThumb } from './scroll-thumb.js';
 
 // ---------------------------------------------------------------------- feed
 
@@ -263,12 +264,44 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
       y += height;
     }
   }
-  const drawn = entries.map((entry, i) => h(FeedEntry, {
-    key: i,
-    index: i,
-    onHeight: report.current,
-    ...(skipped[i] ? { placeholder: true, height: heights.current[i] as number } : {}),
-  }, skipped[i] ? null : entry));
+  /*
+   * A run of skipped entries is one box, not one box each.
+   *
+   * Skipping the *contents* of an entry took the wrapping away, which was the
+   * expensive part, and left everything else: an entry standing in for itself
+   * is still a component to reconcile and still a box to measure, four times a
+   * frame, at every level of the tree above it. Six hundred entries with
+   * thirty on screen was five hundred and seventy of those, and they cost the
+   * same whether or not anything in them had changed.
+   *
+   * The window is contiguous, so there are at most two runs - everything above
+   * it and everything below - and each collapses to a single box of exactly
+   * the height its entries had. The entries that *are* drawn keep their own
+   * index as their key, so scrolling moves the boundary without disturbing the
+   * identity of anything still on screen.
+   */
+  const drawn: unknown[] = [];
+  let gap = 0;
+  let gapFrom = 0;
+  const closeGap = (): void => {
+    if (gap <= 0) return;
+    drawn.push(h('box', { key: `gap:${String(gapFrom)}`, height: gap }));
+    gap = 0;
+  };
+  for (let i = 0; i < count; i++) {
+    if (skipped[i]) {
+      if (gap === 0) gapFrom = i;
+      gap += heights.current[i] as number;
+      continue;
+    }
+    closeGap();
+    drawn.push(h(FeedEntry, {
+      key: i,
+      index: i,
+      onHeight: report.current,
+    }, entries[i]));
+  }
+  closeGap();
 
   // Content-sized: draw everything and let the box grow. Clamping to a
   // measurement here would clamp to how tall this happened to be last frame,
@@ -296,8 +329,21 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
     },
   },
     h('box', { flex: 1, direction: 'column', scrollTop: top, overflow: 'scroll' }, ...drawn),
+    // `ScrollThumb`, the one every other viewport in the library draws. This
+    // one had its own: a column filled with the border glyph, taking no offset
+    // and saying nothing about where in the conversation you were or how much
+    // of it there is. Against the panel it sits inside, it read as a second
+    // border - and a bar that cannot be told from a frame is not a bar.
+    //
     // Only when there is somewhere to scroll. A track down the side of a feed
     // that fits is chrome that states something untrue.
-    scrollbar && limit > 0 ? h(FeedScrollbar, {}) : null,
+    scrollbar && limit > 0
+      ? h(ScrollThumb, {
+          total: total || measured.height,
+          rows: measured.height,
+          offset: top,
+          focused: focus.focused,
+        })
+      : null,
   );
 });

@@ -955,6 +955,33 @@ export class App implements TextUIApp {
     } catch (err) {
       this.handleError(err, `input:${event.type}`);
     }
+
+    /*
+     * Pointer motion and the wheel are streams, and only where they got to
+     * means anything.
+     *
+     * A terminal reports every cell the pointer crosses and every notch of the
+     * wheel, and one read can carry twenty of them - so rendering per event
+     * lays out and paints the whole tree twenty times to draw one gesture. The
+     * cost is the size of the tree, which is why it is invisible on a short
+     * screen and, on a long transcript, is the thing being dragged trailing
+     * seconds behind the pointer and a wheel that goes on scrolling after the
+     * hand has stopped. That second one is the tell: it is not momentum, it is
+     * a backlog of events still being drawn one frame each.
+     *
+     * Only the drawing is coalesced. Every event is still dispatched, so the
+     * notches still add up and the pointer still ends where it ended; what
+     * they share is the one frame `handleMouse` asked for, at the animation
+     * ceiling rather than at whatever rate the terminal felt like reporting.
+     *
+     * Keys are the opposite and stay synchronous: every one of them is a
+     * separate thing a person did, and a handler closes over the props from
+     * its last render, so typing "ab" without a frame in between makes the
+     * handler for "b" see the state from before "a".
+     */
+    if (event.type === 'mouse'
+      && (event.action === 'move' || event.action === 'drag' || event.action === 'wheel')) return;
+
     if (this.running_ && this.isDirty()) this.renderFrame();
   }
 

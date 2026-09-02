@@ -1,5 +1,5 @@
 import type { Rect } from '../types/geometry.js';
-import type { Style } from '../types/style.js';
+import type { Style, TextWrap } from '../types/style.js';
 import type { ResolvedTheme } from '../types/theme.js';
 import type { TerminalCapabilities } from '../types/capabilities.js';
 import type { Cell, Color } from '../types/cells.js';
@@ -12,7 +12,7 @@ import type { Buffer } from '../render/buffer.js';
 import { COLOR_DEFAULT, mix, packColor, type PackedColor } from '../render/color.js';
 import { rectIntersect } from '../types/geometry.js';
 import {
-  graphemes, graphemeWidth, sanitize, stringWidth, truncate,
+  graphemes, graphemeWidth, isAscii, sanitize, stringWidth, truncate,
   truncateSideOf, wrapModeOf, wrapText,
 } from '../util/text.js';
 import {
@@ -87,8 +87,23 @@ class Surface implements PaintSurface {
     const link = style?.link;
     const oy = this.rect.y + y;
 
+    const clean = sanitize(text);
+
+    // Plain ASCII is one cell per character and needs none of the clustering
+    // machinery - and it is nearly every string a terminal ever draws. The
+    // general path allocates an array of one-character strings for the whole
+    // run before writing any of it.
     let cx = x;
-    for (const g of graphemes(sanitize(text))) {
+    if (isAscii(clean)) {
+      for (let i = 0; i < clean.length; i++) {
+        const ax = this.rect.x + cx;
+        if (this.visible(ax, oy)) this.buffer.put(ax, oy, clean[i] as string, fg, bg, attrs, link);
+        cx += 1;
+      }
+      return cx - x;
+    }
+
+    for (const g of graphemes(clean)) {
       const w = graphemeWidth(g);
       if (w === 0) continue;
       const ax = this.rect.x + cx;
@@ -337,6 +352,17 @@ function oneLine(text: string): string {
   return text.includes('\n') ? text.split('\n').join(' ') : text;
 }
 
+/**
+ * Text measurements already taken.
+ *
+ * A measurement is a pure function of the string, how it wraps and the width
+ * it is offered - and a layout asks for the same three several times in a
+ * frame, then the next frame asks for all of them again. The text in a
+ * transcript does not change; only the one line somebody is typing does.
+ */
+const measurements = new Map<string, { width: number; height: number }>();
+const MEASURE_CACHE = 4096;
+
 function textMeasure(instance: Instance, style: Style): (w: number, h: number) => { width: number; height: number } {
   return (maxWidth: number) => {
     const text = sanitize(textContent(instance));
@@ -344,26 +370,41 @@ function textMeasure(instance: Instance, style: Style): (w: number, h: number) =
 
     const wrap = style.wrap ?? 'none';
 
+    const key = `${wrap}\u0000${String(maxWidth)}\u0000${text}`;
+    const seen = measurements.get(key);
+    if (seen !== undefined) return seen;
+
     // A truncating text is one row, always. It still asks for the width it
     // would like - a box sizing itself around it gets the whole string when
     // there is room, and only cuts when there is not.
-    if (truncateSideOf(wrap) !== undefined) {
-      return { width: stringWidth(oneLine(text)), height: 1 };
-    }
+    const size = measure(text, wrap, maxWidth);
+    if (measurements.size >= MEASURE_CACHE) measurements.clear();
+    measurements.set(key, size);
+    return size;
+  };
+}
 
-    if (wrap === 'none') {
-      const lines = text.split('\n');
-      return {
-        width: Math.max(...lines.map(stringWidth)),
-        height: lines.length,
-      };
-    }
-    const limit = Number.isFinite(maxWidth) && maxWidth > 0 ? maxWidth : stringWidth(text);
-    const lines = wrapText(text, limit, wrapModeOf(wrap));
+/** The measurement itself, with nothing remembered. */
+function measure(text: string, wrap: TextWrap, maxWidth: number): { width: number; height: number } {
+  // A truncating text is one row, always. It still asks for the width it
+  // would like - a box sizing itself around it gets the whole string when
+  // there is room, and only cuts when there is not.
+  if (truncateSideOf(wrap) !== undefined) {
+    return { width: stringWidth(oneLine(text)), height: 1 };
+  }
+
+  if (wrap === 'none') {
+    const lines = text.split('\n');
     return {
-      width: Math.min(limit, Math.max(0, ...lines.map(stringWidth))),
-      height: Math.max(1, lines.length),
+      width: Math.max(...lines.map(stringWidth)),
+      height: lines.length,
     };
+  }
+  const limit = Number.isFinite(maxWidth) && maxWidth > 0 ? maxWidth : stringWidth(text);
+  const lines = wrapText(text, limit, wrapModeOf(wrap));
+  return {
+    width: Math.min(limit, Math.max(0, ...lines.map(stringWidth))),
+    height: Math.max(1, lines.length),
   };
 }
 

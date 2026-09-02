@@ -41,6 +41,19 @@ export interface LayoutBox {
   scrollSize?: Size;
 
   /**
+   * Frame and gaps, worked out once for this box.
+   *
+   * Neither depends on the space being offered - they are the box's own
+   * margin, border, padding and gap - and the box is measured about four
+   * times a frame at different bounds, each of which was rebuilding both and
+   * allocating three objects to do it. Same lifetime as `measured` below, and
+   * for the same reason: a layout box is rebuilt from the instance tree every
+   * frame, so nothing here can go stale.
+   */
+  frame?: { margin: Edges; inset: Edges };
+  gaps?: { main: number; cross: number };
+
+  /**
    * The last answer `measureBox` gave for this box, and what it was asked.
    *
    * Sizing a flex container measures its children to find their intrinsic
@@ -145,11 +158,15 @@ function mainOverflow(box: LayoutBox): Overflow {
  * that sets both reads the same either way round.
  */
 function gapsOf(box: LayoutBox): { main: number; cross: number } {
+  const seen = box.gaps;
+  if (seen !== undefined) return seen;
   const vertical = box.style.rowGap ?? box.style.gap ?? 0;
   const horizontal = box.style.columnGap ?? box.style.gap ?? 0;
-  return isColumn(box)
+  const gaps = isColumn(box)
     ? { main: vertical, cross: horizontal }
     : { main: horizontal, cross: vertical };
+  box.gaps = gaps;
+  return gaps;
 }
 
 /**
@@ -181,10 +198,12 @@ function splitLines(mains: number[], gap: number, limit: number): [number, numbe
 
 /** Space this box consumes outside its content: margin, border, padding. */
 function frameOf(box: LayoutBox): { margin: Edges; inset: Edges } {
+  const seen = box.frame;
+  if (seen !== undefined) return seen;
   const margin = resolveEdges(box.style.margin);
   const padding = resolveEdges(box.style.padding);
   const b = box.borderEdges;
-  return {
+  const frame = {
     margin,
     inset: {
       top: b.top + padding.top,
@@ -193,6 +212,8 @@ function frameOf(box: LayoutBox): { margin: Edges; inset: Edges } {
       left: b.left + padding.left,
     },
   };
+  box.frame = frame;
+  return frame;
 }
 
 /**
@@ -247,7 +268,7 @@ export function measureBox(box: LayoutBox, availW: number, availH: number): Size
       if (isAbsolute(child) || isHidden(child)) continue;
       count++;
       const m = measureBox(child, innerAvailW, innerAvailH);
-      const cm = resolveEdges(child.style.margin);
+      const cm = frameOf(child).margin;
       mains.push(column ? m.height + edgeV(cm) : m.width + edgeH(cm));
       crosses.push(column ? m.width + edgeH(cm) : m.height + edgeV(cm));
     }
@@ -289,7 +310,7 @@ export function measureBox(box: LayoutBox, availW: number, availH: number): Size
           if (isAbsolute(child) || isHidden(child)) continue;
           const flex = Math.max(0, child.style.flex ?? 0);
           if (flex > 0) {
-            const cm = resolveEdges(child.style.margin);
+            const cm = frameOf(child).margin;
             const share = Math.max(0, Math.floor((room * flex) / totalFlex) - edgeH(cm));
             const m = measureBox(child, share, innerAvailH);
             crosses[index] = m.height + edgeV(cm);
@@ -519,7 +540,7 @@ function layoutWrapped(box: LayoutBox, flow: LayoutBox[]): void {
   const mains: number[] = [];
   const crosses: number[] = [];
   for (const child of flow) {
-    const margin = resolveEdges(child.style.margin);
+    const margin = frameOf(child).margin;
     const basis = child.style.basis ?? (column ? child.style.height : child.style.width);
     const fixed = resolveDimension(basis, mainAvail);
     const m = measureBox(
@@ -580,7 +601,7 @@ function layoutLine(
   const gapTotal = flow.length > 1 ? gap * (flow.length - 1) : 0;
 
   // 1. base sizes
-  const margins = flow.map((c) => resolveEdges(c.style.margin));
+  const margins = flow.map((c) => frameOf(c).margin);
   const bases: number[] = [];
   for (let i = 0; i < flow.length; i++) {
     const child = flow[i] as LayoutBox;

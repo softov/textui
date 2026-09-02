@@ -20,7 +20,7 @@ const segmenter =
  * code, file names, labels, key hints. Every character is then one grapheme
  * one cell wide, and none of the Unicode machinery below has anything to do.
  */
-function isAscii(text: string): boolean {
+export function isAscii(text: string): boolean {
   for (let i = 0; i < text.length; i++) {
     const c = text.charCodeAt(i);
     if (c < 0x20 || c > 0x7e) return false;
@@ -152,14 +152,42 @@ export function graphemeWidth(cluster: string): number {
   return 1;
 }
 
+/**
+ * Widths already worked out, for strings that are not plain ASCII.
+ *
+ * The same strings are measured over and over. A frame measures the tree, lays
+ * it out and paints it - which is three walks over the same text - and then
+ * the next frame does all three again for content that has not changed. Nearly
+ * every row in a terminal application carries one glyph among its ASCII, a box
+ * rule or a bullet or an icon, and a single non-ASCII character sends the whole
+ * string down the slow path: an array of one-character strings, and a width
+ * classification for each of them. That was a quarter of the frame in a long
+ * transcript, spent proving the same sentences were the same width they were a
+ * thirtieth of a second ago.
+ *
+ * Only the slow path is remembered. ASCII is answered by `.length` before the
+ * map is even consulted, which is cheaper than the lookup would be, so the
+ * cache holds only what it saves anything on.
+ */
+const widths = new Map<string, number>();
+const WIDTH_CACHE = 8192;
+
 /** Width of a string in terminal cells. */
 export function stringWidth(text: string): number {
   if (text === '') return 0;
   // Fast path: pure ASCII printable.
   if (isAscii(text)) return text.length;
 
+  const seen = widths.get(text);
+  if (seen !== undefined) return seen;
+
   let w = 0;
   for (const g of graphemes(text)) w += graphemeWidth(g);
+  // Emptied rather than evicted one at a time: a terminal's vocabulary of
+  // strings is small and slow-moving, so the cap is only ever reached by
+  // something streaming new text, and for that the whole map is stale.
+  if (widths.size >= WIDTH_CACHE) widths.clear();
+  widths.set(text, w);
   return w;
 }
 
@@ -414,10 +442,33 @@ export function stripAnsi(text: string): string {
   return text.replace(ANSI_RE, '');
 }
 
-/** Remove control characters that would corrupt the frame. Keeps newlines. */
+/*
+ * Test copies, without the `g` flag.
+ *
+ * `test` on a global regular expression advances its `lastIndex` and starts
+ * the next call from there, so the same string tested twice answers yes then
+ * no. Asking is a different question from replacing and gets its own pattern.
+ */
+// eslint-disable-next-line no-control-regex
+const ANSI_TEST = /\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\][^\x07\x1B]*(?:\x07|\x1B\\))/;
+// eslint-disable-next-line no-control-regex
+const CONTROL_TEST = /[\x00-\x08\x0B-\x1F\x7F]/;
+// eslint-disable-next-line no-control-regex
+const CONTROL_RE = /[\x00-\x08\x0B-\x1F\x7F]/g;
+
+/**
+ * Remove control characters that would corrupt the frame. Keeps newlines.
+ *
+ * Two regular expressions over every string on screen, every frame, and for
+ * almost all of them the answer is the string it was given. `test` before
+ * `replace` is one scan that stops at the first match instead of two that
+ * always run to the end and allocate a copy each - and it returns the original
+ * string, so the callers that follow it get a cache hit on the width they
+ * already worked out rather than an equal-but-different string.
+ */
 export function sanitize(text: string): string {
-  // eslint-disable-next-line no-control-regex
-  return stripAnsi(text).replace(/[\x00-\x08\x0B-\x1F\x7F]/g, '');
+  if (ANSI_TEST.test(text)) return stripAnsi(text).replace(CONTROL_RE, '');
+  return CONTROL_TEST.test(text) ? text.replace(CONTROL_RE, '') : text;
 }
 
 /** Repeat a grapheme to exactly `width` cells (wide chars land short). */

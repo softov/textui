@@ -6,6 +6,52 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+## 0.4.0
+
+### A long transcript did not keep up with the hand on it
+
+Three separate ways the same screen paid for work it had already done.
+
+Text measurement ran three times a frame for content that had not changed: the width of a
+non-ASCII string, the wrap and width of a measured text, and a box's own frame and gaps.
+One glyph outside ASCII in a row sent the whole string down the grapheme path, which was
+about a quarter of the frame in a long transcript. Each is worked out once now.
+
+A terminal reports every cell the pointer crosses and every notch of the wheel, and a
+render per event laid out and painted the whole tree for each of them - so a drag trailed
+seconds behind the pointer and the wheel went on scrolling after the hand had stopped.
+Every event is still dispatched; they now share the one frame `handleMouse` had already
+asked for. Keys stay synchronous.
+
+`Feed` gave every skipped run of entries a stand-in of its own, and a stand-in is still a
+component to reconcile and a box to measure four times a frame - 1433 instances for a
+300-turn transcript, and 240 now that a run collapses into one box.
+
+### `Feed` drew a scrollbar that said nothing
+
+It was a strip of the border glyph: no offset, no size, no indication of where in the
+transcript you were. It draws `ScrollThumb` now, like every other viewport in the library.
+
+### A resize left the old frame scattered across the new one
+
+Invalidating a frame cleared `committed`, which made every row be walked - but a blank
+cell still matched the reset previous frame and so was never written. Under any theme with
+a transparent canvas, what stayed on the screen was the frame before the resize with the
+new one drawn into the gaps. An invalidated frame now repaints every cell.
+
+### An empty field showed no caret
+
+A field with nothing in it publishes a caret at column 0, and the check for whether there
+was a caret at all was `!cursor` - which is false for column 0 as much as for no cursor.
+So the one field a person most needs a caret in, the empty one, was the field that did not
+draw it.
+
+### Focus moved and the cursor stayed behind
+
+A frame that only needed the cursor *taken away* emitted nothing at all, and a `Select`
+had nowhere to take it to. Focus left a text field and the terminal went on showing the
+caret where the field used to have it.
+
 ## 0.3.0
 
 ### A conversation got heavier to sit in the longer it got

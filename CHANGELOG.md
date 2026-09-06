@@ -6,6 +6,39 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+## 0.5.0
+
+### A palette never said which way a switch was set
+
+`CommandDefinition.checked` is a clause evaluated per read, so a toggle's row can say what
+it is toggling *to* while the definition is registered once. `CommandPalette` never read
+it. Every switch in every application listed as a plain row, and the field it was declared
+for had no effect anywhere. The rows carry it now, and `Menu` draws the check column it
+already knew how to draw.
+
+### Nothing could colour one word inside a text
+
+Search highlighting has no home in a content API: a caller that splits its text at each hit
+is splitting the very strings the wrapper needs whole, and a paragraph broken at every
+match wraps differently from the paragraph it is. So `text` takes `match`, with `matchFg`
+and `matchBg`, and the painter colours the cells that hold it - after wrapping and
+truncation, over the text as drawn. A match a wrap broke in two is left alone, because
+there is nothing on either row to colour. `MarkdownView` takes the same and hands it to
+every run.
+
+### A feed ignored a selection it did not own
+
+`reveal` was reachable only from the feed's own arrow keys. A caller driving
+`selectedIndex` - a search jumping to its next hit, a cursor restored on the way back to a
+screen - moved a highlight the viewport never followed, which reads as the key having done
+nothing. It scrolls to the selection when the index changes, and skips the first value so a
+transcript still opens at its tail rather than at whatever index the caller passed on the
+way there.
+
+That leaves the case where the caller lands on the entry the cursor is already on, where the
+index does not change and there is still something off screen to show. `pinSelection` covers
+it: while it is set, a selection is brought back whenever it goes out of view.
+
 ## 0.4.0
 
 ### A long transcript did not keep up with the hand on it

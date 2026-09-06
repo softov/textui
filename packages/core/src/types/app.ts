@@ -67,6 +67,17 @@ export interface TextUIApp extends Disposable {
   start(): Promise<void>;
   /** Release exactly what was acquired, then stop. */
   stop(): Promise<void>;
+  /**
+   * Hand the terminal to something that draws for itself, and take it back.
+   *
+   * For an editor, a pager, a shell. The session is released so the child
+   * inherits a terminal in the state it expects - no alt screen, no raw mode -
+   * and is acquired again afterwards exactly as it was, with the frame
+   * repainted whole rather than diffed against what another program left.
+   *
+   * `run` rejecting still gives the terminal back.
+   */
+  suspend<T>(run: () => Promise<T>): Promise<T>;
   /** Force a frame now, outside the scheduler. Tests and screenshots use it. */
   flush(): void;
   /**

@@ -15,6 +15,15 @@ import {
   useTicker,
 } from '@textui/core';
 
+/** A version of the field, kept so an edit can be taken back. */
+interface Snapshot {
+  value: string;
+  caret: number;
+}
+
+/** How many edits back a field remembers. */
+const MEMORY = 200;
+
 export interface TextAreaProps extends BoxProps {
   value: string;
   onChange(value: string): void;
@@ -129,6 +138,23 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
   });
   const [caret, setCaret] = useState(value.length);
   const [lit, setLit] = useState(true);
+
+  /**
+   * What the field looked like before each edit, so one can be taken back.
+   *
+   * A ref rather than state: nothing here is drawn, and a render for a stack
+   * nobody can see is a render for nothing. `value` is the caller's, so an
+   * undo is an `onChange` back to a value this field held earlier - the same
+   * call any other edit makes.
+   *
+   * A run of typing is one step. Pushing a snapshot per character would make
+   * undo a backspace with extra ceremony, so the run is opened by the first
+   * character and closed by anything that is not another one: a delete, a
+   * newline, a caret move, a paste.
+   */
+  const edits = useRef<{ past: Snapshot[]; future: Snapshot[]; typing: boolean }>({
+    past: [], future: [], typing: false,
+  });
 
   /**
    * Where the selection was started from; `null` when there is none.
@@ -297,19 +323,58 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
     return lineStart(row.line) + row.start + column;
   };
 
-  const replace = (next: string, at: number): void => {
+  /**
+   * Keep what is about to be overwritten.
+   *
+   * Three kinds, because undo is only useful at the granularity a person
+   * thinks in. `typing` opens a run and every character after joins it;
+   * `break` is the space or newline that finishes a word, which joins the run
+   * it ends rather than starting one of its own - so "one two" undone once
+   * leaves "one " and not "one". `edit` is everything else, and is always its
+   * own step: a kill somebody wants back is not part of the word before it.
+   */
+  const remember = (kind: 'typing' | 'break' | 'edit'): void => {
+    const state = edits.current;
+    // A run is open and this joins it, so there is nothing new to keep.
+    if (kind !== 'edit' && state.typing) { state.typing = kind === 'typing'; state.future.length = 0; return; }
+    state.past.push({ value, caret: position });
+    // Bounded, because a field somebody has been typing in all afternoon
+    // should not be holding every version of itself.
+    if (state.past.length > MEMORY) state.past.shift();
+    state.future.length = 0;
+    state.typing = kind === 'typing';
+  };
+
+  const replace = (next: string, at: number, kind: 'typing' | 'break' | 'edit' = 'edit'): void => {
     const capped = maxLength !== undefined ? next.slice(0, maxLength) : next;
+    remember(kind);
     setAnchor(null);
     onChange(capped);
     setCaret(Math.max(0, Math.min(graphemes(capped).length, at)));
   };
 
+  /** Back one step, or forward again. `false` when there is nowhere to go. */
+  const step = (back: boolean): boolean => {
+    const state = edits.current;
+    const from = back ? state.past : state.future;
+    const to = back ? state.future : state.past;
+    const found = from.pop();
+    if (!found) return false;
+    to.push({ value, caret: position });
+    state.typing = false;
+    setAnchor(null);
+    onChange(found.value);
+    setCaret(Math.max(0, Math.min(graphemes(found.value).length, found.caret)));
+    return true;
+  };
+
   /** Typing over a selection replaces it - which is what deletes it, too. */
-  const insert = (text: string): void => {
+  const insert = (text: string, kind: 'typing' | 'break' | 'edit' = 'edit'): void => {
     const inserted = graphemes(text);
     replace(
       [...chars.slice(0, selectionStart), ...inserted, ...chars.slice(selectionEnd)].join(''),
       selectionStart + inserted.length,
+      kind,
     );
   };
 
@@ -457,12 +522,20 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
           return true;
         }
 
-        case 'backspace':
+        case 'backspace': {
           // A selection is what gets deleted when there is one - the character
           // before the caret is only the fallback.
           if (selected) { insert(''); return true; }
+          // `alt+backspace` is the word, which is the one readline binding
+          // that is a modifier on a key this field already handles.
+          if (event.alt || event.ctrl) {
+            const from = wordStep(position, -1);
+            if (from !== position) replace([...chars.slice(0, from), ...chars.slice(position)].join(''), from);
+            return true;
+          }
           if (position > 0) replace([...chars.slice(0, position - 1), ...chars.slice(position)].join(''), position - 1);
           return true;
+        }
         case 'delete':
           if (selected) { insert(''); return true; }
           if (position < chars.length) replace([...chars.slice(0, position), ...chars.slice(position + 1)].join(''), position);
@@ -489,6 +562,71 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
         default: break;
       }
 
+      /*
+       * The readline set, which is what a shell has taught everyone's hands.
+       *
+       * The line and not the row: `ctrl+a` in a shell goes to the start of
+       * what you typed, and a wrapped paragraph is still one line of that. The
+       * arrow keys are the ones that move by row, because on screen the row
+       * above is what is above.
+       *
+       * `ctrl+f` and `ctrl+b` are deliberately absent. They are character
+       * motion in readline and the arrows already are, and leaving them
+       * unclaimed lets an application above this field spend them - which is
+       * where a find command usually goes.
+       */
+      if (event.ctrl || event.alt) {
+        const home = lineStart(caretLine);
+        const away = home + graphemes(lines[caretLine] ?? '').length;
+        switch (event.name) {
+          case 'a': if (event.ctrl) { move(home, event.shift); return true; } break;
+          case 'e': if (event.ctrl) { move(away, event.shift); return true; } break;
+          case 'k':
+            if (event.ctrl) {
+              // At the end of a line the newline is what is killed, which is
+              // how `ctrl+k` joins two lines in every shell.
+              const to = position === away ? Math.min(chars.length, position + 1) : away;
+              if (to !== position) replace([...chars.slice(0, position), ...chars.slice(to)].join(''), position);
+              return true;
+            }
+            break;
+          case 'u':
+            if (event.ctrl) {
+              if (position !== home) replace([...chars.slice(0, home), ...chars.slice(position)].join(''), home);
+              return true;
+            }
+            break;
+          case 'w':
+            if (event.ctrl) {
+              const from = wordStep(position, -1);
+              if (from !== position) replace([...chars.slice(0, from), ...chars.slice(position)].join(''), from);
+              return true;
+            }
+            break;
+          case 'd':
+            // `alt+d` only: `ctrl+d` is end-of-input to a terminal and an
+            // application above this field answers it.
+            if (event.alt) {
+              const to = wordStep(position, 1);
+              if (to !== position) replace([...chars.slice(0, position), ...chars.slice(to)].join(''), position);
+              return true;
+            }
+            break;
+          /*
+           * Undo on `ctrl+z`, redo on `alt+z`.
+           *
+           * `ctrl+z` is the suspend key to a shell, but this field runs under
+           * a terminal in raw mode, where the byte arrives as itself and no
+           * signal is raised. Redo is an alt chord because the usual second
+           * key is `ctrl+shift+z`, and shift with a control character is not
+           * something most terminals can say.
+           */
+          case 'z': if (event.ctrl || event.alt) return step(event.ctrl);
+            break;
+          default: break;
+        }
+      }
+
       // ctrl+j, for the one case where it is a key of its own: with the kitty
       // protocol on it arrives as `CSI 106;5u` and is named `j`. Without it
       // ctrl+j is 0x0a, the same byte as ctrl+enter, and the case above has
@@ -496,7 +634,9 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
       if (event.name === 'j' && event.ctrl) { insert('\n'); return true; }
 
       if (event.char && !event.ctrl && !event.alt && !event.meta) {
-        insert(event.char);
+        // A run of ordinary characters is one undo step, and the space that
+        // ends a word belongs to the word rather than to the next one.
+        insert(event.char, /\s/.test(event.char) ? 'break' : 'typing');
         return true;
       }
       return false;

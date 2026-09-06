@@ -7,6 +7,7 @@ import type { ResourceAdapter } from '../types/adapter.js';
 import type { Size, Rect } from '../types/geometry.js';
 import type { ResolvedTheme } from '../types/theme.js';
 import type { TerminalCapabilities, CapabilityOverrides } from '../types/capabilities.js';
+import type { TerminalSessionOptions } from '../types/terminal.js';
 import type { InputEvent, KeyEvent, MouseEvent } from '../types/input.js';
 import type { LayerEntry } from '../types/layer.js';
 import type { Instance } from '../runtime/instance.js';
@@ -93,6 +94,8 @@ export class App implements TextUIApp {
   private frameScheduled = false;
   private frameTimer: ReturnType<typeof setTimeout> | null = null;
   private running_ = false;
+  /** What `start` acquired, so `suspend` can put the same thing back. */
+  private session: TerminalSessionOptions | null = null;
   private disposed = false;
   private themeId: string;
   private shellId: string;
@@ -363,7 +366,10 @@ export class App implements TextUIApp {
     }
 
     const caps = this.terminal.capabilities();
-    await this.terminal.acquire({
+    // Kept, because `suspend` has to put back exactly what was taken: a
+    // session re-acquired from defaults would come back without the mouse, or
+    // with an alt screen the caller had asked not to have.
+    this.session = {
       managed: true,
       altScreen: true,
       hideCursor: true,
@@ -373,7 +379,8 @@ export class App implements TextUIApp {
       focusEvents: caps.focusEvents,
       enhancedKeys: caps.kittyKeyboard,
       ...this.options.session,
-    });
+    };
+    await this.terminal.acquire(this.session);
 
     // After `acquire`, never before: with no session there is nothing to put
     // the shape back, so an early call is dropped rather than leaked.
@@ -385,6 +392,36 @@ export class App implements TextUIApp {
     this.running_ = true;
     this.publishEnvironment();
     this.renderFrame();
+  }
+
+  /**
+   * Hand the terminal to something else, and take it back.
+   *
+   * For a program that draws for itself - an editor, a pager, a shell. The
+   * session is released, so the alt screen is left, raw mode is off and the
+   * child inherits a terminal in the state it expects; then it is acquired
+   * again exactly as it was.
+   *
+   * The frame buffer is invalidated on the way back rather than merely
+   * redrawn. The renderer writes the difference between what it painted last
+   * and what it paints now, and after another program has been on the screen
+   * that difference is against something no longer there - so a plain redraw
+   * puts back only the cells this application happened to change.
+   *
+   * `run` rejecting still gives the terminal back.
+   */
+  async suspend<T>(run: () => Promise<T>): Promise<T> {
+    if (!this.running_ || !this.session) return run();
+    await this.terminal.release();
+    try {
+      return await run();
+    }
+    finally {
+      await this.terminal.acquire(this.session);
+      this.applyCursorShape();
+      this.buffer_.invalidate();
+      this.renderFrame();
+    }
   }
 
   async stop(): Promise<void> {

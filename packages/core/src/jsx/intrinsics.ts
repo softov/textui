@@ -1,4 +1,4 @@
-import type { Style, StyleInput } from '../types/style.js';
+import type { Style, StyleColor, StyleInput } from '../types/style.js';
 import type { SemanticRole } from '../types/component-registry.js';
 import type { KeyEvent, MouseEvent } from '../types/input.js';
 import type { PaintSurface, RenderContext } from '../types/render.js';
@@ -99,6 +99,19 @@ export interface TextProps extends BaseProps {
   /** Where to cut when the text does not fit. */
   truncate?: 'end' | 'start' | 'middle' | false;
   ellipsis?: string;
+  /**
+   * Text to pick out wherever it appears, case-insensitively.
+   *
+   * For search: the caller passes what it is looking for and the rows are
+   * coloured where they hold it. It is applied after wrapping and truncation,
+   * to the text as drawn - so nothing about how a paragraph is broken into
+   * lines has to change to mark a hit in it, and a match split across a wrap
+   * is simply not on either row to colour.
+   */
+  match?: string;
+  /** The match's colours. Accent on its own foreground by default. */
+  matchFg?: StyleColor;
+  matchBg?: StyleColor;
 }
 
 export interface CanvasProps extends BaseProps {

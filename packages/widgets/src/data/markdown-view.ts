@@ -23,6 +23,14 @@ export interface MarkdownViewProps extends BoxProps {
   maxLines?: number;
   /** Dim everything, for reasoning and other second-voice text. */
   quiet?: boolean;
+  /**
+   * Text to pick out wherever it appears in the document.
+   *
+   * Passed to every run, and the painter colours the cells that hold it. The
+   * runs are already split by emphasis, so a match that falls across a bold
+   * boundary is coloured in both halves.
+   */
+  match?: string;
 }
 
 /**
@@ -39,7 +47,10 @@ export interface MarkdownViewProps extends BoxProps {
  * person to read.
  */
 export const MarkdownView = defineComponent<MarkdownViewProps>('MarkdownView', (props) => {
-  const { content = '', rows: given, window: slice, maxLines, quiet, ...rest } = props;
+  const { content = '', rows: given, window: slice, maxLines, quiet, match, ...rest } = props;
+  // Spread into every run's style. Empty when nothing is being looked for, so
+  // a document with no search over it carries no extra prop per run.
+  const hit = match ? { match } : {};
   const theme = useTheme();
   const measured = useMeasure();
   const width = measured.width > 0 ? measured.width : 0;
@@ -169,7 +180,7 @@ export const MarkdownView = defineComponent<MarkdownViewProps>('MarkdownView', (
         ...row.cells.flatMap((cell, c) => [
           h('text', { key: `s${c}`, content: c === 0 ? `${chars.left} ` : ` ${chars.left} `, fg, wrap: 'none' }),
           h('box', { key: `c${c}`, direction: 'row', overflow: 'hidden' },
-            ...runNodes(cell, quiet ? { fg: 'muted' as StyleColor } : {})),
+            ...runNodes(cell, { ...(quiet ? { fg: 'muted' as StyleColor } : {}), ...hit })),
         ]),
         h('text', { key: 'end', content: ` ${chars.right}`, fg, wrap: 'none' })));
       i++;
@@ -188,12 +199,13 @@ export const MarkdownView = defineComponent<MarkdownViewProps>('MarkdownView', (
           bold: row.level <= 2,
           underline: row.level === 1,
           fg: quiet ? 'muted' : row.level <= 2 ? 'text' : 'muted',
+          ...hit,
         })));
       i++;
       continue;
     }
 
-    const style = { ...(quiet ? { fg: 'muted' as StyleColor } : row.fg ? { fg: row.fg } : {}) };
+    const style = { ...(quiet ? { fg: 'muted' as StyleColor } : row.fg ? { fg: row.fg } : {}), ...hit };
     if (row.prefix !== undefined) {
       out.push(h('box', { key, direction: 'row', gap: 1, overflow: 'hidden' },
         h('text', { content: row.prefix, fg: quiet ? 'subtle' : row.prefixFg ?? 'accent' }),

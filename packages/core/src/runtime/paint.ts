@@ -1,5 +1,5 @@
 import type { Rect } from '../types/geometry.js';
-import type { Style, TextWrap } from '../types/style.js';
+import type { Style, StyleColor, TextWrap } from '../types/style.js';
 import type { ResolvedTheme } from '../types/theme.js';
 import type { TerminalCapabilities } from '../types/capabilities.js';
 import type { Cell, Color } from '../types/cells.js';
@@ -713,6 +713,23 @@ function paintText(
     link: typeof instance.props.link === 'string' ? instance.props.link : undefined,
   };
 
+  /*
+   * Text to pick out of this one, and how to draw it where it appears.
+   *
+   * Search highlighting is a paint-time concern and not a content one: the
+   * caller passes the same string it is searching for and the wrapped rows
+   * are coloured where they hold it, so nothing about how the text is broken
+   * into lines has to change to mark a hit in it.
+   */
+  const match = typeof instance.props.match === 'string'
+    ? instance.props.match.toLowerCase()
+    : '';
+  const matchStyle: CellStyle = {
+    ...style,
+    fg: colorOf(packStyleColor((instance.props.matchFg as StyleColor | undefined) ?? 'onAccent', env.theme)),
+    bg: colorOf(packStyleColor((instance.props.matchBg as StyleColor | undefined) ?? 'accent', env.theme)),
+  };
+
   const wrap = visual.style.wrap ?? 'none';
   const align = visual.style.textAlign ?? 'left';
   // The ellipsis is a glyph like any other: on an ascii terminal it is '...'.
@@ -744,8 +761,42 @@ function paintText(
       align === 'center' ? Math.max(0, Math.floor((area.width - w) / 2))
         : align === 'right' ? Math.max(0, area.width - w)
           : 0;
-    surface.text(area.x + offset, area.y + i, line, style);
+    if (match === '') {
+      surface.text(area.x + offset, area.y + i, line, style);
+      continue;
+    }
+    for (const run of split(line, match)) {
+      surface.text(
+        area.x + offset + stringWidth(line.slice(0, run.at)),
+        area.y + i,
+        run.text,
+        run.hit ? matchStyle : style,
+      );
+    }
   }
+}
+
+/**
+ * A line cut into the parts that match a needle and the parts that do not.
+ *
+ * Case-insensitive, and over the line as it will be drawn - so a match broken
+ * across a wrap is two lines with no match in either, which is the honest
+ * answer: there is nothing on one row to put a colour on.
+ */
+function split(line: string, needle: string): { at: number; text: string; hit: boolean }[] {
+  const runs: { at: number; text: string; hit: boolean }[] = [];
+  const haystack = line.toLowerCase();
+  let from = 0;
+  for (;;) {
+    const at = haystack.indexOf(needle, from);
+    if (at === -1) break;
+    if (at > from) runs.push({ at: from, text: line.slice(from, at), hit: false });
+    runs.push({ at, text: line.slice(at, at + needle.length), hit: true });
+    from = at + needle.length;
+  }
+  if (runs.length === 0) return [{ at: 0, text: line, hit: false }];
+  if (from < line.length) runs.push({ at: from, text: line.slice(from), hit: false });
+  return runs;
 }
 
 /**

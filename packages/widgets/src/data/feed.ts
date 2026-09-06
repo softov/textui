@@ -3,6 +3,7 @@ import {
   chorded,
   defineComponent,
   h,
+  useEffect,
   useFocus,
   useInput,
   useMeasure,
@@ -31,6 +32,17 @@ export interface FeedProps extends BoxProps {
    * wants.
    */
   selectedIndex?: number;
+  /**
+   * Keep the selection in view for as long as this is set.
+   *
+   * Revealing on a change of `selectedIndex` is not enough for a caller that
+   * lands on the entry the cursor is already on - a search whose first hit is
+   * the row the cursor happens to sit on moves nothing, and the feed stays
+   * where it was showing a selection somewhere else. While this is set the
+   * selection is brought back whenever it is off screen, whatever the index
+   * did, which is what "the cursor is the thing being read" means.
+   */
+  pinSelection?: boolean;
   onSelect?(index: number): void;
   onActivate?(index: number): void;
   scrollbar?: boolean;
@@ -73,7 +85,7 @@ export interface FeedProps extends BoxProps {
  */
 export const Feed = defineComponent<FeedProps>('Feed', (props) => {
   const {
-    children, follow: followProp, onFollowChange, selectedIndex, onSelect, onActivate,
+    children, follow: followProp, onFollowChange, selectedIndex, pinSelection, onSelect, onActivate,
     pageKeys = 'focused',
     scrollbar = true, focusable = true, autoFocus, focusId, id, ...rest
   } = props;
@@ -163,6 +175,40 @@ export const Feed = defineComponent<FeedProps>('Feed', (props) => {
     else if (start + height > top + view) scrollTo(start + height - view);
     else scrollTo(top);
   };
+
+  /*
+   * A selection moved from outside is scrolled to as well.
+   *
+   * `reveal` was reachable only from this feed's own arrow keys, so a caller
+   * that drove `selectedIndex` - a search jumping to its next hit, a link to
+   * an entry, a cursor restored on the way back to a screen - moved a
+   * highlight the viewport never followed. The row was selected and off
+   * screen, which reads as the key having done nothing.
+   *
+   * The first value is skipped rather than revealed. A feed opens at the tail
+   * and its caller usually passes an index of zero on the way there, so
+   * honouring the initial value would scroll every transcript to the top of
+   * the conversation instead of the end of it - and on that first frame there
+   * are no measured heights to scroll by anyway.
+   */
+  const revealed = useRef<number | null>(null);
+  useEffect(() => {
+    if (selectedIndex === undefined) return;
+    const first = revealed.current === null;
+    revealed.current = index;
+    if (!first) reveal(index);
+  }, [selectedIndex]);
+
+  // And every frame while the selection is pinned, but only when it has
+  // actually gone off screen - `reveal` on an entry already in view is a
+  // scroll to where the feed already is, reported as a follow change once a
+  // frame for as long as the pin lasts.
+  useEffect(() => {
+    if (!pinSelection || selectedIndex === undefined) return;
+    const start = startOf(index);
+    const height = heights.current[index] ?? 1;
+    if (start < top || start + height > top + Math.max(1, measured.height)) reveal(index);
+  });
 
   const move = (delta: number): void => {
     if (count === 0) return;

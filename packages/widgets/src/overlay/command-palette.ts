@@ -166,6 +166,11 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
         shortcut: command.shortcut ?? app?.keybindings.forCommand(command.id)[0],
         // A chevron, from `Menu`, for anything that will ask a question.
         children: argumentOf(command) ? [] : undefined,
+        // A switch's state, and `undefined` for everything that is not one -
+        // which is what keeps the check column off a menu of plain commands.
+        // The clause is evaluated per read, so a row opened twice reports
+        // what the switch is now rather than what it was when registered.
+        checked: app?.commands.isChecked(command.id),
         // The heading goes on the first row of each group, including the
         // first - a group with no name over it is the one the reader has to
         // work out from the rows in it.

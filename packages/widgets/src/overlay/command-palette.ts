@@ -389,6 +389,8 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   // there - and a sentence about what a mode does is exactly the thing a
   // person needs whole. So the line under the list follows the highlight: the
   // choice's description while there is one, the question's otherwise.
+  // It is the one line in the panel that wraps rather than truncates,
+  // because it is the one place a sentence can be read whole.
   const chosen = pending ? offered[index] : undefined;
   const detail = pending
     ? chosen?.description
@@ -411,6 +413,13 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const content = Math.max(
     ...items.map((item) => rowWidth(item, descriptions)),
     ...(pending ? [stringWidth(pending.command.title) + 12] : [stringWidth(placeholder ?? '') + 4]),
+    // The sentences the line under the list may show, so a question with
+    // three one-word answers is not a panel 28 wide wrapping a sentence
+    // three times under them. Capped like everything else by `maxWidth`.
+    ...(pending
+      ? [pending.arg.description ?? '', ...offered.map((choice) => choice.description ?? '')]
+        .map((sentence) => (sentence === '' ? 0 : stringWidth(sentence) + 6))
+      : []),
   );
 
   return h('box', {
@@ -457,10 +466,19 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
         const command = matches[index];
         if (command && argumentOf(command)) choose();
       },
+      // A typed answer's field is the answer, so its placeholder is the
+      // question. A list's field is a filter, and the question goes where
+      // there is room to say it once: here, while the line under the list
+      // is busy saying what each answer means; under the list, whole and
+      // wrapped, when the answers have nothing to say for themselves and
+      // that line would otherwise repeat this one, cut to whatever width
+      // three short answers gave the panel.
       placeholder: pending
-        ? (pending.arg.description ?? (pending.arg.choices === undefined
-          ? `${pending.command.title}${theme.glyphs.ellipsis}`
-          : `Choose ${pending.command.title.toLowerCase()}${theme.glyphs.ellipsis}`))
+        ? (pending.arg.choices === undefined
+          ? pending.arg.description ?? `${pending.command.title}${theme.glyphs.ellipsis}`
+          : offered.some((choice) => choice.description) && pending.arg.description
+            ? pending.arg.description
+            : `Choose ${pending.command.title.toLowerCase()}${theme.glyphs.ellipsis}`)
         : (placeholder ?? `Type a command${theme.glyphs.ellipsis}`),
       search: true,
       autoFocus: true,
@@ -484,8 +502,8 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     h('box', { height: 1, fill: theme.borderChars().top, fg: 'borderSubtle' }),
     // What the highlighted row actually is, and how to move around. A palette
     // that shows only titles makes you run something to find out what it does.
-    h('box', { direction: 'row', gap: 1 },
-      h('text', { content: detail, fg: 'muted', flex: 1, truncate: 'end' }),
+    h('box', { direction: 'row', gap: 1, align: 'start' },
+      h('text', { content: detail, fg: 'muted', flex: 1, wrap: 'word' }),
       h('text', { content: `${rows.length}`, fg: 'subtle' })),
     h('box', { direction: 'row', gap: 1 },
       h('text', {

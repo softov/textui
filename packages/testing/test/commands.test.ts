@@ -296,6 +296,52 @@ describe('the palette component', () => {
   });
 
   /**
+   * The question is said once, and whole.
+   *
+   * A list whose answers are three short words gave the panel its width, and
+   * the argument's description was drawn twice in it - as the filter's
+   * placeholder and as the line under the list - cut both times to what
+   * "Default", "On" and "Off" had left. The field is a filter, so its
+   * placeholder says so; the sentence is the line under the list, and that
+   * line wraps.
+   */
+  it('says the question under the list, once, and lets it wrap', async () => {
+    const t = await renderApp({
+      width: 60,
+      height: 16,
+      onBoot: (app) => {
+        app.commands.register({
+          id: 'set.sandbox',
+          title: 'Sandbox',
+          slots: ['palette'],
+          args: [{
+            name: 'value',
+            type: 'string',
+            required: true,
+            description: 'Sandbox behavior for this session. Default follows the global setting.',
+            choices: [
+              { value: 'default', label: 'Default' },
+              { value: 'on', label: 'On' },
+              { value: 'off', label: 'Off' },
+            ],
+          }],
+          run: () => {},
+        });
+        app.open({ surface: 'main', key: 'p', target: { component: 'CommandPalette', openAt: 'set.sandbox', maxWidth: 40 } });
+      },
+    });
+    await t.settle();
+
+    expect(t.hasText('Choose sandbox')).toBe(true);
+    const said = t.lines().filter((line) => line.includes('Sandbox behavior'));
+    expect(said.length).toBe(1);
+    // Wrapped onto the next line rather than cut at the panel's edge.
+    const at = t.lines().findIndex((line) => line.includes('Sandbox behavior'));
+    expect(t.lines()[at + 1]).toContain('global setting');
+    await t.unmount();
+  });
+
+  /**
    * The picker opens on the answer already in force.
    *
    * A question about a setting is asked in order to change it *from*

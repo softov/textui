@@ -6,6 +6,16 @@ This file records the set. Anything package-specific says which package.
 
 ## Unreleased
 
+### The palette cut the question, and said it twice
+
+A question with three one-word answers got a panel as wide as "Default", and the
+argument's description was drawn in it twice - as the filter's placeholder and as the line
+under the list - cut both times at the panel's edge. The panel now asks for the width its
+sentences need, up to `maxWidth`; the line under the list wraps instead of truncating,
+since it is the one place a sentence can be read whole; and the question is said once:
+in the placeholder while the answers have sentences of their own for the line under the
+list, under the list when they do not, where the placeholder says what the field is for.
+
 ## 0.5.0
 
 ### A palette never said which way a switch was set

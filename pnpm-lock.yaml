@@ -306,6 +306,9 @@ importers:
 
   playground:
     dependencies:
+      '@textui/chat':
+        specifier: workspace:*
+        version: link:../packages/chat
       '@textui/core':
         specifier: workspace:*
         version: link:../packages/core

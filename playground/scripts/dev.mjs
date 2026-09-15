@@ -38,6 +38,8 @@ await build({
     '@textui/core': resolve(repo, 'packages/core/src/index.ts'),
     '@textui/terminal': resolve(repo, 'packages/terminal/src/index.ts'),
     '@textui/documents': resolve(repo, 'packages/documents/src/index.ts'),
+    '@textui/widgets': resolve(repo, 'packages/widgets/src/index.ts'),
+    '@textui/chat': resolve(repo, 'packages/chat/src/index.ts'),
   },
 });
 

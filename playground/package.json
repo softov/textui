@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@textui/chat": "workspace:*",
     "@textui/core": "workspace:*",
     "@textui/documents": "workspace:*",
     "@textui/terminal": "workspace:*",

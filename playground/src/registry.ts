@@ -16,6 +16,15 @@ import { StressPlayground } from './playgrounds/stress.js';
 import { ShellsPlayground } from './playgrounds/shells.js';
 import { PatternPlayground } from './playgrounds/pattern.js';
 import { ScenePlayground } from './playgrounds/scene.js';
+import { ChatBubblePlayground } from './playgrounds/chat/bubble.js';
+import { ChatTranscriptPlayground } from './playgrounds/chat/transcript.js';
+import { ToolCallPlayground } from './playgrounds/chat/toolcall.js';
+import { ComposerPlayground, setupComposerPlayground } from './playgrounds/chat/composer.js';
+import { HitlPlayground } from './playgrounds/chat/hitl.js';
+import { DetailsPlayground } from './playgrounds/chat/details.js';
+import { SessionsPlayground } from './playgrounds/chat/sessions.js';
+import { SessionHeadPlayground } from './playgrounds/chat/sessionhead.js';
+import { FileDiffPlayground } from './playgrounds/chat/filediff.js';
 import { Explorer } from './examples/explorer.js';
 import { registerFilesystem } from './examples/filesystem.js';
 import { jsonAdapter, registerDocuments } from '@textui/documents';
@@ -181,6 +190,74 @@ export const PLAYGROUNDS: Playground[] = [
       // explorer knows about.
       app.registerAdapter(jsonAdapter());
     },
+  },
+  {
+    id: 'chat-bubble',
+    title: 'Chat bubbles',
+    description: 'Bubbles, streaming text and a reasoning block.',
+    exercises: ['chat', 'markdown'],
+    node: () => h(ChatBubblePlayground, {}),
+  },
+  {
+    id: 'chat-transcript',
+    title: 'Chat transcript',
+    description: 'Every block kind in one feed.',
+    exercises: ['chat', 'feed', 'resizing'],
+    minSize: { width: 60, height: 20 },
+    node: () => h(ChatTranscriptPlayground, {}),
+  },
+  {
+    id: 'chat-toolcall',
+    title: 'Tool call row',
+    description: 'One row per status, opened and closed.',
+    exercises: ['chat'],
+    node: () => h(ToolCallPlayground, {}),
+  },
+  {
+    id: 'chat-composer',
+    title: 'Chat composer',
+    description: 'Draft, chips, commands and path completion.',
+    exercises: ['chat', 'focus', 'overlays'],
+    minSize: { width: 60, height: 16 },
+    node: () => h(ComposerPlayground, {}),
+    setup: setupComposerPlayground,
+  },
+  {
+    id: 'chat-hitl',
+    title: 'Waiting on you',
+    description: 'A confirmation and every question kind.',
+    exercises: ['chat', 'forms'],
+    minSize: { width: 60, height: 20 },
+    node: () => h(HitlPlayground, {}),
+  },
+  {
+    id: 'chat-details',
+    title: 'Session details',
+    description: 'Label column and long values.',
+    exercises: ['chat'],
+    node: () => h(DetailsPlayground, {}),
+  },
+  {
+    id: 'chat-sessions',
+    title: 'Session list',
+    description: 'The catalogue and the connection badge.',
+    exercises: ['chat', 'tables/lists'],
+    node: () => h(SessionsPlayground, {}),
+  },
+  {
+    id: 'chat-sessionhead',
+    title: 'Session head',
+    description: 'The header over a conversation.',
+    exercises: ['chat'],
+    node: () => h(SessionHeadPlayground, {}),
+  },
+  {
+    id: 'chat-filediff',
+    title: 'File diff',
+    description: 'A unified diff, and what is shown instead of one.',
+    exercises: ['chat', 'resizing'],
+    minSize: { width: 60, height: 16 },
+    node: () => h(FileDiffPlayground, {}),
   },
 ];
 

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { renderApp } from '@textui/testing';
 import { getDocument } from '@textui/documents';
 import { loadWorkspace, registerTextide } from '../src/index.js';
@@ -61,7 +62,7 @@ async function open(size: Size) {
     for (let i = 0; i < 12; i++) { await t.settle(); t.advance(50); t.flush(); }
   };
   await quiet();
-  const uri = (name: string): string => `file://${join(dir, name)}`;
+  const uri = (name: string): string => pathToFileURL(join(dir, name)).href;
   return { t, quiet, uri };
 }
 

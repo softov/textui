@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { renderApp } from '@textui/testing';
 import {
   loadExtensions, loadWorkspace, registerTextide, relativeSpecifier, resolveSpecifier,
@@ -128,8 +129,10 @@ describe('loading', () => {
 
 describe('resolving what the config says', () => {
   it('reads a relative path against the workspace, not the editor', () => {
-    expect(resolveSpecifier('./tools/x.js', dir)).toBe(`file://${join(dir, 'tools/x.js')}`);
-    expect(resolveSpecifier(join(dir, 'y.js'), dir)).toBe(`file://${join(dir, 'y.js')}`);
+    // Through `pathToFileURL`, not `file://` + path: a Windows path has a
+    // drive and backslashes, and the URL for it has neither.
+    expect(resolveSpecifier('./tools/x.js', dir)).toBe(pathToFileURL(join(dir, 'tools/x.js')).href);
+    expect(resolveSpecifier(join(dir, 'y.js'), dir)).toBe(pathToFileURL(join(dir, 'y.js')).href);
   });
 
   /**
@@ -482,39 +485,44 @@ describe('adding an extension while it is running', () => {
  * that matters is picker URI -> config entry -> `import()` specifier.
  */
 describe('relativeSpecifier', () => {
-  const root = 'file:///work/project';
+  // Real paths for this machine, then their URIs: `/work/project` is a drive
+  // letter away from being a path on Windows, and a `file:///work/...` URI
+  // for it is one `fileURLToPath` refuses there.
+  const at = (path: string): string => pathToFileURL(resolve(path)).href;
+  const rootPath = resolve('/work/project');
+  const root = at('/work/project');
 
   it.each([
-    ['file:///work/project/tools/ext.js', './tools/ext.js'],
-    ['file:///work/project/ext.js', './ext.js'],
-    ['file:///work/project/a/b/c.mjs', './a/b/c.mjs'],
+    [at('/work/project/tools/ext.js'), './tools/ext.js'],
+    [at('/work/project/ext.js'), './ext.js'],
+    [at('/work/project/a/b/c.mjs'), './a/b/c.mjs'],
   ])('%s under the workspace becomes %s', (uri, expected) => {
     expect(relativeSpecifier(uri, root)).toBe(expected);
   });
 
   it('reads back to the file it came from', () => {
-    const uri = 'file:///work/project/tools/ext.js';
-    expect(resolveSpecifier(relativeSpecifier(uri, root), '/work/project')).toBe(uri);
+    const uri = at('/work/project/tools/ext.js');
+    expect(resolveSpecifier(relativeSpecifier(uri, root), rootPath)).toBe(uri);
   });
 
   it('decodes what the URI escaped', () => {
     // A space is `%20` in a URI and a space on disk. Writing the escape into
     // the config would ask `import()` for a file whose name has a percent in
     // it, which is a different file and usually no file at all.
-    expect(relativeSpecifier('file:///work/project/my%20tools/ext.js', root))
+    expect(relativeSpecifier(at('/work/project/my tools/ext.js'), root))
       .toBe('./my tools/ext.js');
   });
 
   it('leaves a file outside the workspace absolute', () => {
     // There is no honest relative form, and a `../../..` chain out of the
     // project is worse than saying plainly where the file is.
-    expect(relativeSpecifier('file:///elsewhere/ext.js', root)).toBe('/elsewhere/ext.js');
+    expect(relativeSpecifier(at('/elsewhere/ext.js'), root)).toBe(fileURLToPath(at('/elsewhere/ext.js')));
   });
 
   it('does not mistake a sibling directory for a child', () => {
     // `/work/project-two` starts with `/work/project`, and a prefix test
     // without the separator would call it `./-two/ext.js`.
-    expect(relativeSpecifier('file:///work/project-two/ext.js', root))
-      .toBe('/work/project-two/ext.js');
+    expect(relativeSpecifier(at('/work/project-two/ext.js'), root))
+      .toBe(fileURLToPath(at('/work/project-two/ext.js')));
   });
 });

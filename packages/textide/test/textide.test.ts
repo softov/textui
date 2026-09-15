@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { mkdtemp, mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { renderApp } from '@textui/testing';
 import { getDocument } from '@textui/documents';
 import { loadWorkspace, registerTextide, CONFIG_FILE } from '../src/index.js';
@@ -61,7 +61,7 @@ describe('the workspace', () => {
   it('falls back to the directory name when nothing configures it', async () => {
     const workspace = await loadWorkspace(dir);
     expect(workspace.configured).toBe(false);
-    expect(workspace.name).toBe(dir.split('/').pop());
+    expect(workspace.name).toBe(basename(dir));
     expect(workspace.theme).toBe('paper-dark');
   });
 

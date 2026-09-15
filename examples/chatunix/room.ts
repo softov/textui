@@ -6,6 +6,7 @@
 
 import { createServer, connect, type Server, type Socket } from 'node:net';
 import { unlink } from 'node:fs/promises';
+import { platform } from 'node:process';
 
 /** What a room address can be: a filesystem path, or `host:port`. */
 export type Address = { kind: 'unix'; path: string } | { kind: 'tcp'; host: string; port: number };
@@ -22,7 +23,7 @@ export type Role = 'server' | 'client';
 export interface Room {
   role: Role;
   address: Address;
-  /** Everyone connected, as the server sees it. Always 0 for a client. */
+  /** Everyone connected, as the server sees it. For a client, the count the room greeted it with. */
   peers(): number;
   say(text: string): void;
   onMessage(fn: (message: Message) => void): void;
@@ -52,15 +53,38 @@ export function parseAddress(value: string): Address {
 export const describeAddress = (a: Address): string =>
   a.kind === 'unix' ? a.path : `${a.host}:${a.port}`;
 
-/** One JSON-RPC notification per line. */
-interface Notification {
-  jsonrpc: '2.0';
-  method: 'say';
-  params: Message;
+/**
+ * What `net` is actually told to open for a path.
+ *
+ * On Windows a local socket is a named pipe, and a pipe is named under
+ * `\\.\pipe\` rather than anywhere on disk - `listen('C:\tmp\room')` is
+ * refused outright. The path still names the room, so two people who type
+ * the same `--path` meet; it is folded into one pipe name rather than used
+ * as a file. Everywhere else the path is the socket file, as it says.
+ */
+export function endpointOf(path: string): string {
+  if (platform !== 'win32') return path;
+  return `\\\\.\\pipe\\chatunix-${path.replace(/[\\/:]+/g, '-')}`;
 }
+
+/**
+ * One JSON-RPC notification per line.
+ *
+ * `say` carries a message. `hello` is the room's greeting to whoever just
+ * arrived, and it is what makes "joined" mean *the room has you* rather than
+ * *the connection opened*: on a named pipe the host learns of an arrival a
+ * turn after the arrival learns of the host, and a client that counted itself
+ * in before then was in nobody's count.
+ */
+type Notification =
+  | { jsonrpc: '2.0'; method: 'say'; params: Message }
+  | { jsonrpc: '2.0'; method: 'hello'; params: { peers: number } };
 
 const encode = (message: Message): string =>
   `${JSON.stringify({ jsonrpc: '2.0', method: 'say', params: message } satisfies Notification)}\n`;
+
+const greet = (peers: number): string =>
+  `${JSON.stringify({ jsonrpc: '2.0', method: 'hello', params: { peers } } satisfies Notification)}\n`;
 
 /**
  * Read whole lines out of a socket.
@@ -84,12 +108,16 @@ function lines(socket: Socket, onLine: (line: string) => void): void {
   });
 }
 
-const parse = (line: string): Message | null => {
+type Parsed = { kind: 'say'; message: Message } | { kind: 'hello'; peers: number } | null;
+
+const parse = (line: string): Parsed => {
   try {
-    const value = JSON.parse(line) as Partial<Notification>;
+    const value = JSON.parse(line) as { method?: unknown; params?: Record<string, unknown> };
     const p = value.params;
-    if (value.method !== 'say' || !p || typeof p.from !== 'string' || typeof p.text !== 'string') return null;
-    return { from: p.from, text: p.text, at: typeof p.at === 'number' ? p.at : Date.now() };
+    if (!p) return null;
+    if (value.method === 'hello') return { kind: 'hello', peers: typeof p.peers === 'number' ? p.peers : 0 };
+    if (value.method !== 'say' || typeof p.from !== 'string' || typeof p.text !== 'string') return null;
+    return { kind: 'say', message: { from: p.from, text: p.text, at: typeof p.at === 'number' ? p.at : Date.now() } };
   } catch {
     return null;
   }
@@ -129,7 +157,7 @@ export async function joinRoom(options: JoinOptions): Promise<Room> {
 function asClient(address: Address, name: string, timeoutMs: number): Promise<Room> {
   return new Promise<Room>((resolve, reject) => {
     const socket = address.kind === 'unix'
-      ? connect({ path: address.path })
+      ? connect({ path: endpointOf(address.path) })
       : connect({ host: address.host, port: address.port });
 
     const listeners: ((m: Message) => void)[] = [];
@@ -137,24 +165,33 @@ function asClient(address: Address, name: string, timeoutMs: number): Promise<Ro
     socket.once('error', reject);
     socket.once('timeout', () => { socket.destroy(); reject(new Error('timed out')); });
 
-    socket.once('connect', () => {
-      socket.setTimeout(0);
-      socket.removeListener('error', reject);
-      socket.on('error', () => undefined);
-      lines(socket, (line) => {
-        const message = parse(line);
-        if (message) for (const fn of listeners) fn(message);
-      });
-
-      resolve({
-        role: 'client',
-        address,
-        peers: () => 0,
-        say(text) { socket.write(encode({ from: name, text, at: Date.now() })); },
-        onMessage(fn) { listeners.push(fn); },
-        onPeers() { /* only the server counts */ },
-        close: () => new Promise((done) => { socket.end(() => { done(); }); }),
-      });
+    // Connected is not joined. The room says hello once it has counted the
+    // arrival, and that is the line this resolves on; a stale socket file
+    // refuses before then, and a host that never greets is a timeout.
+    let peers = 0;
+    let joined = false;
+    lines(socket, (line) => {
+      const parsed = parse(line);
+      if (!parsed) return;
+      if (parsed.kind === 'hello') {
+        peers = parsed.peers;
+        if (joined) return;
+        joined = true;
+        socket.setTimeout(0);
+        socket.removeListener('error', reject);
+        socket.on('error', () => undefined);
+        resolve({
+          role: 'client',
+          address,
+          peers: () => peers,
+          say(text) { socket.write(encode({ from: name, text, at: Date.now() })); },
+          onMessage(fn) { listeners.push(fn); },
+          onPeers() { /* only the server counts */ },
+          close: () => new Promise((done) => { socket.end(() => { done(); }); }),
+        });
+        return;
+      }
+      for (const fn of listeners) fn(parsed.message);
     });
   });
 }
@@ -180,9 +217,10 @@ function asServer(address: Address, name: string): Promise<Room> {
       announce();
       socket.on('error', () => undefined);
       socket.on('close', () => { sockets.delete(socket); announce(); });
+      socket.write(greet(sockets.size));
       lines(socket, (line) => {
-        const message = parse(line);
-        if (message) broadcast(message);
+        const parsed = parse(line);
+        if (parsed?.kind === 'say') broadcast(parsed.message);
       });
     });
 
@@ -205,7 +243,7 @@ function asServer(address: Address, name: string): Promise<Room> {
       });
     };
 
-    if (address.kind === 'unix') server.listen(address.path, done);
+    if (address.kind === 'unix') server.listen(endpointOf(address.path), done);
     else server.listen(address.port, address.host, done);
   });
 }

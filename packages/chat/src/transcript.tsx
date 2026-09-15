@@ -35,12 +35,14 @@ export interface ChatTranscriptProps extends BoxProps {
    */
   head?: RenderOutput;
   focusId?: string;
+  /** Prose and reasoning as markdown (the default), or as the characters that arrived. */
+  markdown?: boolean;
 }
 
 export const ChatTranscript: (props: ChatTranscriptProps) => RenderOutput =
   defineComponent<ChatTranscriptProps>('ChatTranscript', (props) => {
     const {
-      blocks, expanded, onToggle, cursor, onCursor, head,
+      blocks, expanded, onToggle, cursor, onCursor, head, markdown,
       focusId = 'chat.transcript', ...rest
     } = props;
 
@@ -73,6 +75,7 @@ export const ChatTranscript: (props: ChatTranscriptProps) => RenderOutput =
             expanded={expanded[block.id] ?? false}
             active={cursor !== undefined && blocks[cursor]?.id === block.id}
             onToggle={() => onToggle(block.id)}
+            {...(markdown !== undefined ? { markdown } : {})}
           />
         ))}
       </Feed>
@@ -84,7 +87,9 @@ const BlockView = defineComponent<{
   expanded: boolean;
   active: boolean;
   onToggle(): void;
-}>('ChatBlockView', ({ block, expanded, active, onToggle }) => {
+  markdown?: boolean;
+}>('ChatBlockView', ({ block, expanded, active, onToggle, markdown }) => {
+  const asMarkdown = markdown !== undefined ? { markdown } : {};
   const theme = useTheme();
 
   switch (block.kind) {
@@ -115,7 +120,7 @@ const BlockView = defineComponent<{
       return (
         <Row gap={1}>
           <Gutter />
-          <StreamingText content={block.content} streaming={block.streaming} flex={1} />
+          <StreamingText content={block.content} streaming={block.streaming} flex={1} {...asMarkdown} />
         </Row>
       );
     case 'reasoning':
@@ -128,6 +133,7 @@ const BlockView = defineComponent<{
             streaming={block.streaming}
             flex={1}
             {...(active ? { bg: 'selected' as const } : {})}
+            {...asMarkdown}
           />
         </Row>
       );

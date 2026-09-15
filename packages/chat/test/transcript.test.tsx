@@ -77,3 +77,15 @@ describe('what is selectable', () => {
     expect(BLOCKS.filter(selectable).map((b) => b.id)).toEqual(['r2', 'c1', 'q1']);
   });
 });
+
+describe('the markdown switch', () => {
+  it('reaches the prose and the reasoning from the transcript', async () => {
+    const raw = await open({ blocks: [
+      { kind: 'prose', id: 'p', turnId: 't', content: '**bold**', streaming: false },
+      { kind: 'reasoning', id: 'r', turnId: 't', content: '_quiet_', streaming: false },
+    ], expanded: { r: true }, markdown: false });
+    expect(raw.hasText('**bold**')).toBe(true);
+    expect(raw.hasText('_quiet_')).toBe(true);
+    await raw.unmount();
+  });
+});

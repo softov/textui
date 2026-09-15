@@ -82,9 +82,8 @@ export interface StreamingTextProps extends BoxProps {
   /**
    * Draw it as markdown, or as the characters that arrived.
    *
-   * Unstated it follows the application's own switch, which is what the key
-   * that toggles it moves - so a caller has to say something here only when
-   * it wants one or the other regardless.
+   * Markdown unless told otherwise. An application with a switch for this
+   * passes it here; nothing is read from anywhere else.
    */
   markdown?: boolean;
 }
@@ -146,6 +145,8 @@ export interface ReasoningBlockProps extends BoxProps {
   streaming?: boolean;
   /** Shown collapsed: "thought for 12s". */
   summary?: string;
+  /** Passed to the text once opened. */
+  markdown?: boolean;
 }
 
 /**
@@ -157,7 +158,7 @@ export interface ReasoningBlockProps extends BoxProps {
  */
 export const ReasoningBlock: (props: ReasoningBlockProps) => RenderOutput =
   defineComponent<ReasoningBlockProps>('ReasoningBlock', (props) => {
-    const { content, expanded, streaming, summary, ...rest } = props;
+    const { content, expanded, streaming, summary, markdown, ...rest } = props;
     const theme = useTheme();
     const chevron = expanded ? theme.glyphs.chevronDown : theme.glyphs.chevronRight;
     const words = content.trim().split(/\s+/).filter(Boolean).length;
@@ -171,7 +172,13 @@ export const ReasoningBlock: (props: ReasoningBlockProps) => RenderOutput =
         {expanded ? (
           <Row gap={1}>
             <text content=" " />
-            <StreamingText content={content} quiet flex={1} {...(streaming ? { streaming: true } : {})} />
+            <StreamingText
+              content={content}
+              quiet
+              flex={1}
+              {...(streaming ? { streaming: true } : {})}
+              {...(markdown !== undefined ? { markdown } : {})}
+            />
           </Row>
         ) : null}
       </Column>

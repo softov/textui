@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir, readdir, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { RegistryComponentManifest, RegistryManifest } from '@textui/core';
 
 /**
@@ -125,7 +126,9 @@ export async function writeReceipt(root: string, receipt: Receipt): Promise<void
 /** Where the shipped registry lives, relative to this package. */
 export function builtinRegistryDir(): string {
   // dist/registry.js -> packages/cli/dist -> repo root/components
-  const here = dirname(new URL(import.meta.url).pathname);
+  // `fileURLToPath`, not `.pathname`: on Windows the pathname is `/F:/...`,
+  // and resolving that gives `F:\F:\...`, a directory that does not exist.
+  const here = dirname(fileURLToPath(import.meta.url));
   const candidates = [
     resolve(here, '../../../components'),
     resolve(here, '../../components'),

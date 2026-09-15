@@ -25,6 +25,7 @@ import { MarkdownView } from '@textui/widgets';
 | `window` | `{ first: number; count: number }` |  | Paint only this slice. The caller owns the scrolling when it passes one. |
 | `maxLines` | `number` |  | Collapse past this many rows, with a count of what is hidden. |
 | `quiet` | `boolean` |  | Dim everything, for reasoning and other second-voice text. |
+| `match` | `string` |  | Text to pick out wherever it appears in the document. Passed to every run, and the painter colours the cells that hold it. The runs are already split by emphasis, so a match that falls across a bold boundary is coloured in both halves. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

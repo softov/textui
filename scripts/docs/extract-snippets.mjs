@@ -46,7 +46,9 @@ for (const file of markdownFiles(DOCS)) {
   const text = readFileSync(file, 'utf8');
   const setup = [...text.matchAll(SETUP)].map((m) => m[1].trim()).join('\n');
   const lines = text.split('\n');
-  const slug = relative(DOCS, file).replace(/\.md$/, '').replace(/[/.]/g, '-');
+  // Both separators: `relative` answers with backslashes on Windows, and a
+  // slug with one in it is a directory the output folder does not have.
+  const slug = relative(DOCS, file).replace(/\.md$/, '').replace(/[/.\\]/g, '-');
   let index = 0;
 
   for (let i = 0; i < lines.length; i++) {

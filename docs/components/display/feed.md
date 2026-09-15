@@ -27,6 +27,7 @@ import { Feed } from '@textui/widgets';
 | `follow` | `boolean` |  | Stick to the newest entry. Turned off when the reader scrolls up, and back on at the bottom - a feed that yanks itself away is one you cannot read. |
 | `onFollowChange` | `(follow: boolean) => void` |  |  |
 | `selectedIndex` | `number` |  | The cursor, by index. Passed, the caller owns it; omitted, the arrows scroll by line instead, which is what a feed with nothing to activate wants. |
+| `pinSelection` | `boolean` |  | Keep the selection in view for as long as this is set. Revealing on a change of `selectedIndex` is not enough for a caller that lands on the entry the cursor is already on - a search whose first hit is the row the cursor happens to sit on moves nothing, and the feed stays where it was showing a selection somewhere else. While this is set the selection is brought back whenever it is off screen, whatever the index did, which is what "the cursor is the thing being read" means. |
 | `onSelect` | `(index: number) => void` |  |  |
 | `onActivate` | `(index: number) => void` |  |  |
 | `scrollbar` | `boolean` | `true` |  |

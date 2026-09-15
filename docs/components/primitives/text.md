@@ -22,6 +22,9 @@ A run of text. Wraps, truncates and aligns within the box it is given.
 | `content` | `string` |  | The string to draw. `children` is accepted as a shorthand. |
 | `truncate` | `'end' \| 'start' \| 'middle' \| false` |  | Where to cut when the text does not fit. |
 | `ellipsis` | `string` |  |  |
+| `match` | `string` |  | Text to pick out wherever it appears, case-insensitively. For search: the caller passes what it is looking for and the rows are coloured where they hold it. It is applied after wrapping and truncation, to the text as drawn - so nothing about how a paragraph is broken into lines has to change to mark a hit in it, and a match split across a wrap is simply not on either row to colour. |
+| `matchFg` | `StyleColor` |  | The match's colours. Accent on its own foreground by default. |
+| `matchBg` | `StyleColor` |  |  |
 
 Plus everything on [`BaseProps`](../base-props.md).
 <!-- props:end -->

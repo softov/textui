@@ -1,0 +1,58 @@
+{
+  "name": "@textui/chat",
+  "version": "0.5.0",
+  "description": "The TextUI chat components - transcript, composer, tool calls, questions, sessions and diffs",
+  "keywords": [
+    "terminal",
+    "tui",
+    "chat",
+    "agent",
+    "components",
+    "jsx",
+    "ui",
+    "text-ui"
+  ],
+  "homepage": "https://softov.github.io/textui/",
+  "bugs": {
+    "url": "https://github.com/softov/textui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softov/textui.git",
+    "directory": "packages/chat"
+  },
+  "license": "MIT",
+  "author": "Softov <softov@brbyte.com>",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@textui/core": "workspace:^",
+    "@textui/widgets": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@textui/testing": "workspace:*"
+  }
+}

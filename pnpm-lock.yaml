@@ -184,6 +184,19 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  packages/chat:
+    dependencies:
+      '@textui/core':
+        specifier: workspace:^
+        version: link:../core
+      '@textui/widgets':
+        specifier: workspace:^
+        version: link:../widgets
+    devDependencies:
+      '@textui/testing':
+        specifier: workspace:*
+        version: link:../testing
+
   packages/cli:
     dependencies:
       '@textui/core':

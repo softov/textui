@@ -1,6 +1,6 @@
 import type { BoxProps, Rect, RenderOutput } from '@textui/core';
 import {
-  defineComponent, useApp, useEffect, useFocusScope, useInput, useMeasure, useTheme,
+  defineComponent, useApp, useFocusScope, useInput, useTheme,
 } from '@textui/core';
 import {
   Button,
@@ -14,6 +14,7 @@ import {
   TextInput,
 } from '@textui/widgets';
 import type { ChatAnswer, ChatPendingInput, ChatQuestion, ChatSendStatus } from './types.js';
+import { useReportMeasure } from './measure.js';
 
 /**
  * The block that means the agent is stopped, waiting on a person.
@@ -51,17 +52,16 @@ export interface ChatHitlProps extends BoxProps {
   onAnswer(answers: Record<string, ChatAnswer>, accepted: boolean): void;
   /** Leave it up, but give the keyboard back. */
   onEscape?(): void;
-  /** Where the block is on screen, whenever that changes. */
-  onMeasure?(rect: Rect): void;
+  /** Where the block is on screen whenever that changes, and `null` once it is gone. */
+  onMeasure?(rect: Rect | null): void;
 }
 
 export const ChatHitl: (props: ChatHitlProps) => RenderOutput =
   defineComponent<ChatHitlProps>('ChatHitl', (props) => {
     // It sits above the composer rather than inside it, so it says where it
     // starts: whoever keeps clear of the composer has to keep clear of this.
-    const rect = useMeasure();
     const { input, draft, onDraft, onApprove, onDeny, onAnswer, onEscape, onMeasure, ...rest } = props;
-    useEffect(() => { onMeasure?.(rect); }, [onMeasure, rect.x, rect.y, rect.width, rect.height]);
+    useReportMeasure(onMeasure);
     const theme = useTheme();
     // Focused on arrival, and not trapped.
     //

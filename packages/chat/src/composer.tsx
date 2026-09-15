@@ -1,10 +1,11 @@
 import type { BoxProps, Rect, RenderOutput } from '@textui/core';
-import { defineComponent, useEffect, useMeasure, useState, useTheme } from '@textui/core';
+import { defineComponent, useState, useTheme } from '@textui/core';
 import type { ListItem } from '@textui/widgets';
 import { Column, Divider, List, TextArea } from '@textui/widgets';
 import type { ChatCommand, ChatCompletion } from './types.js';
 import { ComposerBar } from './controls.js';
 import type { ComposerOption } from './controls.js';
+import { useReportMeasure } from './measure.js';
 
 /**
  * Rows the completion menu shows at once.
@@ -75,8 +76,8 @@ export interface ChatComposerProps extends BoxProps {
   onPath?(path: ChatCompletion): void;
   autoFocus?: boolean;
   focusId?: string;
-  /** Where the composer is on screen, whenever that changes. */
-  onMeasure?(rect: Rect): void;
+  /** Where the composer is on screen whenever that changes, and `null` once it is gone. */
+  onMeasure?(rect: Rect | null): void;
 }
 
 export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
@@ -156,8 +157,7 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
 
     // Where this box is. The slash menu grows it upward, so whoever wants to
     // stand clear of it is told every time rather than once.
-    const rect = useMeasure();
-    useEffect(() => { onMeasure?.(rect); }, [onMeasure, rect.x, rect.y, rect.width, rect.height]);
+    useReportMeasure(onMeasure);
 
     return (
       <Column {...rest} gap={0}>

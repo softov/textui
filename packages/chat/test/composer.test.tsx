@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defineComponent, h, useState } from '@textui/core';
+import type { Rect } from '@textui/core';
 import { renderApp } from '@textui/testing';
 import type { Harness } from '@textui/testing';
 import { ChatComposer } from '../src/index.js';
@@ -160,5 +161,35 @@ describe('escape closes the menu before it leaves anything', () => {
     await t.press('f');
     await t.settle();
     expect(shown(t).length).toBeGreaterThan(0);
+  });
+});
+
+describe('where the composer is', () => {
+  it('is reported on arrival, again when the box moves, and as nothing on the way out', async () => {
+    const seen: (Rect | null)[] = [];
+    const t = await renderApp({
+      width: 60,
+      height: 20,
+      theme: 'workbench',
+      root: h(ChatComposer, {
+        value: '',
+        onChange: () => undefined,
+        onSubmit: () => undefined,
+        onMeasure: (rect: Rect | null) => { seen.push(rect); },
+      }),
+    });
+    await t.settle();
+    await t.settle();
+    const first = seen[seen.length - 1];
+    expect(first).not.toBeNull();
+    expect(first?.width).toBe(60);
+
+    t.resize(40, 12);
+    await t.settle();
+    await t.settle();
+    expect(seen[seen.length - 1]?.width).toBe(40);
+
+    await t.unmount();
+    expect(seen[seen.length - 1]).toBeNull();
   });
 });

@@ -3,6 +3,7 @@ export * from './blocks.js';
 export * from './diff.js';
 export * from './icons.js';
 export * from './picker.js';
+export * from './measure.js';
 export * from './bubble.js';
 export * from './transcript.js';
 export * from './toolcall.js';

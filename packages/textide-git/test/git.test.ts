@@ -3,7 +3,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { renderApp } from '@textui/testing';
 import { decorationsPath, lineMarksFor, registerBuiltins } from '@textui/widgets';
 import { registerDocuments } from '@textui/documents';
@@ -301,6 +302,11 @@ describe('marks on the tree', () => {
     return { t, quiet };
   }
 
+  // The URI textide would hand out for a path under `/repo` on this machine:
+  // a drive letter and forward slashes on Windows, and `file:///repo/...`
+  // everywhere else.
+  const at = (path: string): string => pathToFileURL(resolve(path)).href;
+
   const status = (changes: Partial<Change>[]): Status => ({
     branch: 'main',
     ahead: 0,
@@ -316,7 +322,7 @@ describe('marks on the tree', () => {
       status([{ path: 'a.txt', index: ' ', work: 'M', unstaged: true }]),
       '/repo',
     );
-    expect(marks['file:///repo/a.txt']).toEqual({ badge: '·M', tone: 'warning' });
+    expect(marks[at('/repo/a.txt')]).toEqual({ badge: '·M', tone: 'warning' });
   });
 
   it('carries it up to every folder above', () => {
@@ -326,9 +332,9 @@ describe('marks on the tree', () => {
     );
     // A change three levels down is invisible otherwise, and finding things
     // you have not opened yet is what a file tree is for.
-    expect(marks['file:///repo/src']).toEqual({ badge: '·', tone: 'success' });
-    expect(marks['file:///repo/src/deep']).toEqual({ badge: '·', tone: 'success' });
-    expect(marks['file:///repo/src/deep/a.ts']?.badge).toBe('A·');
+    expect(marks[at('/repo/src')]).toEqual({ badge: '·', tone: 'success' });
+    expect(marks[at('/repo/src/deep')]).toEqual({ badge: '·', tone: 'success' });
+    expect(marks[at('/repo/src/deep/a.ts')]?.badge).toBe('A·');
   });
 
   it('gives a folder the loudest of what is under it', () => {
@@ -339,7 +345,7 @@ describe('marks on the tree', () => {
       ]),
       '/repo',
     );
-    expect(marks['file:///repo/src']?.tone).toBe('warning');
+    expect(marks[at('/repo/src')]?.tone).toBe('warning');
   });
 
   it('says nothing about a clean tree', () => {
@@ -417,14 +423,14 @@ describe('marks in the gutter', () => {
     const bag = registerGit(t.app, { root: dir });
     await quiet();
 
-    const uri = `file://${join(dir, 'tracked.txt')}`;
+    const uri = pathToFileURL(join(dir, 'tracked.txt')).href;
     t.app.store.set('$/ui/editor/uri', uri);
     await quiet();
     expect(lineMarksFor(t.app.store, uri), 'the changed line').toEqual({ 1: 'changed' });
 
     // A file git is not tracking gets no column at all, rather than a column
     // of spaces.
-    const other = `file://${join(dir, 'untracked-nothing.txt')}`;
+    const other = pathToFileURL(join(dir, 'untracked-nothing.txt')).href;
     t.app.store.set('$/ui/editor/uri', other);
     await quiet();
     expect(lineMarksFor(t.app.store, other)).toEqual({});

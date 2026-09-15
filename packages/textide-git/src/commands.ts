@@ -10,6 +10,7 @@ import { blameUri, diffUri, logUri } from './provider.js';
 import { SELECTED_PATH, STATUS_PATH, STATUS_SEGMENTS, summarize } from './changes.js';
 import { DIFF_MODE } from './diff.js';
 import { parseHunks, patchFor } from './hunks.js';
+import { pathIn } from './paths.js';
 
 /**
  * What git can be asked to do.
@@ -43,21 +44,6 @@ export async function refresh(app: TextUIApp, git: Git): Promise<Status | null> 
     app.store.set(SELECTED_PATH, status?.changes[0]?.path ?? null);
   }
   return status;
-}
-
-/**
- * A `file://` URI as a path relative to the working tree, or null if it is
- * not inside it.
- *
- * Everything textide publishes about "the current thing" is a URI and git
- * speaks in repository-relative paths, so this is the one place that
- * translation lives.
- */
-function pathIn(root: string, uri: unknown): string | null {
-  if (typeof uri !== 'string' || uri === '') return null;
-  const base = root.endsWith('/') ? root.slice(0, -1) : root;
-  const prefix = `file://${base}/`;
-  return uri.startsWith(prefix) ? uri.slice(prefix.length) : null;
 }
 
 /**

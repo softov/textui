@@ -1,5 +1,6 @@
 import type { LineMarks } from '@textui/widgets';
 import type { Git, Status } from './git.js';
+import { pathIn } from './paths.js';
 
 /**
  * Git, in the gutter.
@@ -66,11 +67,8 @@ export async function gutterFor(
 ): Promise<LineMarks | null> {
   if (!status || uri === null) return null;
 
-  const base = root.endsWith('/') ? root.slice(0, -1) : root;
-  const prefix = `file://${base}/`;
-  if (!uri.startsWith(prefix)) return null;
-
-  const path = uri.slice(prefix.length);
+  const path = pathIn(root, uri);
+  if (path === null) return null;
   const change = status.changes.find((c) => c.path === path);
   // Not in the status is the common case and the cheap one: a file that has
   // not changed needs no process to prove it.

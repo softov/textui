@@ -1,6 +1,7 @@
 import type { ResourceDecoration } from '@textui/widgets';
 import type { Change, Status } from './git.js';
 import { codeOf, toneOf } from './changes.js';
+import { uriOf } from './paths.js';
 
 /**
  * Git, in the explorer.
@@ -25,18 +26,6 @@ export const GIT_SOURCE = 'git';
  * never write.
  */
 const ROLLUP = '·';
-
-/**
- * The same URI the filesystem provider hands out.
- *
- * Built here rather than imported: this package is loaded *by* textide and
- * cannot depend on it. `file://` and an absolute path is the whole scheme, and
- * a test pins it.
- */
-function uriOf(root: string, relative: string): string {
-  const base = root.endsWith('/') ? root.slice(0, -1) : root;
-  return `file://${base}/${relative}`;
-}
 
 /** Which of two tones matters more when a folder holds both. */
 function louder(

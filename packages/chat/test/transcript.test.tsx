@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Color } from '@textui/core';
 import { h } from '@textui/core';
 import { renderApp } from '@textui/testing';
 import type { Harness } from '@textui/testing';
@@ -57,6 +58,16 @@ describe('the transcript', () => {
     await opened.unmount();
   });
 
+  it('opens a thought on a click, the way it opens a tool row', async () => {
+    const toggled: string[] = [];
+    const t = await open({ onToggle: (id: string) => toggled.push(id) });
+    const row = t.lines().findIndex((line) => line.includes('thought, 3 words'));
+    t.click(6, row);
+    await t.settle();
+    expect(toggled).toEqual(['r2']);
+    await t.unmount();
+  });
+
   it('says what the cursor on a queued message is for', async () => {
     const t = await open({ cursor: 7 });
     expect(t.hasText('enter drops it')).toBe(true);
@@ -68,6 +79,113 @@ describe('the transcript', () => {
     const lines = t.lines();
     expect(lines.findIndex((l) => l.includes('Session one'))).toBeLessThan(lines.findIndex((l) => l.includes('hello there')));
     expect(t.hasText('enter drops it')).toBe(true);
+    await t.unmount();
+  });
+});
+
+/**
+ * The cursor is drawn in a gutter every block has, as a heavy bar in the
+ * accent colour, so a paragraph of prose or a turn header shows where the
+ * cursor is as plainly as a tool row does. Tool rows and thoughts keep their
+ * background as well, and turn their text inverted on it.
+ */
+describe('the cursor', () => {
+  /** A theme colour as the buffer holds it: the built-in themes write hex. */
+  const asRgb = (color: Color): Color => {
+    if (typeof color !== 'string' || !color.startsWith('#')) return color;
+    return { rgb: [parseInt(color.slice(1, 3), 16), parseInt(color.slice(3, 5), 16), parseInt(color.slice(5, 7), 16)] };
+  };
+  const rowOf = (t: Harness, text: string): number => t.lines().findIndex((line) => line.includes(text));
+
+  it('draws the bar down the gutter of whichever block it is on', async () => {
+    for (const [cursor, text] of [[0, 'hello there'], [1, 'claude'], [3, 'here is the answer'], [4, 'Bash'], [5, 'context compacted'], [6, 'the host went away'], [7, 'and then this']] as const) {
+      const t = await open({ cursor });
+      const cell = t.app.buffer().get(0, rowOf(t, text));
+      expect(cell?.char, text).toBe(t.app.theme.borderChars('bold').left);
+      expect(cell?.fg, text).toEqual(asRgb(t.app.theme.color('accent')));
+      await t.unmount();
+    }
+  });
+
+  it('marks every line of a block, not only its first', async () => {
+    const t = await open({ cursor: 2, expanded: { r2: true } });
+    const bar = t.app.theme.borderChars('bold').left;
+    expect(t.app.buffer().get(0, rowOf(t, 'thought, 3 words'))?.char).toBe(bar);
+    expect(t.app.buffer().get(0, rowOf(t, 'let me think'))?.char).toBe(bar);
+    await t.unmount();
+  });
+
+  /**
+   * A glyph that already holds the left column is that block's gutter cell,
+   * and the bar takes its place: the block does not move when the cursor
+   * arrives. The header used to gain a blank column and a gap and start two
+   * cells to the right of the user's line above it.
+   */
+  it('stands in for the glyph that already holds the left column', async () => {
+    const bar = (t: Harness): string => t.app.theme.borderChars('bold').left;
+    const header = await open({ cursor: 1 });
+    expect(header.lines()[rowOf(header, 'claude')]?.startsWith(`${bar(header)} claude`)).toBe(true);
+    await header.unmount();
+
+    const said = await open({ cursor: 0 });
+    expect(said.lines()[rowOf(said, 'you')]?.startsWith(`${bar(said)} you`)).toBe(true);
+    expect(said.lines()[rowOf(said, 'hello there')]?.startsWith(`${bar(said)} hello there`)).toBe(true);
+    await said.unmount();
+
+    // At rest, the glyphs are back and in column 0.
+    const rest = await open({ cursor: 4 });
+    expect(rest.lines()[rowOf(rest, 'claude')]?.startsWith('● claude')).toBe(true);
+    expect(rest.lines()[rowOf(rest, 'you')]?.startsWith('▸ you')).toBe(true);
+    await rest.unmount();
+  });
+
+  it('leaves the gutter blank on the blocks that are neither said nor a turn header', async () => {
+    const t = await open({ cursor: 0 });
+    for (const text of ['Bash', 'context compacted', 'the host went away', 'and then this']) {
+      expect(t.app.buffer().get(0, rowOf(t, text))?.char, text).toBe(' ');
+    }
+    // And keeps the rule on the ones that are said.
+    expect(t.app.buffer().get(0, rowOf(t, 'here is the answer'))?.char).toBe(t.app.theme.borderChars().left);
+    await t.unmount();
+  });
+
+  it('starts a tool row where the prose starts, and a header where the user line does', async () => {
+    const t = await open();
+    const column = (text: string): number => t.lines()[rowOf(t, text)]?.indexOf(text) ?? -1;
+    // The status glyph sits where the rule does on the prose, one gap in.
+    expect(t.lines()[rowOf(t, 'Bash')]?.indexOf('✓')).toBe(column('here is the answer'));
+    expect(t.lines()[rowOf(t, 'claude')]?.indexOf('●')).toBe(0);
+    expect(t.lines()[rowOf(t, 'you')]?.indexOf('▸')).toBe(0);
+    await t.unmount();
+  });
+
+  it("turns a selected tool row's words inverted and keeps its status glyph", async () => {
+    const t = await open({ cursor: 4 });
+    const y = rowOf(t, 'Bash');
+    const name = t.app.buffer().get(t.lines()[y]?.indexOf('Bash') ?? 0, y);
+    const glyph = t.app.buffer().get(t.lines()[y]?.indexOf('✓') ?? 0, y);
+    expect(name?.fg).toEqual(asRgb(t.app.theme.color('inverted')));
+    expect(name?.bg).toEqual(asRgb(t.app.theme.color('selected')));
+    expect(glyph?.fg).toEqual(asRgb(t.app.theme.color('success')));
+    await t.unmount();
+  });
+
+  it("turns a selected thought's words inverted, open or folded", async () => {
+    const t = await open({ cursor: 2, expanded: { r2: true } });
+    for (const text of ['thought, 3 words', 'let me think']) {
+      const y = rowOf(t, text);
+      const cell = t.app.buffer().get(t.lines()[y]?.indexOf(text) ?? 0, y);
+      expect(cell?.fg, text).toEqual(asRgb(t.app.theme.color('inverted')));
+      expect(cell?.bg, text).toEqual(asRgb(t.app.theme.color('selected')));
+    }
+    await t.unmount();
+  });
+
+  it('paints no background on prose or on what the person said', async () => {
+    const t = await open({ cursor: 0 });
+    const y = rowOf(t, 'hello there');
+    const said = t.app.buffer().get(t.lines()[y]?.indexOf('hello') ?? 0, y);
+    expect(said?.bg).not.toEqual(asRgb(t.app.theme.color('selected')));
     await t.unmount();
   });
 });

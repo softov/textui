@@ -233,13 +233,20 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     onRun?.(id, args);
   };
 
-  /** Ask about one command. `choices` may be a function, and may be async. */
+  /**
+   * Ask about one command. `choices` may be a function, and may be async.
+   *
+   * A resolver is handed what was answered before this argument - and an
+   * argument that was not asked because its `default` stood was answered by
+   * that default. Left out, "the models of the chosen provider" would see no
+   * provider exactly when there was only one to choose from.
+   */
   const drillInto = (
     command: CommandDefinition,
     arg: ArgSpec,
     collected: Record<string, unknown> = {},
   ): void => {
-    const resolved = typeof arg.choices === 'function' ? arg.choices() : arg.choices ?? [];
+    const resolved = typeof arg.choices === 'function' ? arg.choices(answeredBefore(command, arg, collected)) : arg.choices ?? [];
     setPending({ command, arg, collected });
     setQuery('');
 
@@ -544,6 +551,26 @@ export function argumentOf(
     (arg) => collected[arg.name] === undefined &&
       (arg.choices !== undefined || (arg.required === true && arg.default === undefined)),
   );
+}
+
+/**
+ * What a `choices` resolver is told: the answers given, under the defaults
+ * of the arguments before this one that stood in for a question.
+ *
+ * Only the ones ahead of it in the declaration. An argument after this one
+ * has not been reached, and its default is not yet an answer to anything.
+ */
+function answeredBefore(
+  command: CommandDefinition,
+  arg: ArgSpec,
+  collected: Record<string, unknown>,
+): Record<string, unknown> {
+  const answered: Record<string, unknown> = {};
+  for (const spec of command.args ?? []) {
+    if (spec === arg) break;
+    if (spec.default !== undefined) answered[spec.name] = spec.default;
+  }
+  return { ...answered, ...collected };
 }
 
 /** The short form and the long one, as one shape. */

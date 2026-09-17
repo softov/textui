@@ -2,7 +2,7 @@ import type { BoxProps, RenderOutput } from '@textui/core';
 import { defineComponent, useTheme } from '@textui/core';
 import { Feed, Row } from '@textui/widgets';
 import type { Block } from './blocks.js';
-import { ChatBubble, Gutter, ReasoningBlock, StreamingText } from './bubble.js';
+import { ChatBubble, Gutter, ReasoningBlock, StreamingText, cursorBar } from './bubble.js';
 import { ToolCallRow } from './toolcall.js';
 
 /**
@@ -92,20 +92,30 @@ const BlockView = defineComponent<{
   const asMarkdown = markdown !== undefined ? { markdown } : {};
   const theme = useTheme();
 
+  // Every block has a one-cell left column the cursor is drawn in. The blocks
+  // that are something said keep the rule they draw there; a block whose
+  // first row already carries a glyph in that column - the header's bullet,
+  // the user line's chevron - has that glyph as its gutter cell, and the bar
+  // takes its place while the cursor is on it; the rest lead with a blank
+  // gutter, so their text starts where the prose does.
+  const mark = active ? { active: true } : {};
   switch (block.kind) {
     case 'said':
       // The blank row is the turn boundary. A uniform gap between every block
       // would space a paragraph from the sentence it belongs to just as much
       // as it spaces one speaker from the next.
       return (
-        <ChatBubble speaker="user" padding={[1, 0, 0, 0]}>
+        <ChatBubble speaker="user" padding={[1, 0, 0, 0]} {...mark}>
           <text content={block.text} wrap="word" />
         </ChatBubble>
       );
     case 'header':
       return (
         <Row gap={1} padding={[1, 0, 0, 0]}>
-          <text content={theme.glyphs.bulletFilled} fg={block.state === 'running' ? 'accent' : 'muted'} />
+          <text
+            content={active ? cursorBar(theme) : theme.glyphs.bulletFilled}
+            fg={active || block.state === 'running' ? 'accent' : 'muted'}
+          />
           <text content={block.model ?? 'agent'} bold fg="accent" />
           {/* What this turn was asked for, where the host said. A thinking
               level is chosen per turn and holds from that turn onwards, so
@@ -119,20 +129,21 @@ const BlockView = defineComponent<{
     case 'prose':
       return (
         <Row gap={1}>
-          <Gutter />
+          <Gutter {...mark} />
           <StreamingText content={block.content} streaming={block.streaming} flex={1} {...asMarkdown} />
         </Row>
       );
     case 'reasoning':
       return (
         <Row gap={1}>
-          <Gutter />
+          <Gutter {...mark} />
           <ReasoningBlock
             content={block.content}
             expanded={expanded}
             streaming={block.streaming}
+            onToggle={onToggle}
             flex={1}
-            {...(active ? { bg: 'selected' as const } : {})}
+            {...mark}
             {...asMarkdown}
           />
         </Row>
@@ -140,6 +151,7 @@ const BlockView = defineComponent<{
     case 'notice':
       return (
         <Row gap={1}>
+          <Gutter blank {...mark} />
           <text content={theme.glyphs.info} fg="info" />
           <text content={block.content} fg="muted" wrap="word" flex={1} />
         </Row>
@@ -150,22 +162,28 @@ const BlockView = defineComponent<{
     case 'failure':
       return (
         <Row gap={1}>
+          <Gutter blank {...mark} />
           <text content={theme.glyphs.cross} fg="danger" />
           <text content={block.content} fg="danger" wrap="word" flex={1} />
           {block.resumable ? <text content="resumable" fg="subtle" /> : null}
         </Row>
       );
     case 'tool':
-      // No gutter. A tool call is something the agent *did*, not something it
-      // said, so it sits at the turn's own left edge with a status glyph where
-      // the header's bullet is - rather than indented inside the rule as
-      // though it were a paragraph of the answer.
-      return <ToolCallRow call={block.call} expanded={expanded} active={active} onToggle={onToggle} />;
+      // No rule. A tool call is something the agent *did*, not something it
+      // said, so its status glyph sits where the header's bullet is - rather
+      // than inside the rule as though it were a paragraph of the answer.
+      return (
+        <Row gap={1}>
+          <Gutter blank {...mark} />
+          <ToolCallRow call={block.call} expanded={expanded} active={active} onToggle={onToggle} flex={1} />
+        </Row>
+      );
     case 'queued':
       // Not sent. It reads as a message unless it says so, and "I typed that
       // and nothing happened" is the complaint that follows.
       return (
         <Row gap={1}>
+          <Gutter blank {...mark} />
           <text content={theme.glyphs.chevronRight} fg={active ? 'accent' : 'subtle'} />
           <text content={block.text} fg="subtle" italic wrap="word" flex={1} />
           {/* What the cursor being here is *for*. A queue you cannot take

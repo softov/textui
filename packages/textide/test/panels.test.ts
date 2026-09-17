@@ -136,7 +136,7 @@ describe('how a file opens', () => {
     const choices = await Promise.resolve(
       t.app.commands.get('panel.openWith')?.args?.[0]?.choices,
     );
-    const list = typeof choices === 'function' ? await choices() : choices;
+    const list = typeof choices === 'function' ? await choices({}) : choices;
     // The editor and the plain viewer, from the filesystem adapter and the
     // documents catalog - two registrations this application never has to
     // list, because the registry already knows them.

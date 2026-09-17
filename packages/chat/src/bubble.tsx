@@ -1,6 +1,6 @@
-import type { BoxProps, RenderOutput, SemanticVariant, StyleColor } from '@textui/core';
+import type { BoxProps, RenderOutput, ResolvedTheme, SemanticVariant, StyleColor } from '@textui/core';
 import { defineComponent, useFrame, useTheme } from '@textui/core';
-import { Column, MarkdownView, Row } from '@textui/widgets';
+import { Column, Divider, MarkdownView, Row } from '@textui/widgets';
 
 /**
  * One thing said, and the two ways it is still being said.
@@ -13,6 +13,37 @@ import { Column, MarkdownView, Row } from '@textui/widgets';
 
 export type Speaker = 'user' | 'agent' | 'system';
 
+export interface GutterProps extends BoxProps {
+  /**
+   * The transcript's cursor is on this block.
+   *
+   * A heavy bar in the accent colour, down the whole block. A different glyph
+   * rather than only a different colour, so it survives a session without
+   * colour - which a background does not.
+   */
+  active?: boolean;
+  /**
+   * No rule at rest. For the blocks that are not something said - a tool
+   * row, a turn header - and still need the column, so the bar has a place
+   * to be drawn and their text starts where the prose does.
+   */
+  blank?: boolean;
+}
+
+/**
+ * The glyph the transcript's cursor is drawn with, down the left of the block
+ * it is on.
+ *
+ * The `bold` border's left rule: the heavy line of the same family as the
+ * rule at rest, from the theme, so an ascii terminal gets the glyph it can
+ * draw rather than a question mark. One place, because the gutter draws it
+ * and so does whatever glyph already holds a block's left column - the
+ * header's bullet, the user line's chevron - while the cursor is there.
+ */
+export function cursorBar(theme: ResolvedTheme): string {
+  return theme.borderChars('bold').left;
+}
+
 /**
  * The rule down the left of everything one speaker said.
  *
@@ -20,11 +51,13 @@ export type Speaker = 'user' | 'agent' | 'system';
  * paragraph beside it is nine, so a rule written as a character marks the
  * first line of a wrapped answer and abandons the rest of it.
  */
-export const Gutter: (props: BoxProps) => RenderOutput = defineComponent<BoxProps>('ChatGutter', (props) => {
+export const Gutter: (props: GutterProps) => RenderOutput = defineComponent<GutterProps>('ChatGutter', (props) => {
+  const { active, blank, ...rest } = props;
   const theme = useTheme();
+  const fill = active ? cursorBar(theme) : blank ? ' ' : theme.borderChars().left;
   // `alignSelf` because `Row` centres its children: a one-cell box in a
   // centred row is one cell tall, wherever the rule was meant to reach.
-  return <box width={1} alignSelf="stretch" fill={theme.borderChars().left} fg="borderSubtle" {...props} />;
+  return <box width={1} alignSelf="stretch" fill={fill} fg={active ? 'accent' : 'borderSubtle'} {...rest} />;
 });
 
 export interface ChatBubbleProps extends BoxProps {
@@ -34,7 +67,11 @@ export interface ChatBubbleProps extends BoxProps {
   /** Right of the author line: a time, a duration, a model. */
   meta?: string;
   tone?: SemanticVariant;
-  /** The transcript's cursor is on this block. */
+  /**
+   * The transcript's cursor is on this block: the bar runs down its left
+   * column, in place of the speaker's glyph on the first row and in the
+   * gutter under it.
+   */
   active?: boolean;
   children?: unknown;
 }
@@ -57,16 +94,20 @@ export const ChatBubble: (props: ChatBubbleProps) => RenderOutput =
     // The gutter is one column of glyph and one of rule. It is what makes a
     // wrapped paragraph read as one person talking rather than as the page
     // starting again, and it survives losing colour - which a tinted
-    // background does not.
+    // background does not. The cursor is drawn in it for the same reason,
+    // rather than as a background over what was said.
     return (
-      <Column {...rest} {...(active ? { bg: 'selected' as const } : {})}>
+      <Column {...rest}>
         <Row gap={1}>
-          <text content={glyph} fg={tone ?? look.fg} />
+          {/* The glyph's cell is the block's gutter on this row, so the bar
+              takes it rather than a second column before it: the block does
+              not move when the cursor arrives. */}
+          <text content={active ? cursorBar(theme) : glyph} fg={active ? 'accent' : tone ?? look.fg} />
           <text content={author ?? look.label} bold fg={tone ?? look.fg} />
           {meta ? <text content={meta} fg="subtle" flex={1} truncate="end" /> : <text content="" flex={1} />}
         </Row>
         <Row gap={1} flex={1}>
-          <Gutter />
+          <Gutter {...(active ? { active: true } : {})} />
           <Column flex={1} gap={1}>{children}</Column>
         </Row>
       </Column>
@@ -147,6 +188,16 @@ export interface ReasoningBlockProps extends BoxProps {
   summary?: string;
   /** Passed to the text once opened. */
   markdown?: boolean;
+  /** Clicking the summary row opens it, and closes it again. */
+  onToggle?(): void;
+  /**
+   * The transcript's cursor is on this block.
+   *
+   * The block takes the `selected` background and its words turn `inverted`,
+   * the theme's own rule for that tone: a quiet grey on the selection blue is
+   * a row you can find and cannot read.
+   */
+  active?: boolean;
 }
 
 /**
@@ -155,30 +206,52 @@ export interface ReasoningBlockProps extends BoxProps {
  * Reasoning is prose the host sends like any other, and it is not what the
  * reader came for - so it is one row until it is asked for. Dropping it
  * instead loses the only account of *why* a turn did what it did.
+ *
+ * Open, it ends with a rule. The thought is set in the same quiet tone as the
+ * answer's own gutter, and without a line under it the reader cannot tell
+ * where the thinking stopped and the answer began.
  */
 export const ReasoningBlock: (props: ReasoningBlockProps) => RenderOutput =
   defineComponent<ReasoningBlockProps>('ReasoningBlock', (props) => {
-    const { content, expanded, streaming, summary, markdown, ...rest } = props;
+    const { content, expanded, streaming, summary, markdown, onToggle, active, ...rest } = props;
     const theme = useTheme();
     const chevron = expanded ? theme.glyphs.chevronDown : theme.glyphs.chevronRight;
     const words = content.trim().split(/\s+/).filter(Boolean).length;
+    const fg = active ? 'inverted' : 'subtle';
 
     return (
-      <Column {...rest}>
-        <Row gap={1}>
-          <text content={chevron} fg="subtle" />
-          <text content={summary ?? (streaming ? 'thinking' : `thought, ${words} words`)} fg="subtle" italic />
+      <Column {...rest} {...(active ? { bg: 'selected' as const } : {})}>
+        <Row
+          gap={1}
+          {...(onToggle ? { onClick: onToggle } : {})}
+          // The whole row lights up, as a tool row does: the row is the thing
+          // that opens.
+          style={{ hover: { bg: 'hover' } }}
+        >
+          <text content={chevron} fg={fg} />
+          <text content={summary ?? (streaming ? 'thinking' : `thought, ${words} words`)} fg={fg} italic />
         </Row>
         {expanded ? (
           <Row gap={1}>
             <text content=" " />
+            {/* `quiet` sets every run to `muted` itself, which is exactly the
+                grey that vanishes on the selection; on it the text inherits
+                `inverted` from here instead. */}
             <StreamingText
               content={content}
-              quiet
               flex={1}
+              {...(active ? { fg: 'inverted' as const } : { quiet: true })}
               {...(streaming ? { streaming: true } : {})}
               {...(markdown !== undefined ? { markdown } : {})}
             />
+          </Row>
+        ) : null}
+        {expanded ? (
+          // Under the text, not the chevron: the same one-cell lead the text
+          // has, so the rule closes what it opened.
+          <Row gap={1}>
+            <text content=" " />
+            <Divider flex={1} />
           </Row>
         ) : null}
       </Column>

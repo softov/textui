@@ -14,10 +14,10 @@ import type { ChatToolCall } from './types.js';
  * The status is a glyph and a colour together. A 16-colour session, a piped
  * log and a colourblind reader all lose the colour and keep the glyph.
  *
- * It sits at the turn's own left edge rather than inside the gutter, with its
- * status glyph where the header's bullet is. A tool call is something the
- * agent *did*; indenting it inside the rule filed it under what the agent was
- * saying, which is the one thing it is not.
+ * In the transcript it sits beside a blank gutter rather than inside the rule,
+ * with its status glyph where the header's bullet is. A tool call is something
+ * the agent *did*; indenting it inside the rule filed it under what the agent
+ * was saying, which is the one thing it is not.
  */
 
 export interface ToolCallRowProps extends BoxProps {
@@ -67,6 +67,9 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
     const opens = Boolean(call.intention ?? call.input ?? call.output ?? call.outcome
       ?? (call.files && call.files.length > 0));
 
+    // On the selection the name, the summary and the chevron take `inverted`,
+    // the theme's own rule for that tone; the status glyph keeps its own, since
+    // a check that turned white would stop saying "completed".
     return (
       <Column {...rest} {...(active ? { bg: 'selected' as const } : {})}>
         <Row
@@ -77,13 +80,13 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
           style={{ hover: { bg: 'hover' } }}
         >
           <text content={glyph} fg={look.tone} />
-          <text content={call.name} bold />
-          <text content={summary} fg="muted" flex={1} truncate="middle" />
+          <text content={call.name} bold {...(active ? { fg: 'inverted' as const } : {})} />
+          <text content={summary} fg={active ? 'inverted' : 'muted'} flex={1} truncate="middle" />
           {call.status === 'pending-confirmation' ? <Badge label="asks" tone="warning" icon={theme.glyphs.warning} /> : null}
           {failed ? <Badge label={`exit ${call.exitCode ?? 1}`} tone="danger" /> : null}
           {/* Trailing, like a disclosure triangle - the row says what it is
               first and how to see more of it last. */}
-          {opens ? <text content={chevron} fg="subtle" /> : null}
+          {opens ? <text content={chevron} fg={active ? 'inverted' : 'subtle'} /> : null}
         </Row>
 
         {expanded ? (

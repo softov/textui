@@ -78,4 +78,33 @@ describe('a reasoning block', () => {
     expect(t.hasText('one two three')).toBe(true);
     await t.unmount();
   });
+
+  it('toggles when its row is clicked, like a tool row', async () => {
+    let toggled = 0;
+    const t = await open(h(ReasoningBlock, { content: 'one two three', onToggle: () => { toggled += 1; } }));
+    t.click(4, 0);
+    await t.settle();
+    expect(toggled).toBe(1);
+    await t.unmount();
+  });
+
+  it('ends with a rule when open, and draws none when folded', async () => {
+    // The theme's own horizontal rule, repeated: what `Divider` fills with.
+    const ruled = (t: Harness): number => {
+      const rule = t.app.theme.dividerChars().horizontal;
+      return t.lines().findIndex((line) => line.trim().length >= 5 && [...line.trim()].every((c) => c === rule));
+    };
+    const folded = await open(h(ReasoningBlock, { content: 'one two three' }));
+    expect(ruled(folded)).toBe(-1);
+    await folded.unmount();
+
+    const opened = await open(h(ReasoningBlock, { content: 'one two three', expanded: true }));
+    const lines = opened.lines();
+    const text = lines.findIndex((line) => line.includes('one two three'));
+    const under = ruled(opened);
+    // Under the text and indented to it, not to the chevron.
+    expect(under).toBeGreaterThan(text);
+    expect(lines[under]?.startsWith(' ')).toBe(true);
+    await opened.unmount();
+  });
 });

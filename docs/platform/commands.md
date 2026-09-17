@@ -89,6 +89,16 @@ Choosing it opens a second level listing the tones - filterable, with escape goi
 choices: () => app.themes.list().map((t) => t.id),
 ```
 
+A command with several arguments is asked about each in turn, and a `choices` function is handed the answers given so far - so the second list can depend on the first answer. An earlier argument with a `default` and no `choices` is not asked, and its default is the answer the next function sees:
+
+<!-- docs:nocheck -->
+```ts
+args: [
+  { name: 'provider', type: 'string', required: true, choices: () => providers() },
+  { name: 'model', type: 'string', required: true, choices: (collected) => modelsOf(collected.provider) },
+],
+```
+
 Nothing in the command knows the palette exists. It states what it needs; the palette is one of the things that can ask.
 
 ## Scopes

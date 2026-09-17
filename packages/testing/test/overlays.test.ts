@@ -460,6 +460,78 @@ describe('the command palette', () => {
       expect(ran).toEqual([{ tone: 'warning' }]);
       await t.unmount();
     });
+
+    /**
+     * The second question can depend on the first answer. A resolver used to
+     * be called with nothing, so "the models of the provider you just chose"
+     * had no way to be asked - every dependent list had to be flattened into
+     * one, with the first answer repeated as a prefix on every row.
+     */
+    it('hands a resolver the answers given so far', async () => {
+      const ran: Record<string, unknown>[] = [];
+      const seen: Record<string, unknown>[] = [];
+      const models: Record<string, string[]> = { openai: ['gpt', 'o3'], local: ['llama'] };
+      const t = await palette((app) => {
+        app.commands.register({
+          id: 'demo.model',
+          title: 'Model',
+          slots: ['palette'],
+          args: [
+            { name: 'provider', type: 'string', required: true, choices: Object.keys(models) },
+            {
+              name: 'model', type: 'string', required: true,
+              choices: (collected) => { seen.push(collected); return models[String(collected['provider'])] ?? []; },
+            },
+          ],
+          run: (args) => ran.push(args),
+        });
+      });
+      await t.settle();
+
+      t.press('enter');
+      await t.settle();
+      t.press('down');
+      t.press('enter');
+      await t.settle();
+
+      expect(seen).toEqual([{ provider: 'local' }]);
+      expect(t.hasText('llama')).toBe(true);
+      expect(t.hasText('gpt')).toBe(false);
+      t.press('enter');
+      await t.settle();
+      expect(ran).toEqual([{ provider: 'local', model: 'llama' }]);
+      await t.unmount();
+    });
+
+    /**
+     * An argument whose default stands is not asked, and the default is its
+     * answer - so the resolver after it sees that default, not a gap.
+     */
+    it('counts a default that stood as an answer the next resolver can see', async () => {
+      const ran: Record<string, unknown>[] = [];
+      const seen: Record<string, unknown>[] = [];
+      const t = await palette((app) => {
+        app.commands.register({
+          id: 'demo.model',
+          title: 'Model',
+          slots: ['palette'],
+          args: [
+            { name: 'provider', type: 'string', required: true, default: 'local' },
+            { name: 'model', type: 'string', required: true, choices: (collected) => { seen.push(collected); return ['llama']; } },
+          ],
+          run: (args) => ran.push(args),
+        });
+      });
+      await t.settle();
+
+      t.press('enter');
+      await t.settle();
+      expect(seen).toEqual([{ provider: 'local' }]);
+      t.press('enter');
+      await t.settle();
+      expect(ran).toEqual([{ provider: 'local', model: 'llama' }]);
+      await t.unmount();
+    });
   });
 
   it('is a picker when told not to execute', async () => {

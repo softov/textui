@@ -40,8 +40,17 @@ export interface ArgSpec {
   type: 'string' | 'number' | 'boolean' | 'unknown';
   required?: boolean;
   description?: string;
-  /** Fixed choices, or a resolver for a picker. */
-  choices?: ArgChoices | (() => Promise<ArgChoices> | ArgChoices);
+  /**
+   * Fixed choices, or a resolver for a picker.
+   *
+   * The resolver is handed the arguments answered before this one, so a
+   * second question can depend on the first - the models of the provider
+   * just chosen, the branches of the repository just named. An earlier
+   * argument that was not asked because its `default` stood is in there under
+   * that default. A resolver that takes no parameter is the common case and
+   * is unchanged by this.
+   */
+  choices?: ArgChoices | ((collected: Readonly<Record<string, unknown>>) => Promise<ArgChoices> | ArgChoices);
   default?: unknown;
   /**
    * How the picker should lay out each choice's `description`.

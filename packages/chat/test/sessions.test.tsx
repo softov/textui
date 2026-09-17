@@ -55,6 +55,12 @@ describe('the session list', () => {
     await t.unmount();
   });
 
+  it('puts the pull request after the branch it became', async () => {
+    const t = await list({ sessions: [{ ...SESSION, pullRequest: '#412 merged' }] }, 120);
+    expect(t.hasText('textui chat-package #412 merged')).toBe(true);
+    await t.unmount();
+  });
+
   it('says when a session is archived', async () => {
     const t = await list({ sessions: [{ ...SESSION, status: { ...SESSION.status, archived: true } }] }, 140);
     expect(t.hasText('archived')).toBe(true);

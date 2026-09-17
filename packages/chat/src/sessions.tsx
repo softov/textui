@@ -56,8 +56,9 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
           // The project, then the branch it is on - a catalogue spanning
           // several repositories is read by which one each row is in, and a
           // list of them all on `main` is a list that needs opening to tell
-          // apart.
-          [session.project, session.branch].filter(Boolean).join(' '),
+          // apart. Then the pull request the branch became, where the host
+          // found one: a merged branch is a finished row.
+          [session.project, session.branch, session.pullRequest].filter(Boolean).join(' '),
           changes?.files
             ? `${changes.files} files  +${changes.additions ?? 0} -${changes.deletions ?? 0}`
             : '',

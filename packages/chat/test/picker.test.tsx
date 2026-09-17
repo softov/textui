@@ -84,6 +84,26 @@ describe('the picker', () => {
     await t.unmount();
   });
 
+  it('runs a command that has nothing to ask, as the menu would', async () => {
+    // A chip whose command takes no argument has no values to pick from: the
+    // workspace chip opens a dialog of its own. Drilling the palette into
+    // nothing showed one row that ran it anyway, so the command runs at once,
+    // from the menu rather than the palette, and no panel is opened.
+    const t = await open();
+    const ran: string[] = [];
+    t.app.commands.register({
+      id: 'set.workspace',
+      title: 'Workspace',
+      slots: ['palette'],
+      run: (_args, ctx) => { ran.push(ctx.source); },
+    });
+    openPicker(t.app, { commandId: 'set.workspace', anchorId: chipId('mode') });
+    for (let i = 0; i < 6; i++) await t.settle();
+    expect(ran).toEqual(['menu']);
+    expect(showing(t)).toBe(false);
+    await t.unmount();
+  });
+
   it('gives the keyboard back to the chip on escape', async () => {
     const t = await open();
     openPicker(t.app, { commandId: 'set.mode', anchorId: chipId('mode') });

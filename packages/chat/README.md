@@ -53,15 +53,16 @@ Whoever mounts them holds all of that, wherever it likes.
 
 | | |
 |---|---|
-| `ChatTranscript`, `Block` | The conversation as blocks in a `Feed`: said, header, prose, reasoning, notice, failure, tool, queued |
+| `ChatTranscript`, `Block` | The conversation as blocks in a `Feed`: said, header, prose, reasoning, notice, failure, tool, queued. `match` colours a found term through every block and `pinCursor` keeps the cursor in view while a search moves it |
+| `blockText`, `findBlocks` | The words of a block, and the indexes of the blocks a query is found in, which a find walks the cursor through |
 | `ChatBubble`, `Gutter`, `StreamingText`, `ReasoningBlock` | One thing said, and the two ways it is still being said |
-| `ToolCallRow` | What the agent did, one row per call, opening onto its input and output |
-| `ChatComposer`, `ComposerBar`, `ComposerOption` | The field, the slash and path menus, and the control row of chips |
+| `ToolCallRow` | What the agent did, one row per call, opening onto its input and output. A `ChatToolCall` names its tool (`toolName`, where the id differs from the display name) and, while it runs, says what it is doing (`progress`) on the row |
+| `ChatComposer`, `ComposerBar`, `ComposerOption` | The field, the slash and path menus sized to the terminal, and the control rows of chips. A `ChatCommand.hint` is drawn under the menu for the command under the cursor; a `ComposerOption.where` chip puts where the session runs on a second row, and escape on any chip is `onLeave`, back to the field |
 | `ChatHitl`, `ConfirmRequest`, `QuestionForm`, `ChatInputStatus` | The block that means the agent is stopped, waiting on a person |
-| `SessionList`, `ConnectionBadge` | The catalogue, and which host it came from |
+| `SessionList`, `ConnectionBadge` | The catalogue, and which host it came from. A `ChatSession` row says its project, branch and `pullRequest` (a label the host formats, `#412 merged`) |
 | `ChatSessionHead`, `SessionDetails` | The head over a conversation, and the pane where long values are read whole |
 | `FileDiff`, `diffLines`, `toLines` | One file, both sides lined up |
-| `openPicker` | The command palette, anchored above the chip that asked |
+| `openPicker` | The command palette, anchored above the chip that asked; a command with nothing to ask is run instead |
 | `settingIcon`, `valueIcon` | The marks beside a setting and beside its values, down to ascii |
 
 ## What is not here

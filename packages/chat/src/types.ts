@@ -17,11 +17,28 @@ export interface ChatToolCall {
   id: string;
   /** What the row calls it. */
   name: string;
+  /**
+   * The tool's own id, where it differs from the display name.
+   *
+   * Hosts give many tools one display name - every subagent is "Explore" or
+   * "Plan" and the tool under all of them is `Task` - and a person searching
+   * the transcript for the one or the other should find the row either way.
+   */
+  toolName?: string;
   status: ChatToolCallStatus;
   /** The command. The only thing separating twenty identical rows. */
   input?: string;
   /** What it meant to do. Markdown. */
   intention?: string;
+  /**
+   * What it is doing right now, while it runs.
+   *
+   * A line drawn on a running row and dropped when the row ends: a
+   * subagent's own summary of how far it has got, the last tool it reached
+   * for. Read only while `running`; a host that leaves it on a finished call
+   * is still describing a state the call is no longer in.
+   */
+  progress?: string;
   /** What it did, past tense. */
   outcome?: string;
   /** What came back. */
@@ -64,6 +81,13 @@ export interface ChatSession {
   /** The project as the host names it, when it does. */
   project?: string;
   branch?: string;
+  /**
+   * The pull request the branch became, as the row says it: `#412 merged`.
+   *
+   * Already a label. Which host key holds the number and which the state is
+   * the client's to know; the row only has one line to say it on.
+   */
+  pullRequest?: string;
   /** What the host says it is doing, in its own words. */
   activity?: string;
   /** Why it is here when nobody started it, as a phrase: "by an automation". */
@@ -130,6 +154,14 @@ export interface ChatCommand {
   description?: string;
   /** Where a session command came from: the plugin or directory. */
   from?: string;
+  /**
+   * What goes after the name, written the way it would be typed.
+   *
+   * `/autocompact <tokens>` says more about the command than a sentence
+   * describing it, and it is the one thing a menu cannot show in a row: the
+   * row is the name.
+   */
+  hint?: string;
 }
 
 /** The row under the composer: gone to the host, or never going. */

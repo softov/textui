@@ -3,7 +3,7 @@ import type { Color } from '@textui/core';
 import { h } from '@textui/core';
 import { renderApp } from '@textui/testing';
 import type { Harness } from '@textui/testing';
-import { ChatTranscript, selectable } from '../src/index.js';
+import { ChatTranscript, findBlocks, selectable } from '../src/index.js';
 import type { Block, ChatToolCall } from '../src/index.js';
 
 /**
@@ -193,6 +193,35 @@ describe('the cursor', () => {
 describe('what is selectable', () => {
   it('is the blocks that open, or can be withdrawn', () => {
     expect(BLOCKS.filter(selectable).map((b) => b.id)).toEqual(['r2', 'c1', 'q1']);
+  });
+});
+
+/**
+ * Where a term appears, as block indices, so a find box can walk them with
+ * the cursor. Everything a person could be looking for counts: the model on a
+ * header, the output of a tool call.
+ */
+describe('finding in the blocks', () => {
+  it('matches without regard to case', () => {
+    expect(findBlocks(BLOCKS, 'HELLO')).toEqual([0]);
+    expect(findBlocks(BLOCKS, 'Answer')).toEqual(findBlocks(BLOCKS, 'answer'));
+    // In order, and every block holding it: the person's line, the prose,
+    // the failure and the queued message all say "the" somewhere.
+    expect(findBlocks(BLOCKS, 'the')).toEqual([0, 3, 6, 7]);
+  });
+
+  it('finds nothing for a blank query, rather than everything', () => {
+    expect(findBlocks(BLOCKS, '')).toEqual([]);
+    expect(findBlocks(BLOCKS, '   ')).toEqual([]);
+  });
+
+  it('finds a header by its model', () => {
+    expect(findBlocks(BLOCKS, 'claude')).toEqual([1]);
+  });
+
+  it('finds a tool call by what came back', () => {
+    expect(findBlocks(BLOCKS, 'b')).toEqual([4]);
+    expect(findBlocks(BLOCKS, 'Bash')).toEqual([4]);
   });
 });
 

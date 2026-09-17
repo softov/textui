@@ -79,6 +79,16 @@ describe('a reasoning block', () => {
     await t.unmount();
   });
 
+  it('hands a match to the thought once it is open', async () => {
+    const t = await open(h(ReasoningBlock, { content: 'one two three', expanded: true, match: 'two' }));
+    const y = t.lines().findIndex((line) => line.includes('two'));
+    const x = (t.lines()[y] as string).indexOf('two');
+    const hit = t.app.buffer().get(x, y);
+    const before = t.app.buffer().get(x - 1, y);
+    expect(JSON.stringify(hit?.bg)).not.toBe(JSON.stringify(before?.bg));
+    await t.unmount();
+  });
+
   it('toggles when its row is clicked, like a tool row', async () => {
     let toggled = 0;
     const t = await open(h(ReasoningBlock, { content: 'one two three', onToggle: () => { toggled += 1; } }));

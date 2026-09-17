@@ -23,6 +23,23 @@ export interface ChatTranscriptProps extends BoxProps {
   cursor?: number;
   onCursor?(index: number): void;
   /**
+   * What the find box is looking for.
+   *
+   * Passed down to be coloured where it appears, not to decide what is drawn:
+   * every block stays where it was and the ones holding the term light up, so
+   * a reader keeps the conversation around a hit instead of a filtered list
+   * of the lines that matched.
+   */
+  match?: string;
+  /**
+   * Keep the cursor in view rather than only when it moves.
+   *
+   * For the find box, which drives the cursor: its first hit is often the
+   * block the cursor is already on, and a feed that only scrolls on a change
+   * would leave that one off screen while the box counted it.
+   */
+  pinCursor?: boolean;
+  /**
    * What this conversation is, as the first thing in it.
    *
    * Inside the scrolling region rather than pinned above it: a caption outside
@@ -42,7 +59,7 @@ export interface ChatTranscriptProps extends BoxProps {
 export const ChatTranscript: (props: ChatTranscriptProps) => RenderOutput =
   defineComponent<ChatTranscriptProps>('ChatTranscript', (props) => {
     const {
-      blocks, expanded, onToggle, cursor, onCursor, head, markdown,
+      blocks, expanded, onToggle, cursor, onCursor, head, markdown, match, pinCursor,
       focusId = 'chat.transcript', ...rest
     } = props;
 
@@ -60,6 +77,7 @@ export const ChatTranscript: (props: ChatTranscriptProps) => RenderOutput =
         // keyboard off the field to use them is what a reader is avoiding.
         pageKeys="always"
         {...(cursor !== undefined ? { selectedIndex: cursor + lead } : {})}
+        {...(pinCursor ? { pinSelection: true } : {})}
         {...(onCursor ? { onSelect: (index: number) => onCursor(Math.max(0, index - lead)) } : {})}
         onActivate={(index: number) => {
           const block = blocks[index - lead];
@@ -76,6 +94,7 @@ export const ChatTranscript: (props: ChatTranscriptProps) => RenderOutput =
             active={cursor !== undefined && blocks[cursor]?.id === block.id}
             onToggle={() => onToggle(block.id)}
             {...(markdown !== undefined ? { markdown } : {})}
+            {...(match ? { match } : {})}
           />
         ))}
       </Feed>
@@ -88,8 +107,12 @@ const BlockView = defineComponent<{
   active: boolean;
   onToggle(): void;
   markdown?: boolean;
-}>('ChatBlockView', ({ block, expanded, active, onToggle, markdown }) => {
+  match?: string;
+}>('ChatBlockView', ({ block, expanded, active, onToggle, markdown, match }) => {
   const asMarkdown = markdown !== undefined ? { markdown } : {};
+  // Spread rather than passed, so a block with no search over it carries no
+  // extra prop and its text node is compared unchanged.
+  const hit = match ? { match } : {};
   const theme = useTheme();
 
   // Every block has a one-cell left column the cursor is drawn in. The blocks
@@ -106,7 +129,7 @@ const BlockView = defineComponent<{
       // as it spaces one speaker from the next.
       return (
         <ChatBubble speaker="user" padding={[1, 0, 0, 0]} {...mark}>
-          <text content={block.text} wrap="word" />
+          <text content={block.text} wrap="word" {...hit} />
         </ChatBubble>
       );
     case 'header':
@@ -130,7 +153,7 @@ const BlockView = defineComponent<{
       return (
         <Row gap={1}>
           <Gutter {...mark} />
-          <StreamingText content={block.content} streaming={block.streaming} flex={1} {...asMarkdown} />
+          <StreamingText content={block.content} streaming={block.streaming} flex={1} {...asMarkdown} {...hit} />
         </Row>
       );
     case 'reasoning':
@@ -145,6 +168,7 @@ const BlockView = defineComponent<{
             flex={1}
             {...mark}
             {...asMarkdown}
+            {...hit}
           />
         </Row>
       );
@@ -153,7 +177,7 @@ const BlockView = defineComponent<{
         <Row gap={1}>
           <Gutter blank {...mark} />
           <text content={theme.glyphs.info} fg="info" />
-          <text content={block.content} fg="muted" wrap="word" flex={1} />
+          <text content={block.content} fg="muted" wrap="word" flex={1} {...hit} />
         </Row>
       );
     // Not a notice. A notice is the harness saying something in passing, and
@@ -164,7 +188,7 @@ const BlockView = defineComponent<{
         <Row gap={1}>
           <Gutter blank {...mark} />
           <text content={theme.glyphs.cross} fg="danger" />
-          <text content={block.content} fg="danger" wrap="word" flex={1} />
+          <text content={block.content} fg="danger" wrap="word" flex={1} {...hit} />
           {block.resumable ? <text content="resumable" fg="subtle" /> : null}
         </Row>
       );
@@ -185,7 +209,7 @@ const BlockView = defineComponent<{
         <Row gap={1}>
           <Gutter blank {...mark} />
           <text content={theme.glyphs.chevronRight} fg={active ? 'accent' : 'subtle'} />
-          <text content={block.text} fg="subtle" italic wrap="word" flex={1} />
+          <text content={block.text} fg="subtle" italic wrap="word" flex={1} {...hit} />
           {/* What the cursor being here is *for*. A queue you cannot take
               anything out of is a list of messages you have to let happen. */}
           <text content={active ? 'enter drops it' : 'queued'} fg="warning" />

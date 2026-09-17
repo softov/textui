@@ -127,6 +127,8 @@ export interface StreamingTextProps extends BoxProps {
    * passes it here; nothing is read from anywhere else.
    */
   markdown?: boolean;
+  /** Text to pick out, for the find box. Coloured wherever it appears. */
+  match?: string;
 }
 
 /**
@@ -141,7 +143,7 @@ export interface StreamingTextProps extends BoxProps {
  */
 export const StreamingText: (props: StreamingTextProps) => RenderOutput =
   defineComponent<StreamingTextProps>('StreamingText', (props) => {
-    const { content, streaming, quiet, maxLines, markdown, ...rest } = props;
+    const { content, streaming, quiet, maxLines, markdown, match, ...rest } = props;
     const theme = useTheme();
     // Only while something is arriving. A ticker marks its component dirty
     // whether or not the frame it produces differs, so an unconditional one
@@ -165,6 +167,7 @@ export const StreamingText: (props: StreamingTextProps) => RenderOutput =
           content={shown}
           wrap="word"
           {...(quiet ? { fg: 'muted' as const } : {})}
+          {...(match ? { match } : {})}
           {...rest}
         />
       );
@@ -175,6 +178,7 @@ export const StreamingText: (props: StreamingTextProps) => RenderOutput =
         content={shown}
         {...(quiet ? { quiet: true } : {})}
         {...(maxLines !== undefined ? { maxLines } : {})}
+        {...(match ? { match } : {})}
         {...rest}
       />
     );
@@ -188,6 +192,8 @@ export interface ReasoningBlockProps extends BoxProps {
   summary?: string;
   /** Passed to the text once opened. */
   markdown?: boolean;
+  /** Text to pick out, for the find box. Handed to the text inside it. */
+  match?: string;
   /** Clicking the summary row opens it, and closes it again. */
   onToggle?(): void;
   /**
@@ -213,7 +219,7 @@ export interface ReasoningBlockProps extends BoxProps {
  */
 export const ReasoningBlock: (props: ReasoningBlockProps) => RenderOutput =
   defineComponent<ReasoningBlockProps>('ReasoningBlock', (props) => {
-    const { content, expanded, streaming, summary, markdown, onToggle, active, ...rest } = props;
+    const { content, expanded, streaming, summary, markdown, match, onToggle, active, ...rest } = props;
     const theme = useTheme();
     const chevron = expanded ? theme.glyphs.chevronDown : theme.glyphs.chevronRight;
     const words = content.trim().split(/\s+/).filter(Boolean).length;
@@ -243,6 +249,7 @@ export const ReasoningBlock: (props: ReasoningBlockProps) => RenderOutput =
               {...(active ? { fg: 'inverted' as const } : { quiet: true })}
               {...(streaming ? { streaming: true } : {})}
               {...(markdown !== undefined ? { markdown } : {})}
+              {...(match ? { match } : {})}
             />
           </Row>
         ) : null}

@@ -225,6 +225,70 @@ describe('finding in the blocks', () => {
   });
 });
 
+/**
+ * The find box hands the term down, and the transcript colours it where it
+ * appears rather than filtering to the lines that hold it. The cursor is how
+ * a hit is reached, so a pinned cursor is one the feed keeps on screen even
+ * when it did not move.
+ */
+describe('a match', () => {
+  it('is coloured where it appears', async () => {
+    const t = await open({ match: 'answer' });
+    const lines = t.lines();
+    const y = lines.findIndex((line) => line.includes('answer'));
+    expect(y).toBeGreaterThan(-1);
+    const x = (lines[y] as string).indexOf('answer');
+    const hit = t.app.buffer().get(x, y);
+    const before = t.app.buffer().get(x - 1, y);
+    expect(JSON.stringify(hit?.bg)).not.toBe(JSON.stringify(before?.bg));
+    await t.unmount();
+  });
+
+  it('reaches the words a person said, a notice and a queued message too', async () => {
+    const t = await open({ match: 'th' });
+    // Every block with the term lights up, not the first one only.
+    for (const text of ['hello there', 'the host went away', 'and then this']) {
+      const y = t.lines().findIndex((line) => line.includes(text));
+      const x = (t.lines()[y] as string).indexOf('th');
+      const hit = t.app.buffer().get(x, y);
+      const before = t.app.buffer().get(x - 1, y);
+      expect(JSON.stringify(hit?.bg), text).not.toBe(JSON.stringify(before?.bg));
+    }
+    await t.unmount();
+  });
+});
+
+describe('a pinned cursor', () => {
+  const prose = (count: number): Block[] => Array.from({ length: count }, (_, i) => ({
+    kind: 'prose', id: `p${i}`, turnId: 't', content: `paragraph ${i} of many`, streaming: false,
+  }));
+  const tall = async (props: Record<string, unknown>): Promise<Harness> => {
+    const t = await renderApp({
+      width: 60,
+      height: 10,
+      root: h(ChatTranscript, {
+        blocks: prose(40), expanded: {}, onToggle: () => undefined, cursor: 0, flex: 1, ...props,
+      }),
+    });
+    for (let i = 0; i < 4; i += 1) await t.settle();
+    return t;
+  };
+
+  it('is kept in view, where an unpinned one at the same index is not', async () => {
+    // A feed opens at its tail, and the cursor's first value is not scrolled
+    // to: the top of a conversation is off screen even with the cursor on it.
+    const loose = await tall({});
+    expect(loose.hasText('paragraph 0 of')).toBe(false);
+    await loose.unmount();
+
+    // Pinned, the feed brings the row the cursor is on back on screen without
+    // the index having moved - which is what a find box's first hit needs.
+    const pinned = await tall({ pinCursor: true });
+    expect(pinned.hasText('paragraph 0 of')).toBe(true);
+    await pinned.unmount();
+  });
+});
+
 describe('the markdown switch', () => {
   it('reaches the prose and the reasoning from the transcript', async () => {
     const raw = await open({ blocks: [

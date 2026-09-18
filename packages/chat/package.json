@@ -1,6 +1,6 @@
 {
   "name": "@textui/chat",
-  "version": "0.5.0",
+  "version": "0.6.1",
   "description": "The TextUI chat components - transcript, composer, tool calls, questions, sessions and diffs",
   "keywords": [
     "terminal",

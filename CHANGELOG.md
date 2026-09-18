@@ -4,7 +4,41 @@ The publishable packages release as a set, under one version. `workspace:^` betw
 
 This file records the set. Anything package-specific says which package.
 
-## Unreleased
+## 0.6.1
+
+`@textui/chat@0.6.0` exists on the registry and cannot be installed: it was published by hand for the trusted-publishing bootstrap, straight from the workspace, so its dependency ranges read `workspace:^`, which npm does not know. It is deprecated in favour of this release; nothing else is in it, and the set skips 0.6.0.
+
+### The chat components have a package
+
+`@textui/chat` joins the set: the transcript, the composer, the tool call row, the
+question and confirmation blocks, the session list and the file diff that a chat client
+draws, with their own prop types (`ChatTranscript`, `ChatComposer`, `ChatToolCall`,
+`ChatSession`, `Block`, `ComposerOption`, ...). They came out of ahpc, where they were
+written against a live host, and the first release carries everything ahpc had taught
+them since: the tool's `toolName` under a call and `progress` on its row while it runs, the
+pull request on a session's row (`ChatSession.pullRequest`), `match` and `pinCursor` on
+the transcript for a search that colours every hit and keeps the cursor in view,
+`blockText` and `findBlocks` to search the blocks, a completion menu sized to the
+terminal with the command's `hint` under it, a second control row for the chips that say
+where the session runs (`ComposerOption.where`), and escape leaving a chip for the field
+(`ComposerBar.onLeave`). `measure.ts` reports where the composer and the waiting block
+are, and when they are gone, so a host can place its own chrome around them.
+
+### A thought opens on click, and the cursor is marked on every block
+
+`ReasoningBlock` takes `onToggle` and folds open and shut on a mouse click as a tool row
+does, and ends with a divider while open. The block under the cursor is marked by an
+accent bar in a gutter every block has, so arrowing through prose, headers, user lines,
+tool rows and thoughts shows where the cursor is; a selected tool row or thought keeps
+its background and its text reads inverted on it, and a header's bullet is the gutter cell
+so the model's name stays at the column it had.
+
+### A picker's later question can depend on the earlier answer
+
+`ArgSpec.choices` receives the arguments collected so far (`choices(collected)`), so a
+command whose second argument depends on the first - a provider, then that provider's
+models - lists the right things. `CommandPalette` passes them and skips an argument with
+a single choice on the way. `openPicker` on a command with nothing to ask runs it.
 
 ### The palette cut the question, and said it twice
 
@@ -15,6 +49,13 @@ sentences need, up to `maxWidth`; the line under the list wraps instead of trunc
 since it is the one place a sentence can be read whole; and the question is said once:
 in the placeholder while the answers have sentences of their own for the line under the
 list, under the list when they do not, where the placeholder says what the field is for.
+
+### `@textui/cli` finds its registry on Windows
+
+`builtinRegistryDir` located the shipped registry through `new URL(import.meta.url).pathname`,
+which on Windows is `/F:/...` and resolves to `F:\F:\...`, a directory that does not exist.
+It goes through `fileURLToPath` now. Four prop tables in the docs were out of step with the
+source and are generated again.
 
 ## 0.5.0
 

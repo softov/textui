@@ -1,6 +1,6 @@
 {
   "name": "@textui/terminal",
-  "version": "0.5.0",
+  "version": "0.6.1",
   "description": "Terminal adapters, capability detection, ANSI writing and input decoding for TextUI",
   "keywords": [
     "terminal",

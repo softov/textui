@@ -27,7 +27,7 @@
  * puts it back on the way out, whichever way it leaves.
  */
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -166,11 +166,35 @@ if (dryRun) {
   process.exit(0);
 }
 
+/**
+ * Whether the registry already has this version of the package.
+ *
+ * A package new to the set is bootstrapped by hand at the release version
+ * (RELEASING.md), and a set that failed halfway has its first packages up
+ * already; npm refuses to publish over either, and the refusal would stop
+ * the packages after it. What is there is left alone.
+ */
+function onRegistry(name) {
+  try {
+    // One command line, through a shell, so it answers on Windows too, where `npm` is a `.cmd`.
+    const found = execSync(`npm view ${name}@${version} version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return found === version;
+  } catch {
+    return false;
+  }
+}
+
+let published = 0;
 for (const p of ordered) {
+  if (onRegistry(p.manifest.name)) {
+    console.log(`\n${p.manifest.name}@${version} is on the registry already: skipped`);
+    continue;
+  }
   console.log(`\npublishing ${p.manifest.name}@${version}`);
   // Under trusted publishing the OIDC exchange is npm's own; there is no
   // token here and provenance is attached without asking for it.
   execFileSync('npm', ['publish', '--access', 'public'], { cwd: p.dir, stdio: 'inherit' });
+  published += 1;
 }
 
-console.log(`\npublished ${ordered.length} packages at ${version}`);
+console.log(`\npublished ${published} of ${ordered.length} packages at ${version}`);

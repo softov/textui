@@ -1,6 +1,6 @@
 {
   "name": "@textui/core",
-  "version": "0.5.0",
+  "version": "0.6.1",
   "description": "Graph-mounted terminal UI runtime - store, registries, renderer, host primitives",
   "keywords": [
     "terminal",

@@ -89,6 +89,15 @@ export interface CommandPaletteProps extends BoxProps {
  * That is where sub-items come from - the command says what it needs and the
  * palette asks, rather than every caller inventing its own submenu.
  */
+
+/** The question being asked: the command, the argument, and the answers given before it. */
+interface Pending {
+  command: CommandDefinition;
+  arg: ArgSpec;
+  /** Answers given so far, for a command that asks for more than one. */
+  collected: Record<string, unknown>;
+}
+
 export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalette', (props) => {
   const theme = useTheme();
   const runtime = useRuntime();
@@ -101,12 +110,7 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   /** The command being asked about, when the palette has drilled in. */
-  const [pending, setPending] = useState<{
-    command: CommandDefinition;
-    arg: ArgSpec;
-    /** Answers given so far, for a command that asks for more than one. */
-    collected: Record<string, unknown>;
-  } | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
   const [choices, setChoices] = useState<ArgChoice[]>([]);
   /**
    * Whether the answer to "what may I choose" is still on its way.
@@ -186,10 +190,30 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
           : {}),
       }));
 
+  /** The argument answered last, when this question came after one. */
+  const previousOf = (asked: Pending): ArgSpec | undefined => {
+    const last = Object.keys(asked.collected).at(-1);
+    return last === undefined ? undefined : (asked.command.args ?? []).find((arg) => arg.name === last);
+  };
+
+  /**
+   * One question back.
+   *
+   * After a first question the second is asked again from the start with
+   * the earlier answer withdrawn: a wrong provider is corrected by choosing
+   * another, not by closing the whole picker and opening it again. At the
+   * first question, the command list.
+   */
   const back = (): void => {
     // `null` is "never mind": whatever the preview did gets undone by whoever
     // did it, because only the command knows what it changed.
     pending?.arg.preview?.(null);
+    const previous = pending ? previousOf(pending) : undefined;
+    if (pending && previous) {
+      const { [previous.name]: _withdrawn, ...rest } = pending.collected;
+      drillInto(pending.command, previous, rest);
+      return;
+    }
     setPending(null);
     setChoices([]);
     setQuery('');
@@ -357,8 +381,10 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
         // anybody chose to be at: the caller drilled in on their behalf, and
         // the level underneath is a list of one. Backing out to it reads as
         // "escape did nothing", and the second escape - the one that would
-        // close it - is spent leaving a screen nobody asked to see.
-        if (pending && !openAt) { back(); return true; }
+        // close it - is spent leaving a screen nobody asked to see. A question
+        // that came after one is different: there the level underneath is the
+        // earlier question, which somebody did choose to be at.
+        if (pending && (!openAt || previousOf(pending) !== undefined)) { back(); return true; }
         // Whatever a highlighted choice previewed has to be put back on the
         // way out, and `null` is how the command is told to undo it - only it
         // knows what it changed. `back()` did that, so closing instead of
@@ -368,7 +394,7 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
         onClose?.();
         return true;
       }
-      if (event.name === 'left' && pending && query === '' && !openAt) { back(); return true; }
+      if (event.name === 'left' && pending && query === '' && (!openAt || previousOf(pending) !== undefined)) { back(); return true; }
       // Wrapping, both ways. A list you can walk off the end of makes you
       // check where you are before every press; one that comes round means the
       // last item is one key from the first.

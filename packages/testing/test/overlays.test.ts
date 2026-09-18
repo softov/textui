@@ -504,6 +504,83 @@ describe('the command palette', () => {
     });
 
     /**
+     * Escape on a later question is one question back, not the way out.
+     *
+     * A provider chosen by mistake is corrected by choosing another; closing
+     * the picker and opening it again to do that is two presses and a lost
+     * place. Opened at the command - the chip's way in - the first question
+     * still closes, because the list beneath it is one nobody chose to be
+     * at; the second goes back to the first all the same.
+     */
+    it('goes back one question on escape, and closes only from the first', async () => {
+      const models: Record<string, string[]> = { openai: ['gpt', 'o3'], local: ['llama'] };
+      const ran: Record<string, unknown>[] = [];
+      const register = (app: TextUIApp) => {
+        app.commands.register({
+          id: 'demo.model',
+          title: 'Model',
+          slots: ['palette'],
+          args: [
+            { name: 'provider', type: 'string', required: true, choices: Object.keys(models) },
+            { name: 'model', type: 'string', required: true, choices: (collected) => models[String(collected['provider'])] ?? [] },
+          ],
+          run: (args) => ran.push(args),
+        });
+      };
+
+      // From the list: provider, then model, escape, the providers again, then the other one.
+      const t = await palette(register);
+      await t.settle();
+      t.press('enter');
+      await t.settle();
+      t.press('enter');
+      await t.settle();
+      expect(t.hasText('gpt')).toBe(true);
+      t.press('escape');
+      await t.settle();
+      expect(t.hasText('gpt')).toBe(false);
+      expect(t.hasText('local')).toBe(true);
+      t.press('down');
+      t.press('enter');
+      await t.settle();
+      expect(t.hasText('llama')).toBe(true);
+      t.press('enter');
+      await t.settle();
+      expect(ran).toEqual([{ provider: 'local', model: 'llama' }]);
+      await t.unmount();
+
+      // Opened at the command: the second question backs, the first closes.
+      let closed = 0;
+      const at = await renderApp({
+        width: 72,
+        height: 20,
+        onBoot: (app) => {
+          register(app);
+          app.layers.open({
+            id: 'p',
+            layer: 'modal',
+            trapFocus: true,
+            node: { component: 'CommandPalette', width: 60, openAt: 'demo.model', onClose: () => { closed += 1; } },
+          });
+        },
+      });
+      for (let i = 0; i < 4; i++) await at.settle();
+      expect(at.hasText('openai')).toBe(true);
+      at.press('enter');
+      await at.settle();
+      expect(at.hasText('gpt')).toBe(true);
+      at.press('escape');
+      await at.settle();
+      expect(closed).toBe(0);
+      expect(at.hasText('openai')).toBe(true);
+      expect(at.hasText('gpt')).toBe(false);
+      at.press('escape');
+      await at.settle();
+      expect(closed).toBe(1);
+      await at.unmount();
+    });
+
+    /**
      * An argument whose default stands is not asked, and the default is its
      * answer - so the resolver after it sees that default, not a gap.
      */

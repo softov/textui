@@ -556,6 +556,20 @@ export function focusScopeOf(instance: Instance): string | undefined {
   return typeof found === 'string' ? found : undefined;
 }
 
+/** Where an instance sits: its root, and its child index at each level. */
+function placeOf(instance: Instance): { root: unknown; path: number[] } | undefined {
+  const path: number[] = [];
+  let cursor = instance;
+  while (cursor.parent) {
+    const at = cursor.parent.children.indexOf(cursor);
+    // Rendered but not yet adopted, or already dropped: no place to answer.
+    if (at < 0) return undefined;
+    path.unshift(at);
+    cursor = cursor.parent;
+  }
+  return { root: cursor, path };
+}
+
 export function useFocus(options: UseFocusOptions = {}): FocusHandle {
   const instance = currentInstance();
   const runtime = instance.runtime;
@@ -575,6 +589,7 @@ export function useFocus(options: UseFocusOptions = {}): FocusHandle {
       skipTab: options.skipTab,
       order: options.order,
       scopeId,
+      place: () => placeOf(instance),
       onFocus: () => {
         invalidate(instance, 'focus');
         options.onFocus?.();

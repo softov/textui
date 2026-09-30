@@ -25,6 +25,14 @@ export interface FocusableOptions {
   id: string;
   /** Explicit order within the scope. Unset = document order. */
   order?: number;
+  /**
+   * Where the focusable sits in the tree, asked each time the tab order is.
+   *
+   * `root` is the tree it is in and `path` the child index at each level
+   * below it. Left off, or answering `undefined`, the focusable is placed by
+   * when it registered.
+   */
+  place?(): { root: unknown; path: number[] } | undefined;
   disabled?: boolean;
   /** Skipped by tab, still reachable by directional navigation and click. */
   skipTab?: boolean;

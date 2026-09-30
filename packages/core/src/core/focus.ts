@@ -223,12 +223,29 @@ export class Focus implements FocusManager {
         return (n.scopeId ?? GLOBAL_SCOPE) === scope;
       });
 
-    return candidates
-      .map((n, i) => ({ n, i }))
+    // A tree is placed where its first control registered, and its controls
+    // by where they sit in it. Registration order alone put a control that
+    // mounted late - a field a choice revealed - after everything that was
+    // already there, however far up the form it is drawn.
+    const firstOf = new Map<unknown, number>();
+    const entries = candidates.map((n, i) => {
+      const place = n.place?.();
+      const root = place ? place.root : n;
+      if (!firstOf.has(root)) firstOf.set(root, i);
+      return { n, i, root, path: place?.path };
+    });
+
+    return entries
       .sort((a, b) => {
         const ao = a.n.order ?? Number.MAX_SAFE_INTEGER;
         const bo = b.n.order ?? Number.MAX_SAFE_INTEGER;
-        return ao === bo ? a.i - b.i : ao - bo;
+        if (ao !== bo) return ao - bo;
+        if (a.root !== b.root) return (firstOf.get(a.root) as number) - (firstOf.get(b.root) as number);
+        if (a.path && b.path) {
+          const by = comparePaths(a.path, b.path);
+          if (by !== 0) return by;
+        }
+        return a.i - b.i;
       })
       .map((e) => e.n.id);
   }
@@ -366,4 +383,14 @@ export class Focus implements FocusManager {
 
 export function createFocus(onChange?: () => void): Focus {
   return new Focus(onChange);
+}
+
+/** Document order of two places in one tree; an ancestor comes first. */
+function comparePaths(a: number[], b: number[]): number {
+  const length = Math.min(a.length, b.length);
+  for (let i = 0; i < length; i++) {
+    const by = (a[i] as number) - (b[i] as number);
+    if (by !== 0) return by;
+  }
+  return a.length - b.length;
 }

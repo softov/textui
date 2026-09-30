@@ -109,6 +109,21 @@ describe('a tool call row', () => {
   });
 });
 
+describe('the line a tool call reads as', () => {
+  it('is the host\'s own line over the input, which stays for when it opens', async () => {
+    const t = await open({ invocation: 'Read test.md, propose questions', input: '{"description":"Read test.md"}' });
+    expect(t.line(0)).toContain('Read test.md, propose questions');
+    expect(t.line(0)).not.toContain('{"description"');
+    await t.unmount();
+  });
+
+  it('is the input when the host gave no line', async () => {
+    const t = await open({ input: 'ls -la' });
+    expect(t.line(0)).toContain('ls -la');
+    await t.unmount();
+  });
+});
+
 describe('a tool call that is still running', () => {
   const RUNNING: Partial<ChatToolCall> = {
     name: 'Explore', toolName: 'Task', status: 'running',

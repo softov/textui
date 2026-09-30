@@ -65,7 +65,9 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
     // What it is doing beats what it was asked, for as long as it is doing
     // it: a subagent's row that says "look for the bug" for a minute is a
     // row that says nothing, and the host has a line for what it is up to.
-    const summary = oneLine(call.progress ?? call.input ?? call.intention ?? '');
+    // After that, the host's own line for the call, which is what a person
+    // reads it as; the input is JSON often enough to be the last resort.
+    const summary = oneLine(call.progress ?? call.invocation ?? call.input ?? call.intention ?? '');
     // Only when there is something under it. A chevron on a row that opens on
     // to nothing is a promise the row cannot keep.
     const opens = Boolean(call.intention ?? call.input ?? call.output ?? call.outcome
@@ -105,6 +107,7 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
                 whose intention is the tool's own name, or the input verbatim,
                 is repeating the header and the block below it. */}
             {call.intention && call.intention !== call.name && call.intention !== call.input
+              && call.intention !== call.invocation
               ? <MarkdownView content={call.intention} quiet />
               : null}
             {call.input ? (

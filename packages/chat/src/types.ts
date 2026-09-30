@@ -28,6 +28,13 @@ export interface ChatToolCall {
   status: ChatToolCallStatus;
   /** The command. The only thing separating twenty identical rows. */
   input?: string;
+  /**
+   * The one line the host gives for the call - AHP's `invocationMessage`.
+   *
+   * The row's own line when there is one: the input of a subagent or an edit
+   * is a block of JSON, and the host has already said it in words.
+   */
+  invocation?: string;
   /** What it meant to do. Markdown. */
   intention?: string;
   /**

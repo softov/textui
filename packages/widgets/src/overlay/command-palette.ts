@@ -5,6 +5,7 @@ import {
   stringWidth,
   useEffect,
   useFocusScope,
+  useI18n,
   useInput,
   useRuntime,
   useState,
@@ -100,6 +101,8 @@ interface Pending {
 
 export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalette', (props) => {
   const theme = useTheme();
+  const i18n = useI18n();
+  const ellipsis = theme.glyphs.ellipsis;
   const runtime = useRuntime();
   const {
     commands, placeholder, onRun, onClose, execute = true,
@@ -148,7 +151,9 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
         // the only thing the palette itself knows about a value.
         ...(choice.description
           ? { description: choice.description }
-          : pending.arg.default === choice.value ? { description: 'default' } : {}),
+          : pending.arg.default === choice.value
+            ? { description: i18n.t('textui.palette.default', undefined, 'default') }
+            : {}),
       }))
       // One row, saying which kind of nothing this is. A disabled item rather
       // than no items: the panel keeps its height, so the answer arriving does
@@ -156,8 +161,10 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       : [{
         id: '',
         label: asking
-          ? `Asking${theme.glyphs.ellipsis}`
-          : (query === '' ? 'Nothing to choose' : 'No match'),
+          ? i18n.t('textui.palette.asking', { ellipsis }, 'Asking{ellipsis}')
+          : (query === ''
+            ? i18n.t('textui.palette.nothingToChoose', undefined, 'Nothing to choose')
+            : i18n.t('textui.palette.noMatch', undefined, 'No match')),
         disabled: true,
       }])
     : matches.map((command, i) => ({
@@ -417,7 +424,12 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   );
 
   const highlighted = pending ? undefined : matches[index];
-  const move = `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown} move`;
+  const move = i18n.t(
+    'textui.palette.hint.move',
+    { arrows: `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown}` },
+    '{arrows} move',
+  );
+  const escBack = i18n.t('textui.palette.hint.back', undefined, 'esc back');
   // What the highlighted row is, in full.
   //
   // The rows themselves have to fit, so a choice's own sentence is truncated
@@ -429,7 +441,12 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const chosen = pending ? offered[index] : undefined;
   const detail = pending
     ? chosen?.description
-      ?? pending.arg.description ?? `${pending.command.title} needs a ${pending.arg.name}`
+      ?? pending.arg.description
+      ?? i18n.t(
+        'textui.palette.needs',
+        { command: pending.command.title, arg: pending.arg.name },
+        '{command} needs a {arg}',
+      )
     : highlighted?.description ?? highlighted?.id ?? '';
 
   /*
@@ -459,7 +476,7 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
 
   return h('box', {
     role: 'dialog',
-    label: 'Commands',
+    label: i18n.t('textui.palette.label', undefined, 'Commands'),
     border: theme.border,
     bg: 'overlay',
     // A stated width is a width. Left off, it fits what it holds.
@@ -475,8 +492,8 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     // where you are; "commands › id" is what the parameter happens to be
     // called, which is the author's business rather than the reader's.
     title: pending
-      ? ` commands ${theme.glyphs.breadcrumb} ${pending.command.title} `
-      : ' commands ',
+      ? ` ${i18n.t('textui.palette.title', undefined, 'commands')} ${theme.glyphs.breadcrumb} ${pending.command.title} `
+      : ` ${i18n.t('textui.palette.title', undefined, 'commands')} `,
     ...rest,
   },
     h(TextInput, {
@@ -513,8 +530,12 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
           ? pending.arg.description ?? `${pending.command.title}${theme.glyphs.ellipsis}`
           : offered.some((choice) => choice.description) && pending.arg.description
             ? pending.arg.description
-            : `Choose ${pending.command.title.toLowerCase()}${theme.glyphs.ellipsis}`)
-        : (placeholder ?? `Type a command${theme.glyphs.ellipsis}`),
+            : i18n.t(
+              'textui.palette.choose',
+              { command: pending.command.title.toLowerCase(), ellipsis },
+              'Choose {command}{ellipsis}',
+            ))
+        : (placeholder ?? i18n.t('textui.palette.placeholder', { ellipsis }, 'Type a command{ellipsis}')),
       search: true,
       autoFocus: true,
       border: 'none',
@@ -544,11 +565,22 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       h('text', {
         content: pending
           ? (pending.arg.choices === undefined
-            ? hint(theme, ['type it', 'enter confirm', 'esc back'])
+            ? hint(theme, [
+              i18n.t('textui.palette.hint.type', undefined, 'type it'),
+              i18n.t('textui.palette.hint.confirm', undefined, 'enter confirm'),
+              escBack,
+            ])
             // Nothing to choose is nothing to press enter on, and offering it
             // is how a panel reads as broken rather than as empty.
-            : hint(theme, rows.length > 0 ? [move, 'enter choose', 'esc back'] : ['esc back']))
-          : hint(theme, [move, 'enter run', `${theme.glyphs.chevronRight} sub-items`, 'esc close']),
+            : hint(theme, rows.length > 0
+              ? [move, i18n.t('textui.palette.hint.choose', undefined, 'enter choose'), escBack]
+              : [escBack]))
+          : hint(theme, [
+            move,
+            i18n.t('textui.palette.hint.run', undefined, 'enter run'),
+            i18n.t('textui.palette.hint.subItems', { glyph: theme.glyphs.chevronRight }, '{glyph} sub-items'),
+            i18n.t('textui.palette.hint.close', undefined, 'esc close'),
+          ]),
         fg: 'subtle',
         truncate: 'end',
       })),

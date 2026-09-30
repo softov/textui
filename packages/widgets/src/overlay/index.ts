@@ -7,7 +7,7 @@ import type {
   TextUIApp,
 } from '@textui/core';
 import { CommandPalette } from './command-palette.js';
-import { Dialog } from './dialog.js';
+import { ConfirmDialog, Dialog } from './dialog.js';
 import { LayerScope } from './layer-scope.js';
 import { PathPicker } from './path-picker.js';
 import { PromptDialog } from './prompt-dialog.js';
@@ -68,23 +68,14 @@ export function confirm(
       dismissOnEscape: true,
       onClose: () => finish(false),
       node: {
-        component: 'Dialog',
-        title: options.title ?? 'Confirm',
-        width: 50,
-        children: { component: 'text', content: options.message, wrap: 'word' },
-        actions: [
-          {
-            id: 'confirm',
-            label: options.confirmLabel ?? 'Confirm',
-            tone: options.tone ?? 'primary',
-            onPress: () => finish(true),
-          },
-          {
-            id: 'cancel',
-            label: options.cancelLabel ?? 'Cancel',
-            onPress: () => finish(false),
-          },
-        ],
+        component: 'ConfirmDialog',
+        title: options.title,
+        message: options.message,
+        confirmLabel: options.confirmLabel,
+        cancelLabel: options.cancelLabel,
+        tone: options.tone,
+        onConfirm: { handler: () => finish(true) },
+        onCancel: { handler: () => finish(false) },
       },
     });
   });
@@ -120,7 +111,7 @@ export function prompt(
       onClose: () => finish(null),
       node: {
         component: 'PromptDialog',
-        title: options.title ?? 'Input',
+        title: options.title,
         message: options.message,
         placeholder: options.placeholder,
         initialValue: options.initialValue,
@@ -222,6 +213,7 @@ export function toastPosition(anchor: ToastHostProps['anchor']): LayerPosition {
 
 export const OVERLAY_COMPONENTS: ComponentDefinition[] = [
   { component: 'Dialog', category: 'overlay', renderer: { kind: 'function', render: Dialog }, role: 'dialog', description: 'Modal box with actions; traps focus and restores it.' },
+  { component: 'ConfirmDialog', category: 'overlay', renderer: { kind: 'function', render: ConfirmDialog }, role: 'dialog', description: 'Two-button dialog behind the `confirm` helper.' },
   { component: 'PromptDialog', category: 'overlay', renderer: { kind: 'function', render: PromptDialog }, role: 'dialog', description: 'One-field dialog behind the `prompt` helper.' },
   { component: 'PathPicker', category: 'overlay', renderer: { kind: 'function', render: PathPicker }, role: 'dialog', description: 'Walk the resource tree and pick a file or a folder.' },
   { component: 'Tooltip', category: 'overlay', renderer: { kind: 'function', render: Tooltip }, role: 'tooltip', description: 'Small anchored hint.' },

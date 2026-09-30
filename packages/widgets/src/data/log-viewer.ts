@@ -4,6 +4,7 @@ import {
   defineComponent,
   h,
   useFocus,
+  useI18n,
   useInput,
   useMeasure,
   useState,
@@ -45,6 +46,7 @@ export const LogViewer = defineComponent<LogViewerProps>('LogViewer', (props) =>
     lines, visibleRows: visibleRowsProp, follow: followProp, showTime = true,
     showLevel = true, onFollowChange, ...rest
   } = props;
+  const i18n = useI18n();
 
   const focus = useFocus({});
   const measured = useMeasure();
@@ -99,7 +101,11 @@ export const LogViewer = defineComponent<LogViewerProps>('LogViewer', (props) =>
         h('text', { content: line.message, flex: 1, truncate: 'end' }),
       )),
     !follow
-      ? h('text', { content: '  paused - end to follow', fg: 'warning', dim: true })
+      ? h('text', {
+        content: `  ${i18n.t('textui.logViewer.paused', undefined, 'paused - end to follow')}`,
+        fg: 'warning',
+        dim: true,
+      })
       : null,
   );
 });

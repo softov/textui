@@ -57,18 +57,22 @@ export class I18nRegistry implements I18n {
     return [...this.bundles.keys()];
   }
 
-  /** Missing keys fall through to the fallback locale, then to the key. */
-  t(key: string, values?: Record<string, unknown>): string {
+  /**
+   * Missing keys fall through to the base language, then the fallback locale,
+   * then `fallback`, then the key.
+   */
+  t(key: string, values?: Record<string, unknown>, fallback?: string): string {
     const primary = this.bundles.get(this.locale);
     const base = this.locale.includes('-')
       ? this.bundles.get(this.locale.split('-')[0] as string)
       : undefined;
-    const fallback = this.bundles.get(this.fallbackLocale);
+    const secondary = this.bundles.get(this.fallbackLocale);
 
     const template =
       (primary && lookup(primary, key)) ??
       (base && lookup(base, key)) ??
-      (fallback && lookup(fallback, key)) ??
+      (secondary && lookup(secondary, key)) ??
+      fallback ??
       key;
 
     return values ? interpolate(template, values) : template;

@@ -1,5 +1,5 @@
 import type { BindingPath, BoxProps, ComponentNode, Mount } from '@textui/core';
-import { defineComponent, h, useRuntime } from '@textui/core';
+import { defineComponent, h, useI18n, useRuntime } from '@textui/core';
 import { EmptyState } from '../display/index.js';
 
 export interface MountViewProps extends BoxProps {
@@ -9,6 +9,7 @@ export interface MountViewProps extends BoxProps {
 /** Renders one mount's target - an inline node, or a node read from a path. */
 export const MountView = defineComponent<MountViewProps>('MountView', ({ mount, ...rest }) => {
   const runtime = useRuntime();
+  const i18n = useI18n();
 
   const target = mount.target;
   const node: ComponentNode | null =
@@ -17,7 +18,7 @@ export const MountView = defineComponent<MountViewProps>('MountView', ({ mount, 
       : (runtime.store.get<ComponentNode>((target as { path: BindingPath }).path) ?? null);
 
   if (!node) {
-    return h(EmptyState, { title: 'Nothing mounted', ...rest });
+    return h(EmptyState, { title: i18n.t('textui.mountView.empty', undefined, 'Nothing mounted'), ...rest });
   }
 
   // A mount's data context makes relative paths inside it resolve against the

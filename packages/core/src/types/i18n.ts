@@ -13,8 +13,11 @@ export interface I18n {
   setLocale(locale: LocaleId): void;
   register(bundle: TranslationBundle): Disposable;
   locales(): LocaleId[];
-  /** Missing keys fall back to the fallback locale, then to the key itself. */
-  t(key: string, values?: Record<string, unknown>): string;
+  /**
+   * Missing keys fall back to the fallback locale, then to `fallback` (the
+   * text a component draws when nobody translated it), then to the key itself.
+   */
+  t(key: string, values?: Record<string, unknown>, fallback?: string): string;
   /** Intl-backed; TextUI does not reimplement formatting. */
   number(value: number, options?: Intl.NumberFormatOptions): string;
   date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;

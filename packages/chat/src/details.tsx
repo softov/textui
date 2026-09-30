@@ -4,6 +4,7 @@ import {
   useClipboard,
   useEffect,
   useFocus,
+  useI18n,
   useInput,
   useState,
   useTheme,
@@ -89,6 +90,7 @@ export const SessionDetails: (props: SessionDetailsProps) => RenderOutput =
     // values it is there to label.
     const column = labelWidth ?? Math.min(20, Math.max(11, ...fields.map((field) => field.label.length)));
     const theme = useTheme();
+    const i18n = useI18n();
     const clipboard = useClipboard();
     const focus = useFocus({ ...(focusId ? { id: focusId } : {}) });
     const [index, setIndex] = useState(0);
@@ -171,7 +173,7 @@ export const SessionDetails: (props: SessionDetailsProps) => RenderOutput =
                 {...(field.tone && field.value ? { fg: field.tone } : {})}
                 {...(selected ? { bold: true } : {})}
               />}
-              {copied === field.id ? <text content="copied" fg="success" shrink={0} /> : null}
+              {copied === field.id ? <text content={i18n.t('textui.details.copied', undefined, 'copied')} fg="success" shrink={0} /> : null}
             </Row>
           );
         })}

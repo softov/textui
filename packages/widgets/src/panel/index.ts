@@ -244,18 +244,20 @@ export function panelCommands(app: TextUIApp): CommandDefinition[] {
   const targetUri = (args: Record<string, unknown>, id: string | null): string | null =>
     (args.uri as string | undefined) ?? (id === null ? null : panelUri(app.store, id));
 
+  const category = app.i18n.t('textui.panel.category', undefined, 'View');
+
   return [
     {
       id: 'panel.openWith',
-      title: 'Open With…',
-      category: 'View',
+      title: app.i18n.t('textui.panel.openWith', undefined, 'Open With…'),
+      category,
       slots: ['palette'],
       when: PANEL_PATH,
       args: [{
         name: 'renderer',
         type: 'string' as const,
         required: true,
-        description: 'How to show this resource',
+        description: app.i18n.t('textui.panel.renderer', undefined, 'How to show this resource'),
         choices: async () => {
           const id = activePanel(app.store);
           return (await choicesFor(app, id === null ? null : panelUri(app.store, id)))
@@ -272,8 +274,8 @@ export function panelCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'panel.nextRenderer',
-      title: 'Next View',
-      category: 'View',
+      title: app.i18n.t('textui.panel.nextView', undefined, 'Next View'),
+      category,
       slots: ['palette'],
       when: PANEL_PATH,
       run: async (args: Record<string, unknown>, ctx: CommandContext) => {
@@ -291,8 +293,8 @@ export function panelCommands(app: TextUIApp): CommandDefinition[] {
     },
     {
       id: 'panel.toggleEdit',
-      title: 'Edit / View',
-      category: 'View',
+      title: app.i18n.t('textui.panel.toggleEdit', undefined, 'Edit / View'),
+      category,
       slots: ['palette'],
       when: PANEL_PATH,
       run: async (args: Record<string, unknown>, ctx: CommandContext) => {

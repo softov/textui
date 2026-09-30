@@ -1,5 +1,5 @@
 import type { BoxProps, RenderOutput, ResolvedTheme, SemanticVariant, StyleColor } from '@textui/core';
-import { defineComponent, useFrame, useTheme } from '@textui/core';
+import { defineComponent, useFrame, useI18n, useTheme } from '@textui/core';
 import { Column, Divider, MarkdownView, Row } from '@textui/widgets';
 
 /**
@@ -76,16 +76,17 @@ export interface ChatBubbleProps extends BoxProps {
   children?: unknown;
 }
 
-const SPEAKER: Record<Speaker, { fg: StyleColor; label: string }> = {
-  user: { fg: 'primary', label: 'you' },
-  agent: { fg: 'accent', label: 'agent' },
-  system: { fg: 'muted', label: 'system' },
+const SPEAKER: Record<Speaker, { fg: StyleColor; key: string; label: string }> = {
+  user: { fg: 'primary', key: 'textui.bubble.you', label: 'you' },
+  agent: { fg: 'accent', key: 'textui.bubble.agent', label: 'agent' },
+  system: { fg: 'muted', key: 'textui.bubble.system', label: 'system' },
 };
 
 export const ChatBubble: (props: ChatBubbleProps) => RenderOutput =
   defineComponent<ChatBubbleProps>('ChatBubble', (props) => {
     const { speaker, author, meta, tone, active, children, ...rest } = props;
     const theme = useTheme();
+    const i18n = useI18n();
     const look = SPEAKER[speaker];
     const glyph = speaker === 'user' ? theme.glyphs.chevronRight
       : speaker === 'agent' ? theme.glyphs.bulletFilled
@@ -103,7 +104,7 @@ export const ChatBubble: (props: ChatBubbleProps) => RenderOutput =
               takes it rather than a second column before it: the block does
               not move when the cursor arrives. */}
           <text content={active ? cursorBar(theme) : glyph} fg={active ? 'accent' : tone ?? look.fg} />
-          <text content={author ?? look.label} bold fg={tone ?? look.fg} />
+          <text content={author ?? i18n.t(look.key, undefined, look.label)} bold fg={tone ?? look.fg} />
           {meta ? <text content={meta} fg="subtle" flex={1} truncate="end" /> : <text content="" flex={1} />}
         </Row>
         <Row gap={1} flex={1}>
@@ -221,32 +222,34 @@ export const ReasoningBlock: (props: ReasoningBlockProps) => RenderOutput =
   defineComponent<ReasoningBlockProps>('ReasoningBlock', (props) => {
     const { content, expanded, streaming, summary, markdown, match, onToggle, active, ...rest } = props;
     const theme = useTheme();
+    const i18n = useI18n();
     const chevron = expanded ? theme.glyphs.chevronDown : theme.glyphs.chevronRight;
     const words = content.trim().split(/\s+/).filter(Boolean).length;
     const fg = active ? 'inverted' : 'subtle';
 
     return (
-      <Column {...rest} {...(active ? { bg: 'selected' as const } : {})}>
+      <Column {...rest}>
+        {/* The selection is the header line alone, as on a tool row. */}
         <Row
           gap={1}
+          {...(active ? { bg: 'selected' as const } : {})}
           {...(onToggle ? { onClick: onToggle } : {})}
           // The whole row lights up, as a tool row does: the row is the thing
           // that opens.
           style={{ hover: { bg: 'hover' } }}
         >
           <text content={chevron} fg={fg} />
-          <text content={summary ?? (streaming ? 'thinking' : `thought, ${words} words`)} fg={fg} italic />
+          <text content={summary ?? (streaming
+            ? i18n.t('textui.reasoning.thinking', undefined, 'thinking')
+            : i18n.t('textui.reasoning.thought', { words }, 'thought, {words} words'))} fg={fg} italic />
         </Row>
         {expanded ? (
           <Row gap={1}>
             <text content=" " />
-            {/* `quiet` sets every run to `muted` itself, which is exactly the
-                grey that vanishes on the selection; on it the text inherits
-                `inverted` from here instead. */}
             <StreamingText
               content={content}
               flex={1}
-              {...(active ? { fg: 'inverted' as const } : { quiet: true })}
+              quiet
               {...(streaming ? { streaming: true } : {})}
               {...(markdown !== undefined ? { markdown } : {})}
               {...(match ? { match } : {})}

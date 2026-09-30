@@ -1,5 +1,5 @@
 import type { BoxProps, RenderOutput } from '@textui/core';
-import { defineComponent, useTheme } from '@textui/core';
+import { defineComponent, useI18n, useTheme } from '@textui/core';
 import { Feed, Row } from '@textui/widgets';
 import type { Block } from './blocks.js';
 import { ChatBubble, Gutter, ReasoningBlock, StreamingText, cursorBar } from './bubble.js';
@@ -114,6 +114,7 @@ const BlockView = defineComponent<{
   // extra prop and its text node is compared unchanged.
   const hit = match ? { match } : {};
   const theme = useTheme();
+  const i18n = useI18n();
 
   // Every block has a one-cell left column the cursor is drawn in. The blocks
   // that are something said keep the rule they draw there; a block whose
@@ -139,14 +140,14 @@ const BlockView = defineComponent<{
             content={active ? cursorBar(theme) : theme.glyphs.bulletFilled}
             fg={active || block.state === 'running' ? 'accent' : 'muted'}
           />
-          <text content={block.model ?? 'agent'} bold fg="accent" />
+          <text content={block.model ?? i18n.t('textui.transcript.agent', undefined, 'agent')} bold fg="accent" />
           {/* What this turn was asked for, where the host said. A thinking
               level is chosen per turn and holds from that turn onwards, so
               two answers from one model are two different questions. */}
           {block.settings ? <text content={block.settings} fg="subtle" /> : null}
           <text content={block.meta} fg="subtle" flex={1} />
-          {block.state === 'cancelled' ? <text content="stopped" fg="warning" /> : null}
-          {block.state === 'failed' ? <text content="failed" fg="danger" /> : null}
+          {block.state === 'cancelled' ? <text content={i18n.t('textui.transcript.stopped', undefined, 'stopped')} fg="warning" /> : null}
+          {block.state === 'failed' ? <text content={i18n.t('textui.transcript.failed', undefined, 'failed')} fg="danger" /> : null}
         </Row>
       );
     case 'prose':
@@ -189,7 +190,7 @@ const BlockView = defineComponent<{
           <Gutter blank {...mark} />
           <text content={theme.glyphs.cross} fg="danger" />
           <text content={block.content} fg="danger" wrap="word" flex={1} {...hit} />
-          {block.resumable ? <text content="resumable" fg="subtle" /> : null}
+          {block.resumable ? <text content={i18n.t('textui.transcript.resumable', undefined, 'resumable')} fg="subtle" /> : null}
         </Row>
       );
     case 'tool':
@@ -215,7 +216,12 @@ const BlockView = defineComponent<{
           {block.model ? <text content={block.model} fg="muted" shrink={0} /> : null}
           {/* What the cursor being here is *for*. A queue you cannot take
               anything out of is a list of messages you have to let happen. */}
-          <text content={active ? 'enter drops it' : 'queued'} fg="warning" />
+          <text
+            content={active
+              ? i18n.t('textui.transcript.dropQueued', undefined, 'enter drops it')
+              : i18n.t('textui.transcript.queued', undefined, 'queued')}
+            fg="warning"
+          />
         </Row>
       );
     default:

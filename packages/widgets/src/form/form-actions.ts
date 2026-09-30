@@ -1,5 +1,5 @@
 import type { BoxProps, SemanticVariant } from '@textui/core';
-import { defineComponent, h, useTheme } from '@textui/core';
+import { defineComponent, h, useI18n, useTheme } from '@textui/core';
 import { Button } from '../control/index.js';
 import { useFormContext } from './shared.js';
 
@@ -14,9 +14,12 @@ export interface FormActionsProps extends BoxProps {
 
 export const FormActions = defineComponent<FormActionsProps>('FormActions', (props) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const form = useFormContext();
   const {
-    submitLabel = 'Submit', cancelLabel = 'Cancel', onCancel,
+    submitLabel = i18n.t('textui.formActions.submit', undefined, 'Submit'),
+    cancelLabel = i18n.t('textui.formActions.cancel', undefined, 'Cancel'),
+    onCancel,
     tone = 'primary', requireDirty = false, ...rest
   } = props;
 

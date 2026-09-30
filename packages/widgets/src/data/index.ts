@@ -6,6 +6,7 @@ import {
   h,
   stringWidth,
   useFocus,
+  useI18n,
   useInput,
   useMeasure,
   useState,
@@ -79,9 +80,10 @@ export interface TableProps<T extends object = Record<string, unknown>> extends 
  */
 const TableImpl = defineComponent<TableProps<Record<string, unknown>>>('Table', (props) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const {
     columns, rows, rowKey = 'id', selectedKey, onSelect, onActivate,
-    visibleRows, showHeader = true, emptyMessage = 'No rows',
+    visibleRows, showHeader = true, emptyMessage = i18n.t('textui.table.empty', undefined, 'No rows'),
     focusable = true, responsive = true, width, ...rest
   } = props;
 

@@ -1,5 +1,5 @@
 import type { BoxProps } from '@textui/core';
-import { defineComponent, h, useState } from '@textui/core';
+import { defineComponent, h, useI18n, useState } from '@textui/core';
 import { TextInput } from '../control/index.js';
 import { Dialog } from './dialog.js';
 
@@ -15,15 +15,16 @@ export interface PromptDialogProps extends BoxProps {
 
 export const PromptDialog = defineComponent<PromptDialogProps>('PromptDialog', (props) => {
   const { title, message, placeholder, initialValue = '', mask, onSubmit, onCancel, ...rest } = props;
+  const i18n = useI18n();
   const [value, setValue] = useState(initialValue);
 
   return h(Dialog, {
-    title,
+    title: title ?? i18n.t('textui.promptDialog.title', undefined, 'Input'),
     width: 50,
     onClose: onCancel,
     actions: [
-      { id: 'ok', label: 'OK', tone: 'primary', onPress: () => onSubmit?.(value) },
-      { id: 'cancel', label: 'Cancel', onPress: onCancel },
+      { id: 'ok', label: i18n.t('textui.promptDialog.ok', undefined, 'OK'), tone: 'primary', onPress: () => onSubmit?.(value) },
+      { id: 'cancel', label: i18n.t('textui.promptDialog.cancel', undefined, 'Cancel'), onPress: onCancel },
     ],
     ...rest,
   },

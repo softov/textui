@@ -1,5 +1,5 @@
 import type { PaintSurface, RenderContext } from '@textui/core';
-import { defineComponent, fitTo, h, stringWidth, useTheme } from '@textui/core';
+import { defineComponent, fitTo, h, stringWidth, useI18n, useTheme } from '@textui/core';
 import type { LineChartProps } from './shared.js';
 import { TONE, bounds, resample } from './shared.js';
 
@@ -9,6 +9,7 @@ import { TONE, bounds, resample } from './shared.js';
  */
 export const LineChart = defineComponent<LineChartProps>('LineChart', (props) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const {
     series, min, max, chartWidth, chartHeight = 8,
     axis = true, area = false, format, ...rest
@@ -83,7 +84,7 @@ export const LineChart = defineComponent<LineChartProps>('LineChart', (props) =>
           ...series.map((s, i) =>
             h('box', { key: i, direction: 'row', gap: 1 },
               h('text', { content: theme.glyphs.bulletFilled, fg: TONE[s.tone ?? (i === 0 ? 'accent' : 'secondary')] }),
-              h('text', { content: s.label ?? `series ${i + 1}`, fg: 'muted' }))))
+              h('text', { content: s.label ?? i18n.t('textui.lineChart.series', { n: i + 1 }, 'series {n}'), fg: 'muted' }))))
       : null,
   );
 });

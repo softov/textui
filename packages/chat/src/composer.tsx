@@ -1,5 +1,5 @@
 import type { BoxProps, Rect, RenderOutput } from '@textui/core';
-import { defineComponent, useApp, useEffect, useSize, useState, useTheme } from '@textui/core';
+import { defineComponent, useApp, useEffect, useI18n, useSize, useState, useTheme } from '@textui/core';
 import type { ListItem } from '@textui/widgets';
 import { Column, Divider, List, TextArea } from '@textui/widgets';
 import type { ChatCommand, ChatCompletion } from './types.js';
@@ -111,6 +111,7 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
       focusId = 'chat.composer', onMeasure, ...rest
     } = props;
     const theme = useTheme();
+    const i18n = useI18n();
     const app = useApp();
 
     // A slash menu is a completion over what is already typed, not a mode.
@@ -244,7 +245,7 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
                 const path = byInsert.get(id);
                 if (path) onPath?.(path);
               }}
-              emptyMessage="no command"
+              emptyMessage={i18n.t('textui.composer.noCommand', undefined, 'no command')}
             />
             {hint === undefined ? null : <Divider label={hint} />}
           </Column>
@@ -277,7 +278,9 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
             }}
             {...(onLeave ? { onEdge: (edge: 'start' | 'end') => { if (edge === 'start') onLeave(); } } : {})}
             placeholder={placeholder
-              ?? (running ? 'The agent is working. Type to queue a message.' : 'Ask the agent anything…')}
+              ?? (running
+                ? i18n.t('textui.composer.placeholderRunning', undefined, 'The agent is working. Type to queue a message.')
+                : i18n.t('textui.composer.placeholder', undefined, 'Ask the agent anything…'))}
             focusId={focusId}
             // The caret is the one thing on this screen saying where typing
             // goes, and this field is the point of the screen.

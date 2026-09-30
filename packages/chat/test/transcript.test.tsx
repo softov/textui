@@ -181,14 +181,27 @@ describe('the cursor', () => {
     await t.unmount();
   });
 
-  it("turns a selected thought's words inverted, open or folded", async () => {
+  it("inverts a selected thought's header, and leaves what it opens to alone", async () => {
     const t = await open({ cursor: 2, expanded: { r2: true } });
-    for (const text of ['thought, 3 words', 'let me think']) {
+    const cellOf = (text: string) => {
       const y = rowOf(t, text);
-      const cell = t.app.buffer().get(t.lines()[y]?.indexOf(text) ?? 0, y);
-      expect(cell?.fg, text).toEqual(asRgb(t.app.theme.color('inverted')));
-      expect(cell?.bg, text).toEqual(asRgb(t.app.theme.color('selected')));
-    }
+      return t.app.buffer().get(t.lines()[y]?.indexOf(text) ?? 0, y);
+    };
+    const header = cellOf('thought, 3 words');
+    expect(header?.fg).toEqual(asRgb(t.app.theme.color('inverted')));
+    expect(header?.bg).toEqual(asRgb(t.app.theme.color('selected')));
+    // The words themselves keep the canvas: a block opened under the cursor
+    // took the selection's background under colours chosen for the canvas.
+    expect(cellOf('let me think')?.bg).not.toEqual(asRgb(t.app.theme.color('selected')));
+    await t.unmount();
+  });
+
+  it('paints the selection on a tool call\'s header only, not on its input', async () => {
+    const t = await open({ cursor: 4, expanded: { c1: true } });
+    const y = rowOf(t, 'Bash');
+    expect(t.app.buffer().get(t.lines()[y]?.indexOf('Bash') ?? 0, y)?.bg).toEqual(asRgb(t.app.theme.color('selected')));
+    const below = t.lines().findIndex((line, at) => at > y && line.includes('ls'));
+    expect(t.app.buffer().get(t.lines()[below]?.indexOf('ls') ?? 0, below)?.bg).not.toEqual(asRgb(t.app.theme.color('selected')));
     await t.unmount();
   });
 

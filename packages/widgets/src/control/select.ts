@@ -1,6 +1,6 @@
 import type { BoxProps, ComponentNode, RenderOutput } from '@textui/core';
 import {
-  defineComponent, h, useApp, useEffect, useFocus, useInput, useMeasure, useState, useTheme,
+  defineComponent, h, useApp, useEffect, useFocus, useI18n, useInput, useMeasure, useState, useTheme,
 } from '@textui/core';
 
 export interface SelectOption {
@@ -46,6 +46,7 @@ export interface SelectProps extends BoxProps {
 
 export const Select = defineComponent<SelectProps>('Select', (props) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const {
     options, value, onChange, label, placeholder,
     open: openProp, visibleRows = 6, disabled, mode = 'inline', ...rest
@@ -54,7 +55,8 @@ export const Select = defineComponent<SelectProps>('Select', (props) => {
   const app = useApp();
   const focus = useFocus({ disabled });
   const measured = useMeasure();
-  const empty = placeholder ?? `Select${theme.glyphs.ellipsis}`;
+  const empty = placeholder
+    ?? i18n.t('textui.select.placeholder', { ellipsis: theme.glyphs.ellipsis }, 'Select{ellipsis}');
   const [open, setOpen] = useState(openProp ?? false);
   const index = Math.max(0, options.findIndex((o) => o.value === value));
   const [highlight, setHighlight] = useState(index);

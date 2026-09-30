@@ -1,5 +1,5 @@
 import type { BoxProps, SemanticVariant } from '@textui/core';
-import { defineComponent, h, useFocusScope, useInput, useTheme } from '@textui/core';
+import { defineComponent, h, useFocusScope, useI18n, useInput, useTheme } from '@textui/core';
 import { Button } from '../control/index.js';
 
 export interface DialogProps extends BoxProps {
@@ -61,5 +61,41 @@ export const Dialog = defineComponent<DialogProps>('Dialog', (props) => {
               onPress: action.onPress,
             })))
       : null,
+  );
+});
+
+export interface ConfirmDialogProps extends BoxProps {
+  title?: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  tone?: SemanticVariant;
+  onConfirm?(): void;
+  onCancel?(): void;
+}
+
+/** Two-button dialog behind the `confirm` helper. */
+export const ConfirmDialog = defineComponent<ConfirmDialogProps>('ConfirmDialog', (props) => {
+  const i18n = useI18n();
+  const { title, message, confirmLabel, cancelLabel, tone, onConfirm, onCancel, ...rest } = props;
+  return h(Dialog, {
+    title: title ?? i18n.t('textui.confirmDialog.title', undefined, 'Confirm'),
+    width: 50,
+    actions: [
+      {
+        id: 'confirm',
+        label: confirmLabel ?? i18n.t('textui.confirmDialog.confirm', undefined, 'Confirm'),
+        tone: tone ?? 'primary',
+        onPress: onConfirm,
+      },
+      {
+        id: 'cancel',
+        label: cancelLabel ?? i18n.t('textui.confirmDialog.cancel', undefined, 'Cancel'),
+        onPress: onCancel,
+      },
+    ],
+    ...rest,
+  },
+    h('text', { content: message, wrap: 'word' }),
   );
 });

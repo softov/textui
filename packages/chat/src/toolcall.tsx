@@ -1,5 +1,5 @@
 import type { BoxProps, RenderOutput, SemanticVariant } from '@textui/core';
-import { defineComponent, useTheme } from '@textui/core';
+import { defineComponent, useI18n, useTheme } from '@textui/core';
 import { Badge, Column, MarkdownView, Row } from '@textui/widgets';
 import type { ChatToolCall } from './types.js';
 
@@ -57,6 +57,7 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
   defineComponent<ToolCallRowProps>('ToolCallRow', (props) => {
     const { call, expanded, active, onToggle, ...rest } = props;
     const theme = useTheme();
+    const i18n = useI18n();
     const look = LOOK[call.status] ?? { tone: 'muted' as SemanticVariant, glyph: 'bulletHollow' as StatusGlyph };
     const glyph = theme.glyphs[look.glyph];
     const chevron = expanded ? theme.glyphs.chevronDown : theme.glyphs.chevronRight;
@@ -74,9 +75,13 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
     // the theme's own rule for that tone; the status glyph keeps its own, since
     // a check that turned white would stop saying "completed".
     return (
-      <Column {...rest} {...(active ? { bg: 'selected' as const } : {})}>
+      <Column {...rest}>
+        {/* The selection is the header line alone. On the whole block, what
+            it opens to - input, output, markdown - took the selection's
+            background under colours chosen for the canvas. */}
         <Row
           gap={1}
+          {...(active ? { bg: 'selected' as const } : {})}
           {...(opens && onToggle ? { onClick: onToggle } : {})}
           // The whole row lights up, not the glyph the pointer happens to be
           // over: the row is the thing that opens.
@@ -85,8 +90,8 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
           <text content={glyph} fg={look.tone} />
           <text content={call.name} bold {...(active ? { fg: 'inverted' as const } : {})} />
           <text content={summary} fg={active ? 'inverted' : 'muted'} flex={1} truncate="middle" />
-          {call.status === 'pending-confirmation' ? <Badge label="asks" tone="warning" icon={theme.glyphs.warning} /> : null}
-          {failed ? <Badge label={`exit ${call.exitCode ?? 1}`} tone="danger" /> : null}
+          {call.status === 'pending-confirmation' ? <Badge label={i18n.t('textui.toolCall.asks', undefined, 'asks')} tone="warning" icon={theme.glyphs.warning} /> : null}
+          {failed ? <Badge label={i18n.t('textui.toolCall.exit', { code: call.exitCode ?? 1 }, 'exit {code}')} tone="danger" /> : null}
           {/* Trailing, like a disclosure triangle - the row says what it is
               first and how to see more of it last. */}
           {opens ? <text content={chevron} fg={active ? 'inverted' : 'subtle'} /> : null}
@@ -117,7 +122,11 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
                   <text key={i} content={line} fg="muted" truncate="end" />
                 ))}
                 {call.output.split('\n').length > 12 ? (
-                  <text content={`${theme.glyphs.ellipsis} ${call.output.split('\n').length - 12} more lines`} fg="subtle" />
+                  <text content={i18n.t(
+                    'textui.toolCall.moreLines',
+                    { glyph: theme.glyphs.ellipsis, count: call.output.split('\n').length - 12 },
+                    '{glyph} {count} more lines',
+                  )} fg="subtle" />
                 ) : null}
               </Column>
             ) : null}

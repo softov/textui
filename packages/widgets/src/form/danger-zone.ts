@@ -1,5 +1,5 @@
 import type { BoxProps } from '@textui/core';
-import { defineComponent, h, useTheme } from '@textui/core';
+import { defineComponent, h, useI18n, useTheme } from '@textui/core';
 import { Button } from '../control/index.js';
 
 export interface DangerZoneProps extends BoxProps {
@@ -13,8 +13,9 @@ export interface DangerZoneProps extends BoxProps {
 
 export const DangerZone = defineComponent<DangerZoneProps>('DangerZone', (props) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const {
-    title = 'Danger zone', description, actionLabel, onAction, confirmText, ...rest
+    title = i18n.t('textui.dangerZone.title', undefined, 'Danger zone'), description, actionLabel, onAction, confirmText, ...rest
   } = props;
 
   return h('box', {
@@ -26,7 +27,10 @@ export const DangerZone = defineComponent<DangerZoneProps>('DangerZone', (props)
   },
     description ? h('text', { content: description, fg: 'muted', wrap: 'word' }) : null,
     confirmText
-      ? h('text', { content: `Type "${confirmText}" to confirm.`, fg: 'subtle' })
+      ? h('text', {
+        content: i18n.t('textui.dangerZone.confirm', { text: confirmText }, 'Type "{text}" to confirm.'),
+        fg: 'subtle',
+      })
       : null,
     h('box', { direction: 'row', justify: 'end' },
       h(Button, { label: actionLabel, tone: 'danger', variant: 'outline', onPress: onAction })),

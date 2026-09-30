@@ -1,5 +1,5 @@
 import type { BoxProps } from '@textui/core';
-import { defineComponent, h, useFocus, useInput } from '@textui/core';
+import { defineComponent, h, useFocus, useI18n, useInput } from '@textui/core';
 
 export interface SwitchProps extends BoxProps {
   label?: string;
@@ -10,7 +10,14 @@ export interface SwitchProps extends BoxProps {
 }
 
 export const Switch = defineComponent<SwitchProps>('Switch', (props) => {
-  const { label, value = false, onChange, labels = ['off', 'on'], disabled, ...rest } = props;
+  const i18n = useI18n();
+  const {
+    label, value = false, onChange, disabled, ...rest
+  } = props;
+  const labels = props.labels ?? [
+    i18n.t('textui.switch.off', undefined, 'off'),
+    i18n.t('textui.switch.on', undefined, 'on'),
+  ];
   const focus = useFocus({ disabled });
 
   useInput(

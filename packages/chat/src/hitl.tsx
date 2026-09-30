@@ -1,6 +1,6 @@
 import type { BoxProps, Rect, RenderOutput } from '@textui/core';
 import {
-  defineComponent, useApp, useFocusScope, useInput, useTheme,
+  defineComponent, useApp, useFocusScope, useI18n, useInput, useTheme,
 } from '@textui/core';
 import {
   Button,
@@ -63,6 +63,8 @@ export const ChatHitl: (props: ChatHitlProps) => RenderOutput =
     const { input, draft, onDraft, onApprove, onDeny, onAnswer, onEscape, onMeasure, ...rest } = props;
     useReportMeasure(onMeasure);
     const theme = useTheme();
+    const i18n = useI18n();
+    const asks = i18n.t('textui.hitl.title', undefined, 'The agent asks');
     // Focused on arrival, and not trapped.
     //
     // Trapping read well - the answer is the only thing to do - and it was
@@ -81,10 +83,10 @@ export const ChatHitl: (props: ChatHitlProps) => RenderOutput =
     return (
       <Column {...rest}>
       <Panel
-        title={input.kind === 'toolConfirmation' ? (input.call.confirmationTitle ?? 'The agent asks') : 'The agent asks'}
+        title={input.kind === 'toolConfirmation' ? (input.call.confirmationTitle ?? asks) : asks}
         tone="warning"
         border={theme.border}
-        meta={`${theme.glyphs.warning} waiting on you`}
+        meta={i18n.t('textui.hitl.waiting', { glyph: theme.glyphs.warning }, '{glyph} waiting on you')}
       >
         {input.kind === 'toolConfirmation'
           ? <ConfirmRequest input={input} onApprove={onApprove} onDeny={onDeny} {...(onEscape ? { onEscape } : {})} />
@@ -110,6 +112,7 @@ export const ConfirmRequest = defineComponent<{
   onEscape?(): void;
 }>('ConfirmRequest', ({ input, onApprove, onDeny, onEscape }) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const options = input.call.options ?? [];
 
   // The letters are on the block, not on the application: they only exist
@@ -140,8 +143,8 @@ export const ConfirmRequest = defineComponent<{
           can actually answer with, and it is on the control rather than in a
           list above it. */}
       <Row gap={2}>
-        <Button label="Approve" tone="success" variant="solid" icon={theme.glyphs.check} hint="a" autoFocus onPress={() => onApprove()} />
-        <Button label="Deny" tone="danger" icon={theme.glyphs.cross} hint="d" onPress={onDeny} />
+        <Button label={i18n.t('textui.confirm.approve', undefined, 'Approve')} tone="success" variant="solid" icon={theme.glyphs.check} hint="a" autoFocus onPress={() => onApprove()} />
+        <Button label={i18n.t('textui.confirm.deny', undefined, 'Deny')} tone="danger" icon={theme.glyphs.cross} hint="d" onPress={onDeny} />
         {options.map((option, i) => (
           <Button key={option.id} label={option.label} variant="ghost" hint={String(i + 1)} onPress={() => onApprove(option.id)} />
         ))}
@@ -166,6 +169,7 @@ export const QuestionForm = defineComponent<{
   onEscape?(): void;
 }>('QuestionForm', ({ input, draft, onDraft, onAnswer, onEscape }) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const app = useApp();
   const answers = draft;
 
@@ -220,7 +224,7 @@ export const QuestionForm = defineComponent<{
 
       <Row gap={2}>
         <Button
-          label="Send"
+          label={i18n.t('textui.question.send', undefined, 'Send')}
           tone="success"
           variant="solid"
           icon={theme.glyphs.check}
@@ -228,9 +232,13 @@ export const QuestionForm = defineComponent<{
           disabled={missing.length > 0}
           onPress={() => onAnswer(answers, true)}
         />
-        <Button label="Decline" variant="ghost" icon={theme.glyphs.cross} onPress={() => onAnswer({}, false)} />
+        <Button label={i18n.t('textui.question.decline', undefined, 'Decline')} variant="ghost" icon={theme.glyphs.cross} onPress={() => onAnswer({}, false)} />
         {missing.length > 0 ? (
-          <text content={`${theme.glyphs.warning} ${missing.length} still to answer`} fg="warning" />
+          <text content={i18n.t(
+            'textui.question.missing',
+            { glyph: theme.glyphs.warning, count: missing.length },
+            '{glyph} {count} still to answer',
+          )} fg="warning" />
         ) : null}
       </Row>
     </Column>
@@ -248,6 +256,7 @@ const QuestionField = defineComponent<{
   onSubmit(): void;
 }>('QuestionField', ({ question, answer, autoFocus, onChange, onSubmit }) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const options = question.options ?? [];
   const selectedMany = answer?.kind === 'selected-many' ? answer.value : [];
 
@@ -255,12 +264,12 @@ const QuestionField = defineComponent<{
     <Column gap={0}>
       <Row gap={1}>
         <text content={question.message} bold wrap="word" flex={1} />
-        {question.required ? <text content="required" fg="warning" /> : null}
+        {question.required ? <text content={i18n.t('textui.question.required', undefined, 'required')} fg="warning" /> : null}
       </Row>
 
       {question.kind === 'boolean' ? (
         <Checkbox
-          label="yes"
+          label={i18n.t('textui.question.yes', undefined, 'yes')}
           autoFocus={autoFocus === true}
           checked={answer?.kind === 'boolean' ? answer.value : false}
           onChange={(checked: boolean) => onChange({ kind: 'boolean', value: checked })}
@@ -315,7 +324,11 @@ const QuestionField = defineComponent<{
           autoFocus={autoFocus === true}
           maxRows={6}
           border={theme.border}
-          placeholder="Type your answer · enter sends · alt+enter for a new line"
+          placeholder={i18n.t(
+            'textui.question.textPlaceholder',
+            undefined,
+            'Type your answer · enter sends · alt+enter for a new line',
+          )}
           caretTone="accent"
           onSubmit={onSubmit}
           onChange={(value: string) => onChange(value === '' ? null : { kind: 'text', value })}
@@ -326,9 +339,9 @@ const QuestionField = defineComponent<{
         <TextInput
           value={answer && 'value' in answer ? String(answer.value) : ''}
           autoFocus={autoFocus === true}
-          label="number"
+          label={i18n.t('textui.question.numberLabel', undefined, 'number')}
           hideLabel
-          placeholder="A number"
+          placeholder={i18n.t('textui.question.numberPlaceholder', undefined, 'A number')}
           onSubmit={onSubmit}
           onChange={(value: string) => onChange(
             value === '' ? null : { kind: 'number', value: Number(value) },
@@ -344,8 +357,8 @@ const QuestionField = defineComponent<{
           <text content={theme.glyphs.chevronRight} fg="subtle" />
           <TextInput
             value={answer?.kind === 'text' ? answer.value : ''}
-            label="or say it in words"
-            placeholder="or say it in words"
+            label={i18n.t('textui.question.freeform', undefined, 'or say it in words')}
+            placeholder={i18n.t('textui.question.freeform', undefined, 'or say it in words')}
             hideLabel
             flex={1}
             onSubmit={onSubmit}

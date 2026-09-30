@@ -1,5 +1,5 @@
 import type { BoxProps, RenderOutput, SemanticVariant } from '@textui/core';
-import { defineComponent, useTheme } from '@textui/core';
+import { defineComponent, useI18n, useTheme } from '@textui/core';
 import { Column, KeyValue, Row } from '@textui/widgets';
 import type { ChatSession } from './types.js';
 
@@ -57,6 +57,7 @@ export const ChatSessionHead: (props: ChatSessionHeadProps) => RenderOutput =
   defineComponent<ChatSessionHeadProps>('ChatSessionHead', (props) => {
     const { session, model, chat, settings = [], present = [], ...rest } = props;
     const theme = useTheme();
+    const i18n = useI18n();
     const status = session.status;
     const started = when(session.createdAt);
     const updated = when(session.modifiedAt);
@@ -65,28 +66,32 @@ export const ChatSessionHead: (props: ChatSessionHeadProps) => RenderOutput =
     // fixed list produces, and it reads as a session the host would not talk
     // about rather than as one nobody has asked yet.
     const rows: { label: string; value: string; tone?: SemanticVariant }[] = [
-      { label: 'Harness', value: [session.provider, model].filter(Boolean).join(`  ${theme.glyphs.separator}  `) },
+      { label: i18n.t('textui.sessionHead.harness', undefined, 'Harness'), value: [session.provider, model].filter(Boolean).join(`  ${theme.glyphs.separator}  `) },
       ...settings.filter((setting) => setting.value).map((setting) => ({ ...setting })),
-      { label: 'Workspace', value: session.workingDirectories.map((dir) => dir.replace(/^file:\/\//, '')).join(', ') },
+      { label: i18n.t('textui.sessionHead.workspace', undefined, 'Workspace'), value: session.workingDirectories.map((dir) => dir.replace(/^file:\/\//, '')).join(', ') },
       // Only when the host says one. A blank branch row reads as a detached
       // head rather than as a host that does not report branches.
-      ...(session.branch ? [{ label: 'Branch', value: session.branch }] : []),
+      ...(session.branch ? [{ label: i18n.t('textui.sessionHead.branch', undefined, 'Branch'), value: session.branch }] : []),
       {
-        label: 'Started',
+        label: i18n.t('textui.sessionHead.started', undefined, 'Started'),
         value: started && updated && updated !== started
-          ? `${started}  ${theme.glyphs.separator}  updated ${updated}`
+          ? i18n.t(
+            'textui.sessionHead.startedUpdated',
+            { started, separator: theme.glyphs.separator, updated },
+            '{started}  {separator}  updated {updated}',
+          )
           : started,
       },
       // Last, and in full. A uri you can read half of is worse than one you
       // cannot see at all: it looks like the whole thing.
-      { label: 'Session', value: session.id },
-      ...(chat ? [{ label: 'Chat', value: chat }] : []),
+      { label: i18n.t('textui.sessionHead.session', undefined, 'Session'), value: session.id },
+      ...(chat ? [{ label: i18n.t('textui.sessionHead.chat', undefined, 'Chat'), value: chat }] : []),
       // Only when somebody else is here. One entry is this client, and a row
       // saying you are the person reading it is a row that tells nobody
       // anything.
       ...(present.length > 1
         ? [{
-          label: 'Here',
+          label: i18n.t('textui.sessionHead.here', undefined, 'Here'),
           value: present.map((one) => one.displayName ?? one.clientId).join(`  ${theme.glyphs.separator}  `),
         }]
         : []),

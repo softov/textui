@@ -4,6 +4,7 @@ import {
   h,
   layoutMarkdown,
   repeatToWidth,
+  useI18n,
   useMeasure,
   useMemo,
   useTheme,
@@ -52,6 +53,7 @@ export const MarkdownView = defineComponent<MarkdownViewProps>('MarkdownView', (
   // a document with no search over it carries no extra prop per run.
   const hit = match ? { match } : {};
   const theme = useTheme();
+  const i18n = useI18n();
   const measured = useMeasure();
   const width = measured.width > 0 ? measured.width : 0;
   const ruled = theme.border !== 'none';
@@ -221,7 +223,11 @@ export const MarkdownView = defineComponent<MarkdownViewProps>('MarkdownView', (
   return h('box', { role: 'document', direction: 'column', ...rest },
     ...out,
     hidden > 0
-      ? h('text', { content: `${theme.glyphs.ellipsis} ${hidden} more lines`, fg: 'subtle' })
+      ? h('text', { content: i18n.t(
+          'textui.markdown.moreLines',
+          { glyph: theme.glyphs.ellipsis, count: hidden },
+          '{glyph} {count} more lines',
+        ), fg: 'subtle' })
       : null,
   );
 });

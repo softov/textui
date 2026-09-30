@@ -4,6 +4,7 @@ import {
   defineComponent,
   h,
   useFocus,
+  useI18n,
   useInput,
   useMeasure,
   useState,
@@ -98,9 +99,10 @@ export interface ListProps<T extends ListItem = ListItem> extends BoxProps {
 
 function ListView<T extends ListItem>(props: ListProps<T>): RenderOutput {
   const theme = useTheme();
+  const i18n = useI18n();
   const {
     items, selectedId, onSelect, onActivate, visibleRows,
-    emptyMessage = 'Nothing here', marker = true, focusable = true,
+    emptyMessage = i18n.t('textui.list.empty', undefined, 'Nothing here'), marker = true, focusable = true,
     autoFocus, focusId, renderItem, itemHeight = 1, ...rest
   } = props;
 

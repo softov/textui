@@ -1,5 +1,5 @@
 import type { BoxProps, SemanticVariant } from '@textui/core';
-import { defineComponent, h, stringWidth, useFocus, useInput, useState, useTheme } from '@textui/core';
+import { defineComponent, h, stringWidth, useFocus, useI18n, useInput, useState, useTheme } from '@textui/core';
 import { Marquee } from '../display/index.js';
 import { TONE } from '../tone.js';
 
@@ -63,6 +63,7 @@ export interface MenuProps extends BoxProps {
 
 export const Menu = defineComponent<MenuProps>('Menu', (props) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const {
     items, onSelect, visibleRows, activeId, autoFocus, interactive = true,
     descriptions = 'inline', ...rest
@@ -188,7 +189,7 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
         : [row];
     }),
     selectable.length === 0
-      ? h('text', { content: '  no matches', fg: 'subtle' })
+      ? h('text', { content: `  ${i18n.t('textui.menu.noMatch', undefined, 'no matches')}`, fg: 'subtle' })
       : null,
   );
 });

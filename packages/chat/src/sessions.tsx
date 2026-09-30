@@ -1,5 +1,5 @@
 import type { BoxProps, RenderOutput, SemanticVariant } from '@textui/core';
-import { defineComponent, stringWidth, useTheme } from '@textui/core';
+import { defineComponent, stringWidth, useI18n, useTheme } from '@textui/core';
 import type { ListItem, ListItemState } from '@textui/widgets';
 import { Badge, Column, List, Marquee, Row } from '@textui/widgets';
 import type { ChatSession } from './types.js';
@@ -34,6 +34,7 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
   defineComponent<SessionListProps>('SessionList', (props) => {
     const { sessions, selectedId, onSelect, onOpen, emptyMessage, focusId, autoFocus, ...rest } = props;
     const theme = useTheme();
+    const i18n = useI18n();
 
     const dot = `  ${theme.glyphs.separator}  `;
 
@@ -69,7 +70,7 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
           // session that appeared at nine in the morning is a row with no
           // account of itself, sitting among rows somebody typed.
           session.origin ?? '',
-          status.archived ? 'archived' : '',
+          status.archived ? i18n.t('textui.sessions.archived', undefined, 'archived') : '',
         ].filter(Boolean).join(dot),
         meta: status.label,
         tone: status.tone as SemanticVariant,
@@ -77,7 +78,7 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
         // under the status, green and red the way a diff says it.
         ...(changes?.files
           ? {
-            files: `${changes.files} files`,
+            files: i18n.t('textui.sessions.files', { files: changes.files }, '{files} files'),
             added: `+${changes.additions ?? 0}`,
             removed: `-${changes.deletions ?? 0}`,
           }
@@ -121,7 +122,7 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
           </Column>
         )}
         {...(selectedId ? { selectedId } : {})}
-        emptyMessage={emptyMessage ?? 'No sessions on this host'}
+        emptyMessage={emptyMessage ?? i18n.t('textui.sessions.empty', undefined, 'No sessions on this host')}
         onSelect={(id: string) => onSelect?.(id)}
         onActivate={(id: string) => onOpen?.(id)}
         {...(focusId ? { focusId } : {})}
@@ -142,6 +143,7 @@ export const ConnectionBadge: (props: ConnectionBadgeProps) => RenderOutput =
   defineComponent<ConnectionBadgeProps>('ConnectionBadge', (props) => {
     const { url, state, sessions, ...rest } = props;
     const theme = useTheme();
+    const i18n = useI18n();
     const look = {
       connected: { tone: 'success' as SemanticVariant, glyph: theme.glyphs.bulletFilled },
       connecting: { tone: 'warning' as SemanticVariant, glyph: theme.glyphs.bulletHalf },
@@ -152,7 +154,7 @@ export const ConnectionBadge: (props: ConnectionBadgeProps) => RenderOutput =
       <Row gap={1} {...rest}>
         <text content={look.glyph} fg={look.tone} />
         <text content={url} fg="muted" truncate="start" />
-        {sessions !== undefined ? <Badge label={`${sessions} sessions`} tone="muted" /> : null}
+        {sessions !== undefined ? <Badge label={i18n.t('textui.connection.sessions', { sessions }, '{sessions} sessions')} tone="muted" /> : null}
       </Row>
     );
   });

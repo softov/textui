@@ -1,5 +1,5 @@
 import type { BoxProps } from '@textui/core';
-import { defineComponent, h, useTheme } from '@textui/core';
+import { defineComponent, h, useI18n, useTheme } from '@textui/core';
 
 export interface ErrorStateProps extends BoxProps {
   title?: string;
@@ -10,7 +10,8 @@ export interface ErrorStateProps extends BoxProps {
 
 export const ErrorState = defineComponent<ErrorStateProps>('ErrorState', (props) => {
   const theme = useTheme();
-  const { title = 'Something went wrong', error, onRetry, ...rest } = props;
+  const i18n = useI18n();
+  const { title = i18n.t('textui.errorState.title', undefined, 'Something went wrong'), error, onRetry, ...rest } = props;
   const message = error instanceof Error ? error.message : String(error);
 
   return h('box', { role: 'alert', direction: 'column', gap: 1, padding: 1, ...rest },
@@ -18,6 +19,6 @@ export const ErrorState = defineComponent<ErrorStateProps>('ErrorState', (props)
       h('text', { content: theme.glyphs.cross, fg: 'danger' }),
       h('text', { content: title, bold: true, fg: 'danger' })),
     h('text', { content: message, fg: 'muted', wrap: 'word' }),
-    onRetry ? h('text', { content: 'r  retry', fg: 'subtle' }) : null,
+    onRetry ? h('text', { content: i18n.t('textui.errorState.retry', undefined, 'r  retry'), fg: 'subtle' }) : null,
   );
 });

@@ -1,5 +1,5 @@
 import type { BoxProps } from '@textui/core';
-import { defineComponent, h, useFocus, useInput, useTheme } from '@textui/core';
+import { defineComponent, h, useFocus, useI18n, useInput, useTheme } from '@textui/core';
 
 export interface PaginationProps extends BoxProps {
   page: number;
@@ -10,6 +10,7 @@ export interface PaginationProps extends BoxProps {
 
 export const Pagination = defineComponent<PaginationProps>('Pagination', (props) => {
   const theme = useTheme();
+  const i18n = useI18n();
   const { page, pageCount, total, onChange, ...rest } = props;
   const focus = useFocus({});
 
@@ -26,6 +27,6 @@ export const Pagination = defineComponent<PaginationProps>('Pagination', (props)
     h('text', { content: theme.glyphs.chevronLeft, fg: page > 1 ? 'accent' : 'disabled' }),
     h('text', { content: `${page} / ${pageCount}`, bold: focus.focused }),
     h('text', { content: theme.glyphs.chevronRight, fg: page < pageCount ? 'accent' : 'disabled' }),
-    total !== undefined ? h('text', { content: `${total} items`, fg: 'muted' }) : null,
+    total !== undefined ? h('text', { content: i18n.t('textui.pagination.total', { total }, '{total} items'), fg: 'muted' }) : null,
   );
 });

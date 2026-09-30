@@ -1,5 +1,5 @@
 import type { BoxProps, RenderOutput } from '@textui/core';
-import { defineComponent, useFocus, useInput, useTheme } from '@textui/core';
+import { defineComponent, useFocus, useI18n, useInput, useTheme } from '@textui/core';
 import { Column, Row } from '@textui/widgets';
 
 /**
@@ -77,6 +77,7 @@ export const ComposerBar: (props: ComposerBarProps) => RenderOutput =
   defineComponent<ComposerBarProps>('ComposerBar', (props) => {
     const { options, onOpen, onSend, onLeave, running, queued = 0, sendDisabled, ...rest } = props;
     const theme = useTheme();
+    const i18n = useI18n();
 
     // The first row and then the second, which is also the tab order. Stated
     // rather than inherited: tab order is registration order, and which chips
@@ -112,12 +113,14 @@ export const ComposerBar: (props: ComposerBarProps) => RenderOutput =
     // the one verb on the bar.
     const tail = [
       <text key="gap" content="" flex={1} />,
-      queued > 0 ? <text key="queued" content={`${queued} queued`} fg="warning" /> : null,
+      queued > 0 ? <text key="queued" content={i18n.t('textui.composer.queued', { queued }, '{queued} queued')} fg="warning" /> : null,
       <Chip
         key="send"
         focusId={SEND_ID}
         order={ordered.length}
-        label={running ? 'queue' : 'send'}
+        label={running
+          ? i18n.t('textui.composer.queue', undefined, 'queue')
+          : i18n.t('textui.composer.send', undefined, 'send')}
         trailing={theme.glyphs.chevronRight}
         tone="accent"
         {...(sendDisabled ? { disabled: true } : {})}

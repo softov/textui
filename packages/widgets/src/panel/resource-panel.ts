@@ -12,6 +12,7 @@ import {
   h,
   useEffect,
   useFocusScope,
+  useI18n,
   useRef,
   useRuntime,
   useStoreValue,
@@ -144,6 +145,7 @@ export interface ResourcePanelProps extends BoxProps {
  */
 export const ResourcePanel = defineComponent<ResourcePanelProps>('ResourcePanel', (props) => {
   const runtime = useRuntime();
+  const i18n = useI18n();
   const {
     id: named, uri, renderer, mode, rendererProps, fallbackComponent, autoFocus,
     emptyTitle, ...rest
@@ -265,19 +267,22 @@ export const ResourcePanel = defineComponent<ResourcePanelProps>('ResourcePanel'
     if (claim > 0 && chosen) runtime.store.set(panelClaimPath(id), 0);
   }, [id, claim, chosen?.id ?? null]);
 
-  if (!uri) return h(EmptyState, { title: emptyTitle ?? 'Nothing selected', ...rest });
+  if (!uri) return h(EmptyState, { title: emptyTitle ?? i18n.t('textui.resourcePanel.empty', undefined, 'Nothing selected'), ...rest });
   if (!app) return null;
   if (task.status === 'running' || task.status === 'idle') {
-    return h(Spinner, { label: 'Loading…', ...rest });
+    return h(Spinner, { label: i18n.t('textui.resourcePanel.loading', undefined, 'Loading…'), ...rest });
   }
   if (task.status === 'error') return h(ErrorState, { error: task.error, ...rest });
-  if (!resource) return h(EmptyState, { title: 'Not found', message: uri, ...rest });
+  if (!resource) return h(EmptyState, { title: i18n.t('textui.resourcePanel.notFound', undefined, 'Not found'), message: uri, ...rest });
 
   if (!chosen) {
     return h('box', { direction: 'column', flex: 1, id: scope, ...rest },
       fallbackComponent
         ? { component: fallbackComponent, resource, uri }
-        : h(EmptyState, { title: 'No renderer', message: resource.kind }));
+        : h(EmptyState, {
+          title: i18n.t('textui.resourcePanel.noRenderer', undefined, 'No renderer'),
+          message: resource.kind,
+        }));
   }
 
   const node: ComponentNode = {

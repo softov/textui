@@ -4,6 +4,7 @@ import {
   h,
   nameOf,
   useEffect,
+  useI18n,
   useInput,
   useRuntime,
   useState,
@@ -41,6 +42,8 @@ export const PathPicker = defineComponent<PathPickerProps>('PathPicker', (props)
     width = 60, onPick, onCancel, ...rest
   } = props;
   const theme = useTheme();
+  const i18n = useI18n();
+  const ellipsis = theme.glyphs.ellipsis;
   const runtime = useRuntime();
   const app = runtime.app();
 
@@ -90,7 +93,7 @@ export const PathPicker = defineComponent<PathPickerProps>('PathPicker', (props)
     // child to press enter on and a hidden chord for it is a chord nobody
     // finds. It is first, since it is the answer most often wanted.
     ...(wants === 'directory'
-      ? [{ id: '.', label: 'Use this folder', icon: theme.glyphs.check }]
+      ? [{ id: '.', label: i18n.t('textui.pathPicker.useFolder', undefined, 'Use this folder'), icon: theme.glyphs.check }]
       : []),
     ...(parent !== null ? [{ id: '..', label: '..', icon: theme.glyphs.chevronUp }] : []),
     ...shown.map((e) => ({
@@ -139,17 +142,23 @@ export const PathPicker = defineComponent<PathPickerProps>('PathPicker', (props)
   }, { global: true });
 
 
-  const move = `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown} move`;
+  const move = i18n.t(
+    'textui.pathPicker.hint.move',
+    { arrows: `${theme.glyphs.arrowUp}${theme.glyphs.arrowDown}` },
+    '{arrows} move',
+  );
 
   return h('box', {
     role: 'dialog',
-    label: title ?? 'Choose',
+    label: title ?? i18n.t('textui.pathPicker.label', undefined, 'Choose'),
     border: theme.border,
     bg: 'overlay',
     width,
     direction: 'column',
     ...(theme.border === 'none' ? { padding: { left: 1, right: 1 } } : {}),
-    title: ` ${title ?? (wants === 'directory' ? 'choose a folder' : 'choose a file')} `,
+    title: ` ${title ?? (wants === 'directory'
+      ? i18n.t('textui.pathPicker.titleFolder', undefined, 'choose a folder')
+      : i18n.t('textui.pathPicker.titleFile', undefined, 'choose a file'))} `,
     ...rest,
   },
     // Where you are. A column of bare names with no header is a list you can
@@ -171,7 +180,7 @@ export const PathPicker = defineComponent<PathPickerProps>('PathPicker', (props)
        * what you want while editing one.
        */
       onEdge: (edge: 'start' | 'end') => { if (edge === 'start') up(); },
-      placeholder: placeholder ?? `Filter${theme.glyphs.ellipsis}`,
+      placeholder: placeholder ?? i18n.t('textui.pathPicker.placeholder', { ellipsis }, 'Filter{ellipsis}'),
       search: true,
       autoFocus: true,
       border: 'none',
@@ -195,8 +204,10 @@ export const PathPicker = defineComponent<PathPickerProps>('PathPicker', (props)
     shown.length === 0
       ? h('text', {
           content: loading
-            ? `Reading${theme.glyphs.ellipsis}`
-            : (q === '' ? 'Nothing here.' : 'Nothing matches.'),
+            ? i18n.t('textui.pathPicker.reading', { ellipsis }, 'Reading{ellipsis}')
+            : (q === ''
+              ? i18n.t('textui.pathPicker.empty', undefined, 'Nothing here.')
+              : i18n.t('textui.pathPicker.noMatch', undefined, 'Nothing matches.')),
           fg: 'muted',
         })
       : null,
@@ -204,9 +215,11 @@ export const PathPicker = defineComponent<PathPickerProps>('PathPicker', (props)
     h('text', {
       content: hint(theme, [
         move,
-        wants === 'directory' ? 'enter open' : 'enter choose',
-        `${theme.glyphs.chevronLeft} up`,
-        'esc cancel',
+        wants === 'directory'
+          ? i18n.t('textui.pathPicker.hint.open', undefined, 'enter open')
+          : i18n.t('textui.pathPicker.hint.choose', undefined, 'enter choose'),
+        i18n.t('textui.pathPicker.hint.up', { glyph: theme.glyphs.chevronLeft }, '{glyph} up'),
+        i18n.t('textui.pathPicker.hint.cancel', undefined, 'esc cancel'),
       ]),
       fg: 'subtle',
       truncate: 'end',

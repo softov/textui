@@ -1,5 +1,5 @@
 import type { BoxProps, RenderOutput } from '@textui/core';
-import { defineComponent, useTheme } from '@textui/core';
+import { defineComponent, useI18n, useTheme } from '@textui/core';
 import { Column, EmptyState, Row, ScrollView } from '@textui/widgets';
 import type { DiffResult } from './diff.js';
 
@@ -32,12 +32,20 @@ export const FileDiff: (props: FileDiffProps) => RenderOutput =
   defineComponent<FileDiffProps>('FileDiff', (props) => {
     const { path, diff, kind, binary, ...rest } = props;
     const theme = useTheme();
+    const i18n = useI18n();
 
     if (binary) {
       return (
         <EmptyState
-          title="Not text"
-          message={`${binary.contentType ?? 'Binary'}, ${binary.bytes} bytes. There is nothing to show a line at a time.`}
+          title={i18n.t('textui.fileDiff.binaryTitle', undefined, 'Not text')}
+          message={i18n.t(
+            'textui.fileDiff.binaryMessage',
+            {
+              type: binary.contentType ?? i18n.t('textui.fileDiff.binaryType', undefined, 'Binary'),
+              bytes: binary.bytes,
+            },
+            '{type}, {bytes} bytes. There is nothing to show a line at a time.',
+          )}
           {...rest}
         />
       );
@@ -46,15 +54,25 @@ export const FileDiff: (props: FileDiffProps) => RenderOutput =
     if (diff.tooLarge) {
       return (
         <EmptyState
-          title="Too big to line up"
-          message={`${diff.tooLarge.lines} lines between the two sides, over the ${diff.tooLarge.limit} this will compare. Open it in an editor.`}
+          title={i18n.t('textui.fileDiff.tooLargeTitle', undefined, 'Too big to line up')}
+          message={i18n.t(
+            'textui.fileDiff.tooLargeMessage',
+            { lines: diff.tooLarge.lines, limit: diff.tooLarge.limit },
+            '{lines} lines between the two sides, over the {limit} this will compare. Open it in an editor.',
+          )}
           {...rest}
         />
       );
     }
 
     if (diff.rows.length === 0) {
-      return <EmptyState title="Nothing between the two" message="Both sides of this file are the same." {...rest} />;
+      return (
+        <EmptyState
+          title={i18n.t('textui.fileDiff.sameTitle', undefined, 'Nothing between the two')}
+          message={i18n.t('textui.fileDiff.sameMessage', undefined, 'Both sides of this file are the same.')}
+          {...rest}
+        />
+      );
     }
 
     // The widest line number either side will need, so the gutter does not

@@ -131,7 +131,9 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   const given = typeof commands === 'function' ? commands() : commands;
   const all = given ?? app?.commands.list({ slot: 'palette', enabledOnly: true }) ?? [];
 
-  const matches = pending ? [] : filterCommands(all, query);
+  const matches = pending
+    ? []
+    : grouped && query.trim() === '' ? byCategory(all) : filterCommands(all, query);
   const offered = pending ? filterChoices(choices, query) : [];
   const rows = pending ? offered.map((choice) => choice.value) : matches.map((c) => c.id);
   const index = Math.max(0, Math.min(highlight, rows.length - 1));
@@ -616,6 +618,24 @@ function filterChoices(choices: ArgChoice[], query: string): ArgChoice[] {
   if (q === '') return choices;
   return choices.filter((choice) => `${choice.label ?? ''} ${choice.value} ${choice.description ?? ''}`
     .toLowerCase().includes(q));
+}
+
+/**
+ * Each category's commands together, the categories in the order they first
+ * appear and the commands in the order they came.
+ *
+ * Registration order is whatever order the code happened to run in, so a
+ * category registered in two places would be two groups with the same name
+ * over them.
+ */
+function byCategory(commands: CommandDefinition[]): CommandDefinition[] {
+  const groups = new Map<string | undefined, CommandDefinition[]>();
+  for (const command of commands) {
+    const group = groups.get(command.category);
+    if (group) group.push(command);
+    else groups.set(command.category, [command]);
+  }
+  return [...groups.values()].flat();
 }
 
 export function filterCommands(commands: CommandDefinition[], query: string): CommandDefinition[] {

@@ -229,6 +229,27 @@ describe('the palette component', () => {
     await t.unmount();
   });
 
+  it('gathers a category registered in two places into one group', async () => {
+    const t = await renderApp({
+      width: 60,
+      height: 20,
+      onBoot: (app) => {
+        app.commands.register({ id: 'go.sessions', title: 'Sessions', category: 'Screens', slots: ['palette'], run: () => {} });
+        app.commands.register({ id: 'go.back', title: 'Back', category: 'Navigation', slots: ['palette'], run: () => {} });
+        app.commands.register({ id: 'go.hosts', title: 'Hosts', category: 'Screens', slots: ['palette'], run: () => {} });
+        app.open({ surface: 'main', key: 'p', target: { component: 'CommandPalette' } });
+      },
+    });
+    await t.settle();
+
+    const lines = t.lines();
+    const at = (text: string): number => lines.findIndex((line) => line.includes(text));
+    expect(lines.filter((line) => line.includes('Screens')).length).toBe(1);
+    expect(at('Hosts')).toBe(at('Sessions') + 1);
+    expect(at('Navigation')).toBeGreaterThan(at('Hosts'));
+    await t.unmount();
+  });
+
   it('drops the headings once a query sorts the rows', async () => {
     const t = await grouped();
     t.type('s');

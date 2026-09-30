@@ -1,6 +1,6 @@
 {
   "name": "@textui/testing",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Headless testing harness for TextUI - semantic queries, input, resizing, time",
   "keywords": [
     "terminal",

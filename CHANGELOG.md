@@ -1,318 +1,105 @@
 # Changelog
 
-The publishable packages release as a set, under one version. `workspace:^` between them means a mixed set resolves to a combination nobody tested, so the tag is the version and every package carries it.
+The packages release as a set under one version.
 
-This file records the set. Anything package-specific says which package.
+## 0.7.0
+
+### Added
+- Widgets and chat text goes through `app.i18n` under `textui.*` keys, English by default.
+- `I18n.t(key, values?, fallback?)`: an optional fallback.
+- `ConfirmDialog` and `PromptDialog`, mounted by `confirm()` and `prompt()`.
+- `ChatToolCall.invocation`: the host's one line for a tool call.
+- A queued block's `model`, shown beside the message.
+- `DetailField.parts`: a value in pieces, each with its own tone.
+
+### Changed
+- Tab order follows the layout, so a field mounted late is reached where it is drawn.
+- The palette shows each category under one heading.
+- A tool call's row shows `invocation` before its input.
+- The transcript cursor highlights a block's header line only.
+- `SessionList` shows change counts in green and red.
 
 ## 0.6.1
 
-`@textui/chat@0.6.0` exists on the registry and cannot be installed: it was published by hand for the trusted-publishing bootstrap, straight from the workspace, so its dependency ranges read `workspace:^`, which npm does not know. It is deprecated in favour of this release; nothing else is in it, and the set skips 0.6.0.
+`@textui/chat@0.6.0` was published with `workspace:^` ranges and cannot be installed. It is deprecated and the set skips 0.6.0.
 
-### The chat components have a package
+### Added
+- `@textui/chat`: transcript, composer, tool call row, question and confirmation blocks, session list and file diff.
+- `ReasoningBlock.onToggle`, and a divider under an open thought.
+- A cursor bar in the gutter of every transcript block.
+- `ArgSpec.choices(collected)`, so a later argument can depend on an earlier one.
 
-`@textui/chat` joins the set: the transcript, the composer, the tool call row, the
-question and confirmation blocks, the session list and the file diff that a chat client
-draws, with their own prop types (`ChatTranscript`, `ChatComposer`, `ChatToolCall`,
-`ChatSession`, `Block`, `ComposerOption`, ...). They came out of ahpc, where they were
-written against a live host, and the first release carries everything ahpc had taught
-them since: the tool's `toolName` under a call and `progress` on its row while it runs, the
-pull request on a session's row (`ChatSession.pullRequest`), `match` and `pinCursor` on
-the transcript for a search that colours every hit and keeps the cursor in view,
-`blockText` and `findBlocks` to search the blocks, a completion menu sized to the
-terminal with the command's `hint` under it, a second control row for the chips that say
-where the session runs (`ComposerOption.where`), and escape leaving a chip for the field
-(`ComposerBar.onLeave`). `measure.ts` reports where the composer and the waiting block
-are, and when they are gone, so a host can place its own chrome around them.
+### Changed
+- The palette sizes to its text up to `maxWidth`, and states the question once.
+- `openPicker` runs a command that has nothing to ask.
 
-### A thought opens on click, and the cursor is marked on every block
-
-`ReasoningBlock` takes `onToggle` and folds open and shut on a mouse click as a tool row
-does, and ends with a divider while open. The block under the cursor is marked by an
-accent bar in a gutter every block has, so arrowing through prose, headers, user lines,
-tool rows and thoughts shows where the cursor is; a selected tool row or thought keeps
-its background and its text reads inverted on it, and a header's bullet is the gutter cell
-so the model's name stays at the column it had.
-
-### A picker's later question can depend on the earlier answer
-
-`ArgSpec.choices` receives the arguments collected so far (`choices(collected)`), so a
-command whose second argument depends on the first - a provider, then that provider's
-models - lists the right things. `CommandPalette` passes them and skips an argument with
-a single choice on the way. `openPicker` on a command with nothing to ask runs it.
-
-### The palette cut the question, and said it twice
-
-A question with three one-word answers got a panel as wide as "Default", and the
-argument's description was drawn in it twice - as the filter's placeholder and as the line
-under the list - cut both times at the panel's edge. The panel now asks for the width its
-sentences need, up to `maxWidth`; the line under the list wraps instead of truncating,
-since it is the one place a sentence can be read whole; and the question is said once:
-in the placeholder while the answers have sentences of their own for the line under the
-list, under the list when they do not, where the placeholder says what the field is for.
-
-### `@textui/cli` finds its registry on Windows
-
-`builtinRegistryDir` located the shipped registry through `new URL(import.meta.url).pathname`,
-which on Windows is `/F:/...` and resolves to `F:\F:\...`, a directory that does not exist.
-It goes through `fileURLToPath` now. Four prop tables in the docs were out of step with the
-source and are generated again.
+### Fixed
+- `@textui/cli` finds its registry on Windows.
 
 ## 0.5.0
 
-### A palette never said which way a switch was set
+### Added
+- `text` takes `match`, `matchFg` and `matchBg` to colour a term; so does `MarkdownView`.
+- `Feed.pinSelection` keeps the selection in view.
 
-`CommandDefinition.checked` is a clause evaluated per read, so a toggle's row can say what
-it is toggling *to* while the definition is registered once. `CommandPalette` never read
-it. Every switch in every application listed as a plain row, and the field it was declared
-for had no effect anywhere. The rows carry it now, and `Menu` draws the check column it
-already knew how to draw.
-
-### Nothing could colour one word inside a text
-
-Search highlighting has no home in a content API: a caller that splits its text at each hit
-is splitting the very strings the wrapper needs whole, and a paragraph broken at every
-match wraps differently from the paragraph it is. So `text` takes `match`, with `matchFg`
-and `matchBg`, and the painter colours the cells that hold it - after wrapping and
-truncation, over the text as drawn. A match a wrap broke in two is left alone, because
-there is nothing on either row to colour. `MarkdownView` takes the same and hands it to
-every run.
-
-### A feed ignored a selection it did not own
-
-`reveal` was reachable only from the feed's own arrow keys. A caller driving
-`selectedIndex` - a search jumping to its next hit, a cursor restored on the way back to a
-screen - moved a highlight the viewport never followed, which reads as the key having done
-nothing. It scrolls to the selection when the index changes, and skips the first value so a
-transcript still opens at its tail rather than at whatever index the caller passed on the
-way there.
-
-That leaves the case where the caller lands on the entry the cursor is already on, where the
-index does not change and there is still something off screen to show. `pinSelection` covers
-it: while it is set, a selection is brought back whenever it goes out of view.
+### Fixed
+- `CommandPalette` shows `CommandDefinition.checked`.
+- `Feed` scrolls to a `selectedIndex` set by the caller.
 
 ## 0.4.0
 
-### A long transcript did not keep up with the hand on it
+### Changed
+- Text measurement is cached, and mouse events share one frame.
+- `Feed` collapses off-screen runs into one box.
+- `Feed` draws `ScrollThumb`.
 
-Three separate ways the same screen paid for work it had already done.
-
-Text measurement ran three times a frame for content that had not changed: the width of a
-non-ASCII string, the wrap and width of a measured text, and a box's own frame and gaps.
-One glyph outside ASCII in a row sent the whole string down the grapheme path, which was
-about a quarter of the frame in a long transcript. Each is worked out once now.
-
-A terminal reports every cell the pointer crosses and every notch of the wheel, and a
-render per event laid out and painted the whole tree for each of them - so a drag trailed
-seconds behind the pointer and the wheel went on scrolling after the hand had stopped.
-Every event is still dispatched; they now share the one frame `handleMouse` had already
-asked for. Keys stay synchronous.
-
-`Feed` gave every skipped run of entries a stand-in of its own, and a stand-in is still a
-component to reconcile and a box to measure four times a frame - 1433 instances for a
-300-turn transcript, and 240 now that a run collapses into one box.
-
-### `Feed` drew a scrollbar that said nothing
-
-It was a strip of the border glyph: no offset, no size, no indication of where in the
-transcript you were. It draws `ScrollThumb` now, like every other viewport in the library.
-
-### A resize left the old frame scattered across the new one
-
-Invalidating a frame cleared `committed`, which made every row be walked - but a blank
-cell still matched the reset previous frame and so was never written. Under any theme with
-a transparent canvas, what stayed on the screen was the frame before the resize with the
-new one drawn into the gaps. An invalidated frame now repaints every cell.
-
-### An empty field showed no caret
-
-A field with nothing in it publishes a caret at column 0, and the check for whether there
-was a caret at all was `!cursor` - which is false for column 0 as much as for no cursor.
-So the one field a person most needs a caret in, the empty one, was the field that did not
-draw it.
-
-### Focus moved and the cursor stayed behind
-
-A frame that only needed the cursor *taken away* emitted nothing at all, and a `Select`
-had nowhere to take it to. Focus left a text field and the terminal went on showing the
-caret where the field used to have it.
+### Fixed
+- A resize repaints every cell.
+- An empty field shows its caret.
+- The cursor hides when focus leaves a text field.
 
 ## 0.3.0
 
-### A conversation got heavier to sit in the longer it got
-
-Three things, each invisible in a small tree and each the whole frame budget in a large one.
-
-A `Feed` laid out every entry it held. Laying one out means wrapping its text, and that was paid per *frame* rather than per change - a keystroke in the composer, a caret blinking, a spinner somewhere else on the screen - so a viewport thirty rows tall over a long transcript spent every frame measuring the hundreds of entries nobody could see. Entries more than a screenful outside the viewport now stand in as a box of the height they were measured at; nothing is estimated, so the extent, the scrollbar and every position are what they would have been.
-
-`useFrame` had no way to say *not now*. A ticker is a standing invalidation - it marks its component dirty `fps` times a second for as long as it is mounted - so the chat example's settled paragraphs each asked the application to redraw twice a second, for ever, because the caret they draw while streaming needed a frame counter. It takes `{ enabled }` now, like `useTicker` always has.
-
-And prop resolution copied every array and object on the way in. Identity is what the reconciler compares, so that made the "nothing changed, do not re-run this" test impossible to pass for exactly the props worth passing it for: a list of four hundred rows arrived as a new array on every pass and re-rendered the lot, whatever its caller had memoised. The copy is still made for the bindings inside one, and returned only when something actually changed.
-
-Typing into a three-hundred-turn conversation was about 650ms a keystroke and is about 34ms.
-
-### A shell registered after boot took the application off the screen
-
-`root` reaches the screen two ways. With a shell it is a mount like any other and the surface registry owns it; with no shell at all - which is every application built out of primitives - `rootNode` wraps it directly and the registry is never consulted. `setRoot` has always done both, and says why: setting one and not the other works in exactly half of the programs that can exist.
-
-`setShell` is the moment a program crosses from the second case to the first, and it did only half. `rootNode` began answering with the shell, nothing had ever put `root` into `main`, and what was left was a framed, themed, empty screen.
-
-### The sidebar is not a column of the document
-
-Sideways, the layout shrinks a child with a plain `width` before it clips anything - which is how terminals have always narrowed, and is right for content. Applied to chrome it meant a pane with one long line in it crushed twenty-four columns of file tree down to four. The workbench shell's sidebar is `shrink: 0` now, which the layout has always honoured; nothing in core changed.
-
-### Nobody knew how long to wait for a frame
-
-Every example that writes a still ended the same way: `for (let i = 0; i < 8; i++) await sleep(4)`, then `flush`. Eight, mostly - four in the showcase, twelve in the chat - three numbers for one question, each arrived at by trying until the picture looked right. A number too small does not fail. It writes a half-drawn frame.
-
-`flush` forces a frame; there was no way to ask whether the frame was *finished*. `TextUIApp.settled()` is that question. A frame settles in more than one pass by design - an effect marks something dirty, a measurement runs the layout again - so it is a loop that yields to the task queue and renders until a pass finds nothing pending. It answers `false` when the passes never stop, which is a render loop that does not converge rather than one that is merely busy: an application that animates settles *between* its frames, which is what makes a still of one possible at all.
-
-### `renderStill`, so a program that is piped has one line to write
-
-The eight lines either side of that sleep loop were also copied seven times: a virtual terminal, an app, a writer, start, flush, capture, stop. `renderStill({ width, height, ...appOptions })` is all of it, and hands back the text, the cells, and whether it settled.
-
-`before` drives the application to the moment worth photographing - push a screen, send a message, pump a scripted host. `after` reaches it once the frame is drawn and before it is captured, which is where the showcase crops four hundred rows down to the ones it used and both it and the chat read the theme's own two colours for an SVG export.
-
-All seven examples now use it, and each one's output is byte-for-byte what it was.
-
-### 0.2.0 - the mouse, and the keys that reach a field
-
-Pre-1.0, and the surface is still moving. Nothing here is a rename, but a
-control that used to ignore a click now answers one, and focus lands somewhere
-it did not before - so a screen that leaned on either is worth a look.
-
-#### The chat example's queue never sent anything
-
-A message typed while the agent was working went into a list in the client, and nothing in the client was watching for the turn to end - so it sat under the transcript saying `queued` until the session was closed. The queue is the host's: `queuedMessages` is on the chat, `chat/pendingMessageSet` appends to it, and the server starts the next turn from the head as soon as it goes idle. Which also means a message queued from an editor shows up here, and one queued here shows up there.
-
-One turn each, in order - not all of them at once, and not joined into one message. `chat/pendingMessageRemoved` takes one back while it is still waiting: the cursor stops on a queued row now, and enter drops the one it is on.
-
-#### The chat example answers a question in words
-
-A free-text answer is a `TextArea` rather than a `TextInput`, because what a host asks for in words is answered in words: enter sends, `alt+enter` (or `ctrl+enter`) is the newline, and the placeholder says so - an empty bordered box with no caret in it is not obviously somewhere you can type.
-
-#### A subscription check that allocated on every miss
-
-`Store.notify` asks every subscription whether a write touches it, so the check runs per subscription per changed key - and its last clause built the changed key's whole ancestor list and scanned it. That clause could never say yes: `ancestorKeys(k).includes(subKey)` is the same set as `isDescendantKey(k, subKey)`, which had already returned `true` two lines above. So the array was built, scanned, and thrown away on every subscription a write did *not* touch, which is nearly all of them.
-
-`keysTouch(a, b)` is what is left - the relation is symmetric, and there is nothing to allocate. Around 2x on a screen's worth of subscriptions. `ancestorKeys` had no other caller and is gone.
-
-`layoutBox` partitioned its children with two `filter` passes, one per frame per box; it is one loop now.
-
-#### `TextInput` ignored the mouse
-
-Clicking it did nothing - no focus, no caret. An empty one has nothing in it to say it is a field, so what a form built out of them looked like was a stack of gaps that ignored every click. `TextArea` has answered the mouse from the start; the two disagreeing is what made a form built out of the single-line one unusable with a mouse.
-
-#### A control that asked for focus did not get it
-
-A scope that asks for `autoFocus` takes focus as its first control arrives - and a `global` key handler registers as a focusable, because that is how a layer reads escape without holding focus. It is `skipTab`, so it is not a place focus can land, and handed it anyway focus sat on a node that consumes nothing: the keys fell through to whatever was behind, and every real control's own `autoFocus` then stood down, because it claims focus only when the scope does not already hold it.
-
-So a dialog that drew a text field, put `required` beside it and disabled its Send button until the field was filled in was one where every key typed at the field went to whatever was on the screen underneath. The scope's claim now passes over anything that is not somewhere focus can land.
-
-`Checkbox` and `RadioGroup` take `autoFocus`, which they had no way to say before.
-
-#### A catalogue is only as fresh as what it was last told
-
-The client subscribed to one session's channel and to nothing else, so a session appearing, finishing or starting to wait was invisible until somebody navigated away and came back - a reader doing by hand what the host had already said. `HostConnection.onSessions` is the catalogue moving, as opposed to one session's channel; the live client raises it from the root channel it was already draining for something else.
-
-The header had the other half of it: `openSession` is a plain read, so a title or a status arriving changed the store and left the row showing what it said when the session was opened.
-
-#### `pageKeys: 'always'` on a Feed
-
-For the feed that *is* the screen, with a text field under it. Somebody typing a message who presses page up means the conversation above them, and taking the keyboard off the field to use those keys is the thing they are avoiding. Only those two keys, and only after the focused node has declined them - so a field that pages its own content keeps them.
-
-#### Hover works on things that are not focusable
-
-`onHover` was declared on every node and called from nowhere, and the `hover` style overlay was driven by comparing a focus id against `props.id` - so only a focusable node could ever be hovered. A row that is clicked rather than focused, which is most of them, had a `hover` style nothing could trigger.
-
-Hover is now a hit test over laid-out boxes and inherits down the chain the way it does in a browser: a row is hovered while the pointer is over the label inside it, because the label is what the hit test finds. `onHover` fires once on the way in and once on the way out.
-
-#### A selection made with the keyboard copies
-
-`shift` with the arrows highlighted something that was not on the clipboard, which is a selection you have to make again with the mouse. `ctrl+left` and `ctrl+right` also move a word at a time now, and select one with `shift` held.
-
-#### Double click takes a word, a third click takes the line
-
-In `TextArea`. Letters with letters, spaces with spaces, punctuation with punctuation - so a double click in the gap between two words takes the gap. A newline joins nothing, so a word never runs across a line break, and the third click takes the logical line rather than the row it was drawn on. A fourth comes back round to a caret.
-
-None of that arrives from the terminal: the wire reports presses and releases and has no notion of a double click. `MouseEvent.at` is a timestamp stamped by whatever produced the event, and the count is same-cell-within-450ms arithmetic on top of it. `@textui/testing` gains `clickRepeat(x, y, times)`; `click` deliberately steps its clock past the window, so two clicks in a test are two clicks.
-
-#### OSC 52 was switched off in the one place it exists for
-
-The clipboard capability required a recognised terminal, and none of the variables that name one survive an ssh hop - `TERM_PROGRAM`, `KITTY_WINDOW_ID` and `WT_SESSION` are set by the terminal you are sitting at, not by the machine the program runs on. So a remote session saw a bare `xterm-256color`, decided the terminal could not take a clipboard write, and dropped every copy. Reaching the clipboard of a machine the program is *not* running on is the whole reason OSC 52 was specified.
-
-It is on now for anything not known to mangle it, which is `screen` alone: a terminal that does not implement OSC 52 ignores the whole string rather than printing part of it, because an OSC runs to its terminator.
-
-#### A picker opens on the answer that is in force
-
-`ArgSpec.default` is where a command says what its argument is currently set to, and the palette now starts the cursor there instead of at the top of the list. Opening at the top says the first option is the current one, which is wrong on every list where it is not.
-
-A panel opened from a control is also that control's toggle: opening the same one again closes it, rather than closing and reopening it - which looks exactly like the click doing nothing.
-
-#### A palette sizes to what it holds
-
-`width` left off, the panel is as wide as its widest row and no wider than `maxWidth` (60 by default). A constant is too wide for a list of one-word answers and too narrow for a list of sentences, and it is the same constant either way. A stated `width` is still a width.
-
-A description on its own line is a `Marquee` like the inline one, so the row under the cursor slides what it had to truncate.
-
-#### A description can have a line of its own
-
-`descriptions: 'below'` on `Menu` and `CommandPalette` gives each row's description a line under the label instead of a column beside it. `ArgSpec.descriptions` says it per argument, because the argument is what knows: a list of branch names has nothing to say under each one, and a list of approval modes is *only* told apart by what is under each one. Inline, that sentence shares the width with the label and every answer shows the same truncated half.
-
-#### A narrow `List` row gives up the description, not the status
-
-All three columns shrank together, so a catalogue at 58 columns cut the label to "Kqueue events on Li…" *and* the status to "waiting on y…" in order to keep a workspace path nobody was scanning for. The description yields first now, and `meta` yields nothing - the same rule `Menu` already followed.
-
-#### The palette says a category once, over its group
-
-The category was in every row's right-hand column, so four screens read "Screens, Screens, Screens, Screens" - in the width the rows needed for saying what they *do*, and still without marking where a group started. It is a heading over the group now, and the column is back to the command's `description`.
-
-`MenuItem` gains `sectionBefore`, which takes the line `separatorBefore` would have used rather than adding one. Typing turns the headings off: a query sorts by relevance, which interleaves the categories, and a heading over a single row is not a group.
-
-#### A mouse gesture belongs to whoever started it
-
-Mouse dispatch is a hit test, so a `drag` only ever reached the node the pointer happened to be over - which is not the node the drag is *about* the moment the pointer leaves it. An `onMouse` that returns `true` on a `down` now claims the `drag`s and the `up` that follow, wherever they land, until the button comes back up. See [`onMouse`](docs/components/base-props.md).
-
-Nothing had a drag handler before this, so nothing changes for anything that does not want one. `@textui/testing` gains `drag(from, ...to)`, which sends the whole gesture - the press, the points between and the release - because the parts in the middle are the only ones a handler can be wrong about.
-
-#### `TextArea` takes the mouse
-
-A click puts the caret where it landed, a drag selects, and the release puts the selection on the system clipboard over OSC 52 and into the store. Dragging past the edge of the field scrolls it. `shift` with the movement keys extends the selection, typing and `backspace` replace it, and `escape` clears it before it reaches `onCancel`.
-
-That is a debt being paid rather than a feature: reporting mouse events takes the terminal's own select-and-copy away, so an application that reads the mouse has to hand one back. `copyOnSelect={false}` opts out of the clipboard half.
-
-#### A theme can say what shape the caret is
-
-`cursor` on a theme is `block`, `underline` or `bar`, applied to the terminal's own caret through `TerminalAdapter.setCursorShape` (DECSCUSR) and reset at teardown only if the session set it. It is also the default for `TextArea`'s drawn caret, so the two do not disagree about the same caret - `bar` arrives there as an underline, since a bar between two characters is the one caret that occupies a cell of its own.
-
-#### A divider is not a border
-
-`divider` and `dividerChars` are their own theme setting with their own six sets, resolved down the `extends` chain the way borders are. A borderless theme can still separate with a line, which it could not when the rule was drawn from the border style. `Divider` takes `rule` rather than `style`, which collided with `BoxProps.style`.
-
-Publishing moved to npm trusted publishing: GitHub Actions exchanges an OIDC token for a short-lived credential, and there is no `NPM_TOKEN` in the repository any more.
-
-Two things made that more than a flag. Trusted publishing cannot *create* a package - npm only attaches a trusted publisher to a name that already exists, so 0.1.0 still had to be bootstrapped with a token, which was then deleted. And `pnpm publish` has no OIDC support, while `npm publish` cannot read `workspace:^`; `scripts/release-publish.mjs` resolves the ranges and publishes each package from its own directory in dependency order.
-
-#### The OIDC exchange only happens with no credential configured
-
-`actions/setup-node` writes `_authToken=${NODE_AUTH_TOKEN}` into an `.npmrc` whenever it is given a `registry-url`. With nothing to substitute, that is an empty credential rather than no credential, and npm treats any `_authToken` line as auth already being configured - so it never asks GitHub for a token. The release workflow no longer sets `registry-url`, and `scripts/check-no-npm-auth.mjs` fails the run if a credential appears anyway.
-
-#### The facade is `@textui/kit`, not `textui`
-
-npm refused the unscoped name: "Package name too similar to existing package `text-ui`". That package is a tombstone - zero versions, no maintainers, nothing published since 2022 - but npm reserves the names of unpublished packages permanently, and the reserved name still trips the similarity check.
-
-The bare name is not taken, only blocked, so it may become available if npm lifts the check. Until then the one-install entry point is `@textui/kit`. The `textui` *command* is unaffected: it is the bin of `@textui/cli`, and a bin name is not a package name.
-
-### 0.1.0 - the first publish
-
-Six packages: [`@textui/kit`](packages/facade), [`@textui/core`](packages/core), [`@textui/widgets`](packages/widgets), [`@textui/terminal`](packages/terminal), [`@textui/testing`](packages/testing) and [`@textui/cli`](packages/cli).
-
-`@textui/documents`, `@textui/textide` and `@textui/textide-git` are in the repository and build in CI, but are held back from this release - they are marked `private` until their surface settles, so `pnpm publish -r` skips them.
-
-Pre-1.0: the surface is still moving.
-
-#### Fixed before publishing
-
-- `@textui/core` declared an `./hooks` export subpath pointing at `dist/hooks/`, which is never emitted - hooks live in `runtime/hooks.ts` and are already re-exported from the root. Nothing in the repository imported the subpath, so nothing caught it; it would have been `ERR_MODULE_NOT_FOUND` for the first consumer who tried it. The subpath is gone, and `scripts/check-exports.mjs` now runs in CI so the next one fails a PR.
-- Every package ships the MIT `LICENSE` in its tarball. `license: "MIT"` in the manifest is not the licence text, and npm only includes a `LICENSE` that sits in the package's own directory.
-- Package READMEs linked to sibling packages relatively (`../core`), which resolves in the repository and 404s on npmjs.com. They are absolute now.
-- The documents guide said the JSON adapter ships in `@textui/core/adapters`. It ships in `@textui/documents`; `core/src/adapters` is a deliberately empty placeholder, and says so.
+### Added
+- `useFrame(fps, { enabled })`.
+- `TextUIApp.settled()`.
+- `renderStill({ width, height, ...appOptions })`.
+
+### Changed
+- `Feed` lays out only the entries near the viewport.
+- Prop resolution keeps array and object identity when nothing changed.
+- The workbench sidebar does not shrink.
+
+### Fixed
+- A shell registered after boot keeps the root on screen.
+
+## 0.2.0
+
+### Added
+- `TextInput` takes the mouse; `TextArea` selects by click, drag, double and triple click, and copies over OSC 52.
+- Hover on any node, with `onHover`.
+- `onMouse` returning `true` on `down` claims the drag and the release.
+- `Feed.pageKeys: 'always'`.
+- `HostConnection.onSessions`.
+- `ArgSpec.default` opens a picker on the current answer.
+- `descriptions: 'below'` on `Menu`, `CommandPalette` and `ArgSpec`.
+- `MenuItem.sectionBefore`; the palette shows a category as a heading.
+- A theme's `cursor` shape, and `divider` and `dividerChars`.
+- `Checkbox` and `RadioGroup` take `autoFocus`.
+- `@textui/testing`: `clickRepeat` and `drag`.
+
+### Changed
+- A palette with no `width` sizes to its rows, up to `maxWidth`.
+- A narrow `List` row drops the description before the status.
+- `Divider` takes `rule` instead of `style`.
+- Publishing uses npm trusted publishing.
+- The facade is `@textui/kit`.
+
+### Fixed
+- `autoFocus` skips nodes focus cannot land on.
+- OSC 52 is on for any terminal but `screen`.
+- `Store.notify` no longer allocates per subscription.
+
+## 0.1.0
+
+First publish: `@textui/kit`, `@textui/core`, `@textui/widgets`, `@textui/terminal`, `@textui/testing` and `@textui/cli`.

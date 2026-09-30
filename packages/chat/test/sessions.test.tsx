@@ -48,7 +48,7 @@ describe('the session list', () => {
     const t = await list({}, 140);
     for (const text of [
       'Rename the widgets package', 'running', 'claude', 'textui chat-package',
-      '3 files  +12 -4', 'reading tests', 'by an automation',
+      '3 files +12 -4', 'reading tests', 'by an automation',
     ]) {
       expect(t.hasText(text), text).toBe(true);
     }

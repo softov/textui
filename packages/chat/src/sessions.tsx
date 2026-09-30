@@ -37,7 +37,10 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
 
     const dot = `  ${theme.glyphs.separator}  `;
 
-    const items: ListItem[] = sessions.map((session) => {
+    /** A row, and what it changed: drawn apart from the line so the counts keep their colours. */
+    type SessionRow = ListItem & { files?: string; added?: string; removed?: string };
+
+    const items: SessionRow[] = sessions.map((session) => {
       const status = session.status;
       const changes = session.changes;
       return {
@@ -59,9 +62,6 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
           // apart. Then the pull request the branch became, where the host
           // found one: a merged branch is a finished row.
           [session.project, session.branch, session.pullRequest].filter(Boolean).join(' '),
-          changes?.files
-            ? `${changes.files} files  +${changes.additions ?? 0} -${changes.deletions ?? 0}`
-            : '',
           // What the host says it is doing, in its own words. Last, because it
           // is the one that is usually not there.
           session.activity ?? '',
@@ -73,6 +73,15 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
         ].filter(Boolean).join(dot),
         meta: status.label,
         tone: status.tone as SemanticVariant,
+        // What it has to show for itself, at the end of the second line
+        // under the status, green and red the way a diff says it.
+        ...(changes?.files
+          ? {
+            files: `${changes.files} files`,
+            added: `+${changes.additions ?? 0}`,
+            removed: `-${changes.deletions ?? 0}`,
+          }
+          : {}),
       };
     });
 
@@ -80,7 +89,7 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
       <List
         items={items}
         itemHeight={2}
-        renderItem={(item: ListItem, state: ListItemState) => (
+        renderItem={(item: SessionRow, state: ListItemState) => (
           <Column>
             <Row gap={1}>
               <text
@@ -105,6 +114,9 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
                 {...(state.selected ? {} : { fg: 'muted' as const })}
                 flex={1}
               />
+              {item.files ? <text content={` ${item.files}`} {...(state.selected ? {} : { fg: 'muted' })} shrink={0} /> : null}
+              {item.added ? <text content={` ${item.added}`} fg="success" shrink={0} /> : null}
+              {item.removed ? <text content={` ${item.removed}`} fg="danger" shrink={0} /> : null}
             </Row>
           </Column>
         )}

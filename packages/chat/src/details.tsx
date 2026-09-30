@@ -35,6 +35,11 @@ export interface DetailField {
   tone?: SemanticVariant;
   /** Shown instead of the value when there is none, in the subtle tone. */
   absent?: string;
+  /**
+   * The value drawn in pieces, for one with a colour of its own in it:
+   * `3 files`, `+260` in green, `-31` in red. `value` is still what is copied.
+   */
+  parts?: { text: string; tone?: SemanticVariant }[];
 }
 
 export interface SessionDetailsProps extends BoxProps {
@@ -145,14 +150,27 @@ export const SessionDetails: (props: SessionDetailsProps) => RenderOutput =
                 fg="muted"
                 truncate="end"
               />
-              <text
+              {field.parts && field.value ? (
+                <Row gap={1} flex={1}>
+                  {field.parts.map((part, index) => (
+                    <text
+                      key={index}
+                      content={part.text}
+                      shrink={part.tone ? 0 : 1}
+                      truncate="end"
+                      {...(part.tone ? { fg: part.tone } : {})}
+                      {...(selected ? { bold: true } : {})}
+                    />
+                  ))}
+                </Row>
+              ) : <text
                 content={field.value || field.absent || '-'}
                 flex={1}
                 {...(whole ? { wrap: 'word' as const } : { truncate: 'end' as const })}
                 {...(field.value ? {} : { fg: 'subtle' as const })}
                 {...(field.tone && field.value ? { fg: field.tone } : {})}
                 {...(selected ? { bold: true } : {})}
-              />
+              />}
               {copied === field.id ? <text content="copied" fg="success" shrink={0} /> : null}
             </Row>
           );

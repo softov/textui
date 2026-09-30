@@ -47,6 +47,17 @@ describe('the transcript', () => {
     await t.unmount();
   });
 
+  it('names the model a queued message will run on, when the host said', async () => {
+    const t = await open({ blocks: [
+      { kind: 'queued', id: 'q1', messageId: 'm1', text: 'and then this', model: 'opus-5' },
+      { kind: 'queued', id: 'q2', messageId: 'm2', text: 'and this too' },
+    ] });
+    const line = (text: string): string => t.lines().find((one) => one.includes(text)) ?? '';
+    expect(line('and then this')).toContain('opus-5');
+    expect(line('and this too')).not.toContain('opus-5');
+    await t.unmount();
+  });
+
   it('keeps folded content folded until it is expanded', async () => {
     const closed = await open();
     expect(closed.hasText('a')).toBe(true);

@@ -19,7 +19,8 @@ export type Block =
   | { kind: 'notice'; id: string; turnId: string; content: string }
   | { kind: 'failure'; id: string; turnId: string; content: string; resumable: boolean }
   | { kind: 'tool'; id: string; turnId: string; call: ChatToolCall }
-  | { kind: 'queued'; id: string; messageId: string; text: string };
+  /** `model` is what the host will run it on, when the host said. */
+  | { kind: 'queued'; id: string; messageId: string; text: string; model?: string };
 
 /** The blocks a cursor can land on: the ones that open, or can be withdrawn. */
 export function selectable(block: Block): boolean {

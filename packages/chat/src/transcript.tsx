@@ -210,6 +210,9 @@ const BlockView = defineComponent<{
           <Gutter blank {...mark} />
           <text content={theme.glyphs.chevronRight} fg={active ? 'accent' : 'subtle'} />
           <text content={block.text} fg="subtle" italic wrap="word" flex={1} {...hit} />
+          {/* The model it will run on, which need not be the one the
+              composer shows now: it was chosen when the message was sent. */}
+          {block.model ? <text content={block.model} fg="muted" shrink={0} /> : null}
           {/* What the cursor being here is *for*. A queue you cannot take
               anything out of is a list of messages you have to let happen. */}
           <text content={active ? 'enter drops it' : 'queued'} fg="warning" />

@@ -62,11 +62,23 @@ const Banners = defineComponent('Banners', () => {
       <Center padding={[1, 1, 0, 1]}>
         <ColorText
           content={banner("TextUI", fontAt('gard'), ink, width)}
-          ink={{ gradient: SPECTRUM }}
+          ink={{ cycle: SPECTRUM, every: 3 }}
           alignBlock
           wrap="none"
         />
       </Center>
+      <Column padding={{ top: 1 }}>
+        {bannerLines(BANNER_TEXT, fontAt('tmplt'), ink, width).map((line, i) => (
+          <ColorText
+            key={i}
+            content={line}
+            ink={{ gradient: SPECTRUM }}
+            alignBlock
+            textAlign="center"
+            wrap="none"
+          />
+        ))}
+      </Column>
       <Pattern
         tile={[
           '---o--'
@@ -80,18 +92,6 @@ const Banners = defineComponent('Banners', () => {
         // fg="accent"
         height={1}
       />
-      <Column padding={{top: 1}}>
-        {bannerLines(BANNER_TEXT, fontAt('tmplt'), ink, width).map((line, i) => (
-          <ColorText
-            key={i}
-            content={line}
-            ink={{ cycle: SPECTRUM, every: 3 }}
-            alignBlock
-            textAlign="center"
-            wrap="none"
-          />
-        ))}
-      </Column>
       {/* <FontText
         content={BANNER_TEXT}
         font={fontAt('tmplt')}

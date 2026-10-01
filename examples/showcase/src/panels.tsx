@@ -5,6 +5,7 @@ import {
   Spinner, StatusDot,
   Switch, Table, Tabs, TextArea, TextInput, Timeline, Toolbar, Tree,
   type PanelProps,
+  Divider,
 } from '@textui/widgets';
 import { Spacer, useTheme, type BoxProps, type RenderOutput } from '@textui/core';
 
@@ -44,8 +45,8 @@ export const PANELS: Showpiece[] = [
     render: () => (
       <Column gap={1}>
         <Row gap={1}>
-          <Button label="Deploy" tone="success" hint="⏎" />
-          <Button label="Cancel" />
+          <Button label="Deploy" tone="success" hint="↵" />
+          <Button label="⎋ Cancel" hint="esc" />
         </Row>
         <Row gap={1}>
           <Checkbox label="Run migrations" checked />
@@ -197,7 +198,7 @@ export const PANELS: Showpiece[] = [
           height={6}
           barWidth={2}
           data={[
-            { label: 'Aa', value: 22, tone: 'success' },
+            { label: 'Aa', value: 20, tone: 'success' },
             { label: 'Bb', value: 7, tone: 'info' },
             { label: 'Cc', value: 1, tone: 'danger' },
           ]}
@@ -226,15 +227,25 @@ export const PANELS: Showpiece[] = [
     title: 'Facts',
     subtitle: 'label and value, aligned',
     render: () => (
-      <KeyValue
-        items={[
-          { label: 'image', value: 'checkout:4.2.1' },
-          { label: 'replicas', value: '6 / 6', tone: 'success' },
-          { label: 'restarts', value: '2', tone: 'warning' },
-          { label: 'uptime', value: '19d 4h' },
-          { label: 'node', value: 'ip-10-0-3-14' },
-        ]}
-      />
+      <>
+        <KeyValue
+          labelGap={2}
+          items={[
+            { label: 'image', value: 'checkout:4.2.1' },
+            { label: 'uptime', value: '19d 4h' },
+            { label: 'node', value: 'ip-10-0-3-14' },
+          ]}
+        />
+        <Divider />
+        <KeyValue 
+          valueAlign="right"       
+          items={[
+            { label: 'restarts', value: '3', tone: 'warning' },
+            { label: 'hosts', value: '9 / 12', tone: 'warning' },
+            { label: 'replicas', value: '6 / 6', tone: 'success' },
+          ]}
+        />
+      </>
     ),
   },
   {
@@ -279,32 +290,6 @@ export const PANELS: Showpiece[] = [
     ),
   },
   {
-    id: 'timeline',
-    title: 'A timeline',
-    subtitle: 'what happened, in order',
-    render: () => (
-      <Timeline
-        items={[
-          { time: '09:12', title: 'Build passed', tone: 'success' },
-          { time: '09:14', title: 'Canary at 5%', description: 'error rate flat, check log file to see whats happening', tone: 'warning' },
-          { time: '09:21', title: 'Rolled to 50%', tone: 'info' },
-        ]}
-      />
-    ),
-  },
-  {
-    id: 'says',
-    title: 'Saying something',
-    subtitle: 'the tone carries it, not the wording',
-    render: () => (
-      <Column gap={1}>
-        <Alert tone="success" title="Deployed" message="4.2.1 is live in eu-west-1." />
-        <Alert tone="warning" message="Two replicas restarted in the last hour." />
-        <Alert tone="danger" title="Rollback" message="The mailer never became ready." />
-      </Column>
-    ),
-  },
-  {
     id: 'table',
     title: 'A table',
     subtitle: 'columns that drop by priority',
@@ -345,6 +330,32 @@ export const PANELS: Showpiece[] = [
             { id: '3', name: 'mailer', region: 'us-east-1', p99: '—', state: 'down' },
           ]}
         />
+      </Column>
+    ),
+  },
+  {
+    id: 'timeline',
+    title: 'A timeline',
+    subtitle: 'what happened, in order',
+    render: () => (
+      <Timeline
+        items={[
+          { time: '09:12', title: 'Build passed', tone: 'success' },
+          { time: '09:14', title: 'Canary at 5%', description: 'error rate flat, check log file to see whats happening', tone: 'warning' },
+          { time: '09:21', title: 'Rolled to 50%', tone: 'info' },
+        ]}
+      />
+    ),
+  },
+  {
+    id: 'says',
+    title: 'Saying something',
+    subtitle: 'the tone carries it, not the wording',
+    render: () => (
+      <Column gap={1}>
+        <Alert tone="success" title="Deployed" message="4.2.1 is live in eu-west-1." />
+        <Alert tone="warning" message="Two replicas restarted in the last hour." />
+        <Alert tone="danger" title="Rollback" message="The mailer never became ready." />
       </Column>
     ),
   },

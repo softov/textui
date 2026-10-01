@@ -355,6 +355,7 @@ export const MONO: ThemeDefinition = {
   name: 'Monochrome',
   appearance: 'dark',
   border: 'ascii',
+  // border: 'none',
   cursor: 'underline',
   // Chosen, not downgraded to: this theme is ascii on a terminal that could
   // draw anything, so the rule has to say so too.
@@ -395,6 +396,21 @@ export const MONO: ThemeDefinition = {
     cursor: 'default',
     shadow: 'default',
   },
+  components: {
+    List: { selected: { bold: true }, focus: { bold: true } },
+    Tree: { selected: { bold: true }, focus: { bold: true } },
+    Table: { selected: { bold: true }, focus: { bold: true } },
+    TextArea: { selected: { bold: true }, focus: { bold: true } },
+    CodeViewer: { selected: { bold: true }, focus: { bold: true } },
+    Menu: { selected: { bold: true }, focus: { bold: true } },
+    Tabs: { selected: { bold: true }, 'solid.selected': { bold: true } },
+    ToolCallRow: { selected: { bold: true } },
+    ReasoningBlock: { selected: { bold: true } },
+    ComposerChip: { focus: { bold: true } },
+    Editor: { selected: { bold: true } },
+    Panel: { base: { border: 'ascii', padding: [0, 1] } },
+    Button: { base: { padding: [0, 1] } },
+  }
 };
 
 /**

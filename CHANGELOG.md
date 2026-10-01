@@ -2,7 +2,7 @@
 
 The packages release as a set under one version.
 
-## Unreleased
+## 0.8.0
 
 ### Added
 - `onSelected` and `onActive`: the colour written on a filled selection, derived from the theme's `inverted` and `text` unless the theme states them.

@@ -564,7 +564,7 @@ export const PANELS: Showpiece[] = [
       // colour resolves through `ctx`, which is what keeps it legible when the
       // terminal can only do ascii, or only do sixteen colours.
       <Canvas
-        height={9}
+        height={8}
         draw={(surface, ctx) => {
           const ramp = ctx.theme.glyphs.blocks;
           const period = 12;

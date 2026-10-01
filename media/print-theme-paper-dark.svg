@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1588" height="1210" viewBox="0 0 1588 1210" font-family="ui-monospace, SFMono-Regular, &apos;SF Mono&apos;, Menlo, Consolas, &apos;DejaVu Sans Mono&apos;, monospace" font-size="13px">
+<svg xmlns="http://www.w3.org/2000/svg" width="1588" height="1193" viewBox="0 0 1588 1193" font-family="ui-monospace, SFMono-Regular, &apos;SF Mono&apos;, Menlo, Consolas, &apos;DejaVu Sans Mono&apos;, monospace" font-size="13px">
 <title>textui - paper-dark</title>
-<rect width="1588" height="1210" rx="6" fill="#1c1a17"/>
+<rect width="1588" height="1193" rx="6" fill="#1c1a17"/>
 <rect x="410" y="44" width="384" height="17" fill="#26231f"/>
 <rect x="802" y="44" width="384" height="17" fill="#26231f"/>
 <rect x="1194" y="44" width="376" height="17" fill="#26231f"/>
@@ -248,10 +248,6 @@
 <rect x="410" y="1132" width="384" height="17" fill="#26231f"/>
 <rect x="802" y="1132" width="384" height="17" fill="#26231f"/>
 <rect x="1194" y="1132" width="376" height="17" fill="#26231f"/>
-<rect x="18" y="1149" width="384" height="17" fill="#26231f"/>
-<rect x="410" y="1149" width="384" height="17" fill="#26231f"/>
-<rect x="802" y="1149" width="384" height="17" fill="#26231f"/>
-<rect x="1194" y="1149" width="376" height="17" fill="#26231f"/>
 <text x="10" y="23" fill="#e8e3d9" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">●</text>
 <text x="26" y="23" fill="#9a9287" textLength="48" lengthAdjust="spacing" xml:space="preserve">textui</text>
 <text x="74" y="23" fill="#db8c4c" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
@@ -914,28 +910,19 @@
 <text x="1138" y="1128" fill="#3fb950" textLength="16" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇</text>
 <text x="1154" y="1128" fill="#d29922" textLength="24" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆</text>
 <text x="1202" y="1128" fill="#e0873f" textLength="360" lengthAdjust="spacing" xml:space="preserve">/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/</text>
-<text x="810" y="1145" fill="#d29922" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▃▅▆▇</text>
-<text x="842" y="1145" fill="#e0873f" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▇</text>
-<text x="874" y="1145" fill="#f85149" textLength="64" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▅▃▅▆▇</text>
-<text x="938" y="1145" fill="#3fb950" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▇</text>
-<text x="970" y="1145" fill="#d29922" textLength="64" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▅▃▅▆▇</text>
-<text x="1034" y="1145" fill="#e0873f" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▇</text>
-<text x="1066" y="1145" fill="#f85149" textLength="64" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▅▃▅▆▇</text>
-<text x="1130" y="1145" fill="#3fb950" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▇</text>
-<text x="1162" y="1145" fill="#d29922" textLength="16" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇</text>
-<text x="10" y="1196" fill="#e0873f" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↑</text>
-<text x="26" y="1196" fill="#e0873f" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↓</text>
-<text x="42" y="1196" fill="#9a9287" textLength="48" lengthAdjust="spacing" xml:space="preserve">scroll</text>
-<text x="90" y="1196" fill="#db8c4c" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
-<text x="114" y="1196" fill="#e0873f" font-weight="bold" textLength="72" lengthAdjust="spacing" xml:space="preserve">pgup pgdn</text>
-<text x="194" y="1196" fill="#9a9287" textLength="48" lengthAdjust="spacing" xml:space="preserve">faster</text>
-<text x="242" y="1196" fill="#db8c4c" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
-<text x="266" y="1196" fill="#e0873f" font-weight="bold" textLength="24" lengthAdjust="spacing" xml:space="preserve">tab</text>
-<text x="298" y="1196" fill="#9a9287" textLength="96" lengthAdjust="spacing" xml:space="preserve">next control</text>
-<text x="394" y="1196" fill="#db8c4c" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
-<text x="418" y="1196" fill="#e0873f" font-weight="bold" textLength="8" lengthAdjust="spacing" xml:space="preserve">t</text>
-<text x="434" y="1196" fill="#9a9287" textLength="40" lengthAdjust="spacing" xml:space="preserve">theme</text>
-<text x="474" y="1196" fill="#db8c4c" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
-<text x="498" y="1196" fill="#e0873f" font-weight="bold" textLength="48" lengthAdjust="spacing" xml:space="preserve">ctrl+c</text>
-<text x="554" y="1196" fill="#9a9287" textLength="32" lengthAdjust="spacing" xml:space="preserve">quit</text>
+<text x="10" y="1179" fill="#e0873f" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↑</text>
+<text x="26" y="1179" fill="#e0873f" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↓</text>
+<text x="42" y="1179" fill="#9a9287" textLength="48" lengthAdjust="spacing" xml:space="preserve">scroll</text>
+<text x="90" y="1179" fill="#db8c4c" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="114" y="1179" fill="#e0873f" font-weight="bold" textLength="72" lengthAdjust="spacing" xml:space="preserve">pgup pgdn</text>
+<text x="194" y="1179" fill="#9a9287" textLength="48" lengthAdjust="spacing" xml:space="preserve">faster</text>
+<text x="242" y="1179" fill="#db8c4c" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="266" y="1179" fill="#e0873f" font-weight="bold" textLength="24" lengthAdjust="spacing" xml:space="preserve">tab</text>
+<text x="298" y="1179" fill="#9a9287" textLength="96" lengthAdjust="spacing" xml:space="preserve">next control</text>
+<text x="394" y="1179" fill="#db8c4c" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="418" y="1179" fill="#e0873f" font-weight="bold" textLength="8" lengthAdjust="spacing" xml:space="preserve">t</text>
+<text x="434" y="1179" fill="#9a9287" textLength="40" lengthAdjust="spacing" xml:space="preserve">theme</text>
+<text x="474" y="1179" fill="#db8c4c" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="498" y="1179" fill="#e0873f" font-weight="bold" textLength="48" lengthAdjust="spacing" xml:space="preserve">ctrl+c</text>
+<text x="554" y="1179" fill="#9a9287" textLength="32" lengthAdjust="spacing" xml:space="preserve">quit</text>
 </svg>

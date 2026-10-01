@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1588" height="1142" viewBox="0 0 1588 1142" font-family="ui-monospace, SFMono-Regular, &apos;SF Mono&apos;, Menlo, Consolas, &apos;DejaVu Sans Mono&apos;, monospace" font-size="13px">
+<svg xmlns="http://www.w3.org/2000/svg" width="1588" height="1125" viewBox="0 0 1588 1125" font-family="ui-monospace, SFMono-Regular, &apos;SF Mono&apos;, Menlo, Consolas, &apos;DejaVu Sans Mono&apos;, monospace" font-size="13px">
 <title>textui - dark</title>
-<rect width="1588" height="1142" rx="6" fill="#0d1117"/>
+<rect width="1588" height="1125" rx="6" fill="#0d1117"/>
 <rect x="818" y="537" width="352" height="17" fill="#264466"/>
 <rect x="1210" y="537" width="344" height="17" fill="#264466"/>
 <rect x="1210" y="741" width="344" height="17" fill="#161b22"/>
@@ -428,7 +428,7 @@
 <text x="146" y="346" fill="#f85149" textLength="8" lengthAdjust="spacing" xml:space="preserve">!</text>
 <text x="162" y="346" fill="#f85149" textLength="56" lengthAdjust="spacing" xml:space="preserve">failing</text>
 <text x="234" y="346" fill="#58a6ff" textLength="40" lengthAdjust="spacing" xml:space="preserve">4.2.1</text>
-<text x="290" y="346" fill="#58a6ff" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">⠸</text>
+<text x="290" y="346" fill="#58a6ff" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">⠹</text>
 <text x="298" y="346" fill="#e6edf3" textLength="96" lengthAdjust="spacing" xml:space="preserve"> draining   </text>
 <text x="394" y="346" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="410" y="346" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
@@ -1155,39 +1155,23 @@
 <text x="1194" y="1060" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1210" y="1060" fill="#58a6ff" textLength="344" lengthAdjust="spacing" xml:space="preserve">/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/</text>
 <text x="1562" y="1060" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="18" y="1077" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="394" y="1077" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="410" y="1077" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="786" y="1077" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="802" y="1077" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="818" y="1077" fill="#d29922" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▃▅▆▇</text>
-<text x="850" y="1077" fill="#58a6ff" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▇</text>
-<text x="882" y="1077" fill="#f85149" textLength="64" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▅▃▅▆▇</text>
-<text x="946" y="1077" fill="#3fb950" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▇</text>
-<text x="978" y="1077" fill="#d29922" textLength="64" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▅▃▅▆▇</text>
-<text x="1042" y="1077" fill="#58a6ff" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▇</text>
-<text x="1074" y="1077" fill="#f85149" textLength="64" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▅▃▅▆▇</text>
-<text x="1138" y="1077" fill="#3fb950" textLength="32" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█▇▆▇</text>
-<text x="1178" y="1077" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="1194" y="1077" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="1562" y="1077" fill="#30363d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="18" y="1094" fill="#30363d" textLength="384" lengthAdjust="spacingAndGlyphs" xml:space="preserve">└──────────────────────────────────────────────┘</text>
-<text x="410" y="1094" fill="#30363d" textLength="384" lengthAdjust="spacingAndGlyphs" xml:space="preserve">└──────────────────────────────────────────────┘</text>
-<text x="802" y="1094" fill="#30363d" textLength="384" lengthAdjust="spacingAndGlyphs" xml:space="preserve">└──────────────────────────────────────────────┘</text>
-<text x="1194" y="1094" fill="#30363d" textLength="376" lengthAdjust="spacingAndGlyphs" xml:space="preserve">└─────────────────────────────────────────────┘</text>
-<text x="10" y="1128" fill="#58a6ff" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↑</text>
-<text x="26" y="1128" fill="#58a6ff" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↓</text>
-<text x="42" y="1128" fill="#8b949e" textLength="48" lengthAdjust="spacing" xml:space="preserve">scroll</text>
-<text x="90" y="1128" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
-<text x="114" y="1128" fill="#58a6ff" font-weight="bold" textLength="72" lengthAdjust="spacing" xml:space="preserve">pgup pgdn</text>
-<text x="194" y="1128" fill="#8b949e" textLength="48" lengthAdjust="spacing" xml:space="preserve">faster</text>
-<text x="242" y="1128" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
-<text x="266" y="1128" fill="#58a6ff" font-weight="bold" textLength="24" lengthAdjust="spacing" xml:space="preserve">tab</text>
-<text x="298" y="1128" fill="#8b949e" textLength="96" lengthAdjust="spacing" xml:space="preserve">next control</text>
-<text x="394" y="1128" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
-<text x="418" y="1128" fill="#58a6ff" font-weight="bold" textLength="8" lengthAdjust="spacing" xml:space="preserve">t</text>
-<text x="434" y="1128" fill="#8b949e" textLength="40" lengthAdjust="spacing" xml:space="preserve">theme</text>
-<text x="474" y="1128" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
-<text x="498" y="1128" fill="#58a6ff" font-weight="bold" textLength="48" lengthAdjust="spacing" xml:space="preserve">ctrl+c</text>
-<text x="554" y="1128" fill="#8b949e" textLength="32" lengthAdjust="spacing" xml:space="preserve">quit</text>
+<text x="18" y="1077" fill="#30363d" textLength="384" lengthAdjust="spacingAndGlyphs" xml:space="preserve">└──────────────────────────────────────────────┘</text>
+<text x="410" y="1077" fill="#30363d" textLength="384" lengthAdjust="spacingAndGlyphs" xml:space="preserve">└──────────────────────────────────────────────┘</text>
+<text x="802" y="1077" fill="#30363d" textLength="384" lengthAdjust="spacingAndGlyphs" xml:space="preserve">└──────────────────────────────────────────────┘</text>
+<text x="1194" y="1077" fill="#30363d" textLength="376" lengthAdjust="spacingAndGlyphs" xml:space="preserve">└─────────────────────────────────────────────┘</text>
+<text x="10" y="1111" fill="#58a6ff" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↑</text>
+<text x="26" y="1111" fill="#58a6ff" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↓</text>
+<text x="42" y="1111" fill="#8b949e" textLength="48" lengthAdjust="spacing" xml:space="preserve">scroll</text>
+<text x="90" y="1111" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="114" y="1111" fill="#58a6ff" font-weight="bold" textLength="72" lengthAdjust="spacing" xml:space="preserve">pgup pgdn</text>
+<text x="194" y="1111" fill="#8b949e" textLength="48" lengthAdjust="spacing" xml:space="preserve">faster</text>
+<text x="242" y="1111" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="266" y="1111" fill="#58a6ff" font-weight="bold" textLength="24" lengthAdjust="spacing" xml:space="preserve">tab</text>
+<text x="298" y="1111" fill="#8b949e" textLength="96" lengthAdjust="spacing" xml:space="preserve">next control</text>
+<text x="394" y="1111" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="418" y="1111" fill="#58a6ff" font-weight="bold" textLength="8" lengthAdjust="spacing" xml:space="preserve">t</text>
+<text x="434" y="1111" fill="#8b949e" textLength="40" lengthAdjust="spacing" xml:space="preserve">theme</text>
+<text x="474" y="1111" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="498" y="1111" fill="#58a6ff" font-weight="bold" textLength="48" lengthAdjust="spacing" xml:space="preserve">ctrl+c</text>
+<text x="554" y="1111" fill="#8b949e" textLength="32" lengthAdjust="spacing" xml:space="preserve">quit</text>
 </svg>

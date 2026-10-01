@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1588" height="1142" viewBox="0 0 1588 1142" font-family="ui-monospace, SFMono-Regular, &apos;SF Mono&apos;, Menlo, Consolas, &apos;DejaVu Sans Mono&apos;, monospace" font-size="13px">
+<svg xmlns="http://www.w3.org/2000/svg" width="1588" height="1125" viewBox="0 0 1588 1125" font-family="ui-monospace, SFMono-Regular, &apos;SF Mono&apos;, Menlo, Consolas, &apos;DejaVu Sans Mono&apos;, monospace" font-size="13px">
 <title>textui - mono</title>
-<rect width="1588" height="1142" rx="6" fill="#0d1117"/>
+<rect width="1588" height="1125" rx="6" fill="#0d1117"/>
 <text x="10" y="23" fill="#c9d1d9" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">●</text>
 <text x="18" y="23" fill="#c9d1d9" textLength="1560" lengthAdjust="spacing" xml:space="preserve"> textui · 20 of 20 panels                                                                                                                                                      Monochrome · 196×400</text>
 <text x="10" y="57" fill="#c9d1d9" textLength="1560" lengthAdjust="spacing" xml:space="preserve">                                                  + Controls ------------------------------------+ + Text ----------------------------------------+ + Choosing -----------------------------------+</text>
@@ -279,7 +279,7 @@
 <text x="10" y="312" fill="#c9d1d9" textLength="1560" lengthAdjust="spacing" xml:space="preserve"> | the four tones, and a shape each             | | a number, four ways                          | | a series in one row, or in a block           | | a value per label, sorted as given          |</text>
 <text x="10" y="329" fill="#c9d1d9" textLength="1560" lengthAdjust="spacing" xml:space="preserve"> |                                              | |                                              | |                                              | |                                             |</text>
 <text x="10" y="346" fill="#c9d1d9" textLength="280" lengthAdjust="spacing" xml:space="preserve"> | live  canary  ! failing  4.2.1  </text>
-<text x="290" y="346" fill="#c9d1d9" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">⠙</text>
+<text x="290" y="346" fill="#c9d1d9" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">⠼</text>
 <text x="298" y="346" fill="#c9d1d9" textLength="288" lengthAdjust="spacing" xml:space="preserve"> draining   | | upload              </text>
 <text x="586" y="346" fill="#c9d1d9" textLength="160" lengthAdjust="spacingAndGlyphs" xml:space="preserve">██████████████▍░░░░░</text>
 <text x="746" y="346" fill="#c9d1d9" textLength="72" lengthAdjust="spacing" xml:space="preserve"> 72% | | </text>
@@ -540,19 +540,16 @@
 <text x="778" y="1060" fill="#c9d1d9" textLength="40" lengthAdjust="spacing" xml:space="preserve"> | | </text>
 <text x="818" y="1060" fill="#c9d1d9" textLength="352" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▂▃▅▆▇█▇█▇▆▅▃▂▃▅▆▇█▇█▇▆▅▃▂▃▅▆▇█▇█▇▆▅▃▂▃▅▆▇█▇█</text>
 <text x="1170" y="1060" fill="#c9d1d9" textLength="400" lengthAdjust="spacing" xml:space="preserve"> | | /\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/ |</text>
-<text x="10" y="1077" fill="#c9d1d9" textLength="808" lengthAdjust="spacing" xml:space="preserve"> |                                              | |                                              | | </text>
-<text x="818" y="1077" fill="#c9d1d9" textLength="352" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▃▅▆▇█▇▆▇█▇▆▅▃▅▆▇█▇▆▇█▇▆▅▃▅▆▇█▇▆▇█▇▆▅▃▅▆▇█▇▆▇</text>
-<text x="1170" y="1077" fill="#c9d1d9" textLength="400" lengthAdjust="spacing" xml:space="preserve"> | |                                             |</text>
-<text x="10" y="1094" fill="#c9d1d9" textLength="1560" lengthAdjust="spacing" xml:space="preserve"> +----------------------------------------------+ +----------------------------------------------+ +----------------------------------------------+ +---------------------------------------------+</text>
-<text x="10" y="1128" fill="#c9d1d9" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↑</text>
-<text x="26" y="1128" fill="#c9d1d9" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↓</text>
-<text x="34" y="1128" fill="#c9d1d9" textLength="80" lengthAdjust="spacing" xml:space="preserve"> scroll · </text>
-<text x="114" y="1128" fill="#c9d1d9" font-weight="bold" textLength="72" lengthAdjust="spacing" xml:space="preserve">pgup pgdn</text>
-<text x="186" y="1128" fill="#c9d1d9" textLength="80" lengthAdjust="spacing" xml:space="preserve"> faster · </text>
-<text x="266" y="1128" fill="#c9d1d9" font-weight="bold" textLength="24" lengthAdjust="spacing" xml:space="preserve">tab</text>
-<text x="290" y="1128" fill="#c9d1d9" textLength="128" lengthAdjust="spacing" xml:space="preserve"> next control · </text>
-<text x="418" y="1128" fill="#c9d1d9" font-weight="bold" textLength="8" lengthAdjust="spacing" xml:space="preserve">t</text>
-<text x="426" y="1128" fill="#c9d1d9" textLength="72" lengthAdjust="spacing" xml:space="preserve"> theme · </text>
-<text x="498" y="1128" fill="#c9d1d9" font-weight="bold" textLength="48" lengthAdjust="spacing" xml:space="preserve">ctrl+c</text>
-<text x="546" y="1128" fill="#c9d1d9" textLength="40" lengthAdjust="spacing" xml:space="preserve"> quit</text>
+<text x="10" y="1077" fill="#c9d1d9" textLength="1560" lengthAdjust="spacing" xml:space="preserve"> +----------------------------------------------+ +----------------------------------------------+ +----------------------------------------------+ +---------------------------------------------+</text>
+<text x="10" y="1111" fill="#c9d1d9" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↑</text>
+<text x="26" y="1111" fill="#c9d1d9" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↓</text>
+<text x="34" y="1111" fill="#c9d1d9" textLength="80" lengthAdjust="spacing" xml:space="preserve"> scroll · </text>
+<text x="114" y="1111" fill="#c9d1d9" font-weight="bold" textLength="72" lengthAdjust="spacing" xml:space="preserve">pgup pgdn</text>
+<text x="186" y="1111" fill="#c9d1d9" textLength="80" lengthAdjust="spacing" xml:space="preserve"> faster · </text>
+<text x="266" y="1111" fill="#c9d1d9" font-weight="bold" textLength="24" lengthAdjust="spacing" xml:space="preserve">tab</text>
+<text x="290" y="1111" fill="#c9d1d9" textLength="128" lengthAdjust="spacing" xml:space="preserve"> next control · </text>
+<text x="418" y="1111" fill="#c9d1d9" font-weight="bold" textLength="8" lengthAdjust="spacing" xml:space="preserve">t</text>
+<text x="426" y="1111" fill="#c9d1d9" textLength="72" lengthAdjust="spacing" xml:space="preserve"> theme · </text>
+<text x="498" y="1111" fill="#c9d1d9" font-weight="bold" textLength="48" lengthAdjust="spacing" xml:space="preserve">ctrl+c</text>
+<text x="546" y="1111" fill="#c9d1d9" textLength="40" lengthAdjust="spacing" xml:space="preserve"> quit</text>
 </svg>

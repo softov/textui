@@ -32,7 +32,7 @@ import { List } from '@textui/widgets';
 | `onSelect` | `(id: string, item: T) => void` |  |  |
 | `onActivate` | `(id: string, item: T) => void` |  |  |
 | `visibleRows` | `number` |  | Rows visible at once. Scrolls when there are more. |
-| `emptyMessage` | `string` | `'Nothing here'` |  |
+| `emptyMessage` | `string` | `i18n.t('textui.list.empty', undefined, 'Nothing here')` |  |
 | `marker` | `boolean` | `true` | Draw a marker column for the selected row. Drawn either way. |
 | `focusable` | `boolean` | `true` |  |
 | `autoFocus` | `boolean` |  |  |

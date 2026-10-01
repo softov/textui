@@ -20,8 +20,8 @@ import { FormActions } from '@textui/widgets';
 <!-- props:start -->
 | Prop | Type | Default | |
 | --- | --- | --- | --- |
-| `submitLabel` | `string` | `'Submit'` |  |
-| `cancelLabel` | `string` | `'Cancel'` |  |
+| `submitLabel` | `string` | `i18n.t('textui.formActions.submit', undefined, 'Submit')` |  |
+| `cancelLabel` | `string` | `i18n.t('textui.formActions.cancel', undefined, 'Cancel')` |  |
 | `onCancel` | `() => void` |  |  |
 | `tone` | `'default' \| 'primary' \| 'secondary' \| 'accent' \| 'success' \| 'warning' \| 'danger' \| 'info' \| 'muted'` | `'primary'` |  |
 | `requireDirty` | `boolean` | `false` | Disable submit until something changed. |

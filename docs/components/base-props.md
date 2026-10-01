@@ -84,6 +84,8 @@ Props every node accepts. Style arrives three ways on purpose: the full `style` 
 | `description` | `string` |  |
 | `disabled` | `boolean` |  |
 | `selected` | `boolean` |  |
+| `focused` | `boolean` | The states this node is in, for `style` overlays and for a theme. `focused` is a tri-state on purpose. Left out, the runtime asks the focus manager - which is right for a control and wrong for a row: a list row does not hold the keyboard, the list does. A row that has to be told so, or the distinction between "this is the current row" and "this is the current row and you can type at it" cannot be drawn at all. |
+| `styleAs` | `string` | Which of the component's boxes a theme styles. A composite component draws plain `box` nodes, so without this its entry in a theme's `components` map is a key nothing reads - a list row is a `box`, and `components.List.selected` is what a theme author would reach for. The name has to be stated by the component that owns the box, which is the only place that knows what the row is part of. Omitted, the node is styled under its own host name, so `components.box` and a `variant` keep working exactly as they did. |
 | `focusable` | `boolean` | Participates in tab order. Implied by an interactive role. |
 | `focusScope` | `string` | The focus scope this node belongs to. |
 | `autoFocus` | `boolean` |  |

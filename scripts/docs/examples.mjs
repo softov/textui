@@ -1282,6 +1282,32 @@ height.`,
 - [DangerZone](../input/danger-zone.md) - for irreversible actions, a better guard`,
   },
 
+  ConfirmDialog: {
+    summary: 'The two-button dialog behind the `confirm` helper.',
+    example: `import { ConfirmDialog } from '@textui/widgets';
+
+<ConfirmDialog
+  title="Delete the branch?"
+  message="This cannot be undone."
+  confirmLabel="Delete"
+  cancelLabel="Keep"
+  tone="danger"
+  onConfirm={() => {}}
+  onCancel={() => {}}
+/>`,
+    notes: `Usually reached through the app's \`confirm\` helper rather than mounted by
+hand - that opens it on the modal layer and resolves a promise with the answer.
+The buttons are the dialog's, not the caller's, so the order and the widths are
+the same wherever it is used.
+
+\`tone\` colours the confirming button, which is where a destructive action says
+so - see [\`DangerZone\`](../input/danger-zone.md) when the guard should be typed
+instead of clicked.`,
+    seeAlso: `- [Dialog](dialog.md) - when the choice is not yes or no
+- [PromptDialog](prompt-dialog.md) - when the answer is a string
+- [Layers](../../platform/layers.md) - trapping and dismissal`,
+  },
+
   PromptDialog: {
     summary: 'A dialog that asks for one string.',
     example: `import { PromptDialog } from '@textui/widgets';

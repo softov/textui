@@ -23,7 +23,7 @@ import { Switch } from '@textui/widgets';
 | `label` | `string` |  |  |
 | `value` | `boolean` | `false` |  |
 | `onChange` | `(value: boolean) => void` |  |  |
-| `labels` | `[off: string, on: string]` | `['off', 'on']` | Words either side, so the state reads without colour. |
+| `labels` | `[off: string, on: string]` |  | Words either side, so the state reads without colour. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

@@ -25,7 +25,7 @@ import { DangerZone } from '@textui/widgets';
 <!-- props:start -->
 | Prop | Type | Default | |
 | --- | --- | --- | --- |
-| `title` | `string` | `'Danger zone'` |  |
+| `title` | `string` | `i18n.t('textui.dangerZone.title', undefined, 'Danger zone')` |  |
 | `description` | `string` |  |  |
 | `actionLabel` | `string` | **required** |  |
 | `onAction` | `() => void` |  |  |

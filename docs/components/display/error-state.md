@@ -20,7 +20,7 @@ import { ErrorState } from '@textui/widgets';
 <!-- props:start -->
 | Prop | Type | Default | |
 | --- | --- | --- | --- |
-| `title` | `string` | `'Something went wrong'` |  |
+| `title` | `string` | `i18n.t('textui.errorState.title', undefined, 'Something went wrong')` |  |
 | `error` | `unknown` | **required** |  |
 | `onRetry` | `() => void` |  | Command id offered as a retry. |
 

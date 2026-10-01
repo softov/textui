@@ -31,7 +31,7 @@ Every node also accepts `role`, `label`, `focusable`, `onKey`, `onClick`, `disab
 
 <!-- props:start -->
 
-~97 components, and growing.
+~98 components, and growing.
 
 ### The four primitives
 
@@ -147,6 +147,7 @@ Every node also accepts `role`, `label`, `focusable`, `onKey`, `onClick`, `disab
 | | |
 | --- | --- |
 | [`Dialog`](navigation/dialog.md) | Modal box with actions; traps focus and restores it. |
+| [`ConfirmDialog`](navigation/confirm-dialog.md) | Two-button dialog behind the `confirm` helper. |
 | [`PromptDialog`](navigation/prompt-dialog.md) | One-field dialog behind the `prompt` helper. |
 | [`PathPicker`](navigation/path-picker.md) | Walk the resource tree and pick a file or a folder. |
 | [`Tooltip`](navigation/tooltip.md) | Small anchored hint. |

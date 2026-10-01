@@ -94,10 +94,10 @@ export class I18nRegistry implements I18n {
     return new Intl.ListFormat(this.locale, options).format(items);
   }
 
-  plural(count: number, forms: Record<string, string>): string {
+  plural(count: number, forms: Record<string, string>, values?: Record<string, unknown>): string {
     const rule = new Intl.PluralRules(this.locale).select(count);
     const template = forms[rule] ?? forms.other ?? '';
-    return interpolate(template, { count });
+    return interpolate(template, { ...values, count });
   }
 
   onChange(fn: (locale: LocaleId) => void): Disposable {

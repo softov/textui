@@ -51,7 +51,7 @@ export const Tabs = defineComponent<TabsProps>('Tabs', (props) => {
         gap: 1,
         padding: variant === 'solid' ? [0, 1] : 0,
         bg: variant === 'solid' && active ? 'selected' : undefined,
-        fg: item.disabled ? 'disabled' : active ? (variant === 'solid' ? 'inverted' : 'accent') : 'muted',
+        fg: item.disabled ? 'disabled' : active ? (variant === 'solid' ? 'onSelected' : 'accent') : 'muted',
         bold: active,
         underline: variant === 'underline' && active,
         onClick: () => { if (!item.disabled) onChange?.(item.id); },

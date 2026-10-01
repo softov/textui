@@ -15,6 +15,7 @@ export type ColorToken =
   | 'onDefault' | 'onMuted'
   | 'onAccent' | 'onPrimary' | 'onSecondary'
   | 'onSuccess' | 'onWarning' | 'onDanger' | 'onInfo'
+  | 'onSelected' | 'onActive'
   | 'hover' | 'active' | 'selected' | 'focus' | 'disabled'
   | 'scrim' | 'cursor' | 'shadow' | 'divider';
 

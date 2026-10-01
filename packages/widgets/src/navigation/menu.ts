@@ -130,11 +130,11 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
           ? h(Marquee, {
             content: item.description,
             active,
-            fg: active ? 'inverted' : 'muted',
+            fg: active ? 'onSelected' : 'muted',
             shrink: 8,
           })
           : null,
-        item.shortcut ? h('text', { content: item.shortcut, fg: active ? 'inverted' : 'subtle' }) : null,
+        item.shortcut ? h('text', { content: item.shortcut, fg: active ? 'onSelected' : 'subtle' }) : null,
         // Present but empty means "this opens something, contents unknown" -
         // which is what the command palette knows about an argument whose
         // choices it has not resolved yet.
@@ -150,7 +150,7 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
         // One background over both lines: a highlight that stopped after the
         // label would split the row it is highlighting in two.
         bg: active ? 'selected' : undefined,
-        fg: item.disabled ? 'disabled' : active ? 'inverted' : item.tone ? TONE[item.tone] : undefined,
+        fg: item.disabled ? 'disabled' : active ? 'onSelected' : item.tone ? TONE[item.tone] : undefined,
         onClick: () => { if (!item.disabled) onSelect?.(item.id, item); },
       },
         head,
@@ -166,7 +166,7 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
             h(Marquee, {
               content: item.description as string,
               active,
-              fg: active ? 'inverted' : 'muted',
+              fg: active ? 'onSelected' : 'muted',
               flex: 1,
             }))
           : null,

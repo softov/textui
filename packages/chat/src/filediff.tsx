@@ -38,13 +38,13 @@ export const FileDiff: (props: FileDiffProps) => RenderOutput =
       return (
         <EmptyState
           title={i18n.t('textui.fileDiff.binaryTitle', undefined, 'Not text')}
-          message={i18n.t(
-            'textui.fileDiff.binaryMessage',
+          message={i18n.plural(
+            binary.bytes,
             {
-              type: binary.contentType ?? i18n.t('textui.fileDiff.binaryType', undefined, 'Binary'),
-              bytes: binary.bytes,
+              one: i18n.t('textui.fileDiff.binaryMessage.one', undefined, '{type}, {count} byte. There is nothing to show a line at a time.'),
+              other: i18n.t('textui.fileDiff.binaryMessage.other', undefined, '{type}, {count} bytes. There is nothing to show a line at a time.'),
             },
-            '{type}, {bytes} bytes. There is nothing to show a line at a time.',
+            { type: binary.contentType ?? i18n.t('textui.fileDiff.binaryType', undefined, 'Binary') },
           )}
           {...rest}
         />
@@ -55,10 +55,13 @@ export const FileDiff: (props: FileDiffProps) => RenderOutput =
       return (
         <EmptyState
           title={i18n.t('textui.fileDiff.tooLargeTitle', undefined, 'Too big to line up')}
-          message={i18n.t(
-            'textui.fileDiff.tooLargeMessage',
-            { lines: diff.tooLarge.lines, limit: diff.tooLarge.limit },
-            '{lines} lines between the two sides, over the {limit} this will compare. Open it in an editor.',
+          message={i18n.plural(
+            diff.tooLarge.lines,
+            {
+              one: i18n.t('textui.fileDiff.tooLargeMessage.one', undefined, '{count} line between the two sides, over the {limit} this will compare. Open it in an editor.'),
+              other: i18n.t('textui.fileDiff.tooLargeMessage.other', undefined, '{count} lines between the two sides, over the {limit} this will compare. Open it in an editor.'),
+            },
+            { limit: diff.tooLarge.limit },
           )}
           {...rest}
         />

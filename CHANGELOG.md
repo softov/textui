@@ -2,6 +2,20 @@
 
 The packages release as a set under one version.
 
+## Unreleased
+
+### Added
+- `onSelected` and `onActive`: the colour written on a filled selection, derived from the theme's `inverted` and `text` unless the theme states them.
+- `I18n.plural(count, forms, values?)`: the `values` fill the rest of the sentence around `{count}`, so a form can carry a glyph or the total a count is out of.
+- `ChatComposer.commandWidth`: the least the slash menu's name column is given. A longer name widens it, because a floor is not a cut.
+
+### Fixed
+- The slash menu's name column is one width for the whole menu, so the descriptions line up instead of starting after each row's own name. A name that will not fit is cut with the theme's ellipsis rather than squeezed by the source column beside it.
+- Counts inflect: a session row says `1 file`, a connection badge `1 session`, a table footer `1 item`, and the reasoning, tool-call, markdown, binary and too-large-message lines each have a singular form.
+- A list, tree, table, text area, code viewer, menu, tab, tool call or reasoning row that fills with `selected` or `active` now states the colour written on it. It was inheriting the terminal's foreground, which a person may have set to the fill's colour.
+- `paper` states `onActive`, because its `text` is the terminal's own and a filled row cannot be read on a colour the user may have picked.
+- `workbench` names the light text on its grey selection, which the inherited `inverted` nearly disappeared against.
+
 ## 0.7.0
 
 ### Added

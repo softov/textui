@@ -22,4 +22,29 @@ describe('i18n', () => {
     const i18n = createI18n();
     expect(i18n.t('textui.x.missing')).toBe('textui.x.missing');
   });
+
+  it('picks the plural form the locale asks for', () => {
+    const i18n = createI18n('en');
+    const files = (count: number): string =>
+      i18n.plural(count, { one: '{count} file', other: '{count} files' });
+    expect(files(1)).toBe('1 file');
+    expect(files(2)).toBe('2 files');
+    expect(files(0)).toBe('0 files');
+  });
+
+  it('fills the rest of the sentence around the count', () => {
+    const i18n = createI18n('en');
+    const left = (count: number, glyph: string): string =>
+      i18n.plural(count, { one: '{glyph} {count} more line', other: '{glyph} {count} more lines' }, { glyph });
+    expect(left(1, '…')).toBe('… 1 more line');
+    expect(left(5, '…')).toBe('… 5 more lines');
+  });
+
+  it('selects on the number the noun agrees with, not the one it prints', () => {
+    const i18n = createI18n('en');
+    const of = (shown: number, total: number): string =>
+      i18n.plural(total, { one: '{shown} of {total} frame', other: '{shown} of {total} frames' }, { shown, total });
+    expect(of(1, 1)).toBe('1 of 1 frame');
+    expect(of(1, 5)).toBe('1 of 5 frames');
+  });
 });

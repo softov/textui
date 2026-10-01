@@ -78,7 +78,10 @@ export const SessionList: (props: SessionListProps) => RenderOutput =
         // under the status, green and red the way a diff says it.
         ...(changes?.files
           ? {
-            files: i18n.t('textui.sessions.files', { files: changes.files }, '{files} files'),
+            files: i18n.plural(changes.files, {
+              one: i18n.t('textui.sessions.files.one', undefined, '{count} file'),
+              other: i18n.t('textui.sessions.files.other', undefined, '{count} files'),
+            }),
             added: `+${changes.additions ?? 0}`,
             removed: `-${changes.deletions ?? 0}`,
           }
@@ -154,7 +157,15 @@ export const ConnectionBadge: (props: ConnectionBadgeProps) => RenderOutput =
       <Row gap={1} {...rest}>
         <text content={look.glyph} fg={look.tone} />
         <text content={url} fg="muted" truncate="start" />
-        {sessions !== undefined ? <Badge label={i18n.t('textui.connection.sessions', { sessions }, '{sessions} sessions')} tone="muted" /> : null}
+        {sessions !== undefined ? (
+          <Badge
+            label={i18n.plural(sessions, {
+              one: i18n.t('textui.connection.sessions.one', undefined, '{count} session'),
+              other: i18n.t('textui.connection.sessions.other', undefined, '{count} sessions'),
+            })}
+            tone="muted"
+          />
+        ) : null}
       </Row>
     );
   });

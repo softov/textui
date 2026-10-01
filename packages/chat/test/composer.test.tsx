@@ -4,7 +4,7 @@ import type { Rect } from '@textui/core';
 import { renderApp } from '@textui/testing';
 import type { Harness } from '@textui/testing';
 import { ChatComposer } from '../src/index.js';
-import type { ChatCompletion, ComposerOption } from '../src/index.js';
+import type { ChatCommand, ChatCompletion, ComposerOption } from '../src/index.js';
 
 /**
  * The completion menu above the composer, and how far down it goes.
@@ -335,5 +335,108 @@ describe('where the composer is', () => {
 
     await t.unmount();
     expect(seen[seen.length - 1]).toBeNull();
+  });
+});
+
+/**
+ * The name column of the slash menu.
+ *
+ * The menu is a table - the name, what it does, where it came from - so the
+ * first column is one width for the whole menu rather than each row's own
+ * name. Sized per row, the description started somewhere different on every
+ * line and a name long enough to matter was cut by whatever the row beside it
+ * needed. `commandWidth` is the floor, a longer name widens the column, and
+ * where the row cannot hold both the name is cut with the theme's ellipsis.
+ */
+
+const COMMANDS: ChatCommand[] = [
+  { id: 'security-review', kind: 'session', title: 'security-review', description: 'Complete a security review' },
+  { id: 'skill-doctor', kind: 'session', title: 'skill-doctor', description: 'Show which skills are unused' },
+  { id: 'ok', kind: 'session', title: 'ok', description: 'Short' },
+];
+
+const slash = async (width: number, commands: ChatCommand[] = COMMANDS, commandWidth?: number): Promise<Harness> => {
+  const t = await renderApp({
+    width,
+    height: 20,
+    theme: 'workbench',
+    root: h(ChatComposer, {
+      value: '/',
+      onChange: () => undefined,
+      onSubmit: () => undefined,
+      commands,
+      ...(commandWidth === undefined ? {} : { commandWidth }),
+    }),
+  });
+  await t.settle();
+  await t.settle();
+  return t;
+};
+
+/** Where each of these strings starts, in cells. */
+const starts = (t: Harness, needles: string[]): number[] =>
+  needles.map((text) => (t.lines().find((line) => line.includes(text)) ?? '').indexOf(text));
+
+describe('the slash menu name column', () => {
+  it('gives every row the same first column, so the descriptions line up', async () => {
+    const t = await slash(100);
+    const at = starts(t, ['Complete a security review', 'Show which skills are unused', 'Short']);
+    expect(new Set(at).size).toBe(1);
+    // One column for the whole menu: the twenty-cell floor the default sets,
+    // then the gap before the description.
+    expect(at[0]).toBe(starts(t, ['/security-review'])[0] + 20 + 1);
+    await t.unmount();
+  });
+
+  it('takes the caller\'s width as the floor', async () => {
+    const t = await slash(100, COMMANDS, 28);
+    const at = starts(t, ['Complete a security review', 'Short']);
+    expect(new Set(at).size).toBe(1);
+    expect(at[0]).toBe(starts(t, ['/security-review'])[0] + 28 + 1);
+    await t.unmount();
+  });
+
+  it('widens for a name past the floor, and keeps the rest lined up', async () => {
+    const long: ChatCommand[] = [
+      { id: 'very-long-command-name', kind: 'session', title: 'very-long-command-name', description: 'A long name' },
+      { id: 'ok', kind: 'session', title: 'ok', description: 'Short' },
+    ];
+    const t = await slash(120, long);
+    const at = starts(t, ['A long name', 'Short']);
+    expect(new Set(at).size).toBe(1);
+    const name = starts(t, ['/very-long-command-name'])[0];
+    expect(at[0]).toBe(name + '/very-long-command-name'.length + 1);
+    await t.unmount();
+  });
+
+  it('cuts a name that will not fit, with the theme\'s ellipsis', async () => {
+    const long: ChatCommand[] = [
+      { id: 'very-long-command-name-here', kind: 'session', title: 'very-long-command-name-here', description: 'A long description' },
+    ];
+    const t = await slash(60, long);
+    const row = t.lines().find((line) => line.includes('very-long-command-name-here')) ?? '';
+    // Cut, rather than pushed out by the source column beside it - and the cut
+    // carries the theme's own ellipsis.
+    expect(row).toContain('/very-lo…');
+    expect(row).not.toContain('/very-long-command-name-here');
+    await t.unmount();
+  });
+
+  it('leaves the path menu as it was', async () => {
+    const t = await renderApp({
+      width: 100,
+      height: 20,
+      theme: 'workbench',
+      root: h(ChatComposer, {
+        value: '@src/',
+        onChange: () => undefined,
+        onSubmit: () => undefined,
+        paths: [{ insertText: '@src/file.ts', label: 'file.ts', rangeStart: 0, rangeEnd: 5 }],
+      }),
+    });
+    await t.settle();
+    // A path is the row, not a table cell: its own name and nothing padded.
+    expect(t.lines().some((line) => line.includes('@src/file.ts'))).toBe(true);
+    await t.unmount();
   });
 });

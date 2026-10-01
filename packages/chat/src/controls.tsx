@@ -208,17 +208,17 @@ const Chip = defineComponent<ChipProps>('ComposerChip', (props) => {
           narrows the labels truncate from the right, and a chip that has
           given up its mark as well is four cells of ellipsis that could be
           any of six questions. */}
-      {icon ? <text content={icon} shrink={0} fg={focus.focused ? 'inverted' : tone ?? 'muted'} /> : null}
+      {icon ? <text content={icon} shrink={0} fg={focus.focused ? 'onSelected' : tone ?? 'muted'} /> : null}
       <text
         content={label}
         truncate="end"
-        fg={focus.focused ? 'inverted' : disabled ? 'disabled' : tone ?? undefined}
+        fg={focus.focused ? 'onSelected' : disabled ? 'disabled' : tone ?? undefined}
         {...(tone ? { bold: true } : {})}
       />
       <text
         content={trailing ?? theme.glyphs.chevronDown}
         shrink={0}
-        fg={focus.focused ? 'inverted' : 'subtle'}
+        fg={focus.focused ? 'onSelected' : 'subtle'}
       />
     </Row>
   );

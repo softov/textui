@@ -242,7 +242,10 @@ export const CodeViewer = defineComponent<CodeViewerProps>('CodeViewer', (props)
         key: number,
         direction: 'row',
         height: 1,
+        // A marked or caret row is a filled row, so it carries the colour that
+        // reads on the fill; a token that states its own keeps it.
         bg: marked ? 'active' : onCaret ? 'hover' : undefined,
+        fg: marked || onCaret ? 'onActive' : undefined,
       },
         lineNumbers
           ? h('text', {

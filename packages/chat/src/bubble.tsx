@@ -225,7 +225,7 @@ export const ReasoningBlock: (props: ReasoningBlockProps) => RenderOutput =
     const i18n = useI18n();
     const chevron = expanded ? theme.glyphs.chevronDown : theme.glyphs.chevronRight;
     const words = content.trim().split(/\s+/).filter(Boolean).length;
-    const fg = active ? 'inverted' : 'subtle';
+    const fg = active ? 'onSelected' : 'subtle';
 
     return (
       <Column {...rest}>
@@ -241,7 +241,10 @@ export const ReasoningBlock: (props: ReasoningBlockProps) => RenderOutput =
           <text content={chevron} fg={fg} />
           <text content={summary ?? (streaming
             ? i18n.t('textui.reasoning.thinking', undefined, 'thinking')
-            : i18n.t('textui.reasoning.thought', { words }, 'thought, {words} words'))} fg={fg} italic />
+            : i18n.plural(words, {
+              one: i18n.t('textui.reasoning.thought.one', undefined, 'thought, {count} word'),
+              other: i18n.t('textui.reasoning.thought.other', undefined, 'thought, {count} words'),
+            }))} fg={fg} italic />
         </Row>
         {expanded ? (
           <Row gap={1}>

@@ -223,10 +223,13 @@ export const MarkdownView = defineComponent<MarkdownViewProps>('MarkdownView', (
   return h('box', { role: 'document', direction: 'column', ...rest },
     ...out,
     hidden > 0
-      ? h('text', { content: i18n.t(
-          'textui.markdown.moreLines',
-          { glyph: theme.glyphs.ellipsis, count: hidden },
-          '{glyph} {count} more lines',
+      ? h('text', { content: i18n.plural(
+          hidden,
+          {
+            one: i18n.t('textui.markdown.moreLines.one', undefined, '{glyph} {count} more line'),
+            other: i18n.t('textui.markdown.moreLines.other', undefined, '{glyph} {count} more lines'),
+          },
+          { glyph: theme.glyphs.ellipsis },
         ), fg: 'subtle' })
       : null,
   );

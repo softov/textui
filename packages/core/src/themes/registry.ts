@@ -24,6 +24,7 @@ const FALLBACK_COLORS: Record<ColorToken, Color> = {
   onDefault: 'default', onMuted: 'default',
   onAccent: 'default', onPrimary: 'default', onSecondary: 'default',
   onSuccess: 'default', onWarning: 'default', onDanger: 'default', onInfo: 'default',
+  onSelected: 'default', onActive: 'default',
   hover: 'default', active: 'default', selected: 'default', focus: 'default',
   disabled: 'default', scrim: 'default', cursor: 'default', shadow: 'default',
 };
@@ -159,6 +160,21 @@ export class Themes implements ThemeRegistry {
         components[name] = { ...components[name], ...variants };
       }
     }
+
+    // What is written on a filled row, derived rather than restated.
+    //
+    // A selection background is only half a pair: `selected` carries
+    // `inverted` and `active` carries `text`. Stated as two independent
+    // colours, a theme that restates one half - `paper-light` restates
+    // `inverted`, `paper` leaves `text` as the terminal's - would take the
+    // other half from the theme it extends, or from the terminal, and a row
+    // could come out unreadable with nothing in the theme saying so.
+    //
+    // So the pair follows the theme's own values unless it says otherwise. A
+    // theme that wants a different colour on a fill states it, which is what
+    // `paper` does for `active`.
+    if (colors.onSelected === 'default') colors.onSelected = colors.inverted;
+    if (colors.onActive === 'default') colors.onActive = colors.text;
 
     // A colourless terminal gets no colour, whatever the theme says.
     if (caps.colorDepth === 0) {

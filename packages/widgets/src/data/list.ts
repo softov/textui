@@ -205,8 +205,13 @@ function ListView<T extends ListItem>(props: ListProps<T>): RenderOutput {
         // One background over the whole row, however many lines it draws: a
         // highlight that stopped after the first would split the row it is
         // highlighting in two.
+        // A background always comes with the colour that reads on it, the pair
+        // the themes state: `selected` carries `inverted` and `active` carries
+        // `text`. Left out, the row takes its parent's foreground - which under
+        // a theme whose `text` is `default` is the terminal's own, and a person
+        // is free to set that to the highlight's colour.
         bg: active && focus.focused ? 'selected' : active ? 'active' : undefined,
-        fg: item.disabled ? 'disabled' : active && focus.focused ? 'inverted' : undefined,
+        fg: item.disabled ? 'disabled' : active && focus.focused ? 'onSelected' : active ? 'onActive' : undefined,
         onClick: () => {
           if (item.disabled) return;
           if (selectedId === undefined) setInternalId(item.id);

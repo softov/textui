@@ -190,8 +190,10 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
         selected: active,
         direction: 'row',
         gap: 1,
+        // The same pair a list row uses: a background never travels without the
+        // colour that reads on it.
         bg: active && focus.focused ? 'selected' : active ? 'active' : undefined,
-        fg: active && focus.focused ? 'inverted' : undefined,
+        fg: active && focus.focused ? 'onSelected' : active ? 'onActive' : undefined,
         onClick: () => {
           if (selectedId === undefined) setInternalSelected(row.node.id);
           onSelect?.(row.node.id, row.node);

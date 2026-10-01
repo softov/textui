@@ -27,6 +27,9 @@ export const Pagination = defineComponent<PaginationProps>('Pagination', (props)
     h('text', { content: theme.glyphs.chevronLeft, fg: page > 1 ? 'accent' : 'disabled' }),
     h('text', { content: `${page} / ${pageCount}`, bold: focus.focused }),
     h('text', { content: theme.glyphs.chevronRight, fg: page < pageCount ? 'accent' : 'disabled' }),
-    total !== undefined ? h('text', { content: i18n.t('textui.pagination.total', { total }, '{total} items'), fg: 'muted' }) : null,
+    total !== undefined ? h('text', { content: i18n.plural(total, {
+      one: i18n.t('textui.pagination.total.one', undefined, '{count} item'),
+      other: i18n.t('textui.pagination.total.other', undefined, '{count} items'),
+    }), fg: 'muted' }) : null,
   );
 });

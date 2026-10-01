@@ -90,13 +90,13 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
           style={{ hover: { bg: 'hover' } }}
         >
           <text content={glyph} fg={look.tone} />
-          <text content={call.name} bold {...(active ? { fg: 'inverted' as const } : {})} />
-          <text content={summary} fg={active ? 'inverted' : 'muted'} flex={1} truncate="middle" />
+          <text content={call.name} bold {...(active ? { fg: 'onSelected' as const } : {})} />
+          <text content={summary} fg={active ? 'onSelected' : 'muted'} flex={1} truncate="middle" />
           {call.status === 'pending-confirmation' ? <Badge label={i18n.t('textui.toolCall.asks', undefined, 'asks')} tone="warning" icon={theme.glyphs.warning} /> : null}
           {failed ? <Badge label={i18n.t('textui.toolCall.exit', { code: call.exitCode ?? 1 }, 'exit {code}')} tone="danger" /> : null}
           {/* Trailing, like a disclosure triangle - the row says what it is
               first and how to see more of it last. */}
-          {opens ? <text content={chevron} fg={active ? 'inverted' : 'subtle'} /> : null}
+          {opens ? <text content={chevron} fg={active ? 'onSelected' : 'subtle'} /> : null}
         </Row>
 
         {expanded ? (
@@ -125,10 +125,13 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
                   <text key={i} content={line} fg="muted" truncate="end" />
                 ))}
                 {call.output.split('\n').length > 12 ? (
-                  <text content={i18n.t(
-                    'textui.toolCall.moreLines',
-                    { glyph: theme.glyphs.ellipsis, count: call.output.split('\n').length - 12 },
-                    '{glyph} {count} more lines',
+                  <text content={i18n.plural(
+                    call.output.split('\n').length - 12,
+                    {
+                      one: i18n.t('textui.toolCall.moreLines.one', undefined, '{glyph} {count} more line'),
+                      other: i18n.t('textui.toolCall.moreLines.other', undefined, '{glyph} {count} more lines'),
+                    },
+                    { glyph: theme.glyphs.ellipsis },
                   )} fg="subtle" />
                 ) : null}
               </Column>

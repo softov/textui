@@ -184,6 +184,11 @@ export const PAPER: ThemeDefinition = {
     hover: '#1f2937',
     active: '#264466',
     selected: '#1f6feb',
+    // `text` here is the terminal's own, which is the point of this theme -
+    // but it cannot be written on a filled row with any guarantee, because a
+    // person may have set their foreground to the fill's colour. So the
+    // selection states what is written on it instead of inheriting.
+    onActive: '#e6edf3',
     focus: '#58a6ff',
     disabled: '#484f58',
     scrim: '#010409',
@@ -263,6 +268,9 @@ export const WORKBENCH: ThemeDefinition = {
     hover: '#313244',
     active: '#45475a',
     selected: '#585b70',
+    // The selection is a mid grey, so the light text is what reads on it; the
+    // inherited `inverted` is darker than the fill and nearly disappears.
+    onSelected: '#cdd6f4',
     focus: '#89b4fa',
     scrim: '#11111b',
   },

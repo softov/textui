@@ -228,8 +228,8 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
    * selections on the screen.
    */
   const selectionStyle: Style = focus.focused
-    ? { bg: 'selected', fg: 'inverted' }
-    : { bg: 'active' };
+    ? { bg: 'selected', fg: 'onSelected' }
+    : { bg: 'active', fg: 'onActive' };
 
   const before = chars.slice(0, position).join('');
   const lines = value === '' ? [''] : value.split('\n');

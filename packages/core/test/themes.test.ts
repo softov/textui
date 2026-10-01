@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest';
+import { createThemes } from '../src/themes/registry.js';
+import type { TerminalCapabilities } from '../src/types/capabilities.js';
+
+/**
+ * What is written on a filled row.
+ *
+ * `selected` and `active` are backgrounds, and a background on its own says
+ * nothing about the text over it. The on-tokens are derived from the theme's
+ * own `inverted` and `text`, so a theme that restates either half keeps the
+ * pair together - and a theme whose `text` is the terminal's has to state a
+ * colour of its own, because the terminal's foreground is exactly what a
+ * person may have set to the fill's colour.
+ */
+
+const CAPS = { colorDepth: 24, unicode: 'full' } as TerminalCapabilities;
+
+describe('the colour written on a filled row', () => {
+  it('is derived from the theme when the theme does not state it', () => {
+    const dark = createThemes().resolve('dark', CAPS);
+    expect(dark.colors.onSelected).toBe(dark.colors.inverted);
+    expect(dark.colors.onActive).toBe(dark.colors.text);
+  });
+
+  it('follows the theme that restates one half of the pair', () => {
+    // `paper-dark` restates `inverted` and `text`; both on-tokens move with
+    // them rather than staying with the theme it extends.
+    const paperDark = createThemes().resolve('paper-dark', CAPS);
+    expect(paperDark.colors.onSelected).toBe(paperDark.colors.inverted);
+    expect(paperDark.colors.onActive).toBe(paperDark.colors.text);
+  });
+
+  it('leaves `paper` a colour of its own for the fill', () => {
+    const paper = createThemes().resolve('paper', CAPS);
+    // The theme draws in the terminal's own foreground, which cannot be
+    // guaranteed to read on a fill - so the fill states its own colour.
+    expect(paper.colors.text).toBe('default');
+    expect(paper.colors.onActive).not.toBe('default');
+  });
+
+  it('is nothing at all on a terminal with no colour', () => {
+    const dark = createThemes().resolve('dark', { ...CAPS, colorDepth: 0 } as TerminalCapabilities);
+    expect(dark.colors.onSelected).toBe('default');
+    expect(dark.colors.onActive).toBe('default');
+  });
+});

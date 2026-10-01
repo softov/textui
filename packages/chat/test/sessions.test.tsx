@@ -55,6 +55,13 @@ describe('the session list', () => {
     await t.unmount();
   });
 
+  it('says one file, not one files', async () => {
+    const t = await list({ sessions: [{ ...SESSION, changes: { files: 1, additions: 3, deletions: 0 } }] }, 140);
+    expect(t.hasText('1 file +3 -0')).toBe(true);
+    expect(t.hasText('1 files')).toBe(false);
+    await t.unmount();
+  });
+
   it('puts the pull request after the branch it became', async () => {
     const t = await list({ sessions: [{ ...SESSION, pullRequest: '#412 merged' }] }, 120);
     expect(t.hasText('textui chat-package #412 merged')).toBe(true);
@@ -107,6 +114,18 @@ describe('the connection badge', () => {
       expect(t.hasText('2 sessions')).toBe(true);
       await t.unmount();
     }
+  });
+
+  it('says one session, not one sessions', async () => {
+    const t = await renderApp({
+      width: 60,
+      height: 3,
+      root: h(ConnectionBadge, { url: 'ws://localhost:4020', state: 'connected', sessions: 1 }),
+    });
+    await t.settle();
+    expect(t.hasText('1 session')).toBe(true);
+    expect(t.hasText('1 sessions')).toBe(false);
+    await t.unmount();
   });
 });
 

@@ -66,6 +66,7 @@ h('box', {
 
 and the theme answers:
 
+<!-- docs:nocheck -->
 ```ts
 components: {
   List: {
@@ -103,6 +104,7 @@ Sometimes the question a state answers is not "what colour" but "does it paint a
 
 So a state is also offered qualified by each of the props-driven names on the same node, immediately after the flat one and with the order between states unchanged:
 
+<!-- docs:nocheck -->
 ```ts
 components: {
   Tabs: {

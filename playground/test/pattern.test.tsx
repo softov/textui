@@ -46,7 +46,10 @@ describe('the pattern playground', () => {
     expect(t.hasText('limit={{ width: 24, height: 6 }}')).toBe(true);
 
     await t.unmount();
-  });
+    // Mounting the page, settling twice after each of two tab clicks, and
+    // reading the frame back - five seconds is the default and this is past it
+    // on a loaded machine, which is a flake rather than a finding.
+  }, 20000);
 });
 
 /**

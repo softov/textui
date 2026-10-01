@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stringWidth } from '@textui/core';
 import { FONTS, banner, bannerLines, fontAt, heightOf, inkGlyphs } from '../src/display/fonts.js';
+import type { Font } from '../src/display/fonts.js';
 
 /**
  * The fonts, as data.

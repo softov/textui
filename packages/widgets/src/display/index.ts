@@ -4,11 +4,13 @@ import { Badge } from './badge.js';
 import { Card } from './card.js';
 import { ColorText } from './color-text.js';
 import { EmptyState } from './empty-state.js';
+import { FontText } from './font-text.js';
 import { ErrorState } from './error-state.js';
 import { Heading } from './heading.js';
 import { KeyValue } from './key-value.js';
 import { Label } from './label.js';
 import { Marquee } from './marquee.js';
+import { Pattern } from './pattern.js';
 import { Progress } from './progress.js';
 import { Skeleton } from './skeleton.js';
 import { Spinner } from './spinner.js';
@@ -28,11 +30,14 @@ export * from './badge.js';
 export * from './card.js';
 export * from './color-text.js';
 export * from './empty-state.js';
+export * from './font-text.js';
+export * from './fonts.js';
 export * from './error-state.js';
 export * from './heading.js';
 export * from './key-value.js';
 export * from './label.js';
 export * from './marquee.js';
+export * from './pattern.js';
 export * from './progress.js';
 export * from './skeleton.js';
 export * from './spinner.js';
@@ -50,7 +55,9 @@ export const DISPLAY_COMPONENTS: ComponentDefinition[] = [
   { component: 'Progress', category: 'feedback', renderer: { kind: 'function', render: Progress }, role: 'progressbar', description: 'Determinate or indeterminate bar, sub-cell resolution.' },
   { component: 'Spinner', category: 'feedback', renderer: { kind: 'function', render: Spinner }, role: 'status', description: 'Animated activity indicator.' },
   { component: 'ColorText', category: 'display', renderer: { kind: 'function', render: ColorText }, description: 'Multiline text coloured cell by cell - a ramp, a palette per line, or a function.' },
+  { component: 'FontText', category: 'display', renderer: { kind: 'function', render: FontText }, description: 'Text drawn in a block font, one glyph table to a letter.' },
   { component: 'Marquee', category: 'display', renderer: { kind: 'function', render: Marquee }, role: 'marquee', description: 'Text too long for its box, read by sliding it while it has the cursor.' },
+  { component: 'Pattern', category: 'display', renderer: { kind: 'function', render: Pattern }, description: 'A tile, repeated - a texture under the children or a motif over them.' },
   { component: 'Skeleton', category: 'feedback', renderer: { kind: 'function', render: Skeleton }, description: 'Loading placeholder.' },
   { component: 'EmptyState', category: 'feedback', renderer: { kind: 'function', render: EmptyState }, description: 'Nothing here, and what to do about it.' },
   { component: 'ErrorState', category: 'feedback', renderer: { kind: 'function', render: ErrorState }, role: 'alert', description: 'A failure, with its message.' },

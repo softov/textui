@@ -5,12 +5,15 @@ import { TONE as TONE_COLOR } from '../tone.js';
 export interface SpinnerProps extends BoxProps {
   label?: string;
   tone?: SemanticVariant;
+  frames?: string[];
 }
 
-export const Spinner = defineComponent<SpinnerProps>('Spinner', ({ label, tone = 'accent', ...rest }) => {
+export const DEFAULT_FRAMES = ['-', '\\', '|', '/'];
+
+export const Spinner = defineComponent<SpinnerProps>('Spinner', ({ label, tone = 'accent', frames: customFrames, ...rest }) => {
   const theme = useTheme();
   const frame = useFrame(10);
-  const frames = theme.glyphs.spinner;
+  const frames = customFrames ?? theme.glyphs.spinner ?? DEFAULT_FRAMES;
   const glyph = frames[frame % frames.length] ?? frames[0] ?? '*';
 
   return h('box', { role: 'status', direction: 'row', gap: 1, ...rest },

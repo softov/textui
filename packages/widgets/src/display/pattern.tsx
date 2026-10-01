@@ -1,12 +1,14 @@
 import { defineComponent, useCapabilities, useMeasure } from '@textui/core';
-import type { BoxProps, RenderOutput } from '@textui/core';
+import type { BoxProps, PaintSurface, RenderContext, RenderOutput } from '@textui/core';
+import { inkCellStyle, inkOwnStyle, painterOf } from './color-text.js';
+import type { Ink } from './color-text.js';
 
 /**
  * A tile, repeated.
  *
- * Written here rather than in the library so it can be exercised against real
- * screens before it earns a place in the catalog. Nothing in it is playground
- * specific - it uses `useMeasure` and absolute positioning and nothing else.
+ * A texture for a box, or a motif over one: the tile is stamped across and
+ * down until the box runs out, and `asBackground` (the default) or `asOverlay`
+ * says which side of the children it lands on.
  *
  * The two modes are document order and not much else. Painting walks the tree
  * in the order components were written, so a layer emitted before the children
@@ -86,6 +88,21 @@ export interface PatternProps extends BoxProps {
    * shows through. `null` paints every cell, spaces included.
    */
   transparent?: string | null;
+  /**
+   * Colour the tile cell by cell, the way [`ColorText`](color-text.md) colours
+   * text: a ramp between stops, a palette walked in runs, or a function of the
+   * cell. The coordinates are the pattern's own - `col` and `line` count cells
+   * of the box it fills, not of one copy of the tile - so `{ gradient }` runs
+   * across the whole texture and `{ cycle, every }` walks it.
+   *
+   * Stated, the tile is painted on a canvas rather than drawn as text, and a
+   * canvas is not told what it was nested in: every cell takes this
+   * component's own `fg` where the ink declines one, not the colour of the row
+   * it happens to sit in. That is the trade `ColorText` makes for the same
+   * reason, and it is the only difference between an inked tile and a plain
+   * one.
+   */
+  ink?: Ink;
   /** Paint under the children. The default, and what a texture wants. */
   asBackground?: boolean;
   /** Paint over the children instead. */
@@ -221,7 +238,7 @@ export const Pattern: (props: PatternProps) => RenderOutput = defineComponent<Pa
   (props) => {
     const {
       tile, ascii, x, y, limit, transparent = ' ',
-      spacing, jitter, seed = 1,
+      spacing, jitter, seed = 1, ink,
       asOverlay, asBackground: _asBackground, children, ...rest
     } = props;
 
@@ -336,19 +353,54 @@ export const Pattern: (props: PatternProps) => RenderOutput = defineComponent<Pa
         }
       }
 
-      grid.forEach((row, y1) => {
-        for (const run of runs(row.join(''), transparent)) {
-          cells.push(
-            <text
-              key={`${y1}:${run.at}`}
-              position="absolute"
-              top={y1}
-              left={run.at}
-              content={run.text}
-            />,
-          );
-        }
-      });
+      if (ink === undefined) {
+        grid.forEach((row, y1) => {
+          for (const run of runs(row.join(''), transparent)) {
+            cells.push(
+              <text
+                key={`${y1}:${run.at}`}
+                position="absolute"
+                top={y1}
+                left={run.at}
+                content={run.text}
+              />,
+            );
+          }
+        });
+      } else {
+        // One cell at a time, because one colour at a time is the whole point
+        // of an ink. A cell the `transparent` character owns is skipped rather
+        // than painted over: it is not the tile's to draw.
+        cells.push(
+          <canvas
+            key="ink"
+            position="absolute"
+            top={0}
+            left={0}
+            width={painted.width}
+            height={painted.height}
+            draw={(surface: PaintSurface, ctx: RenderContext) => {
+              const ownProps = props as unknown as Record<string, unknown>;
+              const base = inkCellStyle(inkOwnStyle(ownProps, ctx), ctx, props.link);
+              const paint = painterOf(ink, ctx);
+              for (let y1 = 0; y1 < grid.length; y1++) {
+                const row = grid[y1] as string[];
+                for (let x1 = 0; x1 < row.length; x1++) {
+                  const char = row[x1] as string;
+                  if (transparent !== null && char === transparent) continue;
+                  const style = paint({
+                    char, col: x1, line: y1, index: x1,
+                    offset: y1 * painted.width + x1,
+                    width: painted.width, height: painted.height,
+                    blockWidth: painted.width,
+                  });
+                  surface.put(x1, y1, char, style ? { ...base, ...style } : base);
+                }
+              }
+            }}
+          />,
+        );
+      }
     }
 
     // Absolute, so the pattern never pushes the children around, and hidden,

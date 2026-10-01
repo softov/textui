@@ -1,5 +1,5 @@
 import type {
-  CellStyle, Color, InteractionState, PaintSurface,
+  CellStyle, Color, InteractionState, PaintSurface, Style, StyleInput,
   RenderContext, StyleColor, TextProps, TextWrap,
 } from '@textui/core';
 import {
@@ -177,15 +177,9 @@ export const ColorText = defineComponent<ColorTextProps>('ColorText', (props) =>
 
     // The component's own style, resolved for the state it is in. Not the
     // inherited one - a canvas is not told what it was nested in.
-    const own = mergeStyles(
-      styleFromProps(props as Record<string, unknown>),
-      flattenStyleInput(props.style, stateOf(ctx)),
-    );
-    const rest: CellStyle = {
-      fg: resolveColor(own.fg, ctx.theme, 'default'),
-      attrs: attrsFromStyle(own),
-      link: typeof props.link === 'string' ? props.link : undefined,
-    };
+    const ownProps = props as Record<string, unknown>;
+    const own = inkOwnStyle(ownProps, ctx);
+    const rest = inkCellStyle(own, ctx, props.link);
 
     const cut = props.truncate ?? truncateSideOf(wrap) ?? 'end';
     const dots = ellipsis ?? ctx.theme.glyphs.ellipsis;
@@ -256,6 +250,31 @@ export function blend(a: Color, b: Color, t: number): Color {
  * Exported so a component that paints its own cells - a chart, a viewer with a
  * heat column - can take an `Ink` and mean the same thing by it.
  */
+/**
+ * A component's own style, resolved for the state it is in.
+ *
+ * A canvas is not told what it was nested in, so a component that paints its
+ * own cells cannot inherit the way a `text` does: it resolves the props it was
+ * given against the theme, and hands the result to every cell the ink declines.
+ * Exported beside `painterOf` so a second painter means the same thing by it -
+ * `ColorText` and `Pattern` both paint their own cells and read the same way.
+ */
+export function inkOwnStyle(props: Record<string, unknown>, ctx: RenderContext): Style {
+  return mergeStyles(
+    styleFromProps(props),
+    flattenStyleInput(props.style as StyleInput | undefined, stateOf(ctx)),
+  );
+}
+
+/** The cell style a canvas painter starts from, given that own style. */
+export function inkCellStyle(own: Style, ctx: RenderContext, link?: unknown): CellStyle {
+  return {
+    fg: resolveColor(own.fg, ctx.theme, 'default'),
+    attrs: attrsFromStyle(own),
+    link: typeof link === 'string' ? link : undefined,
+  };
+}
+
 export function painterOf(
   ink: Ink | undefined,
   ctx: RenderContext,

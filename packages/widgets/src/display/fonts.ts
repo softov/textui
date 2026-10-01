@@ -1,12 +1,15 @@
 /**
- * Block fonts, so there is something worth colouring.
+ * Block fonts, and the engine that draws text in them.
  *
- * They live in the example and not in the library on purpose. `ColorText`
- * colours whatever string it is handed and has no opinion about where the
- * string came from - the plain mode of this demo passes ordinary prose through
- * the identical component and the identical inks. A font is data an
- * application brings; a catalog that shipped one would be shipping a figlet
- * nobody asked it to keep up to date.
+ * A font is data: a table of glyphs, a tracking and a space width. `banner()`
+ * lays a string out in one and answers with plain text, which is the shape
+ * half only - `ColorText` colours it cell by cell, and the two are deliberately
+ * separate, because a banner wants a ramp across it and prose does not.
+ * [`FontText`](font-text.tsx) is the one-liner over this: text and a font in,
+ * letters out.
+ *
+ * These ship so that component has something to draw with; the tables are data
+ * an application can replace, and `Font` is the whole contract.
  *
  * There is one hand-drawn table and three transforms of it, which is the other
  * thing worth showing: a bitmap font is a grid of characters, and a grid of
@@ -682,6 +685,9 @@ export function fontAt(id: string): Font {
   return FONTS.find((f) => f.id === id) ?? (FONTS[0] as Font);
 }
 
+/** The font that is drawn in when a caller names none: the hand-drawn table. */
+export const DEFAULT_FONT: Font = fontAt('block');
+
 /** The tallest glyph in a font, which is how many rows a line of it takes. */
 export function heightOf(font: Font): number {
   return Object.values(font.glyphs).reduce((h, rows) => Math.max(h, rows.length), 0);
@@ -818,23 +824,56 @@ export const PLAIN_GLYPHS: InkGlyphs = { fill: '#', shade: '-', top: '"', bottom
 /**
  * Text as block letters.
  *
- * Newlines are lines: each one becomes its own block of rows, stacked with a
- * blank row between them so two lines of banner do not read as one. A
- * character with no glyph becomes a word space, so a missing one shows as a
+ * Newlines are lines: each one becomes its own block of rows, stacked with
+ * `lineGap` blank rows between them so two lines of banner do not read as one.
+ * A character with no glyph becomes a word space, so a missing one shows as a
  * gap the reader can see rather than silently closing up.
+ */
+export function bannerLines(
+  text: string,
+  font: Font,
+  ink: InkGlyphs = PLAIN_GLYPHS,
+  width = Infinity,
+): string[] {
+  const height = heightOf(font);
+  return text
+    .split('\n')
+    .flatMap((line) => wrapToWidth(line, font, width))
+    .map((line) => bannerLine(line, font, height, ink));
+}
+
+/**
+ * The same banner, one string per line.
+ *
+ * For a caller that has to place the lines itself, and the case that makes it
+ * necessary is centring: a multi-line block is centred once, as a block, so its
+ * shorter lines start at the widest line's edge and read as left-aligned. One
+ * `ColorText` per line - each `alignBlock` and `textAlign="center"` - centres
+ * every line over its own width while keeping the rows of each in step.
+ *
+ * The catch is the ink: a [`ColorText`](color-text.md) starts its ink at its
+ * own first cell, so a block drawn as several pieces restarts a `cycle` (and a
+ * `{ gradient }` measures each piece rather than the lot). That is a reason to
+ * keep one component for a continuous ramp, and this for centring.
  */
 export function banner(
   text: string,
   font: Font,
   ink: InkGlyphs = PLAIN_GLYPHS,
   width = Infinity,
+  /**
+   * Blank rows between one line and the next. One by default.
+   *
+   * Counts the *empty* rows, so `0` butts two lines together and `2` leaves two
+   * rows of air. It applies to every line the block has, wrapped or written -
+   * the break between two lines of a sentence is the same break as the one
+   * between two paragraphs, which is what makes a wrapped banner read as a
+   * block of its own rather than as one long line that ran out of room.
+   */
+  lineGap = 1,
 ): string {
-  const height = heightOf(font);
-  return text
-    .split('\n')
-    .flatMap((line) => wrapToWidth(line, font, width))
-    .map((line) => bannerLine(line, font, height, ink))
-    .join('\n\n');
+  const gap = `\n${'\n'.repeat(Math.max(0, Math.floor(lineGap)))}`;
+  return bannerLines(text, font, ink, width).join(gap);
 }
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { stringWidth } from '@textui/core';
-import { FONTS, banner, fontAt, heightOf, inkGlyphs } from '../src/fonts.js';
+import { FONTS, banner, bannerLines, fontAt, heightOf, inkGlyphs } from '../src/display/fonts.js';
 
 /**
  * The fonts, as data.
@@ -453,5 +453,16 @@ describe('a banner of more than one word', () => {
     expect(inkGlyphs({ progressFull: '#', progressEmpty: '-' }, false))
       .toEqual({ fill: '#', shade: '-', top: '"', bottom: '_' });
     expect(rows('A', fontAt('shadow')).join('')).not.toContain('█');
+  });
+});
+
+describe('bannerLines', () => {
+  it('is the banner, in pieces', () => {
+    const one = banner('Text Terminal User Interface', FONTS[0] as Font, PEN, 30, 1);
+    const lines = bannerLines('Text Terminal User Interface', FONTS[0] as Font, PEN, 30);
+    expect(lines.length).toBeGreaterThan(1);
+    // The gap is the join's business, and only the join's.
+    expect(one).toBe(lines.join('\n\n'));
+    expect(banner('Text Terminal User Interface', FONTS[0] as Font, PEN, 30, 0)).toBe(lines.join('\n'));
   });
 });

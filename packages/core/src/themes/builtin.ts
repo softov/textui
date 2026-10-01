@@ -28,8 +28,11 @@ import type { ThemeDefinition } from '../types/theme.js';
 const SELECTION_FOCUSED: Style = { bg: 'selected', fg: 'onSelected', dim: true };
 const SELECTION_UNFOCUSED: Style = { bg: 'active', fg: 'onActive' };
 const SELECTION_HOVER: Style = { bg: 'hover', fg: 'onActive' };
-const SELECTION_DEFAULT: Style = { bg: 'default', fg: 'default', inverse: true };
-const SELECTION_DIMMED: Style = { bg: 'default', fg: 'default', inverse: true, dim: true };
+// The other way to draw a selection: reverse video, which is legible whatever
+// a theme's own two colours are. Left beside the three above while that is
+// decided - nothing reads them yet.
+// const SELECTION_DEFAULT: Style = { bg: 'default', fg: 'default', inverse: true };
+// const SELECTION_DIMMED: Style = { bg: 'default', fg: 'default', inverse: true, dim: true };
 
 /**
  * The state colours every built-in theme starts from.

@@ -449,7 +449,10 @@ export interface PieceProps extends BoxProps {
  */
 export function Piece({ piece, ...rest }: PieceProps): RenderOutput {
   const theme = useTheme();
-  const style: PanelProps = ['paper', 'paper-dark'].includes(theme.id) ? {
+  // The paper themes, by the thing that makes them paper rather than by a list
+  // of ids: `paper-light` was missing from that list, so the one light paper
+  // picture was the one where the panels had no bottom row and no fill.
+  const style: PanelProps = theme.density === 'airy' ? {
     bg: 'surfaceAlt',
     padding: {
       top: 1,

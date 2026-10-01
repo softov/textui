@@ -45,7 +45,11 @@ export const Showcase: (props: ShowcaseOptions) => RenderOutput =
     const theme = useTheme();
     const size = useSize();
     const shown = only === undefined ? PANELS : PANELS.filter((p) => p.id === only);
-    const rowGap = ['paper', 'paper-dark'].includes(theme.id) ? 1 : 0;
+    // An airy theme spaces its panels the way it spaces everything else. Read
+    // from the theme rather than from a list of ids: `paper-light` arrived
+    // after the list did and was never added to it, so the light paper picture
+    // was the one screenshot where the panels sat flush against each other.
+    const rowGap = theme.density === 'airy' ? 1 : 0;
     const grid = (
       <Row flexWrap="wrap" gap={1} rowGap={rowGap} padding={1} align="start">
         {shown.map((piece) => <Piece key={piece.id} piece={piece} width={wrap} />)}

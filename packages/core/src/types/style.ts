@@ -2,24 +2,77 @@ import type { Color } from './cells.js';
 import type { EdgeSpec } from './geometry.js';
 
 /**
- * Semantic theme tokens. A component names a role, never a colour - which is
- * what lets one catalog render the same under a light theme, a dark theme and
- * a 16-colour ssh session.
+ * Semantic theme tokens, split by the channel each one is written in.
+ *
+ * A component names a role, never a colour - which is what lets one catalog
+ * render the same under a light theme, a dark theme and a 16-colour ssh
+ * session. The role is not enough on its own, though: a token also has to be
+ * somewhere it can actually be drawn. `canvas` is a fill, `onAccent` is
+ * writing, `borderStrong` is a rule - and one union for all three is what let
+ * `fg: 'canvas'` and `border: 'onAccent'` compile, to be found by somebody
+ * looking at a frame.
+ *
+ * So each token is listed under the channels it may appear in, and `Style`
+ * takes the matching one. A token may appear in more than one - the tones are
+ * both a fill and a colour of their own - and a literal colour is the shared
+ * escape out of all three.
+ *
+ * A token missing from a list is a token that channel cannot use. Adding one
+ * is a decision about where it reads, not a convenience.
  */
-export type ColorToken =
-  | 'canvas' | 'surface' | 'surfaceAlt' | 'overlay'
-  | 'border' | 'borderStrong' | 'borderSubtle'
-  | 'text' | 'muted' | 'subtle' | 'inverted'
+
+/** Colours a cell's foreground may be. */
+export type FgColorToken =
+  // A tone is a colour in its own right as well as a fill it provides.
   | 'accent' | 'primary' | 'secondary'
   | 'success' | 'warning' | 'danger' | 'info'
+  // The states are readable as text too: a disabled label, a focus-coloured
+  // border rendered as a caption.
+  | 'hover' | 'active' | 'selected' | 'focus' | 'disabled'
+  | 'text' | 'muted' | 'subtle' | 'inverted'
+  // A quiet rule is also the quietest text there is.
+  | 'borderSubtle'
+  // The caret is the one token that is honestly both: an underline caret is
+  // drawn in the foreground, and a block caret is the foreground swapped, so
+  // both halves are reached by naming it here.
+  | 'cursor'
   | 'onDefault' | 'onMuted'
   | 'onAccent' | 'onPrimary' | 'onSecondary'
   | 'onSuccess' | 'onWarning' | 'onDanger' | 'onInfo'
-  | 'onSelected' | 'onActive'
-  | 'hover' | 'active' | 'selected' | 'focus' | 'disabled'
-  | 'scrim' | 'cursor' | 'shadow' | 'divider';
+  | 'onSelected' | 'onActive';
 
-/** Anywhere a colour is accepted, a semantic token is accepted too. */
+/** Colours a cell's background may be. */
+export type BgColorToken =
+  | 'canvas' | 'surface' | 'surfaceAlt' | 'overlay'
+  | 'hover' | 'active' | 'selected' | 'focus' | 'disabled'
+  | 'accent' | 'primary' | 'secondary'
+  | 'success' | 'warning' | 'danger' | 'info'
+  // What is over everything, what the caret is, and what a shadow is.
+  | 'scrim' | 'cursor' | 'shadow';
+
+/** Colours a rule may be. */
+export type BorderColorToken =
+  | 'border' | 'borderStrong' | 'borderSubtle' | 'divider'
+  | 'accent' | 'primary' | 'secondary'
+  | 'success' | 'warning' | 'danger' | 'info'
+  | 'hover' | 'focus'
+  // A quiet rule and a quiet label are the same two colours often enough that
+  // a frame drawn in `muted` is a line somebody means, not a mistake. What is
+  // refused here is the loud end of the foreground list: a rule in `text` or
+  // in an `on*` token is writing used as structure.
+  | 'muted' | 'subtle';
+
+/** Every token, for the places that take a colour without saying which. */
+export type ColorToken = FgColorToken | BgColorToken | BorderColorToken;
+
+/** A foreground: an `FgColorToken`, or a literal colour. */
+export type FgColor = FgColorToken | Color;
+/** A background: a `BgColorToken`, or a literal colour. */
+export type BgColor = BgColorToken | Color;
+/** A rule: a `BorderColorToken`, or a literal colour. */
+export type BorderColor = BorderColorToken | Color;
+
+/** Anywhere a colour is accepted, any token and any literal are accepted too. */
 export type StyleColor = ColorToken | Color;
 
 export type Dimension = number | `${number}%` | 'auto';
@@ -87,17 +140,17 @@ export type BorderSides = {
 
 /** A colour per edge. Unnamed edges fall back to the border's `color`. */
 export type BorderColors = {
-  top?: StyleColor;
-  right?: StyleColor;
-  bottom?: StyleColor;
-  left?: StyleColor;
+  top?: BorderColor;
+  right?: BorderColor;
+  bottom?: BorderColor;
+  left?: BorderColor;
 };
 
 export type BorderSpec =
   | BorderStyle
   | {
       style?: BorderStyle;
-      color?: StyleColor;
+      color?: BorderColor;
       /**
        * Per-edge colour, over `color`. A corner belongs to the edge that runs
        * through it - the top rule owns both top corners - because a cell holds
@@ -144,7 +197,7 @@ export interface Style {
    * but stays legible, rather than being replaced by a rectangle of nothing.
    * `true` uses the theme's `scrim` token; a number sets the strength.
    */
-  scrim?: boolean | StyleColor;
+  scrim?: boolean | BgColor;
   scrimStrength?: number;
 
   // --- box ---
@@ -197,8 +250,8 @@ export interface Style {
   overflowY?: Overflow;
 
   // --- paint ---
-  fg?: StyleColor;
-  bg?: StyleColor;
+  fg?: FgColor;
+  bg?: BgColor;
   bold?: boolean;
   dim?: boolean;
   italic?: boolean;
@@ -215,15 +268,28 @@ export interface Style {
   fill?: string;
 }
 
-/** Styles selected by interaction state. Merged over the base in this order. */
+/**
+ * Styles selected by interaction state. Merged over the base in this order.
+ *
+ * `selected` is "this is the current one"; `focus` is "and the keyboard is
+ * here", so a row that has both wears `focus` and a row that has only the
+ * first wears the dimmer `selected`. They are separate names because they
+ * were the same word once - `active` meant both the unfocused selection here
+ * and the pressed state in `InteractionState` - and a token that meant two
+ * things could be filled with either and looked wrong half the time.
+ */
 export interface StatefulStyle {
   base?: Style;
   focus?: Style;
   hover?: Style;
+  /** Pressed. Never a selection. */
   active?: Style;
   selected?: Style;
   disabled?: Style;
 }
+
+/** The states, in the order the last one wins. The shared vocabulary. */
+export type StateName = 'selected' | 'hover' | 'active' | 'focus' | 'disabled';
 
 export type StyleInput = Style | StatefulStyle | (Style | StatefulStyle | undefined | false)[];
 

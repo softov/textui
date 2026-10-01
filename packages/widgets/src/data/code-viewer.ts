@@ -92,6 +92,9 @@ export const HORIZONTAL_STEP = 4;
  * around it. And it colours by asking the registry for a highlighter, so a new
  * file type arrives coloured without this component learning what it is.
  */
+/** The name a theme styles a code row under. See `LIST`. */
+export const CODE_VIEWER = 'CodeViewer';
+
 export const CodeViewer = defineComponent<CodeViewerProps>('CodeViewer', (props) => {
   const {
     content, lineNumbers = true, startLine = 1, visibleRows, highlight = [],
@@ -242,10 +245,13 @@ export const CodeViewer = defineComponent<CodeViewerProps>('CodeViewer', (props)
         key: number,
         direction: 'row',
         height: 1,
-        // A marked or caret row is a filled row, so it carries the colour that
-        // reads on the fill; a token that states its own keeps it.
-        bg: marked ? 'active' : onCaret ? 'hover' : undefined,
-        fg: marked || onCaret ? 'onActive' : undefined,
+        styleAs: CODE_VIEWER,
+        // A marked line is a selection; the caret line is that selection with
+        // the keyboard on it. Both fills are the theme's - `CodeViewer.selected`
+        // and `CodeViewer.focused` - and both carry the colour that reads on
+        // the fill, so a token inside the row that states its own keeps it.
+        selected: marked,
+        focused: onCaret,
       },
         lineNumbers
           ? h('text', {

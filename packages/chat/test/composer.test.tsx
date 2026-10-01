@@ -377,6 +377,13 @@ const slash = async (width: number, commands: ChatCommand[] = COMMANDS, commandW
 const starts = (t: Harness, needles: string[]): number[] =>
   needles.map((text) => (t.lines().find((line) => line.includes(text)) ?? '').indexOf(text));
 
+/** Where one string starts, and a failure rather than a -1 when nothing drew it. */
+const start = (t: Harness, needle: string): number => {
+  const at = starts(t, [needle])[0];
+  if (at === undefined || at < 0) throw new Error(`nothing drew ${needle}`);
+  return at;
+};
+
 describe('the slash menu name column', () => {
   it('gives every row the same first column, so the descriptions line up', async () => {
     const t = await slash(100);
@@ -384,7 +391,7 @@ describe('the slash menu name column', () => {
     expect(new Set(at).size).toBe(1);
     // One column for the whole menu: the twenty-cell floor the default sets,
     // then the gap before the description.
-    expect(at[0]).toBe(starts(t, ['/security-review'])[0] + 20 + 1);
+    expect(at[0]).toBe(start(t, '/security-review') + 20 + 1);
     await t.unmount();
   });
 
@@ -392,7 +399,7 @@ describe('the slash menu name column', () => {
     const t = await slash(100, COMMANDS, 28);
     const at = starts(t, ['Complete a security review', 'Short']);
     expect(new Set(at).size).toBe(1);
-    expect(at[0]).toBe(starts(t, ['/security-review'])[0] + 28 + 1);
+    expect(at[0]).toBe(start(t, '/security-review') + 28 + 1);
     await t.unmount();
   });
 
@@ -404,8 +411,7 @@ describe('the slash menu name column', () => {
     const t = await slash(120, long);
     const at = starts(t, ['A long name', 'Short']);
     expect(new Set(at).size).toBe(1);
-    const name = starts(t, ['/very-long-command-name'])[0];
-    expect(at[0]).toBe(name + '/very-long-command-name'.length + 1);
+    expect(at[0]).toBe(start(t, '/very-long-command-name') + '/very-long-command-name'.length + 1);
     await t.unmount();
   });
 

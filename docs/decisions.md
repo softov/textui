@@ -99,6 +99,22 @@ Inheritance is the other half. A cell holds one foreground and one background, s
 
 **Cost.** Inheritance means a container's colour reaches further than some authors expect, and attributes accumulate with no way to unset one. Selection also owns the fill now, so `solid` is a weaker signal than it was: it says "this is the primary action", not "this is selected".
 
+## A component states its state colours where the component is
+
+**Chosen** after a theme that wanted its lists to have a different selection from its tables, and could not have one. `active` and `selected` were global tokens, so restating either repainted every list, tree, table, menu, tab and text field in the application at once - and leaving them alone meant the only way to colour one row differently was to write the colour on the node, where a theme could not reach it.
+
+So `components.List.selected = { bg, fg }` is the answer, and the component says which states it is in rather than what they look like. The five names are real: `selected`, `hover`, `active`, `focus`, `disabled`. Reaching them needed a prop, because a row's `focused` was structurally always false - the keyboard belongs to the list, not the row - so `focused` is a tri-state node prop that `stateOf` honours. `styleAs` came with it, since a composite component draws plain `box` nodes and `components.List` was otherwise a key nothing read.
+
+**Cost.** Three things. A theme author now has to know which name a component answers to, and a wrong one is a colour that silently does nothing - so each built-in entry is covered by a test that mounts the component and reads the cell, which is the only way a miss shows up before a person notices it. Text inside a selected row had to give up its own `fg`, which is the inheritance rule doing its job but reads as an omission at the call site. And `Tabs` needed the general form, a state qualified by a variant (`Tabs.solid.selected`), because whether a selected tab paints at all is a property of the variant rather than of the state.
+
+## A colour is typed by its channel
+
+**Chosen** because `active` was reachable in all three and meant three things. As a background it was the dim end of the selection pair; as a foreground it was the colour written on it; as a border it was neither and read as a mistake. Every one of those was a valid-looking line of code, and none of them said which was which.
+
+`ColorToken` is now a union of three per-channel lists, and `fg`, `bg`, each border side and `scrim` take their own. The tokens a theme's `colors` map is keyed by are still the whole union, so no theme has to be reorganised; the narrowing is on the field, which is where the mistake is actually made.
+
+**Cost.** A literal colour is still accepted anywhere a colour is, so `fg="canvas"` is the only thing that stops compiling and `fg="#0d1117"` still does - the escape hatch stays open deliberately, because the point is to catch the wrong token rather than to make the escape a second thing to argue about. `cursor` is in two lists on purpose, because an underline caret is a foreground and a block caret is the foreground swapped. And the border list keeps the two quiet foregrounds, `muted` and `subtle`, because a dim frame is a line somebody means; what it refuses is a rule in `text` or in an `on*` token, where writing is being used as structure.
+
 ## `root` is a mount, and the shell always frames it
 
 **Chosen** after a light theme that stayed dark: `createApp({ root })` returned that node *instead of* the shell, so the application had no canvas, no status surface, no toast host, and `setShell` silently did nothing. Only the dialogs looked themed, because they paint their own background.

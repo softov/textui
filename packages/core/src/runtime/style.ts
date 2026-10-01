@@ -1,4 +1,4 @@
-import type { Style, StatefulStyle, StyleInput, BorderSpec, BorderStyle, StyleColor } from '../types/style.js';
+import type { Style, StatefulStyle, StyleInput, BorderSpec, BorderColor, BorderStyle, StyleColor, StateName } from '../types/style.js';
 import type { ResolvedTheme } from '../types/theme.js';
 import type { Edges } from '../types/geometry.js';
 import type { Color } from '../types/cells.js';
@@ -31,6 +31,7 @@ export const STYLE_KEYS = new Set<string>([
 export interface InteractionState {
   focused: boolean;
   hovered: boolean;
+  /** Pressed. Not a selection - that is `selected`. */
   active: boolean;
   selected: boolean;
   disabled: boolean;
@@ -39,6 +40,37 @@ export interface InteractionState {
 export const NO_INTERACTION: InteractionState = {
   focused: false, hovered: false, active: false, selected: false, disabled: false,
 };
+
+/**
+ * The states, least to most specific - the order the last one wins.
+ *
+ * `flattenStyleInput` merges a `style` prop in this order and so does a
+ * theme's per-component map, which is the only way the two can be made to
+ * agree: a theme states `focus` over `selected` and gets the same answer
+ * whether the state came from the node or from the theme. `hovered` is the
+ * state; `hover` is the name it wears, which is why this is the one place
+ * that has to know the difference.
+ */
+const STATE_ORDER: readonly (keyof InteractionState)[] = [
+  'selected', 'hovered', 'active', 'focused', 'disabled',
+];
+
+const STATE_VARIANT: Record<keyof InteractionState, StateName> = {
+  selected: 'selected',
+  hovered: 'hover',
+  active: 'active',
+  focused: 'focus',
+  disabled: 'disabled',
+};
+
+/** The names of the states that are true, in the order the last one wins. */
+export function stateVariants(state: InteractionState): StateName[] {
+  const out: StateName[] = [];
+  for (const key of STATE_ORDER) {
+    if (state[key]) out.push(STATE_VARIANT[key]);
+  }
+  return out;
+}
 
 function isStateful(value: Style | StatefulStyle): value is StatefulStyle {
   return (
@@ -68,6 +100,7 @@ export function flattenStyleInput(input: StyleInput | undefined, state: Interact
 
   // Order matters: selected loses to active, active loses to focus, and
   // disabled wins over everything - a disabled control is not focusable.
+  // The same order `stateVariants` gives a theme, so the two cannot disagree.
   return mergeStyles(
     input.base,
     state.selected ? input.selected : undefined,
@@ -94,13 +127,37 @@ export function resolveStyle(
   defaultStyle: Style | undefined,
   state: InteractionState,
 ): Style {
-  const variants: string[] = [];
-  if (typeof props.variant === 'string') variants.push(props.variant);
-  if (typeof props.tone === 'string') variants.push(props.tone);
-  if (typeof props.size === 'string') variants.push(props.size);
+  const qualifiers: string[] = [];
+  if (typeof props.variant === 'string') qualifiers.push(props.variant);
+  if (typeof props.tone === 'string') qualifiers.push(props.tone);
+  if (typeof props.size === 'string') qualifiers.push(props.size);
+  const variants: string[] = [...qualifiers];
+
+  // The states join last, so a theme's entry for one of them wins over the
+  // same name used as a variant - `List.focused` is the fill on the row the
+  // keyboard is on, and a `focused` variant means nothing else.
+  //
+  // Each state is also offered qualified by each of the props-driven names,
+  // immediately after the flat one, for the case the flat name cannot say:
+  // whether a state paints at all is sometimes a property of a variant rather
+  // than of the state. A solid tab is filled and an underline one is not, and
+  // `Tabs.selected` has to mean the pair for both while `Tabs.solid.selected`
+  // is the one that adds the fill. The qualified name merges last and the
+  // order between the states is unchanged, so `disabled` still wins over
+  // everything and `focus` still wins over `selected`.
+  for (const name of stateVariants(state)) {
+    variants.push(name);
+    for (const qualifier of qualifiers) variants.push(`${qualifier}.${name}`);
+  }
+
+  // `styleAs` is how a component says which of its boxes a theme styles. A
+  // list draws its rows as plain `box` nodes, so without it `components.List`
+  // would be a key nothing ever reads - which is what every `components` entry
+  // written for a composite component was until this.
+  const owner = typeof props.styleAs === 'string' ? props.styleAs : component;
 
   return mergeStyles(
-    theme.styleFor(component, variants),
+    theme.styleFor(owner, variants),
     defaultStyle,
     styleFromProps(props),
     flattenStyleInput(props.style as StyleInput | undefined, state),
@@ -109,7 +166,13 @@ export function resolveStyle(
 
 // ------------------------------------------------------------------ colour
 
-/** A token name, a literal colour, or nothing. */
+/**
+ * A token name, a literal colour, or nothing.
+ *
+ * Takes the whole union because it is the one place a colour is turned into
+ * a cell value: the narrowing happened at the field that named it, which is
+ * where the mistake is made and where the error belongs.
+ */
 export function resolveColor(
   value: StyleColor | undefined,
   theme: ResolvedTheme,
@@ -119,6 +182,7 @@ export function resolveColor(
   return theme.color(value as string);
 }
 
+/** Pack a colour for a cell, at the caller's own channel. */
 export function packStyleColor(
   value: StyleColor | undefined,
   theme: ResolvedTheme,
@@ -144,9 +208,9 @@ export function attrsFromStyle(style: Style): number {
 export interface ResolvedBorder {
   style: BorderStyle;
   chars: BorderChars;
-  color: StyleColor | undefined;
+  color: BorderColor | undefined;
   /** Per-edge overrides. Undefined here means "use `color`". */
-  colors: { top?: StyleColor; right?: StyleColor; bottom?: StyleColor; left?: StyleColor };
+  colors: { top?: BorderColor; right?: BorderColor; bottom?: BorderColor; left?: BorderColor };
   dim: boolean;
   sides: { top: boolean; right: boolean; bottom: boolean; left: boolean };
   edges: Edges;

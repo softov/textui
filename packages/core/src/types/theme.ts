@@ -105,7 +105,16 @@ export interface ThemeDefinition {
    */
   tableRules?: TableRules;
   density?: Density;
-  /** Per-component style overrides, keyed by component name then variant. */
+  /**
+   * Per-component style overrides, keyed by component name then variant or
+   * state.
+   *
+   * A composite component has to name which of its boxes this is - a list row
+   * is a `box` node, and `List` is what a theme author knows it by - so the
+   * name is stated at the node with `styleAs` and the map is keyed by it.
+   * `base` is the component at rest; the rest are the variants it supports and
+   * the five states in `StateName`.
+   */
   components?: Record<string, Record<string, Style>>;
   /**
    * Colours for syntax scopes. Every scope has a default drawn from the
@@ -135,7 +144,20 @@ export interface ResolvedTheme {
   color(token: string): Color;
   borderChars(style?: BorderStyle): BorderChars;
   dividerChars(style?: DividerStyle): DividerChars;
-  /** Component style for a name + variant list, merged in order. */
+  /**
+   * Component style for a name and a list of names to merge over it, in the
+   * order given - later names win.
+   *
+   * The names are the component's `variant`, `tone` and `size` followed by the
+   * interaction states that are true: `selected`, `hover`, `active` (pressed),
+   * `focus` and `disabled`. So `components.List.selected` is the fill on the
+   * current row, and `components.List.focused` is the brighter one on the
+   * current row while the list has the keyboard.
+   *
+   * The order is the same one `flattenStyleInput` merges a `style` prop in, so
+   * a state stated at the node and the same state stated by the theme resolve
+   * to one answer rather than to whichever happened to be asked second.
+   */
   styleFor(component: string, variants?: string[]): Style;
 }
 

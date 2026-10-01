@@ -61,6 +61,9 @@ export interface MenuProps extends BoxProps {
   interactive?: boolean;
 }
 
+/** The name a theme styles a menu row under. See `LIST`. */
+export const MENU = 'Menu';
+
 export const Menu = defineComponent<MenuProps>('Menu', (props) => {
   const theme = useTheme();
   const i18n = useI18n();
@@ -126,15 +129,20 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
         // The description yields first, and by a lot. It is the elaboration;
         // the label is the thing being chosen, and a row reading "Accept ed…"
         // beside a full sentence has given up the wrong half.
+        //
+        // On the row under the cursor the foreground is `undefined`, not a
+        // token: what is written on a selection is the theme's, and a hard
+        // `onSelected` here would be a second answer to the same question that
+        // a theme restating `Menu.focused.fg` could not reach.
         item.description && !below
           ? h(Marquee, {
             content: item.description,
             active,
-            fg: active ? 'onSelected' : 'muted',
+            fg: active ? undefined : 'muted',
             shrink: 8,
           })
           : null,
-        item.shortcut ? h('text', { content: item.shortcut, fg: active ? 'onSelected' : 'subtle' }) : null,
+        item.shortcut ? h('text', { content: item.shortcut, fg: active ? undefined : 'subtle' }) : null,
         // Present but empty means "this opens something, contents unknown" -
         // which is what the command palette knows about an argument whose
         // choices it has not resolved yet.
@@ -145,12 +153,18 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
         key: item.id,
         role: 'menuitem',
         label: item.label,
+        styleAs: MENU,
         selected: active,
+        // The keyboard is the menu's, so the row is told - which is what lets
+        // `Menu.selected` be the dimmer fill a menu shows when something else
+        // has taken the keyboard, and `Menu.focused` the one it shows while
+        // the reader is moving through it.
+        focused: active && focus.focused,
         direction: 'column',
         // One background over both lines: a highlight that stopped after the
-        // label would split the row it is highlighting in two.
-        bg: active ? 'selected' : undefined,
-        fg: item.disabled ? 'disabled' : active ? 'onSelected' : item.tone ? TONE[item.tone] : undefined,
+        // label would split the row it is highlighting in two. What it is
+        // filled with is the theme's to say.
+        fg: item.disabled ? 'disabled' : active ? undefined : item.tone ? TONE[item.tone] : undefined,
         onClick: () => { if (!item.disabled) onSelect?.(item.id, item); },
       },
         head,
@@ -166,7 +180,7 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
             h(Marquee, {
               content: item.description as string,
               active,
-              fg: active ? 'onSelected' : 'muted',
+              fg: active ? undefined : 'muted',
               flex: 1,
             }))
           : null,

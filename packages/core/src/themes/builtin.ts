@@ -1,3 +1,4 @@
+import type { Style } from '../types/style.js';
 import type { ThemeDefinition } from '../types/theme.js';
 
 /**
@@ -9,6 +10,69 @@ import type { ThemeDefinition } from '../types/theme.js';
  * airy report or a workbench without a component knowing which - so the
  * difference lives here, in border style and density, not in the catalog.
  */
+
+/**
+ * A selection, in the two states it has.
+ *
+ * `selected` is "this is the current one" and `focus` is the same row while
+ * the component holds the keyboard, so a theme states the bright fill once and
+ * the dimmer one for everything the reader has walked away from. They were one
+ * name once - `active` meant both this and pressed - and a word that means two
+ * things gets filled with either.
+ *
+ * Both name tokens rather than colours, which is the point of the whole
+ * arrangement: retint the palette and every component that has not said
+ * otherwise moves with it, while a theme that states `components.List.focused`
+ * moves the list and leaves the table where it was.
+ */
+const SELECTION_FOCUSED: Style = { bg: 'selected', fg: 'onSelected', dim: true };
+const SELECTION_UNFOCUSED: Style = { bg: 'active', fg: 'onActive' };
+const SELECTION_HOVER: Style = { bg: 'hover', fg: 'onActive' };
+const SELECTION_DEFAULT: Style = { bg: 'default', fg: 'default', inverse: true };
+const SELECTION_DIMMED: Style = { bg: 'default', fg: 'default', inverse: true, dim: true };
+
+/**
+ * The state colours every built-in theme starts from.
+ *
+ * Stated once and spread into `dark` and `light` because a theme that
+ * extends either inherits it whole: the entries name tokens, so `console`
+ * keeps its own `selected` and gets its own fills, without restating a single
+ * component. That is also what makes them the *defaults* - a theme states
+ * `components` to differ, and says nothing here about what it does not.
+ */
+const STATE_STYLES: ThemeDefinition['components'] = {
+  List: { selected: SELECTION_UNFOCUSED, focus: SELECTION_FOCUSED },
+  Tree: { selected: SELECTION_UNFOCUSED, focus: SELECTION_FOCUSED },
+  Table: { selected: SELECTION_UNFOCUSED, focus: SELECTION_FOCUSED },
+  // The field's own selection, over the text it covers. Same pair, same
+  // reason: a selection left visible in an unfocused field says what is on
+  // the clipboard, and saying it as loudly as the live one would put two
+  // selections on the screen.
+  TextArea: { selected: SELECTION_UNFOCUSED, focus: SELECTION_FOCUSED },
+  // A marked line is a selection. The caret line is that selection plus the
+  // keyboard, so it takes the next fill up rather than a colour of its own.
+  CodeViewer: { selected: SELECTION_UNFOCUSED, focus: SELECTION_HOVER },
+  Menu: { selected: SELECTION_UNFOCUSED, focus: SELECTION_FOCUSED },
+  // A tab is open, not selected. Dimming it when the strip does not have the
+  // keyboard would say no document is open, which is a different claim and a
+  // wrong one - so it has one state and no second.
+  //
+  // Whether a tab is *filled* is a property of the variant rather than of the
+  // state: a solid tab is, an underline one is not. So the pair is stated for
+  // the state and the fill only for the variant that has one.
+  Tabs: { selected: { fg: 'onSelected' }, 'solid.selected': SELECTION_FOCUSED },
+  // The chat rows take the same fills, and for the same reason. `ToolCallRow`
+  // and `ReasoningBlock` are selections in a transcript that the caller
+  // names, so they have `selected` and no `focus`; a `ComposerChip` lights up
+  // only while it holds the keyboard, so it has `focus` and no `selected`.
+  ToolCallRow: { selected: SELECTION_FOCUSED },
+  ReasoningBlock: { selected: SELECTION_FOCUSED },
+  ComposerChip: { focus: SELECTION_FOCUSED },
+  // A range in a document is a selection, and it keeps the colours the text
+  // under it was already drawn in - the syntax of a selection is the syntax of
+  // the code it covers.
+  Editor: { selected: { bg: 'active' } },
+};
 
 export const DARK: ThemeDefinition = {
   id: 'dark',
@@ -55,6 +119,7 @@ export const DARK: ThemeDefinition = {
     shadow: '#010409',
   },
   spacing: { none: 0, xs: 0, sm: 1, md: 1, lg: 2, xl: 3 },
+  components: { ...STATE_STYLES },
 };
 
 export const LIGHT: ThemeDefinition = {
@@ -93,7 +158,7 @@ export const LIGHT: ThemeDefinition = {
     onWarning: '#ffffff',
     onDanger: '#ffffff',
     hover: '#eaeef2',
-    active: '#dbeafe',
+    active: '#a5bdd8',
     selected: '#0969da',
     focus: '#0969da',
     disabled: '#8c959f',
@@ -102,6 +167,7 @@ export const LIGHT: ThemeDefinition = {
     shadow: '#d0d7de',
   },
   spacing: { none: 0, xs: 0, sm: 1, md: 1, lg: 2, xl: 3 },
+  components: { ...STATE_STYLES },
 };
 
 /** Dense, bordered, high contrast. Every region is a labelled box. */
@@ -127,7 +193,9 @@ export const CONSOLE: ThemeDefinition = {
     //
     // The two selection backgrounds are picked rather than derived: `selected`
     // carries `inverted` text so it has to be light, and `active` carries
-    // `text` so it has to be dark. Same hue, opposite ends.
+    // `text` so it has to be dark. Same hue, opposite ends. `active` is what
+    // a selection looks like when the component does not have the keyboard -
+    // it is the dim end of the pair, not a pressed control.
     primary: '#88c0d0',
     info: '#88c0d0',
     selected: '#6ba3b2',
@@ -172,6 +240,7 @@ export const PAPER: ThemeDefinition = {
     warning: '#d29922',
     danger: '#f85149',
     info: '#58a6ff',
+    /* ---- */
     onAccent: '#0d1117',
     onDefault: '#0d1117',
     onPrimary: '#0d1117',
@@ -181,22 +250,23 @@ export const PAPER: ThemeDefinition = {
     onInfo: '#0d1117',
     onWarning: '#0d1117',
     onDanger: '#0d1117',
+    /* ---- */
     hover: '#1f2937',
-    active: '#264466',
-    selected: '#1f6feb',
-    // `text` here is the terminal's own, which is the point of this theme -
-    // but it cannot be written on a filled row with any guarantee, because a
-    // person may have set their foreground to the fill's colour. So the
-    // selection states what is written on it instead of inheriting.
-    onActive: '#e6edf3',
+    active: 'default',
+    onActive: '#3191ff',
+    selected: 'default',
+    onSelected: '#58a6ff',
     focus: '#58a6ff',
     disabled: '#484f58',
+
+    /* ---- */
     scrim: '#010409',
     cursor: 'default',
     shadow: '#010409',
   },
   spacing: { none: 0, xs: 1, sm: 1, md: 2, lg: 3, xl: 4 },
   components: {
+    ...STATE_STYLES,
     Panel: { base: { border: 'none', padding: [1, 2] } },
     Button: { base: { padding: [0, 2] } },
   },

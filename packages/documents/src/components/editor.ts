@@ -387,6 +387,9 @@ function spansOf(pieces: Piece[], left: number, width: number): RenderOutput[] {
   return out;
 }
 
+/** The name a theme styles this editor's selection under. See widgets' `LIST`. */
+const EDITOR = 'Editor';
+
 export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props) => {
   const theme = useTheme();
   const capabilities = useCapabilities();
@@ -1034,7 +1037,7 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
       // A selection that runs on past this line took the newline with it, and
       // one cell of highlight is how a reader can see that it did.
       const to = lineNumber === selection.end.line ? selection.end.column : line.length + 1;
-      if (to > from) pieces = paint(pieces, from, to, { bg: 'active' });
+      if (to > from) pieces = paint(pieces, from, to, theme.styleFor(EDITOR, ['selected']));
     }
 
     // The caret is a cell, drawn by splitting the row around it, because a

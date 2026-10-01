@@ -78,6 +78,9 @@ export interface TableProps<T extends object = Record<string, unknown>> extends 
  * table narrows it drops the lowest-priority columns rather than squeezing
  * every column until none of them is readable.
  */
+/** The name a theme styles a table row under. See `LIST` in `./list.js`. */
+export const TABLE = 'Table';
+
 const TableImpl = defineComponent<TableProps<Record<string, unknown>>>('Table', (props) => {
   const theme = useTheme();
   const i18n = useI18n();
@@ -206,13 +209,15 @@ const TableImpl = defineComponent<TableProps<Record<string, unknown>>>('Table', 
       return h('box', {
         key,
         role: 'row',
+        styleAs: TABLE,
         selected: active,
+        // The keyboard is the table's; the row is told which row it lands on.
+        focused: active && focus.focused,
         direction: 'row',
         gap,
-        // The same pair a list row uses: a background never travels without the
-        // colour that reads on it.
-        bg: active && focus.focused ? 'selected' : active ? 'active' : undefined,
-        fg: active && focus.focused ? 'onSelected' : active ? 'onActive' : undefined,
+        // What the row is filled with is the theme's to say - `Table.selected`
+        // for the current row and `Table.focused` over it while the table has
+        // the keyboard - as it is for a list, a tree and a menu.
         onClick: () => {
           if (selectedKey === undefined) setInternalKey(key);
           onSelect?.(key, row);

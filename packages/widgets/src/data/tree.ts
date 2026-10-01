@@ -12,6 +12,9 @@ import { usePanelState } from '../panel/index.js';
 import { TONE } from '../tone.js';
 import { viewportRows } from '../viewport.js';
 
+/** The name a theme styles a tree row under. See `LIST`. */
+export const TREE = 'Tree';
+
 export interface TreeNode {
   id: string;
   label: string;
@@ -187,13 +190,15 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
         key: row.node.id,
         role: 'treeitem',
         label: row.node.label,
+        styleAs: TREE,
         selected: active,
+        // The keyboard is the tree's; the row is told which row it lands on.
+        focused: active && focus.focused,
         direction: 'row',
         gap: 1,
-        // The same pair a list row uses: a background never travels without the
-        // colour that reads on it.
-        bg: active && focus.focused ? 'selected' : active ? 'active' : undefined,
-        fg: active && focus.focused ? 'onSelected' : active ? 'onActive' : undefined,
+        // What the row is filled with is the theme's to say - `Tree.selected`
+        // for the current row and `Tree.focused` over it while the tree has
+        // the keyboard - as it is for a list, a table and a menu.
         onClick: () => {
           if (selectedId === undefined) setInternalSelected(row.node.id);
           onSelect?.(row.node.id, row.node);

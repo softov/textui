@@ -303,7 +303,13 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
                 ? {
                   renderItem: (item: ListItem, state: ListItemState) => (
                     <Row gap={1}>
-                      <text content={item.label} width={nameColumn} truncate="end" shrink={0} />
+                      <text
+                        content={item.label}
+                        width={nameColumn}
+                        truncate="end"
+                        shrink={0}
+                        {...(state.selected ? {} : { fg: 'muted' as const })}
+                      />
                       <text
                         content={item.description ?? ''}
                         flex={1}

@@ -9,6 +9,7 @@ import { DataPlayground } from './playgrounds/data.js';
 import { ChartsPlayground } from './playgrounds/charts.js';
 import { OverlaysPlayground } from './playgrounds/overlays.js';
 import { FocusPlayground } from './playgrounds/focus.js';
+import { StatePlayground } from './playgrounds/state.js';
 import { CommandsPlayground } from './playgrounds/commands.js';
 import { CapabilitiesPlayground } from './playgrounds/capabilities.js';
 import { AnimationPlayground } from './playgrounds/animation.js';
@@ -106,6 +107,13 @@ export const PLAYGROUNDS: Playground[] = [
     description: 'Validation, including a rule that spans two fields.',
     exercises: ['forms', 'validation'],
     node: () => h(FormsPlayground, {}),
+  },
+  {
+    id: 'state',
+    title: 'State',
+    description: 'Every component holding its selection, beside one that has let it go.',
+    exercises: ['themes', 'components.List', 'components.Tabs', 'focus'],
+    node: () => h(StatePlayground, {}),
   },
   {
     id: 'data',

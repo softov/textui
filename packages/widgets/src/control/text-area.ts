@@ -1,8 +1,10 @@
 import type { BoxProps, KeyEvent, MouseEvent, SemanticVariant, Style } from '@textui/core';
 import {
+  NO_INTERACTION,
   defineComponent,
   graphemes,
   h,
+  stateVariants,
   stringWidth,
   useClipboard,
   useEffect,
@@ -122,6 +124,9 @@ export interface TextAreaProps extends BoxProps {
  * is what typing is. That single fact is why an application with one of these
  * cannot have single-letter global commands, and why it does not need to.
  */
+/** The name a theme styles this field's selection under. See `LIST`. */
+export const TEXT_AREA = 'TextArea';
+
 export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
   const {
     value, onChange, onSubmit, onCancel, onOverflow, onEdge, placeholder, maxRows = 6,
@@ -222,14 +227,20 @@ export const TextArea = defineComponent<TextAreaProps>('TextArea', (props) => {
   /**
    * How a selected cell is drawn.
    *
-   * The same pair a selected list row uses, and dimmer once the field loses
-   * the keyboard: a selection left visible in an unfocused field says what is
-   * on the clipboard, and saying it as loudly as the live one would put two
-   * selections on the screen.
+   * The theme's to say, and the same pair a selected list row uses: the
+   * `TextArea.focused` fill while the field has the keyboard and the dimmer
+   * `TextArea.selected` one once it does not, because a selection left
+   * visible in an unfocused field says what is on the clipboard, and saying it
+   * as loudly as the live one would put two selections on the screen.
+   *
+   * Asked for here rather than read off a node, because the field's selection
+   * is painted across cells that are not themselves selected nodes.
    */
-  const selectionStyle: Style = focus.focused
-    ? { bg: 'selected', fg: 'onSelected' }
-    : { bg: 'active', fg: 'onActive' };
+  const selectionStyle: Style = theme.styleFor(TEXT_AREA, stateVariants({
+    ...NO_INTERACTION,
+    selected: true,
+    focused: focus.focused,
+  }));
 
   const before = chars.slice(0, position).join('');
   const lines = value === '' ? [''] : value.split('\n');

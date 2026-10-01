@@ -8,11 +8,29 @@ The packages release as a set under one version.
 - `onSelected` and `onActive`: the colour written on a filled selection, derived from the theme's `inverted` and `text` unless the theme states them.
 - `I18n.plural(count, forms, values?)`: the `values` fill the rest of the sentence around `{count}`, so a form can carry a glyph or the total a count is out of.
 - `ChatComposer.commandWidth`: the least the slash menu's name column is given. A longer name widens it, because a floor is not a cut.
+- `components.<Component>.<state>` on a theme, where the state is one of `selected`, `hover`, `active`, `focus` or `disabled`. A theme states a component's state colours where the component is, so restating one component's selection no longer repaints every list, tree, table, menu, tab and field in the application. The built-in themes carry the defaults.
+- `focused` on any node: a tri-state, so a component whose boxes do not hold the keyboard themselves can say which of them the keyboard is on. A list row is told, and `List.selected` and `List.focus` are then two answers rather than one.
+- `styleAs` on any node: which of a composite component's boxes a theme styles. `components.List` was a key nothing read, because a list row is a plain `box`.
+- A state may be qualified by a variant: `components.Tabs['solid.selected']`. Whether a selected tab paints at all is a property of the variant rather than of the state, and `Tabs.selected` has to mean the pair for both.
+
+### Changed
+- **Breaking.** A list, tree, table, text area, code viewer, menu, tab, tool call, reasoning, composer chip or editor row states which states it is in; the colours come from the theme. Where this states one:
+
+  ```ts
+  // before
+  h('box', { role: 'listitem', bg: active && focus.focused ? 'selected' : active ? 'active' : undefined,
+             fg: active ? (focus.focused ? 'onSelected' : 'onActive') : undefined })
+  // after
+  h('box', { role: 'listitem', styleAs: 'List', selected: active, focused: active && focus.focused })
+  ```
+
+  A custom component that drew its own selection is now overridden by nothing and helped by nothing: give it a `styleAs` and a `components` entry, and leave the colours off the node. An explicit `bg` or `fg` prop still wins over the theme, so a caller who needs one row in one state different does not have to register a theme to get it.
+- **Breaking.** A colour is typed by its channel. `fg`, `bg`, each border side and `scrim` take their own token list, so `fg="canvas"`, `bg="onSelected"` and `border: { color: "text" }` no longer compile. The two quiet foregrounds, `muted` and `subtle`, are still legal rules. `ColorToken` is still the union of the three, so a theme's `colors` map is unchanged. A literal colour is still accepted anywhere a colour is.
+- **Breaking.** Inside a selected row, the texts take no `fg` of their own, so they inherit the fill's foreground from the theme. A hard `onSelected` here was a second answer to a question a theme restating `Menu.focus.fg` could not reach.
 
 ### Fixed
 - The slash menu's name column is one width for the whole menu, so the descriptions line up instead of starting after each row's own name. A name that will not fit is cut with the theme's ellipsis rather than squeezed by the source column beside it.
 - Counts inflect: a session row says `1 file`, a connection badge `1 session`, a table footer `1 item`, and the reasoning, tool-call, markdown, binary and too-large-message lines each have a singular form.
-- A list, tree, table, text area, code viewer, menu, tab, tool call or reasoning row that fills with `selected` or `active` now states the colour written on it. It was inheriting the terminal's foreground, which a person may have set to the fill's colour.
 - `paper` states `onActive`, because its `text` is the terminal's own and a filled row cannot be read on a colour the user may have picked.
 - `workbench` names the light text on its grey selection, which the inherited `inverted` nearly disappeared against.
 

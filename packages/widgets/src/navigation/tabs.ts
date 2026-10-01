@@ -21,6 +21,9 @@ export interface TabsProps extends BoxProps {
   autoFocus?: boolean;
 }
 
+/** The name a theme styles a tab under. See `LIST`. */
+export const TABS = 'Tabs';
+
 export const Tabs = defineComponent<TabsProps>('Tabs', (props) => {
   const { items, activeId, onChange, variant = 'underline', separator, autoFocus, ...rest } = props;
   const focus = useFocus({ autoFocus });
@@ -46,12 +49,20 @@ export const Tabs = defineComponent<TabsProps>('Tabs', (props) => {
         key: item.id,
         role: 'tab',
         label: item.label,
+        styleAs: TABS,
+        // Carried so the theme can tell a filled tab from an unfilled one: a
+        // solid tab is `Tabs.solid.selected`, an underline one is not filled
+        // at all. See `Tabs` in the built-in themes.
+        variant,
+        // A tab is open, not selected, and it says so with one state. There is
+        // no second name for it because there is nothing to dim: the document
+        // a tab names is open whether or not the strip has the keyboard, and
+        // dimming the tab on losing focus would claim none is.
         selected: active,
         direction: 'row',
         gap: 1,
         padding: variant === 'solid' ? [0, 1] : 0,
-        bg: variant === 'solid' && active ? 'selected' : undefined,
-        fg: item.disabled ? 'disabled' : active ? (variant === 'solid' ? 'onSelected' : 'accent') : 'muted',
+        fg: item.disabled ? 'disabled' : active ? (variant === 'solid' ? undefined : 'accent') : 'muted',
         bold: active,
         underline: variant === 'underline' && active,
         onClick: () => { if (!item.disabled) onChange?.(item.id); },

@@ -1,4 +1,4 @@
-import type { BoxProps, RenderOutput, ResolvedTheme, SemanticVariant, StyleColor } from '@textui/core';
+import type { BoxProps, FgColor, RenderOutput, ResolvedTheme, SemanticVariant } from '@textui/core';
 import { defineComponent, useFrame, useI18n, useTheme } from '@textui/core';
 import { Column, Divider, MarkdownView, Row } from '@textui/widgets';
 
@@ -76,7 +76,7 @@ export interface ChatBubbleProps extends BoxProps {
   children?: unknown;
 }
 
-const SPEAKER: Record<Speaker, { fg: StyleColor; key: string; label: string }> = {
+const SPEAKER: Record<Speaker, { fg: FgColor; key: string; label: string }> = {
   user: { fg: 'primary', key: 'textui.bubble.you', label: 'you' },
   agent: { fg: 'accent', key: 'textui.bubble.agent', label: 'agent' },
   system: { fg: 'muted', key: 'textui.bubble.system', label: 'system' },
@@ -225,14 +225,15 @@ export const ReasoningBlock: (props: ReasoningBlockProps) => RenderOutput =
     const i18n = useI18n();
     const chevron = expanded ? theme.glyphs.chevronDown : theme.glyphs.chevronRight;
     const words = content.trim().split(/\s+/).filter(Boolean).length;
-    const fg = active ? 'onSelected' : 'subtle';
+    const fg = active ? undefined : 'subtle';
 
     return (
       <Column {...rest}>
         {/* The selection is the header line alone, as on a tool row. */}
         <Row
           gap={1}
-          {...(active ? { bg: 'selected' as const } : {})}
+          styleAs="ReasoningBlock"
+          selected={active}
           {...(onToggle ? { onClick: onToggle } : {})}
           // The whole row lights up, as a tool row does: the row is the thing
           // that opens.

@@ -25,6 +25,16 @@ export interface ListItem {
   disabled?: boolean;
 }
 
+/**
+ * The name a theme styles a row under.
+ *
+ * A row is a plain `box`, so without this `components.List` in a theme is a
+ * key nothing reads. Stated once here because the row, the tree, the table
+ * and the menu all fill the same two colours and a theme author comparing
+ * them should be reading the same four names.
+ */
+export const LIST = 'List';
+
 /** How a row stands at the moment it is asked to draw itself. */
 export interface ListItemState {
   /** The row the selection is on. */
@@ -199,19 +209,22 @@ function ListView<T extends ListItem>(props: ListProps<T>): RenderOutput {
         key: item.id,
         role: 'listitem',
         label: item.label,
+        styleAs: LIST,
         selected: active,
+        // The keyboard is the list's, not the row's, so the row is told. It is
+        // the difference between "the current row" and "the current row you
+        // can type at", and a theme states the two fills separately.
+        focused: active && focus.focused,
         direction: 'row',
         gap: 1,
         // One background over the whole row, however many lines it draws: a
         // highlight that stopped after the first would split the row it is
-        // highlighting in two.
-        // A background always comes with the colour that reads on it, the pair
-        // the themes state: `selected` carries `inverted` and `active` carries
-        // `text`. Left out, the row takes its parent's foreground - which under
-        // a theme whose `text` is `default` is the terminal's own, and a person
-        // is free to set that to the highlight's colour.
-        bg: active && focus.focused ? 'selected' : active ? 'active' : undefined,
-        fg: item.disabled ? 'disabled' : active && focus.focused ? 'onSelected' : active ? 'onActive' : undefined,
+        // highlighting in two. What it is filled with is the theme's to say -
+        // `List.selected` for the current row, `List.focused` over it while
+        // the list has the keyboard - and a background always comes with the
+        // colour that reads on it, which is why that pairing lives in the
+        // theme rather than here.
+        fg: item.disabled ? 'disabled' : undefined,
         onClick: () => {
           if (item.disabled) return;
           if (selectedId === undefined) setInternalId(item.id);

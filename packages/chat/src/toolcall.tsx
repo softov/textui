@@ -73,9 +73,11 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
     const opens = Boolean(call.intention ?? call.input ?? call.output ?? call.outcome
       ?? (call.files && call.files.length > 0));
 
-    // On the selection the name, the summary and the chevron take `inverted`,
-    // the theme's own rule for that tone; the status glyph keeps its own, since
-    // a check that turned white would stop saying "completed".
+    // On the selection the name, the summary and the chevron take whatever
+    // the theme says is written on it - which is `onSelected` by default and
+    // whatever a theme restating `ToolCallRow.selected` says otherwise; the
+    // status glyph keeps its own, since a check that turned white would stop
+    // saying "completed".
     return (
       <Column {...rest}>
         {/* The selection is the header line alone. On the whole block, what
@@ -83,20 +85,24 @@ export const ToolCallRow: (props: ToolCallRowProps) => RenderOutput =
             background under colours chosen for the canvas. */}
         <Row
           gap={1}
-          {...(active ? { bg: 'selected' as const } : {})}
+          styleAs="ToolCallRow"
+          selected={active}
           {...(opens && onToggle ? { onClick: onToggle } : {})}
           // The whole row lights up, not the glyph the pointer happens to be
           // over: the row is the thing that opens.
           style={{ hover: { bg: 'hover' } }}
         >
           <text content={glyph} fg={look.tone} />
-          <text content={call.name} bold {...(active ? { fg: 'onSelected' as const } : {})} />
-          <text content={summary} fg={active ? 'onSelected' : 'muted'} flex={1} truncate="middle" />
+          <text content={call.name} bold />
+          {/* No foreground of its own on the selection: what is written on it
+              is the theme's, so restating `ToolCallRow.selected.fg` reaches
+              these too. */}
+          <text content={summary} fg={active ? undefined : 'muted'} flex={1} truncate="middle" />
           {call.status === 'pending-confirmation' ? <Badge label={i18n.t('textui.toolCall.asks', undefined, 'asks')} tone="warning" icon={theme.glyphs.warning} /> : null}
           {failed ? <Badge label={i18n.t('textui.toolCall.exit', { code: call.exitCode ?? 1 }, 'exit {code}')} tone="danger" /> : null}
           {/* Trailing, like a disclosure triangle - the row says what it is
               first and how to see more of it last. */}
-          {opens ? <text content={chevron} fg={active ? 'onSelected' : 'subtle'} /> : null}
+          {opens ? <text content={chevron} fg={active ? undefined : 'subtle'} /> : null}
         </Row>
 
         {expanded ? (

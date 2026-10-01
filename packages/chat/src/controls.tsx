@@ -201,24 +201,27 @@ const Chip = defineComponent<ChipProps>('ComposerChip', (props) => {
       id={focus.id}
       gap={1}
       padding={[0, 1]}
-      {...(focus.focused ? { bg: 'selected' as const } : {})}
+      styleAs="ComposerChip"
+      // A chip has no selection of its own - it is the focused one or it is
+      // not there - so the theme states the fill under `focus` and nothing
+      // is painted when the keyboard is elsewhere.
       onClick={disabled ? undefined : onOpen}
     >
       {/* The mark and the chevron never give up room. As the terminal
           narrows the labels truncate from the right, and a chip that has
           given up its mark as well is four cells of ellipsis that could be
           any of six questions. */}
-      {icon ? <text content={icon} shrink={0} fg={focus.focused ? 'onSelected' : tone ?? 'muted'} /> : null}
+      {icon ? <text content={icon} shrink={0} fg={focus.focused ? undefined : tone ?? 'muted'} /> : null}
       <text
         content={label}
         truncate="end"
-        fg={focus.focused ? 'onSelected' : disabled ? 'disabled' : tone ?? undefined}
+        fg={focus.focused ? undefined : disabled ? 'disabled' : tone ?? undefined}
         {...(tone ? { bold: true } : {})}
       />
       <text
         content={trailing ?? theme.glyphs.chevronDown}
         shrink={0}
-        fg={focus.focused ? 'onSelected' : 'subtle'}
+        fg={focus.focused ? undefined : 'subtle'}
       />
     </Row>
   );

@@ -752,8 +752,15 @@ export class App implements TextUIApp {
   private stateOf(instance: Instance): InteractionState {
     const id = typeof instance.props.id === 'string' ? instance.props.id : instance.id;
     const focusedId = this.focus.focused();
+    // A node may state its own focus, and a row has to: the list holds the
+    // keyboard, the row is where it lands. Left to the id comparison every
+    // row in every list reads as unfocused, so "the current row" and "the
+    // current row you can type at" would be the same fill.
+    const stated = instance.props.focused;
     return {
-      focused: focusedId === id || focusedId === `${instance.id}:focus`,
+      focused: typeof stated === 'boolean'
+        ? stated
+        : focusedId === id || focusedId === `${instance.id}:focus`,
       hovered: this.hovered === id || this.hoveredChain.has(instance),
       active: false,
       selected: instance.props.selected === true,

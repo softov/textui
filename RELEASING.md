@@ -82,7 +82,13 @@ Locally:
 ```bash
 pnpm build && pnpm check:exports              # what a consumer will resolve
 node scripts/release-publish.mjs 0.1.0 --dry-run   # order and version rewrite
+node scripts/release-publish.mjs --verify     # what is actually downloadable
 ```
+
+`--verify` publishes nothing and writes nothing - it asks the registry for each
+package's tarball and says which are up, which is what to run when a release
+looked like it worked and a consumer says otherwise. The version comes from the
+manifests, or can be passed.
 
 The dry run rewrites the manifests, checks that nothing is left speaking `workspace:`, and puts them back - whichever way it exits, including the failures. So it leaves the tree as it found it and is safe to run mid-work; it is the *publish* that refuses a dirty tree, because that one rewrites in place and means to.
 
@@ -92,5 +98,6 @@ It restores what was on disk rather than what is in `HEAD`: a rehearsal is not a
 
 - **`scripts/check-exports.mjs`** - every `exports` and `bin` target exists in the built tree and is covered by `files[]`, and every package has a README and a LICENSE. tsc cannot catch a subpath nothing in the repository imports; `@textui/core` shipped a broken `./hooks` for exactly that reason. Runs in CI on every pull request.
 - **`scripts/check-version.mjs`** - the tag and the manifests agree. Runs in the release workflow, on tag only.
-- **`scripts/release-publish.mjs`** - refuses a set at mixed versions, refuses a dependency cycle, and refuses to publish anything still carrying a `workspace:` range. A package the registry already has at the release version is skipped, not failed: a package bootstrapped by hand at that version, or the first packages of a set that failed halfway, would otherwise stop everything after them.
+- **`scripts/release-publish.mjs`** - refuses a set at mixed versions, refuses a dependency cycle, and refuses to publish anything still carrying a `workspace:` range. A package that is already **downloadable** at the release version is skipped, not failed: a package bootstrapped by hand at that version, or the first packages of a set that failed halfway, would otherwise stop everything after them.
+- It ends by asking the registry for every tarball, and fails the run if one cannot be handed over. A publish npm has accepted is not a publish a consumer can install: `@textui/widgets@0.8.0` answered on the registry for ten minutes with a tarball that 404'd, and the run that published it reported "published 7 of 7". The skip asks the same question, so the package that is claimed and not uploaded is one a later run still publishes.
 - **`scripts/check-no-npm-auth.mjs`** - refuses to publish while any npm credential is configured, because a credential is what stops the OIDC exchange happening at all. Runs in the release workflow, before the publish.

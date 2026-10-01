@@ -27,7 +27,7 @@
  * puts it back on the way out, whichever way it leaves.
  */
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,7 +37,61 @@ const pkgRoot = join(root, 'packages');
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const force = args.includes('--force');
+// Asks the registry what a consumer can actually install, and publishes nothing.
+const verify = args.includes('--verify');
 let version = args.find((a) => !a.startsWith('--'));
+
+// --- the registry ----------------------------------------------------------
+
+const REGISTRY = process.env.RELEASE_REGISTRY ?? 'https://registry.npmjs.org';
+/** How long to wait for npm to finish processing a publish it accepted. */
+const PATIENCE_MS = Number(process.env.RELEASE_PATIENCE_MS ?? 5 * 60 * 1000);
+const POLL_MS = 15_000;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The tarball a version resolves to, or null when the registry has no version. */
+async function tarballFor(name, version) {
+  const url = `${REGISTRY}/${name.replace('/', '%2F')}/${version}`;
+  const res = await fetch(url, { headers: { accept: 'application/json' } });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`${url} answered ${res.status}`);
+  const manifest = await res.json();
+  return manifest?.dist?.tarball ?? null;
+}
+
+/**
+ * Whether a version can actually be downloaded, which is not the same question
+ * as whether the registry mentions it.
+ *
+ * npm answers for a version it is still processing: the manifest is there and
+ * its tarball 404s. That is the state that let a release report "published 7 of
+ * 7" with one package missing - the next run asked whether the version was on
+ * the registry, was told yes, and skipped the one package that still needed
+ * publishing. So the question asked here is for the bytes.
+ */
+async function isDownloadable(name, version) {
+  const tarball = await tarballFor(name, version);
+  if (!tarball) return false;
+  const head = await fetch(tarball, { method: 'HEAD' });
+  if (head.ok) return true;
+  // A registry that will not answer HEAD still has to answer for one byte.
+  const ranged = await fetch(tarball, { headers: { range: 'bytes=0-0' } });
+  return ranged.ok || ranged.status === 206;
+}
+
+/** Which of these are not downloadable yet, giving npm up to PATIENCE_MS to catch up. */
+async function waitForAll(pkgs, version) {
+  const deadline = Date.now() + PATIENCE_MS;
+  for (;;) {
+    const missing = [];
+    for (const p of pkgs)
+      if (!(await isDownloadable(p.manifest.name, version))) missing.push(p.manifest.name);
+    if (!missing.length || Date.now() >= deadline) return missing;
+    console.log(`  not downloadable yet: ${missing.join(', ')} - npm may still be processing them`);
+    await sleep(POLL_MS);
+  }
+}
 
 // --- read the workspace ----------------------------------------------------
 
@@ -106,6 +160,20 @@ while (remaining.length) {
   remaining = remaining.filter((p) => !placed.has(p.manifest.name));
 }
 
+// --- verify, if that is all that was asked for -----------------------------
+
+if (verify) {
+  const missing = await waitForAll(ordered, version);
+  for (const p of ordered)
+    console.log(`  ${missing.includes(p.manifest.name) ? 'missing' : 'up     '}  ${p.manifest.name}`);
+  if (missing.length) {
+    console.error(`\n  ${missing.join(', ')} cannot be downloaded at ${version}`);
+    process.exit(1);
+  }
+  console.log(`\nall ${ordered.length} downloadable at ${version}`);
+  process.exit(0);
+}
+
 // --- write the versions in -------------------------------------------------
 
 if (!force && !dryRun) {
@@ -167,26 +235,19 @@ if (dryRun) {
 }
 
 /**
- * Whether the registry already has this version of the package.
+ * A package that is already up is left alone.
  *
  * A package new to the set is bootstrapped by hand at the release version
  * (RELEASING.md), and a set that failed halfway has its first packages up
- * already; npm refuses to publish over either, and the refusal would stop
- * the packages after it. What is there is left alone.
+ * already; npm refuses to publish over either, and the refusal would stop the
+ * packages after it.
+ *
+ * "Up" means downloadable, not mentioned: see `isDownloadable`. A version npm
+ * is still processing is one this run still has to publish.
  */
-function onRegistry(name) {
-  try {
-    // One command line, through a shell, so it answers on Windows too, where `npm` is a `.cmd`.
-    const found = execSync(`npm view ${name}@${version} version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    return found === version;
-  } catch {
-    return false;
-  }
-}
-
 let published = 0;
 for (const p of ordered) {
-  if (onRegistry(p.manifest.name)) {
+  if (await isDownloadable(p.manifest.name, version)) {
     console.log(`\n${p.manifest.name}@${version} is on the registry already: skipped`);
     continue;
   }
@@ -198,3 +259,15 @@ for (const p of ordered) {
 }
 
 console.log(`\npublished ${published} of ${ordered.length} packages at ${version}`);
+
+// A publish npm accepted is not a publish a consumer can install. Stopping at
+// "npm publish exited 0" is how one package of a set went missing with the run
+// reported green, so the last thing a release does is install the set from the
+// registry - in the only way that needs no credentials, by asking for the bytes.
+const missing = await waitForAll(ordered, version);
+if (missing.length) {
+  console.error(`\n  ${missing.join(', ')} answer for ${version} but cannot be downloaded`);
+  console.error('  Re-run this workflow once npm has caught up: the rest are skipped.');
+  process.exit(1);
+}
+console.log(`all ${ordered.length} downloadable at ${version}`);

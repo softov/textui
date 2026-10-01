@@ -1,8 +1,9 @@
 import type { BoxProps, Rect, RenderOutput } from '@textui/core';
-import { defineComponent, stringWidth, useApp, useEffect, useI18n, useSize, useState, useTheme } from '@textui/core';
-import type { ListItem, ListItemState } from '@textui/widgets';
-import { Column, Divider, List, Row, TextArea } from '@textui/widgets';
+import { defineComponent, useApp, useEffect, useI18n, useSize, useState, useTheme } from '@textui/core';
+import type { ListItem } from '@textui/widgets';
+import { Column, Divider, List, TextArea } from '@textui/widgets';
 import type { ChatCommand, ChatCompletion } from './types.js';
+import { CommandList } from './command-list.js';
 import { ComposerBar, composerRows } from './controls.js';
 import type { ComposerOption } from './controls.js';
 import { useReportMeasure } from './measure.js';
@@ -25,25 +26,6 @@ const VISIBLE = 8;
  * Counted with both control rows; a bar that draws one gives the row back.
  */
 const COMPOSER_ROWS = 7;
-
-/**
- * The least of the menu's row the description is left.
- *
- * The name column is the one that can always give ground - a name cut short is
- * still recognisable and the description is how a person tells two similarly
- * named skills apart. So the column stops growing this far from the source
- * column, and a name past it is cut with the theme's ellipsis.
- */
-const DESCRIPTION_FLOOR = 16;
-
-/**
- * The name column when the caller states nothing.
- *
- * Wide enough for the names skills tend to have (`/security-review`,
- * `/team-onboarding`) without spending a wide terminal on the column. A longer
- * name widens it; this is a floor, not a cut.
- */
-const COMMAND_WIDTH = 20;
 
 /** The menu's own frame, which is height the list does not get. */
 const MENU_BORDER = 2;
@@ -102,6 +84,21 @@ export interface ChatComposerProps extends BoxProps {
    */
   commandWidth?: number;
   /**
+   * How the slash menu draws a command's description.
+   *
+   * `lines` is how many it may occupy, one by default; `wrap` says whether it
+   * wraps into those lines or is cut on the first. Unwrapped, `lines` buys
+   * nothing: the rows after the first would be empty, so the row stays one
+   * line. Wrapped, the row is `lines` tall and the menu shows proportionally
+   * fewer of them.
+   */
+  commandDescription?: {
+    /** Lines a description may occupy. One by default. */
+    lines?: number;
+    /** Whether it wraps into those lines instead of being cut on the first. */
+    wrap?: boolean;
+  };
+  /**
    * One of `commands` was chosen from the slash menu.
    *
    * The whole command rather than its id, because the two kinds go different
@@ -137,7 +134,7 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
     const {
       value, onChange, onSubmit, onCancel, onHistory, onLeave, running, queued = 0,
       options = [], onOption, placeholder, commands = [], onCommand, paths = [], onPath, autoFocus,
-      commandWidth = COMMAND_WIDTH, focusId = 'chat.composer', onMeasure, ...rest
+      commandWidth, commandDescription, focusId = 'chat.composer', onMeasure, ...rest
     } = props;
     const theme = useTheme();
     const i18n = useI18n();
@@ -242,31 +239,25 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
 
     // How tall the menu may be here.
     const rows = fits(size.height, composerRows(options));
+    const available = hint === undefined ? rows : rows - 1;
 
     /*
-     * The name column, one width for the whole menu.
+     * The command menu is a table of names, and it is its own component: the
+     * column arithmetic, the row and the options it takes belong with it.
      *
-     * Measured across everything the menu was offered rather than per row, so
-     * the description starts at the same cell on every row and stays there as
-     * the filter narrows. The caller's width is a floor and the longest name
-     * widens it, because a name cut in half is how two skills come to look
-     * alike - but the description is what tells them apart, so the column
-     * stops where the description would be left too little. Past that the name
-     * is cut, and the cut carries the theme's own ellipsis.
-     *
-     * The path menu is not a table of names - a path is the row - so it keeps
-     * the default row.
+     * The path menu is not a table - a path is the row - so it keeps the
+     * default row.
      */
     const fromCommands = found.length > 0;
-    const nameColumn = ((): number => {
-      if (!fromCommands) return 0;
-      const longest = Math.max(...offered.map((item) => stringWidth(item.label)));
-      const widestMeta = Math.max(0, ...offered.map((item) => stringWidth(item.meta ?? '')));
-      // The menu's border and padding, the marker and its gap, the two gaps
-      // between the row's cells, and the source column at the end.
-      const room = size.width - 8 - widestMeta - DESCRIPTION_FLOOR;
-      return Math.max(1, Math.min(Math.max(commandWidth, longest), Math.max(1, room)));
-    })();
+
+    // Chosen from either list: a completion clicked or entered is a completion
+    // taken, and which of the two it was is on the item, not on the row.
+    const choose = (id: string): void => {
+      const command = byId.get(id);
+      if (command) { onCommand?.(command); return; }
+      const path = byInsert.get(id);
+      if (path) onPath?.(path);
+    };
 
     return (
       <Column {...rest} gap={0}>
@@ -276,64 +267,43 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
           // do either, and an airy theme gets a line it deliberately does not
           // draw anywhere else.
           <Column border={theme.border} padding={[0, 1]}>
-            <List
-              items={matches}
-              focusable={false}
-              selectedId={chosen?.id}
-              /*
-               * A window over all of them, not the first six.
-               *
-               * The list scrolls to keep the selected row in view, and the
-               * selection here is driven from outside - so walking past the
-               * sixth moves the window rather than stopping. Truncating the
-               * items instead made up and down cycle the six that survived,
-               * with no way to reach a seventh: a host that answers thirty
-               * paths for `@src/` offered six of them and looked like it had
-               * no more.
-               */
-              visibleRows={hint === undefined ? rows : rows - 1}
-              marker
-              /*
-               * A command row is three cells: the name, what it does, and
-               * where it came from. The name column is the menu's own width
-               * and the description takes what is left, so the rows read as a
-               * table rather than as a paragraph that starts over on each one.
-               */
-              {...(fromCommands
-                ? {
-                  renderItem: (item: ListItem, state: ListItemState) => (
-                    <Row gap={1}>
-                      <text
-                        content={item.label}
-                        width={nameColumn}
-                        truncate="end"
-                        shrink={0}
-                        {...(state.selected ? {} : { fg: 'muted' as const })}
-                      />
-                      <text
-                        content={item.description ?? ''}
-                        flex={1}
-                        truncate="end"
-                        {...(state.selected ? {} : { fg: 'muted' as const })}
-                      />
-                      {item.meta
-                        ? <text content={item.meta} shrink={0} {...(state.selected ? {} : { fg: 'muted' as const })} />
-                        : null}
-                    </Row>
-                  ),
-                }
-                : {})}
-              // Not focusable, so this is the click: a completion clicked is a
-              // completion chosen, and there is nowhere for a merely
-              // highlighted row to lead.
-              onSelect={(id: string) => {
-                const command = byId.get(id);
-                if (command) { onCommand?.(command); return; }
-                const path = byInsert.get(id);
-                if (path) onPath?.(path);
-              }}
-              emptyMessage={i18n.t('textui.composer.noCommand', undefined, 'no command')}
-            />
+            {fromCommands ? (
+              <CommandList
+                items={matches}
+                selectedId={chosen?.id}
+                commandWidth={commandWidth}
+                {...(commandDescription?.lines === undefined ? {} : { descriptionLines: commandDescription.lines })}
+                {...(commandDescription?.wrap === undefined ? {} : { wrapDescription: commandDescription.wrap })}
+                availableLines={available}
+                marker
+                onSelect={choose}
+                emptyMessage={i18n.t('textui.composer.noCommand', undefined, 'no command')}
+              />
+            ) : (
+              <List
+                items={matches}
+                focusable={false}
+                selectedId={chosen?.id}
+                /*
+                 * A window over all of them, not the first six.
+                 *
+                 * The list scrolls to keep the selected row in view, and the
+                 * selection here is driven from outside - so walking past the
+                 * sixth moves the window rather than stopping. Truncating the
+                 * items instead made up and down cycle the six that survived,
+                 * with no way to reach a seventh: a host that answers thirty
+                 * paths for `@src/` offered six of them and looked like it had
+                 * no more.
+                 */
+                visibleRows={available}
+                marker
+                // Not focusable, so this is the click: a completion clicked is a
+                // completion chosen, and there is nowhere for a merely
+                // highlighted row to lead.
+                onSelect={choose}
+                emptyMessage={i18n.t('textui.composer.noCommand', undefined, 'no command')}
+              />
+            )}
             {hint === undefined ? null : <Divider label={hint} />}
           </Column>
         ) : null}

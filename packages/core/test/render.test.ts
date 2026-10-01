@@ -30,6 +30,30 @@ describe('text', () => {
     expect(out).toBe('the quick\nbrown fox');
   });
 
+  it('says it was cut when the box has fewer rows than the wrap needs', () => {
+    const out = renderToString(
+      { component: 'text', content: 'the quick brown fox', wrap: 'word', width: 10, height: 1 },
+      { width: 20 },
+    );
+    // One row of three, and the row says so rather than reading as the end of
+    // the sentence. The whole width is kept, so the ellipsis is the last cell.
+    expect(out).toBe('the quick…');
+  });
+
+  it('cuts the last row it has room for, and leaves the fitting case alone', () => {
+    const cut = renderToString(
+      { component: 'text', content: 'the quick brown fox jumps', wrap: 'word', width: 10, height: 2 },
+      { width: 20 },
+    );
+    expect(cut).toBe('the quick\nbrown fox…');
+
+    const whole = renderToString(
+      { component: 'text', content: 'the quick brown fox', wrap: 'word', width: 10, height: 2 },
+      { width: 20 },
+    );
+    expect(whole).toBe('the quick\nbrown fox');
+  });
+
   it('aligns within its box', () => {
     const out = renderToString(
       { component: 'box', width: 9, children: { component: 'text', content: 'ab', textAlign: 'center' } },

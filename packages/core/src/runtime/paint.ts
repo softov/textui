@@ -12,7 +12,7 @@ import type { Buffer } from '../render/buffer.js';
 import { COLOR_DEFAULT, mix, packColor, type PackedColor } from '../render/color.js';
 import { rectIntersect } from '../types/geometry.js';
 import {
-  graphemes, graphemeWidth, isAscii, sanitize, stringWidth, truncate,
+  graphemes, graphemeWidth, isAscii, markCut, sanitize, stringWidth, truncate,
   truncateSideOf, wrapModeOf, wrapText,
 } from '../util/text.js';
 import {
@@ -751,7 +751,16 @@ function paintText(
 
   for (let i = 0; i < raw.length && i < area.height; i++) {
     let line = raw[i] as string;
-    if (stringWidth(line) > area.width) {
+    // The last line the box has room for is cut when the text goes on past
+    // it, exactly as a line too wide for the box is. Without this a wrapped
+    // paragraph with more to say stopped mid-sentence and read as the whole
+    // of it, which is the failure `truncate` exists to prevent sideways.
+    const stopped = i === area.height - 1 && raw.length > area.height;
+    if (stopped) {
+      // The last row it has room for, with more to say: always marked, since
+      // the row itself may fit to the cell.
+      line = truncateSide === false ? line : markCut(line, area.width, ellipsis);
+    } else if (stringWidth(line) > area.width) {
       line = truncateSide === false
         ? line
         : truncate(line, area.width, ellipsis, truncateSide ?? 'end');

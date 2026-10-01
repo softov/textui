@@ -8,6 +8,7 @@ export * from './bubble.js';
 export * from './transcript.js';
 export * from './toolcall.js';
 export * from './controls.js';
+export * from './command-list.js';
 export * from './composer.js';
 export * from './hitl.js';
 export * from './details.js';

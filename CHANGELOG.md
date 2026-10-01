@@ -8,6 +8,10 @@ The packages release as a set under one version.
 - `onSelected` and `onActive`: the colour written on a filled selection, derived from the theme's `inverted` and `text` unless the theme states them.
 - `I18n.plural(count, forms, values?)`: the `values` fill the rest of the sentence around `{count}`, so a form can carry a glyph or the total a count is out of.
 - `ChatComposer.commandWidth`: the least the slash menu's name column is given. A longer name widens it, because a floor is not a cut.
+- `ChatComposer.commandDescription`: `{ lines, wrap }`, how many lines a command's description may take and whether it wraps into them. Wrapped, the row is that tall and the menu fits proportionally fewer rows.
+- `CommandList` in `@textui/chat`: the completion menu's rows as a component of their own, with the name column, the description options and the row height. The composer renders it for commands and keeps the plain list for paths.
+- `KeyValue.labelGap`, `labelAlign` and `valueAlign`, and `labelAlign`/`valueAlign` on a single item to override the block. `labelGap` is added to the widest label when the column is computed.
+- `markCut(text, width, ellipsis)`: fits into the width and marks the cut whether or not there was one, for text stopped by its box rather than by its own length.
 - `components.<Component>.<state>` on a theme, where the state is one of `selected`, `hover`, `active`, `focus` or `disabled`. A theme states a component's state colours where the component is, so restating one component's selection no longer repaints every list, tree, table, menu, tab and field in the application. The built-in themes carry the defaults.
 - `focused` on any node: a tri-state, so a component whose boxes do not hold the keyboard themselves can say which of them the keyboard is on. A list row is told, and `List.selected` and `List.focus` are then two answers rather than one.
 - `styleAs` on any node: which of a composite component's boxes a theme styles. `components.List` was a key nothing read, because a list row is a plain `box`.
@@ -29,6 +33,7 @@ The packages release as a set under one version.
 - **Breaking.** Inside a selected row, the texts take no `fg` of their own, so they inherit the fill's foreground from the theme. A hard `onSelected` here was a second answer to a question a theme restating `Menu.focus.fg` could not reach.
 
 ### Fixed
+- A wrapped text with more lines than the box it was given now ends its last visible row with the theme's ellipsis. It stopped mid-sentence and read as the whole of it, which is the failure `truncate` prevents sideways.
 - The slash menu's name column is one width for the whole menu, so the descriptions line up instead of starting after each row's own name. A name that will not fit is cut with the theme's ellipsis rather than squeezed by the source column beside it.
 - Counts inflect: a session row says `1 file`, a connection badge `1 session`, a table footer `1 item`, and the reasoning, tool-call, markdown, binary and too-large-message lines each have a singular form.
 - `paper` states `onActive`, because its `text` is the terminal's own and a filled row cannot be read on a colour the user may have picked.

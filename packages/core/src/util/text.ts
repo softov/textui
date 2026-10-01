@@ -283,6 +283,21 @@ export function expandTabs(text: string, tabWidth = 4): string {
 
 export type TruncateSide = 'end' | 'start' | 'middle';
 
+/**
+ * Fit into `width` cells, marking the cut whether or not there was one.
+ *
+ * `truncate` marks only what it had to cut, which is right for a string that
+ * has to fit a cell. A paragraph stopped by the box rather than by its own
+ * length is the other case: its last visible row may fit exactly and still not
+ * be the end of the text, and it has to say so.
+ */
+export function markCut(text: string, width: number, ellipsis = '…'): string {
+  if (width <= 0) return '';
+  const ew = stringWidth(ellipsis);
+  if (width <= ew) return sliceByWidth(ellipsis, width);
+  return sliceByWidth(text, width - ew).trimEnd() + ellipsis;
+}
+
 /** Fit into `width` cells, marking the cut with `ellipsis`. */
 export function truncate(
   text: string,

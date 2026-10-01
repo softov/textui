@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Color } from '@textui/core';
 import { h } from '@textui/core';
-import { notify } from '@textui/widgets';
+import { ColorText, notify } from '@textui/widgets';
 import { render, renderApp } from '../src/index.js';
 import type { Harness } from '../src/index.js';
 
@@ -585,5 +585,35 @@ describe('border colours', () => {
     expect(frame?.attrs).not.toBe(0);
     expect(content?.attrs).toBe(0);
     await t.unmount();
+  });
+});
+
+describe('an ink on a theme with no colour', () => {
+  /** The first painted cell's foreground, under one theme. */
+  const firstInk = async (theme: string): Promise<Color | undefined> => {
+    const t = await renderApp({
+      width: 8,
+      height: 2,
+      theme,
+      root: h(ColorText, { content: 'ab', ink: { gradient: ['#ff0000', '#00ff00'] } }),
+    });
+    await t.settle();
+    const cell = t.app.buffer().get(0, 0)?.fg;
+    await t.unmount();
+    return cell;
+  };
+
+  it('paints it in the terminal\'s own colour', async () => {
+    // Not just "the stops resolve to default": a ramp whose stops are all the
+    // terminal's own still has to be mixed, and mixing that lands on black.
+    expect(await firstInk('mono')).toBe('default');
+  });
+
+  it('leaves a theme with colour alone', async () => {
+    // A painted cell carries the rgb it unpacked to; the stop is a hex.
+    const hex = (c: unknown): string => (c && typeof c === 'object' && 'rgb' in c
+      ? `#${(c as { rgb: number[] }).rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`
+      : String(c));
+    expect(hex(await firstInk('dark'))).toBe('#ff0000');
   });
 });

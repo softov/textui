@@ -280,6 +280,10 @@ export function painterOf(
   ctx: RenderContext,
 ): (cell: InkCell) => CellStyle | undefined {
   if (ink === undefined) return () => undefined;
+  // A theme with no colour has no inks, and this is not only faster: a ramp
+  // whose stops all resolve to the terminal's own still has to be *mixed*, and
+  // mixing "no colour" with itself lands on black - which is a colour.
+  if (ctx.theme.monochrome) return () => undefined;
 
   if (typeof ink === 'function') {
     return (cell) => styleOf(ink(cell, ctx), ctx);

@@ -22,6 +22,7 @@ The packages release as a set under one version.
 - A state may be qualified by a variant: `components.Tabs['solid.selected']`. Whether a selected tab paints at all is a property of the variant rather than of the state, and `Tabs.selected` has to mean the pair for both.
 
 ### Changed
+- `monochrome` on a theme, and `mono` states it: every colour resolves to the terminal's own, literals included. A theme whose palette is all `default` still showed an ink's own hexes, which is how a monochrome screenshot came out with a rainbow banner in it.
 - `Card` states `bg: 'surface'`, so it clears what is behind it. A bordered box that states no background is a frame around whatever is already there, which is why a card dropped over a `Pattern` showed the tile through its own interior; `Dialog` and `CommandPalette` have always stated a background for the same reason. A caller that wants another fill names one.
 - **Breaking.** A list, tree, table, text area, code viewer, menu, tab, tool call, reasoning, composer chip or editor row states which states it is in; the colours come from the theme. Where this states one:
 

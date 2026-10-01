@@ -77,6 +77,16 @@ export interface ThemeDefinition {
   id: string;
   name: string;
   appearance: 'light' | 'dark';
+  /**
+   * Whether this theme has any colour to give.
+   *
+   * A theme's palette is its own business, but a component can state a literal
+   * colour - an ink, a chart, a hand-picked hex - and that used to come through
+   * untouched, so `mono` painted a rainbow the moment a banner asked for one.
+   * Stated, every colour resolves to the terminal's own: tokens and literals
+   * alike, which is what a theme that says it has no colour has to mean.
+   */
+  monochrome?: boolean;
   /** Extend another registered theme; only the differences need stating. */
   extends?: string;
   colors: Partial<Record<ColorToken, Color>>;
@@ -129,6 +139,8 @@ export interface ResolvedTheme {
   id: string;
   name: string;
   appearance: 'light' | 'dark';
+  /** Whether every colour this theme gives back is the terminal's own. */
+  monochrome: boolean;
   colors: Record<ColorToken, Color>;
   spacing: ThemeSpacing;
   glyphs: ThemeGlyphs;
@@ -140,7 +152,7 @@ export interface ResolvedTheme {
   components: Record<string, Record<string, Style>>;
   /** Every syntax scope, resolved to a colour. */
   syntax: Record<SyntaxScope, Color>;
-  /** Resolve a token (or pass a literal colour through). */
+  /** Resolve a token (or pass a literal colour through, unless monochrome). */
   color(token: string): Color;
   borderChars(style?: BorderStyle): BorderChars;
   dividerChars(style?: DividerStyle): DividerChars;

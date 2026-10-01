@@ -357,6 +357,10 @@ export const MONO: ThemeDefinition = {
   id: 'mono',
   name: 'Monochrome',
   appearance: 'dark',
+  // The theme's own colours are all `default`; this is what makes that true of
+  // the ones a component states for itself, which is the difference between a
+  // palette that happens to be grey and a theme with no colour in it.
+  monochrome: true,
   border: 'ascii',
   // border: 'none',
   cursor: 'underline',

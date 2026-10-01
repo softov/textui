@@ -126,6 +126,7 @@ export class Themes implements ThemeRegistry {
     // opts in rather than out.
     let tableRules: TableRules = 'header';
     let density: Density = 'normal';
+    let monochrome = false;
     const components: Record<string, Record<string, Style>> = {};
     let syntaxOverrides: Partial<Record<SyntaxScope, StyleColor>> = {};
 
@@ -156,6 +157,7 @@ export class Themes implements ThemeRegistry {
       if (def.cursor) cursorStyle = def.cursor;
       if (def.tableRules) tableRules = def.tableRules;
       if (def.density) density = def.density;
+      if (def.monochrome !== undefined) monochrome = def.monochrome;
       for (const [name, variants] of Object.entries(def.components ?? {})) {
         components[name] = { ...components[name], ...variants };
       }
@@ -206,6 +208,7 @@ export class Themes implements ThemeRegistry {
       id: leaf.id,
       name: leaf.name,
       appearance: leaf.appearance,
+      monochrome,
       colors,
       spacing,
       glyphs,
@@ -218,6 +221,10 @@ export class Themes implements ThemeRegistry {
       syntax,
 
       color(token: string): Color {
+        // A monochrome theme has no colour to give, and that has to include the
+        // literal a component states for itself - otherwise the one theme whose
+        // whole point is no colour is the one that cannot promise it.
+        if (monochrome) return 'default';
         if (token in colors) return colors[token as ColorToken] as Color;
         // Not a token: a literal colour passed straight through.
         return token as Color;

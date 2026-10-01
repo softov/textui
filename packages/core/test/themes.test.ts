@@ -44,3 +44,20 @@ describe('the colour written on a filled row', () => {
     expect(dark.colors.onActive).toBe('default');
   });
 });
+
+describe('a theme with no colour', () => {
+  it('gives back the terminal\'s own for a literal as well as a token', () => {
+    const mono = createThemes().resolve('mono', CAPS);
+    expect(mono.monochrome).toBe(true);
+    expect(mono.color('accent')).toBe('default');
+    // The one that used to get through: a component stating a hex of its own.
+    expect(mono.color('#ff004d')).toBe('default');
+  });
+
+  it('leaves a theme with colour alone', () => {
+    const dark = createThemes().resolve('dark', CAPS);
+    expect(dark.monochrome).toBe(false);
+    expect(dark.color('#ff004d')).toBe('#ff004d');
+    expect(dark.color('accent')).toBe(dark.colors.accent);
+  });
+});

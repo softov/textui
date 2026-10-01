@@ -31,3 +31,11 @@ app.setTheme('midnight');
 ```
 
 `components` is keyed by component name, then by variant - the variant keys a component understands come from its `variant`, `tone` and `size` props.
+
+`monochrome: true` says the theme has no colour at all, and it is not the same
+statement as a palette whose entries happen to be `default`: every colour
+resolves to the terminal's own, including the ones a component states for
+itself. That matters because a component can carry a literal - an ink, a chart,
+a hand-picked hex - and a literal is not something a palette can restate. It is
+what [`mono`](built-in.md) says, and the only way a theme that promises no
+colour can keep the promise.

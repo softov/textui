@@ -22,6 +22,7 @@ import { Spinner } from '@textui/widgets';
 | --- | --- | --- | --- |
 | `label` | `string` |  |  |
 | `tone` | `'default' \| 'primary' \| 'secondary' \| 'accent' \| 'success' \| 'warning' \| 'danger' \| 'info' \| 'muted'` |  |  |
+| `frames` | `string[]` |  |  |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

@@ -31,7 +31,7 @@ Every node also accepts `role`, `label`, `focusable`, `onKey`, `onClick`, `disab
 
 <!-- props:start -->
 
-~98 components, and growing.
+~100 components, and growing.
 
 ### The four primitives
 
@@ -66,7 +66,9 @@ Every node also accepts `role`, `label`, `focusable`, `onKey`, `onClick`, `disab
 | [`StatusDot`](display/status-dot.md) | The shared status vocabulary: up, degraded, down. |
 | [`Card`](display/card.md) | Bordered block with a title. |
 | [`ColorText`](display/color-text.md) | Multiline text coloured cell by cell - a ramp, a palette per line, or a function. |
+| [`FontText`](display/font-text.md) | Text drawn in a block font, one glyph table to a letter. |
 | [`Marquee`](display/marquee.md) | Text too long for its box, read by sliding it while it has the cursor. |
+| [`Pattern`](display/pattern.md) | A tile, repeated - a texture under the children or a motif over them. |
 
 ### Data
 

@@ -1,9 +1,8 @@
 import {
   defineComponent, useCapabilities, useInput, useMeasure, useMemo, useState, useTicker,
 } from '@textui/core';
-import type { RenderOutput, StyleColor } from '@textui/core';
-import { Column, KeyHints, Row } from '@textui/widgets';
-import { Pattern } from '../components/pattern.js';
+import type { FgColor, RenderOutput } from '@textui/core';
+import { Column, KeyHints, Pattern, Row } from '@textui/widgets';
 import { HEIGHT as PERSONA_HEIGHT, WIDTH as PERSONA_WIDTH, drawPersona } from '../components/persona.js';
 import { MOODS } from '../components/persona.js';
 import type { Mood, Side } from '../components/persona.js';
@@ -167,7 +166,7 @@ const ASCII: Sprites = {
 // a dark theme is near-black - a black petal reads as a dead flower rather
 // than as a white one. `text` is the pale end of the palette, which is what a
 // daisy wants.
-const PETALS: StyleColor[] = ['danger', 'warning', 'text', 'secondary', 'accent'];
+const PETALS: FgColor[] = ['danger', 'warning', 'text', 'secondary', 'accent'];
 
 /**
  * The stem, and why it is a colour rather than a token.
@@ -183,7 +182,7 @@ const PETALS: StyleColor[] = ['danger', 'warning', 'text', 'secondary', 'accent'
  * darker than the light-green ground of a dark theme and lighter than the
  * deep green of a light one, so it reads either way.
  */
-const STEM: StyleColor = '#3f7d4a';
+const STEM: FgColor = '#3f7d4a';
 
 /**
  * A cloud, built rather than chosen.
@@ -363,7 +362,7 @@ function scatter(
  */
 function draw(
   placed: Placed[],
-  tone: StyleColor | ((kind: number, row: number) => StyleColor),
+  tone: FgColor | ((kind: number, row: number) => FgColor),
 ): RenderOutput[] {
   return placed.flatMap((sprite) => sprite.rows.flatMap((row, i) => {
     const lead = row.length - row.trimStart().length;
@@ -506,7 +505,7 @@ const EarthBand = defineComponent<{ seed: number; art: Sprites; figure: Figure |
       {/* The bloom is the first row and everything under it is the plant.
           One green for all of them; the colour belongs to the flower. */}
       {draw(flowers, (kind, row) => (
-        row === 0 ? PETALS[Math.floor(kind / 2) % PETALS.length] as StyleColor : STEM
+        row === 0 ? PETALS[Math.floor(kind / 2) % PETALS.length] as FgColor : STEM
       ))}
       {standing(figure, room)}
     </Pattern>

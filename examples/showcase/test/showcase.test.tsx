@@ -47,6 +47,19 @@ function titleRow(t: Harness, title: string): string {
   return t.lines().find((line) => line.includes(`┌ ${title} `)) ?? '';
 }
 
+/** How many panel frames begin on a line. */
+const framesOn = (row: string): number => (row.match(/┌ /g) ?? []).length;
+
+/**
+ * The panels that draw a frame.
+ *
+ * A pure panel - `isPure` - is content and nothing else: no border, no title,
+ * no row for `titleRow` to find. There is one, and it is the banner, so the
+ * check for "every panel drew" is about the ones that have a frame to look for
+ * and the pure one is asserted on its own below.
+ */
+const FRAMED = PANELS.filter((p) => p.isPure !== true);
+
 describe('everything on one screen', () => {
   for (const width of [132, 62]) {
     it(`draws every panel at ${width} columns`, async () => {
@@ -55,19 +68,45 @@ describe('everything on one screen', () => {
 
       // Not a count - the names, so a panel that silently stopped rendering is
       // named in the failure rather than turning up as 12 instead of 13.
-      const missing = PANELS.filter((p) => titleRow(t, p.title) === '').map((p) => p.id);
+      const missing = FRAMED.filter((p) => titleRow(t, p.title) === '').map((p) => p.id);
       expect(missing).toEqual([]);
       await t.unmount();
     });
   }
 
-  it('puts three panels on a line when there is room for three', async () => {
+  it('puts three cells on a line when there is room for three', async () => {
     const t = await open(132);
-    // The three that come first, on one row, because 40 goes into 130 three
-    // times. This is the whole behaviour `--wrap` controls.
+    // Three into 130, because 40 goes into it three times. The first of them is
+    // the banner, which draws no frame, so the two beside it are the first two
+    // framed panels. This is the whole behaviour `--wrap` controls.
     const row = titleRow(t, 'Controls');
+    // The pure piece is the first cell and has no frame, so the line starts
+    // with its content rather than with a border, and two framed panels sit
+    // beside it: three cells into 130.
+    expect(row.startsWith('┌')).toBe(false);
     expect(row).toContain('┌ Text ');
-    expect(row).toContain('┌ Choosing ');
+    expect(row).not.toContain('┌ Choosing ');
+    expect(framesOn(row)).toBe(2);
+    await t.unmount();
+  });
+
+  it('draws a pure panel as content and nothing else', async () => {
+    const t = await renderApp({
+      width: 140,
+      height: 40,
+      onBoot: (app) => { registerShowcase(app, { wrap: 40, only: 'textui', fit: true }); },
+    });
+    for (let i = 0; i < 8; i++) await t.settle();
+
+    const lines = t.lines();
+    const drawn = lines.filter((line) => line.trim() !== '');
+    // The words are drawn in a font rather than written, so the sentence is not
+    // in the frame - and something is, on more than one row, which is what
+    // "drew its content" means whatever font it happens to be in this week.
+    expect(t.hasText('Text Terminal User Interface')).toBe(false);
+    expect(drawn.length).toBeGreaterThan(3);
+    // And no panel was drawn around it: not a border, not a title.
+    expect(lines.join('\n')).not.toContain('┌');
     await t.unmount();
   });
 
@@ -84,10 +123,11 @@ describe('everything on one screen', () => {
   it('takes the column count from --wrap, not from the width', async () => {
     const narrow = await open(132, 40);
     const wide = await open(132, 64);
-    // Two across at 64 where there were three at 40, on the same terminal.
-    expect(titleRow(narrow, 'Controls')).toContain('┌ Choosing ');
-    expect(titleRow(wide, 'Controls')).not.toContain('┌ Choosing ');
-    expect(titleRow(wide, 'Controls')).toContain('┌ Text ');
+    // Two framed panels beside the banner at 40, one at 64, on the same
+    // terminal: the count is the number, not the width.
+    expect(framesOn(titleRow(narrow, 'Controls'))).toBe(2);
+    expect(framesOn(titleRow(wide, 'Controls'))).toBe(1);
+    expect(titleRow(wide, 'Text')).not.toBe('');
     await narrow.unmount();
     await wide.unmount();
   });

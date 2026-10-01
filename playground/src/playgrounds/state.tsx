@@ -78,7 +78,6 @@ export function StatePlayground() {
             rows={PLAIN}
             selectedKey={table}
             onSelect={(key) => setTable(key)}
-            focusId="state-table"
             showHeader={false}
             flex={1}
           />
@@ -100,7 +99,6 @@ export function StatePlayground() {
             selectedId={tree}
             expandedIds={['src']}
             onSelect={(id) => setTree(id)}
-            focusId="state-tree"
             flex={1}
           />
           <Tree nodes={NODES} selectedId={tree} expandedIds={['src']} focusable={false} flex={1} />
@@ -113,7 +111,6 @@ export function StatePlayground() {
             items={PLAIN}
             activeId={menu}
             onSelect={(id) => setMenu(id)}
-            focusId="state-menu"
             flex={1}
           />
           <Menu items={PLAIN} activeId={menu} interactive={false} flex={1} />
@@ -126,7 +123,7 @@ export function StatePlayground() {
           state is qualified by it, `Tabs.solid.selected`. */}
       <Panel title="Tabs">
         <Column gap={0}>
-          <Tabs items={PLAIN} activeId={tab} onChange={setTab} variant="solid" focusId="state-tabs" />
+          <Tabs items={PLAIN} activeId={tab} onChange={setTab} variant="solid" />
           <Tabs items={PLAIN} activeId={tab} variant="underline" />
         </Column>
       </Panel>

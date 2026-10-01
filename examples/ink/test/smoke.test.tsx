@@ -3,7 +3,7 @@ import { render } from '@textui/testing';
 import type { Harness } from '@textui/testing';
 import { FONT, PLAIN, PRESET, TEXT, registerInk } from '../src/app.js';
 import { PRESETS } from '../src/inks.js';
-import { FONTS, banner, fontAt, inkGlyphs } from '../src/fonts.js';
+import { FONTS, banner, fontAt, inkGlyphs } from '@textui/widgets';
 
 /**
  * The example, mounted.

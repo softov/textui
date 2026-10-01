@@ -381,17 +381,23 @@ the glyph has to carry the meaning on its own.`,
   },
 
   Card: {
-    summary: 'A titled block with no frame, for grouping without drawing a box.',
+    summary: 'A titled block that is filled, so it sits on what is behind it.',
     example: `import { Card } from '@textui/widgets';
 
 <Card title="billing-worker" subtitle="eu-west-1" footer="updated 2m ago">
   <text content="42 jobs queued" />
 </Card>`,
-    notes: `Where [\`Panel\`](../layout/panel.md) draws a region, a card groups by spacing
-and weight alone. Use a panel when the boundary matters - a pane you can focus,
-resize or scroll - and a card when several of them sit in a
-[\`Grid\`](../layout/grid.md) and a border each would be a cage.`,
-    seeAlso: `- [Panel](../layout/panel.md) - the framed version
+    notes: `Where [\`Panel\`](../layout/panel.md) is a region you can focus, resize or
+scroll, a card is a block of content with a heading - the lighter of the two,
+and the one to reach for when several sit in a [\`Grid\`](../layout/grid.md).
+
+It states \`bg: 'surface'\`, so it is opaque: dropped over a
+[\`Pattern\`](pattern.md), a scrim or a neighbouring block it reads as laid on
+top rather than as a hole in it. A box that states no background is a frame
+around whatever was already there, which is right for a container and wrong for
+a surface. A caller that wants a different fill names one - \`bg\` is spread
+last, so it wins.`,
+    seeAlso: `- [Panel](../layout/panel.md) - a pane rather than a block
 - [KeyValue](key-value.md) - for a card that is mostly field-and-value`,
   },
 
@@ -1868,6 +1874,105 @@ anything the reader has to know has to be in the words.`,
     seeAlso: `- [text](../primitives/text.md) - one colour, and the right answer nearly always
 - [canvas](../primitives/canvas.md) - the primitive underneath, for cells that are not text
 - [Themes](../../themes/tokens.md) - the tokens an ink can name`,
+  },
+
+  FontText: {
+    summary: 'Text drawn in a block font, one glyph table to a letter.',
+    example: `import { FontText, fontAt } from '@textui/widgets';
+
+<FontText content="TextUI" font={fontAt('block')} fg="accent" />`,
+    notes: `A font is data: a table of glyphs, a tracking between letters and a width for
+a space. The library ships a few - \`FONTS\`, or \`fontAt(id)\` for one by
+name - and \`Font\` is the whole contract, so an application can bring its own
+table without asking anyone.
+
+What the component adds over the string is the mapping. A table is written in
+placeholders - \`#\` a full cell, \`%\` a lighter one, \`^\` and \`v\` the two
+halves - and those are filled from the theme's own glyphs, which is what keeps a
+banner legible on a terminal that can only do ascii or only do sixteen colours.
+So is the colour: the output is a \`text\` node and inherits like one.
+
+\`wrap\` here is not \`BoxProps.wrap\`. On a \`text\` it says where a line of
+*characters* is cut - and the block this draws is not a line of characters: its
+rows are the rows of the letters, so cutting one at column sixty cuts every
+letter in it in half. So it takes \`'none'\`, the default, or \`'word'\`, which
+breaks the *text* between its words, measured in the font before anything is
+drawn, and spends a word too wide for a line of its own a character at a time -
+the only place a letter boundary is ever crossed. \`'none'\` is the default
+because a banner is usually a size somebody picked, and at a width the caller
+did not intend, letters that reflow are worse than letters that overflow. The
+rows handed to the \`text\` node are always drawn unwrapped; a caller cannot
+reach that.
+
+\`bannerLines\` is the same text one line at a time, for a caller
+that places the lines itself - \`ColorText\` per line, each with \`alignBlock\` and
+\`textAlign="center"\`, is how every line gets centred rather than the block. The
+ink restarts on each piece, so a block drawn that way is one component per line
+and not one continuous ramp.
+
+\`lineGap\` is the blank rows between one line of the block and the next: one by
+default, \`0\` to butt them together - which, for a font with a ground of its own
+like \`pagga\`'s \`░\`, merges two lines into one texture - and any larger number
+for air between them. It is the same gap whether the line came from a newline in
+\`content\` or from \`wrap: 'word'\` breaking a long one.
+
+This is the shape half of a pair. Colouring the letters cell by cell - a ramp
+across a banner, a palette down it - is [\`ColorText\`](color-text.md), and the
+two meet over the string: \`banner(content, font, inkGlyphs(theme.glyphs))\`
+returns what \`ColorText\` wants. A font may also name a \`fallback\` - another
+font of the same height - for a terminal that cannot draw its glyphs, because
+there is no guessing a substitute for a table the library has never seen.`,
+    seeAlso: `- [ColorText](color-text.md) - the other half: colour, cell by cell
+- [text](../primitives/text.md) - what this draws with, and what it inherits from
+- [Themes](../../themes/tokens.md) - the glyphs and colours the placeholders resolve to`,
+  },
+
+  Pattern: {
+    summary: 'A tile, repeated - a texture under the children, or a motif over them.',
+    example: `import { Pattern } from '@textui/widgets';
+
+<Pattern tile={['◆◇', '◇◆']} ascii={['*.', '.*']} x={-1} y={-1} height={5}>
+  <text content="written over the tile" />
+</Pattern>`,
+    notes: `The tile is one string per row, or one string with newlines in it, and a
+ragged tile is padded rather than torn. \`x\` and \`y\` say how many copies:
+unset or \`0\` draws it once, \`-1\` keeps going until the box runs out, and a
+positive number draws exactly that and lets the box clip the rest.
+
+\`ascii\` is the tile to draw where the first one cannot be. A pattern's whole
+content is glyphs, which makes it the component that breaks worst on an
+\`unicode: 'ascii'\` terminal - and unlike a border the library cannot guess a
+substitute for a tile it has never seen, so whoever picks the glyphs picks the
+fallback. Left unset, the tile is drawn as written and the terminal's own font
+decides what that looks like.
+
+\`spacing\` is cells added after each copy - the difference between wrapping
+paper and wallpaper - and \`jitter\` is how much *extra* is left to chance per
+step, so \`spacing.x = 4, jitter.x = 6\` steps by a tile plus four to ten.
+Because a pattern repaints whenever its box changes, the scatter is dealt from
+\`seed\` rather than from \`Math.random()\`: the same props are the same picture
+until somebody changes the number, where a random would make a texture crawl.
+
+Cells holding \`transparent\` are left unpainted so whatever is behind shows
+through; it defaults to a space, and \`null\` paints every cell, spaces included.
+\`asBackground\` (the default) puts the tile under the children and
+\`asOverlay\` puts it over them.
+Anything drawn over the tile that states no background of its own is
+transparent to it, which is how a bordered box ends up as a frame around the
+pattern: a \`Card\`, a \`Dialog\` and a \`CommandPalette\` state one, a bare \`box\`
+does not.
+
+\`ink\` colours the tile the way [\`ColorText\`](color-text.md) colours text - a
+ramp between stops, a palette walked in runs, or a function of the cell - and
+the coordinates it is handed are the pattern's own box rather than one copy of
+the tile, so a gradient sweeps the whole texture and the second copy is not the
+colour of the first. Stated, the tile is painted on a canvas, and a canvas is
+not told what it was nested in: an inked tile takes this component's own \`fg\`
+where the ink declines one instead of inheriting the colour of the row it sits
+in. Without an \`ink\` the tile is text, and inherits like text.`,
+    seeAlso: `- [canvas](../primitives/canvas.md) - the primitive, for a picture rather than a repeat
+- [ColorText](color-text.md) - a second way to put colour on a block
+- [Themes](../../themes/tokens.md) - the colour a tile is drawn in, inherited`,
   },
 
   Marquee: {

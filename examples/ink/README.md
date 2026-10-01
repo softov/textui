@@ -23,9 +23,14 @@ half is worse.
 `ColorText` colours a block of text cell by cell. The example is a banner
 because that is where per-cell colour is worth anything, but **the component
 has no idea what a banner is** - `ctrl+p` swaps the block letters for ordinary
-prose and every ink in the list still applies, unchanged. The fonts are
-[`src/fonts.ts`](src/fonts.ts), which is application data and deliberately not
-something the library ships.
+prose and every ink in the list still applies, unchanged.
+
+The letters are not its business either: they come from
+[`FontText`](../../docs/components/display/font-text.md) and the block fonts
+that ship with the library. A font is still data - `Font` is the whole
+contract, and an application can bring its own table - but these are the ones
+the catalog draws with, and this example is what shows them coloured:
+[`src/app.tsx`](src/app.tsx) is the pair over one string.
 
 ## The three ways to write an ink
 

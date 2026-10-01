@@ -6,7 +6,7 @@ import {
 import {
   ColorText, KeyHints, List, ScrollView, Select, TextArea, registerBuiltins,
 } from '@textui/widgets';
-import { FONTS, banner, fontAt, inkGlyphs } from './fonts.js';
+import { FONTS, banner, fontAt, inkGlyphs } from '@textui/widgets';
 import { PRESETS, sample } from './inks.js';
 
 /**

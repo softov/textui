@@ -7,7 +7,7 @@ grand_parent: Components
 # Card
 {: .no_toc }
 
-A titled block with no frame, for grouping without drawing a box.
+A titled block that is filled, so it sits on what is behind it.
 
 ```tsx
 import { Card } from '@textui/widgets';
@@ -29,9 +29,11 @@ import { Card } from '@textui/widgets';
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->
 
-Where [`Panel`](../layout/panel.md) draws a region, a card groups by spacing and weight alone. Use a panel when the boundary matters - a pane you can focus, resize or scroll - and a card when several of them sit in a [`Grid`](../layout/grid.md) and a border each would be a cage.
+Where [`Panel`](../layout/panel.md) is a region you can focus, resize or scroll, a card is a block of content with a heading - the lighter of the two, and the one to reach for when several sit in a [`Grid`](../layout/grid.md).
+
+It states `bg: 'surface'`, so it is opaque: dropped over a [`Pattern`](pattern.md), a scrim or a neighbouring block it reads as laid on top rather than as a hole in it. A box that states no background is a frame around whatever was already there, which is right for a container and wrong for a surface. A caller that wants a different fill names one - `bg` is spread last, so it wins.
 
 ## See also
 
-- [Panel](../layout/panel.md) - the framed version
+- [Panel](../layout/panel.md) - a pane rather than a block
 - [KeyValue](key-value.md) - for a card that is mostly field-and-value

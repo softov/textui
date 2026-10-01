@@ -1,6 +1,5 @@
 import { useState, useStoreValue } from '@textui/core';
-import { Button, Column, Divider, Heading, KeyHints, Label, Row, Tabs } from '@textui/widgets';
-import { Pattern } from '../components/pattern.js';
+import { Button, Column, Divider, Heading, KeyHints, Label, Pattern, Row, Tabs } from '@textui/widgets';
 import { TILE_PATH, type TileSource } from '../tile.js';
 
 /**

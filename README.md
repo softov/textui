@@ -37,7 +37,7 @@ await waitUntilExit();
 
 ## A quick taste
 
-*Let's cut to the chase, shall we?*
+*Yes, it's SVG, not a screenshot. But it's only because it can export the terminal UI as an SVG*
 
 <p align="center">
   <img src="./media/print-theme-dark.svg" alt="TextUI dark theme" />

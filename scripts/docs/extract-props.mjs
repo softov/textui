@@ -13,10 +13,17 @@ const UI_DIR = at('packages/widgets/src');
 const CORE_UI_DIR = at('packages/core/src/ui');
 const JSX_DIR = at('packages/core/src/jsx');
 
+// `.tsx` as well as `.ts`: a component that uses JSX is still a component,
+// and filtering it out left its page with "_No props of its own._" - a table
+// that disagrees with the source, which is the one thing this script exists to
+// prevent. `createSourceFile` reads the variant off the extension, so the
+// parser wants nothing else.
+const isSource = (f) => /\.tsx?$/.test(String(f));
+
 const files = [
   // Recursive: widgets is one file per component, in a folder per group.
   ...readdirSync(UI_DIR, { recursive: true })
-    .filter((f) => String(f).endsWith('.ts'))
+    .filter(isSource)
     .map((f) => join(UI_DIR, String(f))),
   // Screen and the four primitives stayed in core, with the runtime that
   // paints them.
@@ -28,7 +35,7 @@ const files = [
   // The resource, JSON and editor components ship from @textui/documents, so
   // their props live outside core and would otherwise come out empty.
   ...readdirSync(at('packages/documents/src'), { recursive: true })
-    .filter((f) => String(f).endsWith('.ts'))
+    .filter(isSource)
     .map((f) => join(at('packages/documents/src'), String(f))),
 ];
 

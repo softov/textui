@@ -1,6 +1,6 @@
 ---
 title: A colour is typed by its channel
-status: todo
+status: done
 depends:
   - task-01-the-state-reaches-the-theme.md
 layer: "core types, every component"

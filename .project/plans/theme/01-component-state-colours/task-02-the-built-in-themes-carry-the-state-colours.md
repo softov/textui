@@ -1,6 +1,6 @@
 ---
 title: The built-in themes carry the state colours
-status: todo
+status: done
 depends:
   - task-01-the-state-reaches-the-theme.md
 layer: "widgets, chat, core themes"

@@ -1,7 +1,8 @@
 ---
 title: A component's state colours are the theme's to state
 domain: theme
-status: planned
+status: built
+built: 2026-10-01
 priority: high
 created: 2026-09-30
 revalidated: 2026-09-30
@@ -11,6 +12,7 @@ creates: []
 decisions:
   - decisions/a-components-state-owns-its-colours.md
   - decisions/a-colour-is-typed-by-its-channel.md
+  - decisions/active-stays-a-palette-token.md
 refs:
   - "[code://packages/core/src/runtime/style.ts#L90-L108](../../../../packages/core/src/runtime/style.ts#L90-L108) - `resolveStyle`, where the variant list is built and a state name would have to join it"
   - "[code://packages/core/src/runtime/style.ts#L60-L78](../../../../packages/core/src/runtime/style.ts#L60-L78) - `flattenStyleInput`, whose order already states the precedence between the states"
@@ -74,6 +76,7 @@ node props -> resolveStyle(props, theme, component, defaults, state)
 | The state colours leave the components and become entries in the built-in themes' `components` maps | `(defaulted: a theme's value cannot win while the node states its own)` | 02 |
 | A channel union still accepts a literal colour | `(defaulted: a literal colour like #ff8800 is documented and used, so the union keeps it)` | 03 |
 | `selected` and `active` stop being names a component reaches for once no component states them | `(defaulted: the palette keeps whatever the built-in defaults reference)` | 04 |
+| The palette tokens `active` and `onActive` survive; what retires is the component state that shared the word | [active-stays-a-palette-token](../../../decisions/active-stays-a-palette-token.md) - Softov, 2026-09-30: "Leave the palette untouched" | 04 |
 | The state that means an unfocused selection gets a name of its own, and `active` means pressed | `(defaulted: proposed - selected keeps the fill and gains a focused state beside it)` | 04 |
 
 ## Proposed architecture
@@ -87,11 +90,11 @@ node props -> resolveStyle(props, theme, component, defaults, state)
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The state reaches the theme](task-01-the-state-reaches-the-theme.md) | todo | - |
-| [02 - The built-in themes carry the state colours](task-02-the-built-in-themes-carry-the-state-colours.md) | todo | 01 |
-| [03 - A colour is typed by its channel](task-03-a-colour-is-typed-by-its-channel.md) | todo | 01 |
-| [04 - Active stops meaning two things](task-04-active-stops-meaning-two-things.md) | todo | 02, 03 |
-| [05 - The vocabulary is published](task-05-the-vocabulary-is-published.md) | todo | 02, 03, 04 |
+| [01 - The state reaches the theme](task-01-the-state-reaches-the-theme.md) | done | - |
+| [02 - The built-in themes carry the state colours](task-02-the-built-in-themes-carry-the-state-colours.md) | done | 01 |
+| [03 - A colour is typed by its channel](task-03-a-colour-is-typed-by-its-channel.md) | done | 01 |
+| [04 - Active stops meaning two things](task-04-active-stops-meaning-two-things.md) | done | 02, 03 |
+| [05 - The vocabulary is published](task-05-the-vocabulary-is-published.md) | done | 02, 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -102,20 +105,17 @@ node props -> resolveStyle(props, theme, component, defaults, state)
 
 ## Resume state
 
-- **Done so far:** nothing; the two decisions are written and the plan is drafted.
-- **Next action:** [task-01-the-state-reaches-the-theme.md](task-01-the-state-reaches-the-theme.md).
-- **Open questions:**
-  1. Does `active` survive as a palette token at all, or does the palette gain `selectionBg` and `pressedBg`? proposed: retire it, and let the component state names carry the meaning.
-  2. May a theme set only `bg` for a state and inherit the paired foreground? proposed: yes, the merge is per property, and the `on*` derivation stays as the default.
-  3. Does publishing 0.8.0 wait for all five tasks, or for 01 and 02 alone? proposed: wait, because task 03 changes the types a theme author writes.
-- **Watch out for:** `styleFor` merges `base` and then each variant in the order given, so the order the state names are pushed in is the specificity, and it has to agree with `flattenStyleInput`.
+- **Done so far:** all five tasks. See [implemented.md](implemented.md) for what exists and [deferred.md](deferred.md) for the one thing set aside.
+- **Next action:** none. The plan is built; 0.8.0 is not published.
 
 ## Final verification checklist
 
-- [ ] `components.<Component>.<state>` reaches a node, with a test that fails when the state is not pushed.
-- [ ] No component states a state colour as a plain prop any more, and a theme override moves one component and not its neighbours.
-- [ ] A token used in the wrong channel is a compile error, with a `@ts-expect-error` case per channel.
-- [ ] `active` has one meaning, and no component names it.
-- [ ] `docs/themes/tokens.md`, `docs/decisions.md` and `CHANGELOG.md` carry the vocabulary and the migration.
-- [ ] `pnpm -r test`, `pnpm typecheck` and `npx vitest run playground/test/playgrounds.test.tsx` green.
-- [ ] `plans/index.md` updated.
+- [x] `components.<Component>.<state>` reaches a node, with a test that fails when the state is not pushed.
+- [x] No component states a state colour as a plain prop any more, and a theme override moves one component and not its neighbours.
+- [x] A token used in the wrong channel is a compile error, with a `@ts-expect-error` case per channel.
+- [x] `active` has one meaning, and no component names it.
+- [x] `docs/themes/tokens.md`, `docs/decisions.md` and `CHANGELOG.md` carry the vocabulary and the migration.
+- [x] `npx vitest run` and every package's `tsconfig.test.json` green, which is what `pnpm -r test` and `pnpm typecheck` run.
+- [x] `plans/index.md` updated.
+
+Checked green: `npx vitest run` is 127 files and 2196 tests, `npx vitest run playground/test` is 4 files and 214, and `node scripts/check-docs.mjs` reports 0 errors.

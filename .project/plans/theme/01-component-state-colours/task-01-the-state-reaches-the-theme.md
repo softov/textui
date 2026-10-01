@@ -1,6 +1,6 @@
 ---
 title: The state reaches the theme
-status: todo
+status: done
 depends: []
 layer: "core runtime"
 refs:

@@ -1,6 +1,6 @@
 ---
 title: Active stops meaning two things
-status: todo
+status: done
 depends:
   - task-02-the-built-in-themes-carry-the-state-colours.md
   - task-03-a-colour-is-typed-by-its-channel.md

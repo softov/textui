@@ -16,7 +16,7 @@ Reference: [00-theme.md](theme/00-theme.md)
 
 | Plan | Priority | Status | Requires | Blocks |
 | --- | --- | --- | --- | --- |
-| [01 - A component's state colours are the theme's to state](theme/01-component-state-colours/plan.md) | high | planned 2026-09-30 | - | - |
+| [01 - A component's state colours are the theme's to state](theme/01-component-state-colours/plan.md) | high | built 2026-10-01 | - | - |
 
 Next free number in `theme`: `02`.
 

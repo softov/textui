@@ -439,7 +439,12 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
   // It is the one line in the panel that wraps rather than truncates,
   // because it is the one place a sentence can be read whole.
   const chosen = pending ? offered[index] : undefined;
-  const detail = pending
+  // Nothing selectable is nothing to describe: the line under the list would
+  // otherwise keep the last answer's sentence, or repeat the question the row
+  // above has already asked.
+  const detail = rows.length === 0
+    ? ''
+    : pending
     ? chosen?.description
       ?? pending.arg.description
       ?? i18n.t(
@@ -549,6 +554,11 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
       descriptions: pending?.arg.descriptions ?? descriptions,
       interactive: false,
       activeId: rows[index],
+      // When the answer is a fixed set, the row above already says which kind
+      // of nothing this is and this would be the second line. Searching the
+      // command list has no such row, and there the menu's own line is the one
+      // that says it.
+      noMatch: pending ? false : undefined,
       onSelect: (id: string) => {
         const at = rows.indexOf(id);
         if (at >= 0) setHighlight(at);
@@ -560,7 +570,8 @@ export const CommandPalette = defineComponent<CommandPaletteProps>('CommandPalet
     // that shows only titles makes you run something to find out what it does.
     h('box', { direction: 'row', gap: 1, align: 'start' },
       h('text', { content: detail, fg: 'muted', flex: 1, wrap: 'word' }),
-      h('text', { content: `${rows.length}`, fg: 'subtle' })),
+      // A zero beside an empty line is a number with nothing to count.
+      rows.length > 0 ? h('text', { content: `${rows.length}`, fg: 'subtle' }) : null),
     h('box', { direction: 'row', gap: 1 },
       h('text', {
         content: pending

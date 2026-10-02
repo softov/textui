@@ -4,6 +4,22 @@ The packages release as a set under one version.
 
 ## Unreleased
 
+### Added
+
+- A field's text colour is the theme's, under the field's own name:
+  `components: { TextInput: { base: { fg: 'text' } } }`. `TextInput` states
+  `styleAs` now, so the box a person types in can be coloured like any other
+  component - and the palette's search box, which is one of them, with it.
+- `Menu` takes `noMatch`: a line of its own for an empty list, or `false` to
+  draw none. A palette knows which kind of nothing it is looking at and says so
+  itself, so it turns the menu's line off rather than saying it twice.
+
+### Fixed
+
+- The line under a palette's list no longer keeps the last answer's sentence when
+  nothing is selectable, and no longer counts nothing: the count is there when
+  there is something to count.
+
 ### Fixed
 
 - A shell's frame is drawn in the theme's `border` colour, not in its own text

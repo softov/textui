@@ -182,6 +182,12 @@ export const TextInput = defineComponent<TextInputProps>('TextInput', (props) =>
         : sliceColumns(shown, start, field),
       fg: empty ? 'subtle' : disabled ? 'disabled' : undefined,
       flex: 1,
+      // The name a theme styles this field's text under. Without it a theme
+      // could colour a list row and not the field a person types in - and the
+      // palette's search box, which is this component, could not be coloured
+      // at all. The placeholder and the disabled case state their own `fg`, so
+      // they keep the colours they had.
+      styleAs: 'TextInput',
     }),
   );
 });

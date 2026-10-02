@@ -36,6 +36,7 @@ import { Menu } from '@textui/widgets';
 | `autoFocus` | `boolean` |  |  |
 | `descriptions` | `'inline' \| 'below'` | `'inline'` | Where a row's description goes. `inline` right-aligns it on the row, sharing the width with the label - which is the right shape for a word or two of state. `below` gives it a line of its own under the label, indented to it, which is the only shape that fits a sentence: inline, a list of modes whose whole difference is the sentence under each shows the same truncated half of every one. `below` makes every row two lines, so `visibleRows` buys half as much. |
 | `interactive` | `boolean` | `true` | Take focus and handle keys. Off when something else drives the selection - a command palette, where typing belongs to the search field and the list only follows. |
+| `noMatch` | `string \| false` |  | What to say when nothing is selectable. A palette answers for an empty list itself: it knows *why* it is empty, and its own row can say which kind of nothing this is - nothing to choose, still asking, no match. Given one of its own it turns this off rather than putting both lines on the screen. |
 
 Plus everything on [`BoxProps`](../base-props.md).
 <!-- props:end -->

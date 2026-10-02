@@ -59,6 +59,15 @@ export interface MenuProps extends BoxProps {
    * only follows.
    */
   interactive?: boolean;
+  /**
+   * What to say when nothing is selectable.
+   *
+   * A palette answers for an empty list itself: it knows *why* it is empty, and
+   * its own row can say which kind of nothing this is - nothing to choose,
+   * still asking, no match. Given one of its own it turns this off rather than
+   * putting both lines on the screen.
+   */
+  noMatch?: string | false;
 }
 
 /** The name a theme styles a menu row under. See `LIST`. */
@@ -69,7 +78,7 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
   const i18n = useI18n();
   const {
     items, onSelect, visibleRows, activeId, autoFocus, interactive = true,
-    descriptions = 'inline', ...rest
+    descriptions = 'inline', noMatch, ...rest
   } = props;
   const focus = useFocus({ autoFocus, disabled: !interactive });
   const selectable = items.filter((i) => !i.disabled);
@@ -202,8 +211,8 @@ export const Menu = defineComponent<MenuProps>('Menu', (props) => {
         ? [h('box', { key: `${item.id}-sep`, height: 1, fill: theme.borderChars().top, fg: 'borderSubtle' }), row]
         : [row];
     }),
-    selectable.length === 0
-      ? h('text', { content: `  ${i18n.t('textui.menu.noMatch', undefined, 'no matches')}`, fg: 'subtle' })
+    selectable.length === 0 && noMatch !== false
+      ? h('text', { content: `  ${noMatch ?? i18n.t('textui.menu.noMatch', undefined, 'no matches')}`, fg: 'subtle' })
       : null,
   );
 });

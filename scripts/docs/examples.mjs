@@ -1168,7 +1168,8 @@ others.`,
 <Menu
   items={[
     { id: 'open', label: 'Open', shortcut: 'ctrl+o' },
-    { id: 'save', label: 'Save', shortcut: 'ctrl+s', separatorBefore: true },
+    { id: 'save', label: 'Save', shortcut: 'ctrl+s' },
+    { id: 'forget', label: 'Forget', tone: 'danger', separatorBefore: true },
   ]}
   onSelect={(id) => console.log(id)}
 />`,
@@ -1177,7 +1178,28 @@ others.`,
 saying out loud what the chord already does.
 
 \`separatorBefore\` puts a rule above an item, which is how a destructive action
-gets separated from the ones above it. \`children\` nests a submenu.
+gets separated from the ones above it. \`sectionBefore\` puts a **heading** there
+instead, naming the group the item starts - said once above the group rather
+than repeated in a column on every row, and taking the line the rule would have
+used rather than adding one. \`children\` nests a submenu.
+
+\`tone\` colours a row - its label and its icon. The row under the cursor is the
+exception: what is being chosen is drawn in the theme's \`Menu.focused\` colour,
+so a tone there would be a second answer to a question the fill already
+answered.
+
+With no tone a row is drawn in the colour it inherits, which is the terminal's
+own unless something states otherwise. A theme that wants the whole column in a
+colour states it once, and that is also the only way to colour a menu you do not
+render yourself - the rows inside a [\`CommandPalette\`](command-palette.md):
+
+\`\`\`ts
+app.themes.register({
+  id: 'house',
+  extends: 'dark',
+  components: { Menu: { base: { fg: 'text' } } },
+});
+\`\`\`
 
 \`interactive={false}\` renders it as a static list - for a cheat sheet or a
 help pane rather than a menu.`,

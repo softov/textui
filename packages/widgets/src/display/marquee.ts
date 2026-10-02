@@ -60,11 +60,23 @@ export const Marquee = defineComponent<MarqueeProps>('Marquee', (props) => {
   // at rather than at the rate it asked for.
   const [frame, setFrame] = useState(0);
   const seen = useRef(0);
-  const from = useRef(0);
-  useTicker((at) => { seen.current = at; setFrame(at - from.current); }, { fps, enabled: sliding });
+  // `null` until the first tick of a run, rather than 0.
+  //
+  // The ticker counts from the application's first frame, not from this
+  // component's, so a marquee that starts at frame 0 and subtracts a `from` of
+  // 0 begins at whatever number the application happens to be on - and a
+  // label scrolled to a cell nothing had travelled to yet is what opening a
+  // menu looked like. The effect below resets this, but it runs *after* the
+  // first tick, so the first tick has to be the one that starts the count.
+  const from = useRef<number | null>(null);
+  useTicker((at) => {
+    seen.current = at;
+    if (from.current === null) from.current = at;
+    setFrame(at - from.current);
+  }, { fps, enabled: sliding });
   // Back to the start whenever it stops or the words change, so the row you
   // leave is the row you saw when you arrived at it.
-  useEffect(() => { from.current = seen.current; setFrame(0); }, [sliding, content]);
+  useEffect(() => { from.current = null; setFrame(0); }, [sliding, content]);
 
   if (!sliding) return h('text', { content, truncate: 'end', ...rest });
 

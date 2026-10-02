@@ -9,10 +9,10 @@ cd examples/counter
 node index.ts        # or: bun index.ts
 ```
 
-Nothing compiles them. `h` is what JSX compiles to - `<Row gap={1}/>` and
-`{ component: 'Row', gap: 1 }` are the same value - so a file that calls `h`
-directly is a file the runtime already understands, and node has stripped types
-by default since 23.6.
+Nothing compiles them.
+`h` is what JSX compiles to: `<Row gap={1}/>` and `{ component: 'Row', gap: 1 }` are the same value.
+So a file that calls `h` directly is a file the runtime already understands.
+Node has stripped types by default since 23.6.
 
 | | |
 |---|---|
@@ -22,22 +22,20 @@ by default since 23.6.
 
 ## Can they use JSX?
 
-Under bun, yes, and with no build - [`counter/counter.tsx`](counter/counter.tsx) is
-the same program as [`counter/index.ts`](counter/index.ts), in JSX. Under node,
-no, and the reason is worth knowing because it is not a missing flag.
+Under bun, yes, and with no build.
+[`counter/counter.tsx`](counter/counter.tsx) is the same program as [`counter/index.ts`](counter/index.ts), in JSX.
+Under node, no, and the reason is worth knowing because it is not a missing flag.
 
-**Node strips types; it does not transform syntax.** A `.ts` file with no
-non-erasable syntax is a file node runs by deleting the annotations. JSX is not
-an annotation - `<Box/>` has to *become* a call - so node rejects `.tsx`
-outright:
+**Node strips types; it does not transform syntax.**
+A `.ts` file with no non-erasable syntax is a file node runs by deleting the annotations.
+JSX is not an annotation - `<Box/>` has to *become* a call - so node rejects `.tsx` outright:
 
 ```
 TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".tsx"
 ```
 
-`--experimental-transform-types` does not help; it handles enums and
-namespaces. So the trade is angle brackets against node, which is why the
-counter ships both and `node index.ts` is the default.
+`--experimental-transform-types` does not help; it handles enums and namespaces.
+So the trade is angle brackets against node, which is why the counter ships both and `node index.ts` is the default.
 
 Bun compiles TSX, and the whole setup is one line beside the file:
 
@@ -45,13 +43,11 @@ Bun compiles TSX, and the whole setup is one line beside the file:
 { "compilerOptions": { "jsxImportSource": "textui" } }
 ```
 
-`textui` rather than `@textui/core`, so one install is enough - the facade
-re-exports the JSX runtime for this.
+`textui` rather than `@textui/core`, so one install is enough - the facade re-exports the JSX runtime for this.
 
 ## With a build: the applications
 
-Bigger programs, bundled by esbuild because they are many files rather than
-because textui needs it.
+Bigger programs, bundled by esbuild because they are many files rather than because textui needs it.
 
 ```bash
 pnpm example todo        # or arcade, surfaces, ink, flipbook

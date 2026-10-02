@@ -22,6 +22,11 @@ The packages release as a set under one version.
 
 ### Fixed
 
+- A marquee counts from its own first frame. The ticker hands it the
+  application's frame number, so a marquee whose count started at zero began at
+  whatever frame the application happened to be on: opening a menu after a while
+  drew the label already scrolled, cut at the left, until the cursor moved and
+  reset it.
 - A shell's frame is drawn in the theme's `border` colour, not in its own text
   colour. A box that states an `fg` draws its border in it, which is right for
   `<box fg="danger" border="single">` and wrong for a shell: the workbench shell

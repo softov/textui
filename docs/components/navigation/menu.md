@@ -9,6 +9,8 @@ grand_parent: Components
 
 A list of commands, with shortcuts and submenus.
 
+<!-- docs:setup
+declare const app: import('@textui/core').TextUIApp; -->
 ```tsx
 import { Menu } from '@textui/widgets';
 
@@ -57,7 +59,10 @@ render yourself - the rows inside a [`CommandPalette`](command-palette.md):
 ```ts
 app.themes.register({
   id: 'house',
+  name: 'House',
+  appearance: 'dark',
   extends: 'dark',
+  colors: {},
   components: { Menu: { base: { fg: 'text' } } },
 });
 ```

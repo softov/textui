@@ -1196,7 +1196,10 @@ render yourself - the rows inside a [\`CommandPalette\`](command-palette.md):
 \`\`\`ts
 app.themes.register({
   id: 'house',
+  name: 'House',
+  appearance: 'dark',
   extends: 'dark',
+  colors: {},
   components: { Menu: { base: { fg: 'text' } } },
 });
 \`\`\`

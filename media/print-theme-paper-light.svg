@@ -614,10 +614,10 @@
 <text x="170" y="584" fill="#b4531f" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█</text>
 <text x="418" y="584" fill="#7a756c" textLength="40" lengthAdjust="spacing" xml:space="preserve">image</text>
 <text x="458" y="584" fill="#2b2a27" textLength="352" lengthAdjust="spacing" xml:space="preserve">    checkout:4.2.1                          </text>
-<text x="810" y="584" fill="#2b2a27" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▸</text>
-<text x="818" y="584" fill="#2b2a27" textLength="384" lengthAdjust="spacing" xml:space="preserve"> checkout                      eu-west-1 live   </text>
-<text x="1202" y="584" fill="#2b2a27" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▾</text>
-<text x="1210" y="584" fill="#2b2a27" textLength="32" lengthAdjust="spacing" xml:space="preserve"> src</text>
+<text x="810" y="584" fill="#0969da" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▸</text>
+<text x="818" y="584" fill="#0969da" textLength="360" lengthAdjust="spacing" xml:space="preserve"> checkout                      eu-west-1 live</text>
+<text x="1202" y="584" fill="#0969da" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▾</text>
+<text x="1210" y="584" fill="#0969da" textLength="352" lengthAdjust="spacing" xml:space="preserve"> src                                        </text>
 <text x="42" y="601" fill="#b4531f" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▃</text>
 <text x="58" y="601" fill="#b4531f" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█</text>
 <text x="74" y="601" fill="#b4531f" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▃</text>
@@ -723,7 +723,7 @@
 <text x="274" y="805" fill="#908e8a" textLength="40" lengthAdjust="spacing" xml:space="preserve">  p99</text>
 <text x="330" y="805" fill="#908e8a" textLength="64" lengthAdjust="spacing" xml:space="preserve">State   </text>
 <text x="426" y="805" fill="#2b2a27" textLength="616" lengthAdjust="spacing" xml:space="preserve">                                                  4.2.1 is live in eu-west-1.</text>
-<text x="10" y="822" fill="#2b2a27" textLength="320" lengthAdjust="spacing" xml:space="preserve">  checkout            eu-west-1  120ms  </text>
+<text x="26" y="822" fill="#0969da" textLength="304" lengthAdjust="spacing" xml:space="preserve">checkout            eu-west-1  120ms  </text>
 <text x="330" y="822" fill="#1a7f37" textLength="64" lengthAdjust="spacing" xml:space="preserve">live    </text>
 <text x="418" y="822" fill="#faca00" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">●</text>
 <text x="434" y="822" fill="#2b2a27" font-weight="bold" textLength="96" lengthAdjust="spacing" xml:space="preserve">Canary at 5%</text>

@@ -605,12 +605,12 @@
 <text x="466" y="550" fill="#1f2328" textLength="320" lengthAdjust="spacing" xml:space="preserve">    checkout:4.2.1                      </text>
 <text x="786" y="550" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="802" y="550" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="818" y="550" fill="#1f2328" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▸</text>
-<text x="826" y="550" fill="#1f2328" textLength="352" lengthAdjust="spacing" xml:space="preserve"> checkout                    eu-west-1 live </text>
+<text x="818" y="550" fill="#0969da" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▸</text>
+<text x="826" y="550" fill="#0969da" textLength="344" lengthAdjust="spacing" xml:space="preserve"> checkout                    eu-west-1 live</text>
 <text x="1178" y="550" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1194" y="550" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="1210" y="550" fill="#1f2328" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▾</text>
-<text x="1218" y="550" fill="#1f2328" textLength="344" lengthAdjust="spacing" xml:space="preserve"> src                                       </text>
+<text x="1210" y="550" fill="#0969da" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▾</text>
+<text x="1218" y="550" fill="#0969da" textLength="336" lengthAdjust="spacing" xml:space="preserve"> src                                      </text>
 <text x="1562" y="550" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="567" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="50" y="567" fill="#0969da" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▃</text>
@@ -815,7 +815,7 @@
 <text x="1194" y="754" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1562" y="754" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="771" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="26" y="771" fill="#1f2328" textLength="296" lengthAdjust="spacing" xml:space="preserve"> checkout          eu-west-1  120ms  </text>
+<text x="34" y="771" fill="#0969da" textLength="288" lengthAdjust="spacing" xml:space="preserve">checkout          eu-west-1  120ms  </text>
 <text x="322" y="771" fill="#1a7f37" textLength="64" lengthAdjust="spacing" xml:space="preserve">live    </text>
 <text x="394" y="771" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="410" y="771" fill="#d0d7de" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>

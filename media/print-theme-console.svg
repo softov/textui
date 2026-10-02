@@ -18,10 +18,10 @@
 <rect x="1258" y="1013" width="240" height="17" fill="#0a0e14"/>
 <text x="10" y="23" fill="#d8dee9" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">●</text>
 <text x="26" y="23" fill="#616e88" textLength="48" lengthAdjust="spacing" xml:space="preserve">textui</text>
-<text x="74" y="23" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="74" y="23" fill="#546f94" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
 <text x="98" y="23" fill="#616e88" textLength="120" lengthAdjust="spacing" xml:space="preserve">20 of 20 panels</text>
 <text x="1442" y="23" fill="#616e88" textLength="56" lengthAdjust="spacing" xml:space="preserve">Console</text>
-<text x="1498" y="23" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="1498" y="23" fill="#546f94" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
 <text x="1522" y="23" fill="#616e88" textLength="56" lengthAdjust="spacing" xml:space="preserve">196×400</text>
 <text x="410" y="57" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">┌</text>
 <text x="418" y="57" fill="#d8dee9" textLength="80" lengthAdjust="spacing" xml:space="preserve"> Controls </text>
@@ -174,8 +174,8 @@
 <text x="802" y="176" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="818" y="176" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="834" y="176" fill="#616e88" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">⌕</text>
-<text x="850" y="176" fill="#6e7681" textLength="48" lengthAdjust="spacing" xml:space="preserve">Filter</text>
-<text x="898" y="176" fill="#6e7681" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">…</text>
+<text x="850" y="176" fill="#546f94" textLength="48" lengthAdjust="spacing" xml:space="preserve">Filter</text>
+<text x="898" y="176" fill="#546f94" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">…</text>
 <text x="1162" y="176" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1178" y="176" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1194" y="176" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
@@ -240,9 +240,9 @@
 <text x="1178" y="210" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1194" y="210" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1210" y="210" fill="#616e88" textLength="32" lengthAdjust="spacing" xml:space="preserve">acme</text>
-<text x="1250" y="210" fill="#6e7681" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">›</text>
+<text x="1250" y="210" fill="#546f94" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">›</text>
 <text x="1266" y="210" fill="#616e88" textLength="64" lengthAdjust="spacing" xml:space="preserve">checkout</text>
-<text x="1338" y="210" fill="#6e7681" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">›</text>
+<text x="1338" y="210" fill="#546f94" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">›</text>
 <text x="1354" y="210" fill="#d8dee9" font-weight="bold" textLength="32" lengthAdjust="spacing" xml:space="preserve">prod</text>
 <text x="1562" y="210" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="66" y="227" fill="#ff004d" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">┳</text>
@@ -455,7 +455,7 @@
 <text x="754" y="380" fill="#616e88" textLength="24" lengthAdjust="spacing" xml:space="preserve">31%</text>
 <text x="786" y="380" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="802" y="380" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="818" y="380" fill="#6e7681" textLength="16" lengthAdjust="spacing" xml:space="preserve">61</text>
+<text x="818" y="380" fill="#546f94" textLength="16" lengthAdjust="spacing" xml:space="preserve">61</text>
 <text x="1010" y="380" fill="#d29922" textLength="16" lengthAdjust="spacingAndGlyphs" xml:space="preserve">⢀⡀</text>
 <text x="1042" y="380" fill="#d29922" textLength="56" lengthAdjust="spacingAndGlyphs" xml:space="preserve">⣀⣴⣿⣶⣦⣄⡀</text>
 <text x="1162" y="380" fill="#d29922" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">⢀</text>
@@ -535,16 +535,16 @@
 <text x="754" y="448" fill="#88c0d0" font-weight="bold" textLength="24" lengthAdjust="spacing" xml:space="preserve">12%</text>
 <text x="786" y="448" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="802" y="448" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="818" y="448" fill="#6e7681" textLength="16" lengthAdjust="spacing" xml:space="preserve"> 4</text>
+<text x="818" y="448" fill="#546f94" textLength="16" lengthAdjust="spacing" xml:space="preserve"> 4</text>
 <text x="842" y="448" fill="#88c0d0" textLength="328" lengthAdjust="spacingAndGlyphs" xml:space="preserve">⣀⣤⣴⣦⣤⣤⣶⣾⣿⣿⣷⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿</text>
 <text x="1178" y="448" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1194" y="448" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="1458" y="448" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">A</text>
-<text x="1474" y="448" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">A</text>
-<text x="1490" y="448" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">A</text>
-<text x="1506" y="448" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">S</text>
-<text x="1522" y="448" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">S</text>
-<text x="1538" y="448" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">S</text>
+<text x="1458" y="448" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">A</text>
+<text x="1474" y="448" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">A</text>
+<text x="1490" y="448" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">A</text>
+<text x="1506" y="448" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">S</text>
+<text x="1522" y="448" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">S</text>
+<text x="1538" y="448" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">S</text>
 <text x="1562" y="448" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="465" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="394" y="465" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
@@ -605,12 +605,12 @@
 <text x="466" y="550" fill="#d8dee9" textLength="320" lengthAdjust="spacing" xml:space="preserve">    checkout:4.2.1                      </text>
 <text x="786" y="550" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="802" y="550" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="818" y="550" fill="#d8dee9" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▸</text>
-<text x="826" y="550" fill="#d8dee9" textLength="352" lengthAdjust="spacing" xml:space="preserve"> checkout                    eu-west-1 live </text>
+<text x="818" y="550" fill="#3191ff" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▸</text>
+<text x="826" y="550" fill="#3191ff" textLength="344" lengthAdjust="spacing" xml:space="preserve"> checkout                    eu-west-1 live</text>
 <text x="1178" y="550" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1194" y="550" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="1210" y="550" fill="#d8dee9" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▾</text>
-<text x="1218" y="550" fill="#d8dee9" textLength="344" lengthAdjust="spacing" xml:space="preserve"> src                                       </text>
+<text x="1210" y="550" fill="#3191ff" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▾</text>
+<text x="1218" y="550" fill="#3191ff" textLength="336" lengthAdjust="spacing" xml:space="preserve"> src                                      </text>
 <text x="1562" y="550" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="567" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="50" y="567" fill="#88c0d0" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▃</text>
@@ -619,7 +619,7 @@
 <text x="162" y="567" fill="#88c0d0" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▃</text>
 <text x="178" y="567" fill="#88c0d0" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█</text>
 <text x="194" y="567" fill="#88c0d0" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▃</text>
-<text x="274" y="567" fill="#6e7681" textLength="48" lengthAdjust="spacing" xml:space="preserve">mtwtfs</text>
+<text x="274" y="567" fill="#546f94" textLength="48" lengthAdjust="spacing" xml:space="preserve">mtwtfs</text>
 <text x="394" y="567" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="410" y="567" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="426" y="567" fill="#616e88" textLength="48" lengthAdjust="spacing" xml:space="preserve">uptime</text>
@@ -707,18 +707,18 @@
 <text x="1522" y="618" fill="#616e88" textLength="32" lengthAdjust="spacing" xml:space="preserve">2.2k</text>
 <text x="1562" y="618" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="635" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="34" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">1</text>
-<text x="50" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">2</text>
-<text x="66" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">3</text>
-<text x="82" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">4</text>
-<text x="98" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">5</text>
-<text x="114" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">6</text>
-<text x="130" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">7</text>
-<text x="146" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">7</text>
-<text x="162" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">8</text>
-<text x="178" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">9</text>
-<text x="194" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">1</text>
-<text x="210" y="635" fill="#6e7681" textLength="8" lengthAdjust="spacing" xml:space="preserve">1</text>
+<text x="34" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">1</text>
+<text x="50" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">2</text>
+<text x="66" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">3</text>
+<text x="82" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">4</text>
+<text x="98" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">5</text>
+<text x="114" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">6</text>
+<text x="130" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">7</text>
+<text x="146" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">7</text>
+<text x="162" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">8</text>
+<text x="178" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">9</text>
+<text x="194" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">1</text>
+<text x="210" y="635" fill="#546f94" textLength="8" lengthAdjust="spacing" xml:space="preserve">1</text>
 <text x="394" y="635" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="410" y="635" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="426" y="635" fill="#616e88" textLength="40" lengthAdjust="spacing" xml:space="preserve">hosts</text>
@@ -780,8 +780,8 @@
 <text x="34" y="737" fill="#d8dee9" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">□</text>
 <text x="42" y="737" fill="#d8dee9" textLength="104" lengthAdjust="spacing" xml:space="preserve"> Filter row  </text>
 <text x="146" y="737" fill="#616e88" textLength="48" lengthAdjust="spacing" xml:space="preserve">Status</text>
-<text x="202" y="737" fill="#6e7681" textLength="48" lengthAdjust="spacing" xml:space="preserve">Select</text>
-<text x="250" y="737" fill="#6e7681" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">…</text>
+<text x="202" y="737" fill="#546f94" textLength="48" lengthAdjust="spacing" xml:space="preserve">Select</text>
+<text x="250" y="737" fill="#546f94" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">…</text>
 <text x="266" y="737" fill="#616e88" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">▾</text>
 <text x="394" y="737" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="410" y="737" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
@@ -815,7 +815,7 @@
 <text x="1194" y="754" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1562" y="754" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="771" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="26" y="771" fill="#d8dee9" textLength="296" lengthAdjust="spacing" xml:space="preserve"> checkout            eu-west-1 120ms </text>
+<text x="34" y="771" fill="#3191ff" textLength="288" lengthAdjust="spacing" xml:space="preserve">checkout            eu-west-1 120ms </text>
 <text x="322" y="771" fill="#3fb950" textLength="64" lengthAdjust="spacing" xml:space="preserve">live    </text>
 <text x="394" y="771" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="410" y="771" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
@@ -826,7 +826,7 @@
 <text x="802" y="771" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1178" y="771" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1194" y="771" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="1210" y="771" fill="#6e7681" textLength="16" lengthAdjust="spacing" xml:space="preserve">1 </text>
+<text x="1210" y="771" fill="#546f94" textLength="16" lengthAdjust="spacing" xml:space="preserve">1 </text>
 <text x="1226" y="771" fill="#d8dee9" textLength="336" lengthAdjust="spacing" xml:space="preserve">export function wrap(text: string) {      </text>
 <text x="1562" y="771" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="788" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
@@ -842,7 +842,7 @@
 <text x="826" y="788" fill="#d8dee9" textLength="352" lengthAdjust="spacing" xml:space="preserve"> Two replicas restarted in the last hour.   </text>
 <text x="1178" y="788" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1194" y="788" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="1210" y="788" fill="#6e7681" textLength="16" lengthAdjust="spacing" xml:space="preserve">2 </text>
+<text x="1210" y="788" fill="#546f94" textLength="16" lengthAdjust="spacing" xml:space="preserve">2 </text>
 <text x="1226" y="788" fill="#d8dee9" textLength="336" lengthAdjust="spacing" xml:space="preserve">  if (text === &apos;&apos;) return [];             </text>
 <text x="1562" y="788" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="805" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
@@ -857,7 +857,7 @@
 <text x="802" y="805" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1178" y="805" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1194" y="805" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="1210" y="805" fill="#6e7681" textLength="16" lengthAdjust="spacing" xml:space="preserve">3 </text>
+<text x="1210" y="805" fill="#546f94" textLength="16" lengthAdjust="spacing" xml:space="preserve">3 </text>
 <text x="1226" y="805" fill="#d8dee9" textLength="336" lengthAdjust="spacing" xml:space="preserve">  return text.split(/\s+/);               </text>
 <text x="1562" y="805" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="822" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
@@ -875,7 +875,7 @@
 <text x="834" y="822" fill="#f85149" font-weight="bold" textLength="64" lengthAdjust="spacing" xml:space="preserve">Rollback</text>
 <text x="1178" y="822" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="1194" y="822" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="1210" y="822" fill="#6e7681" textLength="16" lengthAdjust="spacing" xml:space="preserve">4 </text>
+<text x="1210" y="822" fill="#546f94" textLength="16" lengthAdjust="spacing" xml:space="preserve">4 </text>
 <text x="1226" y="822" fill="#d8dee9" textLength="336" lengthAdjust="spacing" xml:space="preserve">}                                         </text>
 <text x="1562" y="822" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="839" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
@@ -962,7 +962,7 @@
 <text x="1546" y="941" fill="#88c0d0" textLength="8" lengthAdjust="spacing" xml:space="preserve">&lt;</text>
 <text x="1562" y="941" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="958" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="106" y="958" fill="#6e7681" textLength="208" lengthAdjust="spacing" xml:space="preserve">Nothing has shipped today.</text>
+<text x="106" y="958" fill="#546f94" textLength="208" lengthAdjust="spacing" xml:space="preserve">Nothing has shipped today.</text>
 <text x="394" y="958" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="410" y="958" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="770" y="958" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">█</text>
@@ -985,7 +985,7 @@
 <text x="1498" y="958" fill="#88c0d0" textLength="56" lengthAdjust="spacing" xml:space="preserve">/\/\/\/</text>
 <text x="1562" y="958" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="18" y="975" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
-<text x="154" y="975" fill="#373b41" textLength="112" lengthAdjust="spacing" xml:space="preserve">n to start one</text>
+<text x="154" y="975" fill="#2a384a" textLength="112" lengthAdjust="spacing" xml:space="preserve">n to start one</text>
 <text x="394" y="975" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="410" y="975" fill="#3b4252" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">│</text>
 <text x="418" y="975" fill="#d8dee9" textLength="104" lengthAdjust="spacing" xml:space="preserve"> Canaries go </text>
@@ -1142,16 +1142,16 @@
 <text x="10" y="1111" fill="#88c0d0" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↑</text>
 <text x="26" y="1111" fill="#88c0d0" font-weight="bold" textLength="8" lengthAdjust="spacingAndGlyphs" xml:space="preserve">↓</text>
 <text x="42" y="1111" fill="#616e88" textLength="48" lengthAdjust="spacing" xml:space="preserve">scroll</text>
-<text x="90" y="1111" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="90" y="1111" fill="#546f94" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
 <text x="114" y="1111" fill="#88c0d0" font-weight="bold" textLength="72" lengthAdjust="spacing" xml:space="preserve">pgup pgdn</text>
 <text x="194" y="1111" fill="#616e88" textLength="48" lengthAdjust="spacing" xml:space="preserve">faster</text>
-<text x="242" y="1111" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="242" y="1111" fill="#546f94" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
 <text x="266" y="1111" fill="#88c0d0" font-weight="bold" textLength="24" lengthAdjust="spacing" xml:space="preserve">tab</text>
 <text x="298" y="1111" fill="#616e88" textLength="96" lengthAdjust="spacing" xml:space="preserve">next control</text>
-<text x="394" y="1111" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="394" y="1111" fill="#546f94" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
 <text x="418" y="1111" fill="#88c0d0" font-weight="bold" textLength="8" lengthAdjust="spacing" xml:space="preserve">t</text>
 <text x="434" y="1111" fill="#616e88" textLength="40" lengthAdjust="spacing" xml:space="preserve">theme</text>
-<text x="474" y="1111" fill="#6e7681" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
+<text x="474" y="1111" fill="#546f94" textLength="24" lengthAdjust="spacing" xml:space="preserve"> · </text>
 <text x="498" y="1111" fill="#88c0d0" font-weight="bold" textLength="48" lengthAdjust="spacing" xml:space="preserve">ctrl+c</text>
 <text x="554" y="1111" fill="#616e88" textLength="32" lengthAdjust="spacing" xml:space="preserve">quit</text>
 </svg>

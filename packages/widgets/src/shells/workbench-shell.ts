@@ -28,7 +28,11 @@ export const WorkbenchShell = defineComponent<ShellProps>('WorkbenchShell', (pro
     height: '100%',
     bg: 'canvas',
     fg: 'text',
-    border: theme.border,
+    // The frame is chrome, not text. A box that states an `fg` draws its
+    // border in it - which is right for `<box fg="danger" border="single">`
+    // and wrong here, where the `fg` is the application's text colour: it made
+    // every screen's outermost edge as bright as the words inside it.
+    border: { style: theme.border, color: 'border' },
     ...props,
   },
     h(SurfaceArea, { surface: 'header' }),

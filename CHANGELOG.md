@@ -2,6 +2,17 @@
 
 The packages release as a set under one version.
 
+## Unreleased
+
+### Fixed
+
+- A shell's frame is drawn in the theme's `border` colour, not in its own text
+  colour. A box that states an `fg` draws its border in it, which is right for
+  `<box fg="danger" border="single">` and wrong for a shell: the workbench shell
+  states `fg: 'text'` for its content, so the outermost edge of every screen
+  came out as bright as the words inside it and the `border` token went unused.
+  `console` and `paper` state no border and still draw none.
+
 ## 0.8.0
 
 ### Added

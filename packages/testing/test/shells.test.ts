@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '../src/index.js';
-import { h, defineComponent, useFocus, useScreen } from '@textui/core';
+import { createThemes, h, defineComponent, useFocus, useScreen } from '@textui/core';
+import type { TerminalCapabilities } from '@textui/core';
 import { registerBuiltins } from '@textui/widgets';
 
 /**
@@ -636,5 +637,57 @@ describe('the sidebar holds its width', () => {
     const row = t.lines().find((line) => line.includes('S')) ?? '';
     expect(row).toContain('S'.repeat(20));
     await t.unmount();
+  });
+});
+
+/**
+ * A shell's frame is chrome, not text.
+ *
+ * A box that states an `fg` draws its border in that colour - right for
+ * `<box fg="danger" border="single">`, wrong for a shell, whose `fg` is the
+ * application's text colour. The outermost edge of every screen came out as
+ * bright as the words inside it, and the `border` token the theme states for
+ * frames went unused.
+ */
+describe('the frame a shell draws', () => {
+  const CAPS = { colorDepth: 24, unicode: 'full' } as TerminalCapabilities;
+
+  async function mount(shell: string, theme: string) {
+    const t = await renderApp({
+      width: 60,
+      height: 12,
+      shell,
+      theme,
+      onBoot: (app) => {
+        app.open({ surface: 'main', key: 'x', target: h('text', { content: 'content' }) });
+      },
+    });
+    for (let i = 0; i < 3; i++) await t.settle();
+    return t;
+  }
+
+  const hex = (c: unknown): string => (c && typeof c === 'object' && 'rgb' in c
+    ? `#${(c as { rgb: number[] }).rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`
+    : String(c));
+
+  it('is the border token, not the text colour', async () => {
+    const theme = createThemes().resolve('dark', CAPS);
+    const t = await mount('workbench', 'dark');
+    // The corner is a frame glyph, and it is drawn in the theme's frame colour.
+    expect(t.lines()[0]?.startsWith('┌') || t.lines()[0]?.startsWith('╭')).toBe(true);
+    expect(hex(t.app.buffer().get(0, 0)?.fg)).toBe(hex(theme.color('border')));
+    expect(hex(t.app.buffer().get(0, 0)?.fg)).not.toBe(hex(theme.color('text')));
+    await t.unmount();
+  });
+
+  it('is nothing at all on a shell that has no frame', async () => {
+    // `console` and `paper` state no border. Adding a colour to the shells that
+    // do have one must not draw a frame where there was none.
+    for (const shell of ['console', 'paper']) {
+      const t = await mount(shell, shell === 'paper' ? 'paper' : 'console');
+      const corner = String(t.app.buffer().get(0, 0)?.char ?? ' ');
+      expect('┌┐└┘─│╭╮╰╯').not.toContain(corner);
+      await t.unmount();
+    }
   });
 });

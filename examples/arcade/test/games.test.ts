@@ -48,7 +48,7 @@ const ctx = { color: (c: unknown) => c } as unknown as RenderContext;
 // --------------------------------------------------------------------- snake
 
 describe('snake', () => {
-  const start = (): SnakeState => snake.create(createRng(1));
+  const start = (): SnakeState => snake.create(createRng(1), snake.field);
 
   it('moves one cell per interval, and owes nothing for a late frame', () => {
     const state = start();
@@ -122,12 +122,38 @@ describe('snake', () => {
     expect(state.over).toBe(false);
     expect(state.body[0]).toEqual({ x: 4, y: 6 });
   });
+
+  it('fills the room it is given', () => {
+    const field = snake.fit?.({ width: 41, height: 23 });
+    expect(field).toEqual({ width: 41, height: 23 });
+  });
+
+  it('never asks for less than the board it promised', () => {
+    // A screen this small is one the stage refuses to draw on, and the field
+    // it is handed must still be a board rather than the negative cells the
+    // arithmetic would give.
+    const field = snake.fit?.({ width: -3, height: 0 });
+    expect(field).toEqual({ width: snake.field.width, height: snake.field.height });
+  });
+
+  it('plays on the field it was handed, not the one it declared', () => {
+    const wide = snake.create(createRng(1), { width: 40, height: 16 });
+    // Off the snake's row, so nothing is eaten and the clock is the declared
+    // one. Six along from the start, so thirty-four moves to the wall - and
+    // the declared twenty-four would have ended the run ten moves ago.
+    wide.food = { x: 0, y: 0 };
+    snake.step(wide, 140 * 30);
+    expect(wide.over).toBe(false);
+
+    snake.step(wide, 140 * 10);
+    expect(wide.over).toBe(true);
+  });
 });
 
 // -------------------------------------------------------------------- tetris
 
 describe('tetris', () => {
-  const start = (): TetrisState => tetris.create(createRng(2));
+  const start = (): TetrisState => tetris.create(createRng(2), tetris.field);
 
   it('turns a piece all the way round to where it started', () => {
     const piece = { kind: 'T', rotation: 0, x: 3, y: 5 };
@@ -201,7 +227,7 @@ describe('tetris', () => {
 // ------------------------------------------------------------------ breakout
 
 describe('breakout', () => {
-  const start = (): BreakoutState => breakout.create(createRng(3));
+  const start = (): BreakoutState => breakout.create(createRng(3), breakout.field);
 
   it('holds the ball until it is launched', () => {
     const state = start();
@@ -423,7 +449,7 @@ describe('the painter', () => {
 
   it('draws nothing an ascii terminal cannot draw', () => {
     for (const game of GAMES) {
-      const state = game.create(createRng(4));
+      const state = game.create(createRng(4), game.field);
       const painter = createPainter(game.field, glyphsFor('ascii'));
       game.draw(state, painter);
       painter.centre(0, 'Game over', 'warning');

@@ -21,7 +21,7 @@ import {
 import type { ListItem } from '@textui/widgets';
 import { Badge, Column, KeyHints, List, Panel, Row } from '@textui/widgets';
 import { SCORE_WIDTH, createPainter, createRng, roomFor } from './engine.js';
-import type { Game, GameKey } from './engine.js';
+import type { Field, Game, GameKey } from './engine.js';
 import { glyphsFor } from './glyphs.js';
 import { GAMES, gameById } from './games/index.js';
 import { GENERATION, PAUSED, SCORES, SEED, SELECTED, recordScore } from './data.js';
@@ -160,38 +160,69 @@ export const GameStage: (props: GameStageProps) => RenderOutput = defineComponen
 
   const glyphs = useMemo(() => glyphsFor(capabilities.unicode), [capabilities.unicode]);
 
+  // What the screen needs around it: the field itself, the frame that is its
+  // walls, the title row, the hints row, the gaps between them and the score
+  // pane beside it. Stated rather than discovered, because "it does not fit"
+  // has to be a sentence rather than a broken frame.
+  const room = roomFor(game);
+  const fits = measured.width >= room.width && measured.height >= room.height;
+  /*
+   * The room there is for a field, in whole cells.
+   *
+   * The same constants `roomFor` adds, subtracted again: the frame is two
+   * columns per cell, the score pane and its gap take the width, and the four
+   * rows of chrome take the height. Floored, because half a cell is not a
+   * cell - the field can be smaller than the room and never half of one.
+   */
+  const available: Field = {
+    width: Math.floor((measured.width - (SCORE_WIDTH + 1 + 2)) / 2),
+    height: measured.height - (game.floor === 'open' ? 1 : 2) - 4,
+  };
+  // What this game will play in here. `fit` never goes below the size the game
+  // promised, so a screen with less room than that still gets a field that
+  // could have been drawn - it is `fits` that decides whether it is.
+  const field = game.fit ? game.fit(available) : game.field;
+
   /**
    * The run.
    *
-   * Rebuilt when the generation moves or the game changes, during render
-   * rather than in an effect: an effect runs after the frame, so a restart
-   * would paint the dead game one last time - the frame that shows "game over"
-   * would still be there after the key that cleared it.
+   * Rebuilt when the generation moves, the game changes or the field does -
+   * during render rather than in an effect: an effect runs after the frame, so
+   * a restart would paint the dead game one last time - the frame that shows
+   * "game over" would still be there after the key that cleared it.
+   *
+   * A resize is a new board rather than the same run on a different one, so it
+   * starts again. Everything that could be carried over - where the food is,
+   * whether the ball is in play - is a fact about a grid that no longer
+   * exists.
    */
-  const run = useRef<{ generation: number; gameId: string; state: unknown } | null>(null);
+  const run = useRef<{
+    generation: number; gameId: string; width: number; height: number; state: unknown;
+  } | null>(null);
   const recorded = useRef(false);
-  if (!run.current || run.current.generation !== generation || run.current.gameId !== game.id) {
+  if (
+    !run.current
+    || run.current.generation !== generation
+    || run.current.gameId !== game.id
+    || run.current.width !== field.width
+    || run.current.height !== field.height
+  ) {
     run.current = {
       generation,
       gameId: game.id,
+      width: field.width,
+      height: field.height,
       // No seed set means a different game every time, which is what a person
       // wants. A test sets one and gets the same game twice.
-      state: game.create(createRng(seed ?? Date.now())),
+      state: game.create(createRng(seed ?? Date.now()), field),
     };
     recorded.current = false;
   }
   const state = run.current.state;
 
   const status = game.status(state);
-  // The cabinet the field sits in: the field itself, plus the frame that is
-  // its walls. Everything below sizes off these two numbers.
-  const width = game.field.width * 2 + 2;
-  const height = game.field.height + (game.floor === 'open' ? 1 : 2);
-  // What the screen needs around it: the title row, the hints row, the gaps
-  // between them and the score pane beside it. Stated rather than discovered,
-  // because "it does not fit" has to be a sentence rather than a broken frame.
-  const room = roomFor(game);
-  const fits = measured.width >= room.width && measured.height >= room.height;
+  const width = field.width * 2 + 2;
+  const height = field.height + (game.floor === 'open' ? 1 : 2);
 
   useTicker((_frame, elapsed) => {
     if (paused || status.over || !fits) return;
@@ -230,9 +261,9 @@ export const GameStage: (props: GameStageProps) => RenderOutput = defineComponen
   const banner = status.over ? status.banner : paused ? 'Paused' : undefined;
 
   const draw = (surface: PaintSurface, ctx: RenderContext): void => {
-    const painter = createPainter(game.field, glyphs);
+    const painter = createPainter(field, glyphs);
     game.draw(state, painter);
-    if (banner) painter.centre(Math.floor(game.field.height / 2), banner, 'warning');
+    if (banner) painter.centre(Math.floor(field.height / 2), banner, 'warning');
 
     // The canvas is the inside of the frame and the field is exactly that
     // size, so this is a centre of nothing - kept because a terminal one cell
@@ -241,8 +272,8 @@ export const GameStage: (props: GameStageProps) => RenderOutput = defineComponen
     painter.flush(
       surface,
       ctx,
-      Math.max(0, Math.floor((surface.rect.width - game.field.width * 2) / 2)),
-      Math.max(0, Math.floor((surface.rect.height - game.field.height) / 2)),
+      Math.max(0, Math.floor((surface.rect.width - field.width * 2) / 2)),
+      Math.max(0, Math.floor((surface.rect.height - field.height) / 2)),
     );
   };
 

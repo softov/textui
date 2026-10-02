@@ -234,10 +234,16 @@ describe('ctrl+c', () => {
 });
 
 describe('a run that ends', () => {
-  /** Straight into the wall: the snake starts moving right and never turns. */
+  /**
+   * Straight into the wall: the snake starts moving right and never turns.
+   *
+   * Long enough for the widest field a test terminal gives it, which is what
+   * snake plays on now - forty-four cells from x=6 is thirty-eight moves, and
+   * eating on the way only makes it sooner.
+   */
   const runIntoTheWall = async (t: Harness): Promise<void> => {
     await play(t, 'snake');
-    t.advance(4000);
+    t.advance(8000);
     for (let i = 0; i < 6; i++) await t.settle();
   };
 
@@ -298,6 +304,22 @@ describe('a run that ends', () => {
 });
 
 describe('the room it needs', () => {
+  it('grows into the room the terminal has', async () => {
+    // The frame is drawn with the bold border and the panels with the theme's
+    // single one, so a row holding `┃` is a row of the field's own frame.
+    const frameRows = (t: Harness): number => t.lines().filter((line) => line.includes('┃')).length;
+
+    const bigger = await open(SIZES[0] as { width: number; height: number });
+    await play(bigger, 'snake');
+    const smaller = await open(SIZES[1] as { width: number; height: number });
+    await play(smaller, 'snake');
+
+    expect(frameRows(bigger)).toBeGreaterThan(frameRows(smaller));
+    expect(frameRows(smaller)).toBeGreaterThan(0);
+    await bigger.unmount();
+    await smaller.unmount();
+  });
+
   it('says so rather than drawing half a field', async () => {
     const t = await open();
     await play(t, 'tetris');

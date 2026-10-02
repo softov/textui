@@ -63,7 +63,27 @@ export interface Game<S = unknown> {
   id: string;
   title: string;
   blurb: string;
+  /**
+   * The field it plays in, and the floor it will not go below.
+   *
+   * `roomFor` promises exactly this much, so a screen smaller than this is a
+   * screen that cannot play the game at all. A game that can use more room
+   * says so with `fit`; one whose board is a fixed shape leaves this as the
+   * size it plays at.
+   */
   field: Field;
+  /**
+   * The field to play in, given the room there is for one.
+   *
+   * `available` is in whole cells and already inside the terminal, and what
+   * comes back is what the stage frames, paints and builds the run for - so a
+   * game that grows is rebuilt when the room changes, which is the honest
+   * thing to do with a board that moved under it.
+   *
+   * Absent, the field is the size it declared and a screen with less room
+   * than `roomFor` says so rather than drawing half a field.
+   */
+  fit?(available: Field): Field;
   /**
    * What the bottom edge of the field is.
    *
@@ -75,7 +95,8 @@ export interface Game<S = unknown> {
   floor?: 'wall' | 'open';
   /** For the footer and the cabinet's side panel. */
   controls: { keys: string; label: string }[];
-  create(rng: Rng): S;
+  /** `field` is the size the stage decided on: `fit`'s answer, or its own. */
+  create(rng: Rng, field: Field): S;
   /** Advance by `ms`. A game keeps its own clock inside its own state. */
   step(state: S, ms: number): void;
   key(state: S, key: GameKey): void;
@@ -91,6 +112,10 @@ export interface Game<S = unknown> {
  * size before you start and the play screen decides whether it can draw - and
  * those two disagreeing is how you get a game that says it fits and then does
  * not.
+ *
+ * The field it is worked out from is the one the game declared, which for a
+ * game that grows is the least it will play at rather than the size it will
+ * end up drawing.
  */
 export function roomFor(game: Game): Field {
   return {

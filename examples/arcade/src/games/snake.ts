@@ -1,4 +1,4 @@
-import type { FieldPainter, Game, GameKey, Rng } from '../engine.js';
+import type { Field, FieldPainter, Game, GameKey, Rng } from '../engine.js';
 
 /**
  * Snake.
@@ -14,6 +14,13 @@ import type { FieldPainter, Game, GameKey, Rng } from '../engine.js';
 interface Point { x: number; y: number }
 
 export interface SnakeState {
+  /**
+   * The board this run is on.
+   *
+   * Carried per run rather than read off the game: the field grows into the
+   * room the terminal has, so it is a fact about this run and not about snake.
+   */
+  field: Field;
   body: Point[];
   dir: Point;
   queued: Point[];
@@ -26,6 +33,7 @@ export interface SnakeState {
   rng: Rng;
 }
 
+/** The floor: the least board a game of snake wants to be played on. */
 const FIELD = { width: 24, height: 16 };
 const START_INTERVAL = 140;
 const FASTEST = 60;
@@ -43,15 +51,16 @@ function occupies(body: Point[], x: number, y: number): boolean {
 
 /** Somewhere the snake is not. A random cell retried is fine at this size. */
 function placeFood(state: SnakeState): Point {
+  const { width, height } = state.field;
   for (let attempt = 0; attempt < 200; attempt++) {
-    const x = Math.floor(state.rng() * FIELD.width);
-    const y = Math.floor(state.rng() * FIELD.height);
+    const x = Math.floor(state.rng() * width);
+    const y = Math.floor(state.rng() * height);
     if (!occupies(state.body, x, y)) return { x, y };
   }
   // A field this full is a win in every practical sense, but the loop still
   // has to end somewhere it can point at.
-  for (let y = 0; y < FIELD.height; y++) {
-    for (let x = 0; x < FIELD.width; x++) if (!occupies(state.body, x, y)) return { x, y };
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) if (!occupies(state.body, x, y)) return { x, y };
   }
   return { x: 0, y: 0 };
 }
@@ -66,7 +75,7 @@ function advance(state: SnakeState): void {
 
   if (
     target.x < 0 || target.y < 0
-    || target.x >= FIELD.width || target.y >= FIELD.height
+    || target.x >= state.field.width || target.y >= state.field.height
     // The tail cell is about to be vacated, so moving into it is legal - and
     // treating it as a crash makes a full-speed turn along your own body fail
     // for a reason nothing on screen shows.
@@ -96,9 +105,26 @@ export const snake: Game<SnakeState> = {
     { keys: 'arrows', label: 'turn' },
   ],
 
-  create(rng) {
-    const middle = Math.floor(FIELD.height / 2);
+  /**
+   * Fill the room there is, in whole cells.
+   *
+   * A snake is a snake on any board, so this is the same grid with more of it
+   * - and the stage is what has already taken the frame, the score pane and
+   * the chrome off the terminal before handing the rest over. Never below the
+   * twenty-four by sixteen the cabinet promises: below that there is not
+   * enough room, and a bigger board than the screen holds is not one.
+   */
+  fit(available) {
+    return {
+      width: Math.max(FIELD.width, available.width),
+      height: Math.max(FIELD.height, available.height),
+    };
+  },
+
+  create(rng, field) {
+    const middle = Math.floor(field.height / 2);
     const state: SnakeState = {
+      field,
       body: [{ x: 6, y: middle }, { x: 5, y: middle }, { x: 4, y: middle }],
       dir: DIRECTIONS.right,
       queued: [],

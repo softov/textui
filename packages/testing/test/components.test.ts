@@ -1184,6 +1184,12 @@ describe('Marquee', () => {
 
     const moving = await render(h(slider, { active: true }), { width: 40, height: 3 });
     await moving.settle();
+    // The first advance is the tick the run starts on - the marquee counts from
+    // its own first frame - so the second is the one that travels. A clock
+    // driven by hand hands over several frames per call, and a marquee that
+    // began at the application's frame number used to be scrolled before it had
+    // moved at all.
+    moving.advance(2000);
     moving.advance(2000);
     await moving.settle();
     expect(moving.lines()[0]?.trim()).not.toBe('the quick brown fox');

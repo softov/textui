@@ -2042,4 +2042,405 @@ a panel has already said everything those commands need. The keys stay yours.`,
 - [Viewers, editors and actions](../../documents/viewers.md) - what gets registered
 - [Commands](../../platform/commands.md) - the panel's own commands`,
   },
+
+  // ---- chat ---------------------------------------------------------------
+
+  ChatBubble: {
+    summary: 'One thing said: who is speaking, a rule down the left, and a body that owns the rest of the width.',
+    example: `import { ChatBubble } from '@textui/chat';
+
+<ChatBubble speaker="agent" author="claude" meta="4.1s">
+  <text content="Three files changed." wrap="word" />
+</ChatBubble>`,
+    notes: `A bubble in a terminal is not a rounded rectangle, because the width is 80 cells and half of it spent on alignment is half the conversation gone.
+The gutter is one column of glyph and one of rule, which is what makes a wrapped paragraph read as one person talking rather than as the page starting again.
+
+\`speaker\` picks both the glyph and the word: \`user\` is the theme's chevron and "you", \`agent\` a filled bullet and "agent", \`system\` the info glyph and "system".
+\`author\` replaces the word with a model, a person or a host, and \`meta\` goes to the right of it - a time, a duration, a model.
+
+\`active\` runs the cursor bar down the block's left column, taking the glyph's own cell on the first row rather than adding a column, so the block does not move when the cursor arrives.
+It is a different glyph rather than only a different colour, so it survives a session without colour.
+\`tone\` overrides the speaker's colour, which is how one turn is painted in the danger tone without becoming another speaker.`,
+    seeAlso: `- [Gutter](gutter.md) - the rule on its own, for a block that is not something said
+- [ChatTranscript](chat-transcript.md) - the bubbles in a conversation
+- [Themes](../../themes/tokens.md) - where the speaker's glyph and colour come from`,
+  },
+
+  Gutter: {
+    summary: 'The rule down the left of a block: one cell wide and as tall as the block it is in.',
+    example: `import { Gutter } from '@textui/chat';
+
+<Column>
+  <Row gap={1}>
+    <Gutter />
+    <text content="a wrapped answer keeps its rule down every line" wrap="word" flex={1} />
+  </Row>
+</Column>`,
+    setup: `import { Column, Row } from '@textui/widgets';`,
+    notes: `A box that fills rather than a \`text\`: the text is one row tall and the paragraph beside it is nine, so a rule written as a character marks the first line of a wrapped answer and abandons the rest of it.
+
+\`active\` fills with \`cursorBar(theme)\`, the heavy left rule of the theme's \`bold\` border, in the accent colour - from the theme, so an ascii terminal gets a glyph it can draw rather than a question mark.
+\`blank\` fills with a space instead of the rule, for a block that is not something said - a tool row, a turn header - and still needs the column, so its text starts where the prose does.
+
+In a \`Row\`, whose children are centred, it needs \`alignSelf="stretch"\` to reach the height of the block rather than sitting as a one-cell box in the middle of it.
+\`ChatBubble\` and \`ChatTranscript\` set that for the blocks they draw.`,
+    seeAlso: `- [ChatBubble](chat-bubble.md) - the rule with a speaker over it
+- [box](../primitives/box.md) - \`fill\` and the border characters
+- [Themes](../../themes/tokens.md) - \`borderChars\` and the \`bold\` family`,
+  },
+
+  StreamingText: {
+    summary: 'Text that is still being said, with the caret on the last word.',
+    example: `import { StreamingText } from '@textui/chat';
+
+<StreamingText content="The field is a **TextArea**, so a message can be a paragraph." streaming />`,
+    notes: `\`content\` is drawn as markdown unless \`markdown\` is \`false\`, which shows the characters that arrived instead.
+Raw is a \`text\` and not a \`MarkdownView\` told not to parse, because anything that lays a document out has already decided some of those characters were structure.
+
+\`streaming\` appends the theme's caret and keeps it on the end of the content.
+The caret is part of the content rather than a node beside it, because a caret placed after the block sits under the last line instead of at the end of it.
+It blinks on the theme's own ticker and only while something is arriving, so animation being off - a pipe, a test, a \`--static\` capture - leaves a steady caret rather than a missing one, and a settled paragraph does not ask for a redraw twice a second for ever.
+
+\`quiet\` drops it to the muted tone, \`maxLines\` caps how much of the markdown is drawn, and \`match\` colours a term from the find box wherever it appears.`,
+    seeAlso: `- [ReasoningBlock](reasoning-block.md) - the same text, folded away
+- [MarkdownView](../display/markdown-view.md) - what a markdown block is drawn by
+- [text](../primitives/text.md) - the raw path, and \`match\``,
+  },
+
+  ReasoningBlock: {
+    summary: 'What the agent was thinking, one row until it is asked for.',
+    example: `import { ReasoningBlock } from '@textui/chat';
+
+<ReasoningBlock content="The lock file changed, so the install is the suspect." onToggle={() => {}} />`,
+    notes: `Reasoning arrives from the host like any other prose and is not what the reader came for, so it is one row until it is asked for.
+Dropping it instead loses the only account of why a turn did what it did.
+
+Collapsed, the row is a chevron and \`summary\` - "thought for 12s" - or a count of the words, which is pluralised through i18n; while \`streaming\` it says "thinking" instead.
+\`onToggle\` is called when the row is clicked, and the whole row takes the hover fill rather than the glyph the pointer is over.
+
+\`expanded\` draws the content as a quiet \`StreamingText\` and closes it with a \`Divider\`, because without a line under it the reader cannot tell where the thinking stopped and the answer began.
+\`markdown\` is passed through to that text.
+\`active\` puts the selection on the header row alone and its words in the theme's own \`inverted\`, which is a quiet grey on the selection blue otherwise.`,
+    seeAlso: `- [StreamingText](streaming-text.md) - what an opened reasoning block draws
+- [ChatTranscript](chat-transcript.md) - where the fold is keyed and toggled
+- [Divider](../layout/divider.md) - the rule that closes it`,
+  },
+
+  ChatTranscript: {
+    summary: 'The conversation as blocks in a `Feed`: said, header, prose, reasoning, notice, failure, tool and queued.',
+    example: `import { ChatTranscript } from '@textui/chat';
+import type { Block } from '@textui/chat';
+
+const blocks: Block[] = [
+  { kind: 'said', id: 's1', turnId: 't1', text: 'Rename the package.' },
+  { kind: 'header', id: 'h1', turnId: 't1', model: 'claude', meta: '4.1s', state: 'complete' },
+  { kind: 'prose', id: 'p1', turnId: 't1', content: 'Done. Three files changed.', streaming: false },
+];
+
+<ChatTranscript blocks={blocks} expanded={{}} onToggle={() => {}} flex={1} />`,
+    notes: `There is no scrolling here.
+\`Feed\` owns the viewport, the cursor and the tail it follows, because none of that is about chat - a transcript, an activity stream and search results with snippets are the same problem, which is entries that are not one line tall.
+What is left is the only part that is about chat: which block draws as what.
+
+\`expanded\` is keyed by block id and \`onToggle\` is handed one, so a tool row and a reasoning fold open out of the same map the caller owns.
+\`cursor\` is an index into \`blocks\` and \`onCursor\` reports one back; \`pinCursor\` keeps the cursor in view even when the index did not change, which is what a find box that lands on the block the cursor is already on needs.
+\`match\` colours a term through every block without filtering any of them out, so the conversation stays around a hit.
+\`head\` is drawn as the first thing inside the scrolling region and is not a block, so it does not shift the indices the cursor walks.
+
+Every block gets a one-cell left column the cursor is drawn in: a block that is something said keeps its rule, one whose first row already carries a glyph - the header's bullet, the user line's chevron - uses that glyph as its gutter, and the rest lead with a blank one so their text starts where the prose does.
+A \`queued\` block says so and, under the cursor, says that enter drops it.`,
+    seeAlso: `- [Feed](../display/feed.md) - the viewport, the cursor and the tail
+- [ChatBubble](chat-bubble.md) - what a \`said\` block draws
+- [ToolCallRow](tool-call-row.md) - what a \`tool\` block draws`,
+  },
+
+  ToolCallRow: {
+    summary: 'One tool call as a row, opening onto its input and output.',
+    example: `import { ToolCallRow } from '@textui/chat';
+import type { ChatToolCall } from '@textui/chat';
+
+const call: ChatToolCall = {
+  id: 'c1',
+  name: 'Bash',
+  status: 'completed',
+  input: 'ls -la',
+  output: 'total 8',
+  exitCode: 0,
+};
+
+<ToolCallRow call={call} expanded onToggle={() => {}} />`,
+    notes: `Twenty of these in a turn look identical unless the command is on the row, so the input is the row and the display name is a prefix.
+The summary is the first of \`progress\`, \`invocation\`, \`input\` and \`intention\` that is there, flattened to one line, because a JSON object put straight on the row makes it three rows tall and floats the name beside the middle of a brace-delimited block.
+\`progress\` wins while it is set: a subagent whose row says what it was asked for a minute is a row that says nothing.
+
+Status is a glyph and a colour together - hollow for pending, half for pending confirmation, filled for running, a check for completed, a cross for failed and cancelled - so a 16-colour session, a piped log and a colourblind reader all keep the glyph.
+\`exitCode\` that is a non-zero number also reads as failed, and the code is drawn as a badge.
+
+The chevron is there only when the row opens onto something: \`intention\` as markdown when it says more than the row already does, \`input\` on its own lines, the first twelve lines of \`output\` with a count of the rest, the \`files\` and the \`outcome\`.
+\`expanded\` turns that on and \`onToggle\` is called when the row is clicked.
+\`active\` selects the header row alone, so what it opens to is not painted with a background chosen for the canvas.`,
+    seeAlso: `- [ChatTranscript](chat-transcript.md) - the row in a conversation
+- [ChatHitl](chat-hitl.md) - a call that is waiting on a person
+- [Badge](../display/badge.md) - the exit code and the asks badge`,
+  },
+
+  ComposerBar: {
+    summary: 'The composer control rows: what this message will be sent as, and the one verb.',
+    example: `import { ComposerBar } from '@textui/chat';
+
+<ComposerBar
+  options={[{ id: 'model', label: 'claude', title: 'Model', commandId: 'chat.model' }]}
+  onOpen={() => {}}
+  onSend={() => {}}
+/>`,
+    notes: `Everything on the bar is a current value rather than a label: which harness, which model, how much it may do before it asks, and where it runs.
+A person can read what will happen without opening anything, and change any of it without leaving the composer.
+
+Each chip with a \`commandId\` is one command's argument, asked through the palette, so nothing here knows what a model or a permission mode is and a new chip is a new command rather than a change to this file.
+A chip with no \`commandId\` is shown and not asked: a value fixed for the session is still worth reading, and a panel offering one choice is a worse way of saying so.
+
+\`where\` puts an option on a second row, under what runs it.
+One line held all of them until a host that answers every question about where put eight chips on it and the row truncated each to its mark; a host that asks nothing about where keeps one line.
+\`composerRows\` answers 1 or 2 before the bar is drawn, which is what the composer needs to know how much of a short terminal the menu above it can have.
+
+The bar orders the chips what-then-where rather than in the order they mounted, because tab order is registration order and the host's answers arrive a round trip after the first frame.
+The send chip carries \`SEND_ID\`, says queue rather than send while \`running\`, is disabled by \`sendDisabled\`, and shows \`queued\` when there is a queue.
+Escape on any chip is \`onLeave\`, which is back to the field and not out of the screen.`,
+    seeAlso: `- [ChatComposer](chat-composer.md) - the bar under the field
+- [openPicker](chat-helpers.md) - what a chip opens
+- [settingIcon](setting-icons.md) - the mark in front of a label`,
+  },
+
+  CommandList: {
+    summary: 'The completion menu: a name, what it does and where it came from.',
+    example: `import { CommandList } from '@textui/chat';
+
+<CommandList
+  items={[
+    { id: 'review', label: '/review', description: 'Review the working tree', meta: 'git' },
+    { id: 'theme', label: '/theme', description: 'Pick a theme', meta: 'client' },
+  ]}
+  selectedId="review"
+/>`,
+    notes: `Extracted from \`ChatComposer\` because the rows are the whole of what a menu is, and a caller with a different list of commands should not have to re-derive the column arithmetic.
+
+The menu is a table: one width for the name column across every row, so the description starts at the same cell on the row the reader is on and on the rows around it.
+That width comes from this component's own measured box rather than the terminal, because a composer in a split pane is not the whole screen; the first frame is measured at zero and the terminal stands in until the layout has run.
+
+The name column starts at \`commandWidth\`, widens to the longest name, and stops where the description would have less than sixteen cells - a name cut short is still recognisable, and the description is what tells two similarly named skills apart.
+\`descriptionLines\` and \`wrapDescription\` decide how tall a row is and whether a description wraps into those lines or is cut on the first; unwrapped, a description is one line however many are allowed.
+\`availableLines\` converts the room into rows, so a menu that does not fit scrolls rather than dropping what it offers.
+
+The selection, the keys and the window are the \`List\`'s.
+\`focusable\` is off by default, because a completion menu is driven by its field.`,
+    seeAlso: `- [ChatComposer](chat-composer.md) - the menu over the field
+- [List](../display/list.md) - the list all of this is drawn with
+- [CommandPalette](../navigation/command-palette.md) - the registry-wide version`,
+  },
+
+  ChatComposer: {
+    summary: 'The field, the slash and path menus above it, and the control row under it.',
+    example: `import { ChatComposer } from '@textui/chat';
+
+<ChatComposer
+  value=""
+  onChange={() => {}}
+  onSubmit={() => {}}
+  options={[{ id: 'model', label: 'claude', commandId: 'chat.model' }]}
+  onOption={() => {}}
+/>`,
+    notes: `The field itself is \`TextArea\` from the catalog - growing, scrolling and giving back the keys it does not want is not a chat problem.
+What is here is the rest of a composer: what enter means while a turn is running, the menu over what has already been typed, and the control rows.
+
+A draft that starts with a slash and holds no space is a completion over the commands, filtered by id and title with the host's session commands first; any other draft offers the \`paths\` the host returned for the word the caret is in.
+Paths are fetched rather than filtered, because a path is a path on the host's filesystem and which of them match changes with every keystroke.
+
+The menu is sized from the terminal: it takes at least three rows and no more than what the composer can spare, so a short screen does not get a menu on top of a field with no room to type in it.
+Enter on a highlighted command goes to \`onCommand\`, on a highlighted path to \`onPath\`, and otherwise to \`onSubmit\`; a slash the menu did not match is left alone and sent, which is how a command the host offers but did not list still reaches it.
+Up and down walk the menu, and the field's history when there is none.
+Escape dismisses the menu for exactly that draft and it comes back the moment another character makes it a different question; with no menu it is \`onCancel\`.
+\`onMeasure\` reports where the box is whenever that changes and \`null\` once it is gone, because the menu grows the box upward.
+
+\`commandWidth\` and \`commandDescription\` are passed to the \`CommandList\`, and the control row is \`ComposerBar\`, whose options are \`ComposerOption\`s.`,
+    seeAlso: `- [ComposerBar](composer-bar.md) - the chips under the field
+- [CommandList](command-list.md) - how the menu draws a command
+- [TextArea](../input/text-area.md) - the field itself`,
+  },
+
+  ChatHitl: {
+    summary: 'The block that means the agent is stopped, waiting on a person.',
+    example: `import { ChatHitl } from '@textui/chat';
+import type { ChatPendingInput } from '@textui/chat';
+
+const input: ChatPendingInput = {
+  kind: 'toolConfirmation',
+  id: 'q1',
+  call: { id: 'c1', name: 'Bash', status: 'pending-confirmation', input: 'rm -rf build' },
+};
+
+<ChatHitl input={input} onApprove={() => {}} onDeny={() => {}} onAnswer={() => {}} />`,
+    notes: `It is the only thing on the screen that is waiting on the reader, so it is focused on arrival and answerable without leaving the keyboard.
+It is not a block in the transcript, because one that scrolls away is a blocked agent that looks merely slow.
+
+The two kinds are nothing alike.
+A \`toolConfirmation\` is a yes or a no about a command, with the host's named options where it offers any; \`a\` approves, \`d\` denies, a digit approves that option, and escape is \`onEscape\`, which gives the keyboard back and leaves the block up.
+A \`chatInput\` carries no tool call at all: its prose is the request's own message and what is being asked is its \`questions\`, and drawing it as a confirmation loses the choices, the question and the request.
+
+The block is focused but not trapped.
+Trapping read well - the answer is the only thing to do - and it was wrong, because you approve a command on the strength of what is written above it and a trap stops the transcript from being scrolled while it is up.
+The keys that answer it are global, so they work from wherever the reader has gone.
+
+A question's answers are \`draft\`, keyed by question id, and every change goes back out through \`onDraft\` rather than being held here - another client may be looking at the same question.
+Enter sends, but only from inside the block, so a reader who has tabbed down to the composer to queue a message does not answer the question with it.
+A required question with no answer keeps Send disabled, and accepting with nothing resumes the agent on the answers it already had.
+\`onMeasure\` reports where the block is, because it sits above the composer and whoever keeps clear of one has to keep clear of both.
+
+\`ConfirmRequest\` and \`QuestionForm\` are exported for a client that wants one of the two on its own; this component is the panel and the two.`,
+    seeAlso: `- [ToolCallRow](tool-call-row.md) - the call a confirmation is about
+- [Panel](../layout/panel.md) - the frame it is drawn in
+- [Checkbox](../input/checkbox.md), [RadioGroup](../input/radio-group.md) - the question controls`,
+  },
+
+  ChatInputStatus: {
+    summary: 'The row between the waiting block and the composer: what came of the answer.',
+    example: `import { ChatInputStatus } from '@textui/chat';
+
+<ChatInputStatus status={{ state: 'sending', text: 'Your answer is on its way' }} />`,
+    notes: `That row used to be blank, and it is where a person is already looking after pressing a button on the block above it.
+A press that reaches a host which then says nothing is indistinguishable from a key that was never read, so this says the answer has gone and says so in the danger tone when it did not.
+
+Nothing to say is \`null\` and no row at all: a status line that is always there is a row of chrome, and the composer is a row further from the conversation for the whole of every session in which nothing goes wrong.
+\`sending\` leads with the hollow bullet this screen already uses for something in progress, rather than an ellipsis in front of a sentence that ends in one.`,
+    seeAlso: `- [ChatHitl](chat-hitl.md) - the block the answer was given to
+- [StatusDot](../display/status-dot.md) - the shared status vocabulary`,
+  },
+
+  SessionDetails: {
+    summary: 'A property list you can walk, where the selected value is shown whole and enter copies it.',
+    example: `import { SessionDetails } from '@textui/chat';
+
+<SessionDetails
+  fields={[
+    { id: 'harness', label: 'Harness', value: 'claude' },
+    { id: 'session', label: 'Session', value: 'ahp://host/1b444e78-d050' },
+  ]}
+/>`,
+    notes: `The catalogue's detail pane is where the identifiers live, and an identifier you cannot read in full or paste anywhere is decoration.
+\`KeyValue\` draws the same pairs and is static: nothing selects a row, so nothing can be copied and nothing can be shown untruncated.
+
+Every row is one line with its value truncated and the selected row wraps its value across as many lines as it needs, which costs nothing when the value is short and is the whole answer when it is a URI in a 36-column pane.
+\`values="all"\` wraps every row instead, which is what a pane of URIs wants.
+\`enter\` writes the row's \`value\` to the clipboard - OSC 52 where the terminal takes it and the store either way, so a test can assert what was copied - and says "copied" until the cursor moves.
+A row with no value shows \`absent\`, or a dash, in the subtle tone.
+
+\`parts\` draws a value in pieces with a tone each - \`3 files\`, \`+260\`, \`-31\` - while \`value\` is still what is copied.
+The label column is the widest label, floored at eleven cells and capped at twenty so one verbose title cannot take the pane from the values it labels, or \`labelWidth\`.
+
+\`claim\` takes the keyboard on the frame this mounts, which is not \`autoFocus\`: a pane that appears because a key asked for it has to end up with the cursor, and the pane it takes it from is in the same focus scope.
+It is done here rather than by the screen that mounts this, because a focusable registers in its own effect and the id does not exist yet on the render that opens the pane.`,
+    seeAlso: `- [ChatSessionHead](chat-session-head.md) - the same identifiers over a conversation
+- [KeyValue](../display/key-value.md) - the static version of this list
+- [Clipboard](../../terminal/clipboard.md) - where a copied value goes`,
+  },
+
+  SessionList: {
+    summary: 'The catalogue of sessions, two lines to a row.',
+    example: `import { SessionList } from '@textui/chat';
+import type { ChatSession } from '@textui/chat';
+
+const sessions: ChatSession[] = [{
+  id: 's1',
+  title: 'Rename the package',
+  provider: 'claude',
+  status: { activity: 'idle', archived: false, read: true, label: 'idle', tone: 'muted', glyph: 'bulletHollow' },
+  createdAt: '2025-01-01T09:00:00Z',
+  modifiedAt: '2025-01-01T09:30:00Z',
+  workingDirectories: ['/srv/api'],
+}];
+
+<SessionList sessions={sessions} selectedId="s1" />`,
+    notes: `Still a \`List\`: the selection, the keys, the window and the highlight are the list's, and reimplementing them is what the transcript already proved is a mistake.
+What is ours is the row, because a session does not fit the one-line shape a list gives you for free.
+
+It takes two lines, and the first one is why.
+A title, a harness, a workspace and a status sharing a pane that is also sharing the terminal leaves every one of them truncated, and a truncated title beside a truncated id names neither the conversation nor the directory it is in.
+So the title gets the width and everything that qualifies it goes underneath: the harness, then the project and the branch and the pull request the branch became, then what the host says it is doing and why it is here when nobody started it.
+
+The status travels as a word, a tone and a glyph together, because none of them is allowed to be the only carrier.
+The changes sit at the end of the second line - the file count, then the additions in green and the deletions in red, the way a diff says it.
+
+The row under the cursor marquees its title and its second line, so the one row that is arbitrarily long reads itself out while the rest are truncated and still.
+\`onSelect\` is the cursor moving and \`onOpen\` is the row being activated.`,
+    seeAlso: `- [List](../display/list.md) - the component underneath
+- [SessionDetails](session-details.md) - the pane beside it
+- [ChatSessionHead](chat-session-head.md) - the same session at the top of its conversation`,
+  },
+
+  ConnectionBadge: {
+    summary: 'Which host, and whether it is answering.',
+    example: `import { ConnectionBadge } from '@textui/chat';
+
+<ConnectionBadge url="ahp://127.0.0.1:7000" state="connected" sessions={3} />`,
+    notes: `\`state\` picks a tone and a glyph together - a filled bullet for connected, a half one for connecting, a cross for offline - because a colour on its own is lost in a piped log and a 16-colour session.
+
+The url is truncated from the start rather than the end, because the end of a hostname is what tells two of them apart.
+\`sessions\` is drawn as a badge and pluralised through i18n when the host has said how many there are.`,
+    seeAlso: `- [Badge](../display/badge.md) - the count
+- [StatusDot](../display/status-dot.md) - the shared status vocabulary
+- [Adapters](../../terminal/adapters.md) - what the url is a url of`,
+  },
+
+  ChatSessionHead: {
+    summary: 'What a conversation is, at the top of it and scrolling with it.',
+    example: `import { ChatSessionHead } from '@textui/chat';
+import type { ChatSession } from '@textui/chat';
+
+const session: ChatSession = {
+  id: 'ahp://host/1b444e78-d050',
+  title: 'Rename the package',
+  provider: 'claude',
+  status: { activity: 'running', archived: false, read: true, label: 'running', tone: 'accent', glyph: 'bulletHalf' },
+  createdAt: '2025-01-01T09:00:00Z',
+  modifiedAt: '2025-01-01T09:30:00Z',
+  workingDirectories: ['/srv/api'],
+  branch: 'main',
+};
+
+<ChatSessionHead session={session} model="claude-sonnet" chat="ahp://host/chat/1" />`,
+    notes: `The first thing in the transcript rather than a band above it, and that is the whole design: a caption pinned outside the scrolling region costs a row of the conversation on every screen for ever, so it has to earn each one, which means one line, which means dropping most of what it is for.
+Scrolled with the conversation it costs nothing after the first screen and can say everything, the way the top of a printed letter does.
+
+The identifiers are the point.
+They are what gets pasted into a shell or a bug report, they are exactly what does not fit anywhere else, and the catalogue's detail pane is a screen away from the conversation they belong to.
+
+Only rows with a value are drawn: a blank branch reads as a detached head rather than as a host that does not report branches, and a row of empty values reads as a session the host would not talk about.
+\`model\` is what the last turn ran on, because a session has no model and each message has one, and it is drawn beside the provider.
+\`settings\` are the host's own labels and values, whatever the host chose to call them.
+\`chat\` is the chat uri, drawn in full.
+\`present\` lists who else is here only when more than one client is, because the one entry is this client.
+
+The timestamps are the host's ISO rendered in whatever this machine calls a date; one that cannot be parsed is passed through as it arrived rather than shown as an invalid date.`,
+    seeAlso: `- [SessionDetails](session-details.md) - the pane where an identifier is read whole
+- [ChatTranscript](chat-transcript.md) - the conversation this heads
+- [KeyValue](../display/key-value.md) - how the rows are drawn`,
+  },
+
+  FileDiff: {
+    summary: 'One file out of a changeset, both sides of it lined up.',
+    example: `import { FileDiff, diffLines } from '@textui/chat';
+
+<FileDiff path="src/index.ts" kind="edited" diff={diffLines('const a = 1;', 'const a = 2;')} />`,
+    notes: `Unified rather than side by side, and not for want of a splitter: a terminal that a changeset list already shares with a session pane has sixty columns left, and eighty characters of source in thirty is two columns of nothing legible.
+
+Every row is exactly one row tall.
+The scroll position is a row count, so a line that wrapped would put the gutter numbers out of step with what is on screen; long lines are clipped, and the file is there to be read rather than edited.
+
+Both gutters are always drawn, because a single number that means the left file on one row and the right on the next is a number nobody can use to find anything.
+The header says whether the file is \`new\`, \`edited\` or \`deleted\` and carries the added and removed counts.
+
+Three things are shown instead of a diff: \`binary\`, a \`diff\` whose \`tooLarge\` is set, and one with no rows at all. Each is an \`EmptyState\` that says which of the three it is.`,
+    seeAlso: `- [Line diff](line-diff.md) - how the rows were worked out
+- [EmptyState](../display/empty-state.md) - what stands in for one that is not shown
+- [ScrollView](../layout/scroll-view.md) - the viewport the rows are in`,
+  },
 };

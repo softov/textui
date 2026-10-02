@@ -10,6 +10,8 @@ permalink: /components/
 
 Most of these are importable from `@textui/widgets`; the resource and document components come from `@textui/documents` and are marked as such below. The four primitives are the exception - they are built into `@textui/core` and always available.
 
+The chat components are a package and a category of their own: see [Chat](chat.md). They are imported by name and register nothing, so they are not counted below.
+
 Imported directly, a component works as it is. Calling `registerBuiltins(app)` is what lets a node graph *name* `'Table'` as data and get one.
 
 Two pages apply to all of them: [Base props](base-props.md) for what every node accepts, and [Nodes](nodes.md) for writing one as data rather than as JSX.

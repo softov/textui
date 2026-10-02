@@ -95,12 +95,48 @@ const SECTIONS = {
   resource:   { dir: 'surfaces',   title: 'Surfaces, shells and resources' },
   editor:     { dir: 'surfaces',   title: 'Surfaces, shells and resources' },
   json:       { dir: 'surfaces',   title: 'Surfaces, shells and resources' },
+  chat:       { dir: 'chat',       title: 'Chat' },
 };
 
 /** Components the registry files one way and the docs file another. */
 const OVERRIDES = {
   StatusBar: 'navigation', Toolbar: 'navigation', KeyHints: 'navigation',
 };
+
+/**
+ * The chat components, which are their own package and their own category.
+ *
+ * `@textui/chat` registers nothing with the app - every one of these is
+ * imported and mounted by name - so there is no registry to read a catalog
+ * from, and the list is written here instead. `registry` is the name the
+ * component was defined under, where that is not the name it is exported as:
+ * `Gutter` is registered as `ChatGutter` so a future `Gutter` in the widgets
+ * catalog cannot collide with it.
+ *
+ * They are deliberately not in `CATALOG`: that list is what the Components
+ * page counts and groups, and these are documented under their own category.
+ */
+const CHAT = [
+  { component: 'ChatBubble' },
+  { component: 'Gutter', registry: 'ChatGutter' },
+  { component: 'StreamingText' },
+  { component: 'ReasoningBlock' },
+  { component: 'ChatTranscript' },
+  { component: 'ToolCallRow' },
+  { component: 'ComposerBar' },
+  { component: 'CommandList' },
+  { component: 'ChatComposer' },
+  { component: 'ChatHitl' },
+  { component: 'ChatInputStatus' },
+  { component: 'SessionDetails' },
+  { component: 'SessionList' },
+  { component: 'ConnectionBadge' },
+  { component: 'ChatSessionHead' },
+  { component: 'FileDiff' },
+].map((entry) => ({ ...entry, category: 'chat' }));
+
+/** Every page this script owns: the catalog, and the chat package's own. */
+const ALL_PAGES = [...CATALOG, ...CHAT];
 
 /** Ordered groups for the catalog table, and which categories feed each. */
 const CATALOG_GROUPS = [
@@ -171,17 +207,20 @@ function baseOf(propsType, file) {
 }
 
 function propsTable(entry) {
-  const propsType = components[entry.component]?.propsType
-    ?? (PRIMITIVES.has(entry.component)
-      ? `${entry.component[0].toUpperCase()}${entry.component.slice(1)}Props`
+  // The name props.json knows the component by, which is its export name
+  // everywhere except the chat gutter.
+  const key = entry.registry ?? entry.component;
+  const propsType = components[key]?.propsType
+    ?? (PRIMITIVES.has(key)
+      ? `${key[0].toUpperCase()}${key.slice(1)}Props`
       : null);
 
-  const file = components[entry.component]?.file;
+  const file = components[key]?.file;
   if (!propsType || !lookup(propsType, file)) {
     return '_No props of its own._\n';
   }
 
-  const defaults = components[entry.component]?.defaults ?? {};
+  const defaults = components[key]?.defaults ?? {};
   const rows = ownProps(propsType, file);
   const base = baseOf(propsType, file);
 
@@ -210,7 +249,7 @@ const unwritten = [];
 const missingPage = [];
 const stale = [];
 
-for (const entry of CATALOG) {
+for (const entry of ALL_PAGES) {
   const section = PRIMITIVES.has(entry.component)
     ? PRIMITIVE_SECTION
     : SECTIONS[OVERRIDES[entry.component] ?? entry.category];
@@ -348,7 +387,7 @@ if (CHECK && stale.length) {
   console.error(`Prop tables out of date with the source:\n  ${stale.join('\n  ')}\n\nRun: node scripts/docs/gen-components.mjs`);
   process.exit(1);
 }
-console.log(`pages created: ${created}, prop tables synced: ${synced}, total: ${CATALOG.length}`);
+console.log(`pages created: ${created}, prop tables synced: ${synced}, total: ${ALL_PAGES.length}`);
 if (unwritten.length) {
   console.log(`\nno example authored yet (${unwritten.length}): ${unwritten.join(' ')}`);
 }

@@ -9,6 +9,7 @@
     "typecheck": "pnpm run extract && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@textui/chat": "workspace:*",
     "@textui/cli": "workspace:*",
     "@textui/core": "workspace:*",
     "@textui/kit": "workspace:*",

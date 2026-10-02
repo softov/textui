@@ -1,7 +1,7 @@
 ---
 title: When one throws
 parent: Components
-nav_order: 10
+nav_order: 11
 ---
 
 <!-- docs:setup

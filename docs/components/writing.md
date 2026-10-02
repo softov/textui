@@ -1,7 +1,7 @@
 ---
 title: Writing a component
 parent: Components
-nav_order: 9
+nav_order: 10
 ---
 
 <!-- docs:setup

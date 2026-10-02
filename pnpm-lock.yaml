@@ -346,6 +346,9 @@ importers:
 
   scripts/docs/snippets:
     dependencies:
+      '@textui/chat':
+        specifier: workspace:*
+        version: link:../../../packages/chat
       '@textui/cli':
         specifier: workspace:*
         version: link:../../../packages/cli

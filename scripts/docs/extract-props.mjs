@@ -37,6 +37,12 @@ const files = [
   ...readdirSync(at('packages/documents/src'), { recursive: true })
     .filter(isSource)
     .map((f) => join(at('packages/documents/src'), String(f))),
+  // The chat components ship from @textui/chat, and are not in the widgets
+  // catalog - they are imported by name rather than resolved through the
+  // registry. Same reason as the documents entries above.
+  ...readdirSync(at('packages/chat/src'), { recursive: true })
+    .filter(isSource)
+    .map((f) => join(at('packages/chat/src'), String(f))),
 ];
 
 /** JSDoc immediately above a node, as plain text. */

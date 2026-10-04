@@ -56,7 +56,7 @@ const STATE_STYLES: ThemeDefinition['components'] = {
   // keyboard, so it takes the next fill up rather than a colour of its own.
   CodeViewer: { selected: SELECTION_UNFOCUSED, focus: SELECTION_HOVER },
   Menu: { base: { fg: 'text' }, selected: SELECTION_UNFOCUSED, focus: SELECTION_FOCUSED },
-  TextInput: { base: { fg: 'text' } } ,
+  TextInput: { base: { fg: 'text' } },
   // A tab is open, not selected. Dimming it when the strip does not have the
   // keyboard would say no document is open, which is a different claim and a
   // wrong one - so it has one state and no second.
@@ -72,10 +72,11 @@ const STATE_STYLES: ThemeDefinition['components'] = {
   ToolCallRow: { selected: SELECTION_FOCUSED },
   ReasoningBlock: { selected: SELECTION_FOCUSED },
   ComposerChip: { focus: SELECTION_FOCUSED },
-  // A range in a document is a selection, and it keeps the colours the text
-  // under it was already drawn in - the syntax of a selection is the syntax of
-  // the code it covers.
-  Editor: { selected: { bg: 'active' } },
+  // A range in a document is a selection, drawn in reverse video so it keeps
+  // the colours the text under it was already drawn in - the syntax of a
+  // selection is the syntax of the code it covers - and shows whether or not
+  // the theme's `active` is a fill.
+  Editor: { selected: { inverse: true } },
 };
 
 export const DARK: ThemeDefinition = {
@@ -164,11 +165,10 @@ export const LIGHT: ThemeDefinition = {
     onWarning: '#ffffff',
     onDanger: '#ffffff',
     hover: '#eaeef2',
-    active: '#a5bdd8',
+    active: 'default',
     onActive: '#0969da',
     selected: 'default',
     onSelected: '#0969da',
-
     focus: '#0969da',
     disabled: '#8c959f',
     scrim: '#8c959f',
@@ -209,6 +209,9 @@ export const CONSOLE: ThemeDefinition = {
     info: '#88c0d0',
     selected: '#6ba3b2',
     active: '#1e3d47',
+    // Stated, because `dark` states its own for a selection with no fill.
+    onSelected: '#0a0e14',
+    onActive: '#d8dee9',
     onAccent: '#0a0e14',
     onPrimary: '#0a0e14',
     onInfo: '#0a0e14',
@@ -308,6 +311,9 @@ export const PAPER_LIGHT: ThemeDefinition = {
     hover: '#f7f1e7',
     active: '#efe4d2',
     selected: '#eadcc6',
+    // Stated, because `light` states its own for a selection with no fill.
+    onActive: '#2b2a27',
+    onSelected: '#2b2a27',
     inverted: '#2b2a27',
     focus: '#b4531f',
   },
@@ -347,8 +353,10 @@ export const PAPER_DARK: ThemeDefinition = {
     primary: '#e0873f',
     // The same restraint, the other way up.
     hover: '#26231f',
-    active: '#332e27',
-    selected: '#3d362c',
+    active: 'default',
+    onActive: '#e0873f',
+    selected: 'default',
+    onSelected: '#e0873f',
     inverted: '#f4efe6',
     focus: '#e0873f',
   },
@@ -391,6 +399,7 @@ export const WORKBENCH: ThemeDefinition = {
     // The selection is a mid grey, so the light text is what reads on it; the
     // inherited `inverted` is darker than the fill and nearly disappears.
     onSelected: '#cdd6f4',
+    onActive: '#cdd6f4',
     focus: '#89b4fa',
     scrim: '#11111b',
   },

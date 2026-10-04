@@ -272,7 +272,7 @@ Then by subsystem:
   <img src="./media/print-theme-paper-dark.svg" alt="TextUI paper-dark theme" />
 </p>
 
-### `paper`
+### `paper-light`
 
 <p align="center">
   <img src="./media/print-theme-paper-light.svg" alt="TextUI paper-light theme" />

@@ -25,7 +25,7 @@ import type { ThemeDefinition } from '../types/theme.js';
  * otherwise moves with it, while a theme that states `components.List.focused`
  * moves the list and leaves the table where it was.
  */
-const SELECTION_FOCUSED: Style = { bg: 'selected', fg: 'onSelected', dim: true };
+const SELECTION_FOCUSED: Style = { bg: 'selected', fg: 'onSelected', bold: true };
 const SELECTION_UNFOCUSED: Style = { bg: 'active', fg: 'onActive' };
 const SELECTION_HOVER: Style = { bg: 'hover', fg: 'onActive' };
 // The other way to draw a selection: reverse video, which is legible whatever
@@ -55,7 +55,8 @@ const STATE_STYLES: ThemeDefinition['components'] = {
   // A marked line is a selection. The caret line is that selection plus the
   // keyboard, so it takes the next fill up rather than a colour of its own.
   CodeViewer: { selected: SELECTION_UNFOCUSED, focus: SELECTION_HOVER },
-  Menu: { selected: SELECTION_UNFOCUSED, focus: SELECTION_FOCUSED },
+  Menu: { base: { fg: 'text' }, selected: SELECTION_UNFOCUSED, focus: SELECTION_FOCUSED },
+  TextInput: { base: { fg: 'text' } } ,
   // A tab is open, not selected. Dimming it when the strip does not have the
   // keyboard would say no document is open, which is a different claim and a
   // wrong one - so it has one state and no second.
@@ -92,9 +93,9 @@ export const DARK: ThemeDefinition = {
     borderStrong: '#484f58',
     borderSubtle: '#21262d',
     divider: '#484f58',
-    text: '#e6edf3',
+    text: '#f3e6f1',
     muted: '#8b949e',
-    subtle: '#6e7681',
+    subtle: '#546f94',
     inverted: '#0d1117',
     accent: '#58a6ff',
     primary: '#388bfd',
@@ -113,8 +114,10 @@ export const DARK: ThemeDefinition = {
     onWarning: '#0d1117',
     onDanger: '#0d1117',
     hover: '#1f2937',
-    active: '#264466',
-    selected: '#1f6feb',
+    active: 'default',
+    onActive: '#3191ff',
+    selected: 'default',
+    onSelected: '#3191ff',
     focus: '#58a6ff',
     disabled: '#484f58',
     scrim: '#010409',
@@ -162,7 +165,10 @@ export const LIGHT: ThemeDefinition = {
     onDanger: '#ffffff',
     hover: '#eaeef2',
     active: '#a5bdd8',
-    selected: '#0969da',
+    onActive: '#0969da',
+    selected: 'default',
+    onSelected: '#0969da',
+
     focus: '#0969da',
     disabled: '#8c959f',
     scrim: '#8c959f',
@@ -312,6 +318,47 @@ export const PAPER_LIGHT: ThemeDefinition = {
   },
 };
 
+/**
+ * Paper, after dark.
+ *
+ * The same airy, borderless, warm-accented character as `paper` - the point of
+ * it is the restraint, not the brightness - with the ink and the page swapped.
+ * A warm dark rather than a blue one, so the two read as one family and a
+ * reader moving between them is not moving between two different products.
+ */
+export const PAPER_DARK: ThemeDefinition = {
+  id: 'paper-dark',
+  name: 'Paper Dark',
+  appearance: 'dark',
+  extends: 'dark',
+  border: 'none',
+  density: 'airy',
+  colors: {
+    canvas: '#1c1a17',
+    surface: '#1c1a17',
+    surfaceAlt: '#26231f',
+    border: '#3a352e',
+    borderSubtle: '#2a2621',
+    divider: 'default',
+    subtle: '#db8c4c',
+    text: '#e8e3d9',
+    muted: '#9a9287',
+    accent: '#e0873f',
+    primary: '#e0873f',
+    // The same restraint, the other way up.
+    hover: '#26231f',
+    active: '#332e27',
+    selected: '#3d362c',
+    inverted: '#f4efe6',
+    focus: '#e0873f',
+  },
+  spacing: { none: 0, xs: 1, sm: 1, md: 2, lg: 3, xl: 4 },
+  components: {
+    Panel: { base: { border: 'none', padding: [1, 2] } },
+    Button: { base: { padding: [0, 2] } },
+  },
+};
+
 /** Rounded chrome around a persistent frame. */
 export const WORKBENCH: ThemeDefinition = {
   id: 'workbench',
@@ -418,47 +465,6 @@ export const MONO: ThemeDefinition = {
     Panel: { base: { border: 'ascii', padding: [0, 1] } },
     Button: { base: { padding: [0, 1] } },
   }
-};
-
-/**
- * Paper, after dark.
- *
- * The same airy, borderless, warm-accented character as `paper` - the point of
- * it is the restraint, not the brightness - with the ink and the page swapped.
- * A warm dark rather than a blue one, so the two read as one family and a
- * reader moving between them is not moving between two different products.
- */
-export const PAPER_DARK: ThemeDefinition = {
-  id: 'paper-dark',
-  name: 'Paper Dark',
-  appearance: 'dark',
-  extends: 'dark',
-  border: 'none',
-  density: 'airy',
-  colors: {
-    canvas: '#1c1a17',
-    surface: '#1c1a17',
-    surfaceAlt: '#26231f',
-    border: '#3a352e',
-    borderSubtle: '#2a2621',
-    divider: 'default',
-    subtle: '#db8c4c',
-    text: '#e8e3d9',
-    muted: '#9a9287',
-    accent: '#e0873f',
-    primary: '#e0873f',
-    // The same restraint, the other way up.
-    hover: '#26231f',
-    active: '#332e27',
-    selected: '#3d362c',
-    inverted: '#f4efe6',
-    focus: '#e0873f',
-  },
-  spacing: { none: 0, xs: 1, sm: 1, md: 2, lg: 3, xl: 4 },
-  components: {
-    Panel: { base: { border: 'none', padding: [1, 2] } },
-    Button: { base: { padding: [0, 2] } },
-  },
 };
 
 export const BUILTIN_THEMES: ThemeDefinition[] = [

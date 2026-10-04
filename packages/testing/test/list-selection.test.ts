@@ -44,7 +44,7 @@ function paint(t: Harness, el: Element): { fg?: string; bg?: string } {
 }
 
 describe('a selection background', () => {
-  it('carries `inverted` when the list has the keyboard', async () => {
+  it('carries `onSelected` when the list has the keyboard', async () => {
     const t = await renderApp({
       width: 40,
       height: 6,
@@ -52,13 +52,13 @@ describe('a selection background', () => {
     });
     await t.settle();
 
-    // `dark`: selected is the bright fill, and `onSelected` is derived from
-    // the theme's own `inverted`.
-    expect(paint(t, selected(t) as Element)).toEqual({ bg: '#1f6feb', fg: '#0d1117' });
+    // `dark`: no fill, so the row keeps the canvas and `onSelected` is the
+    // whole of the selection.
+    expect(paint(t, selected(t) as Element)).toEqual({ bg: '#0d1117', fg: '#3191ff' });
     await t.unmount();
   });
 
-  it('carries `text` when it does not, which is the slash menu and every list beside a field', async () => {
+  it('carries `onActive` when it does not, which is the slash menu and every list beside a field', async () => {
     const t = await renderApp({
       width: 40,
       height: 6,
@@ -66,9 +66,9 @@ describe('a selection background', () => {
     });
     await t.settle();
 
-    // The same pair a step down: the current row without the keyboard, in the
-    // dimmer fill and the text the theme can guarantee reads on it.
-    expect(paint(t, selected(t) as Element)).toEqual({ bg: '#264466', fg: '#e6edf3' });
+    // The same pair a step down: the current row without the keyboard, in
+    // `onActive`. `dark` states the two alike; the weight tells them apart.
+    expect(paint(t, selected(t) as Element)).toEqual({ bg: '#0d1117', fg: '#3191ff' });
     await t.unmount();
   });
 

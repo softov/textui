@@ -13,9 +13,27 @@ The packages release as a set under one version.
 - `Menu` takes `noMatch`: a line of its own for an empty list, or `false` to
   draw none. A palette knows which kind of nothing it is looking at and says so
   itself, so it turns the menu's line off rather than saying it twice.
+- `Menu` states `base: { fg: 'text' }` in the built-in themes, so a menu's rows
+  take the theme's text colour the way a field does.
+
+### Changed
+
+- **Breaking.** `dark`, `light`, `paper` and `paper-dark` draw a selected row
+  with no fill. `selected` and `active` are `default`, and the row is written in
+  `onSelected`, bold while the component has the keyboard, or in `onActive`
+  when it does not. Each of these themes states its own `onSelected` and
+  `onActive`, so a theme that extends one and brings a fill back has to state
+  them too - `console`, `workbench` and `paper-light` now do.
+- `dark`'s `text` is `#f3e6f1` and its `subtle` is `#546f94`.
+- `components.Editor.selected` is reverse video rather than the `active` fill,
+  so a selection in the editor shows whether or not the theme has a fill, and
+  keeps each token's own colour.
 
 ### Fixed
 
+- The editor draws the `bold` and `inverse` a theme states for its selection.
+  It kept only `fg` and `bg`, so any other part of `Editor.selected` was
+  dropped.
 - The line under a palette's list no longer keeps the last answer's sentence when
   nothing is selectable, and no longer counts nothing: the count is there when
   there is something to count.

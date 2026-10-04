@@ -205,7 +205,7 @@ function reindent(lines: string[], from: number, to: number, unit: string, out: 
 // ---------------------------------------------------------------- pieces
 
 /** One coloured run inside a row. The unit both syntax and selection paint. */
-interface Piece { text: string; fg?: StyleColor; bg?: StyleColor }
+interface Piece { text: string; fg?: StyleColor; bg?: StyleColor; bold?: boolean; inverse?: boolean }
 
 /**
  * Where the horizontal window sits, given where the caret is.
@@ -374,6 +374,8 @@ function spansOf(pieces: Piece[], left: number, width: number): RenderOutput[] {
           content: slice,
           ...(piece.fg ? { fg: piece.fg } : {}),
           ...(piece.bg ? { bg: piece.bg } : {}),
+          ...(piece.bold ? { bold: true } : {}),
+          ...(piece.inverse ? { inverse: true } : {}),
         }));
         drawn += stringWidth(slice);
       }
@@ -1011,12 +1013,10 @@ export const CodeEditor = defineComponent<CodeEditorProps>('CodeEditor', (props)
     let pieces = piecesOf(line, tokens[lineNumber], theme.syntax);
 
     /*
-     * The selection is a background, not an inversion.
-     *
-     * `selected` is the token for a row that carries `inverted` text, and this
-     * row carries whatever the highlighter said - so inverting it would either
-     * throw the syntax colours away or write them on a colour picked to be
-     * written on in one specific ink. `active` is the tint that keeps them.
+     * The selection is whatever the theme states for `Editor.selected`, laid
+     * over the colours the highlighter gave. The built-in themes state reverse
+     * video, which keeps every token's own colour and shows on a theme with
+     * no selection fill.
      */
     /*
      * Every match on this line, under the selection rather than over it.

@@ -18,6 +18,9 @@ import type { ComposerOption } from '../src/index.js';
  * These are the chat shapes where the selection is a whole row - a tool row,
  * a reasoning header - and the one where it is the focus alone. The pairing
  * travels with the fill, which is why a restated `fg` is worth checking too.
+ *
+ * They run under `console` because it fills its selection; `dark` draws one
+ * with no fill, and the cell would say nothing about which name reached it.
  */
 
 const under = (t: Harness, text: string): Color | undefined => {
@@ -62,7 +65,7 @@ describe('a tool row', () => {
     const t = await renderApp({
       width: 60,
       height: 8,
-      theme: 'dark',
+      theme: 'console',
       root: h(ToolCallRow, { call, active }),
     });
     await t.settle();
@@ -71,7 +74,7 @@ describe('a tool row', () => {
 
   it('takes the fill the theme states for `ToolCallRow.selected`', async () => {
     const t = await open(true);
-    expect(bgUnder(t, 'search')).toBe('#1f6feb');
+    expect(bgUnder(t, 'search')).toBe('#6ba3b2');
     await t.unmount();
   });
 
@@ -80,7 +83,7 @@ describe('a tool row', () => {
     // terminal's own foreground is a row nobody can read, and restating the
     // fill alone must not be able to produce one.
     const t = await open(true);
-    expect(fgUnder(t, 'search')).toBe('#0d1117');
+    expect(fgUnder(t, 'search')).toBe('#0a0e14');
     await t.unmount();
   });
 
@@ -94,7 +97,7 @@ describe('a tool row', () => {
 
   it('is left on the canvas when it is not the one under the cursor', async () => {
     const t = await open(false);
-    expect(bgUnder(t, 'search')).not.toBe('#1f6feb');
+    expect(bgUnder(t, 'search')).not.toBe('#6ba3b2');
     await t.unmount();
   });
 });
@@ -104,11 +107,11 @@ describe('a reasoning header', () => {
     const t = await renderApp({
       width: 60,
       height: 8,
-      theme: 'dark',
+      theme: 'console',
       root: h(ReasoningBlock, { content: 'one two three', summary: 'thinking', active: true }),
     });
     await t.settle();
-    expect(bgUnder(t, 'thinking')).toBe('#1f6feb');
+    expect(bgUnder(t, 'thinking')).toBe('#6ba3b2');
     await t.unmount();
   });
 });
@@ -118,7 +121,7 @@ describe('a composer chip', () => {
     const t = await renderApp({
       width: 60,
       height: 8,
-      theme: 'dark',
+      theme: 'console',
       root: h(ComposerBar, {
         options: OPTIONS,
         onOpen: () => undefined,
@@ -127,19 +130,19 @@ describe('a composer chip', () => {
     });
     await t.settle();
 
-    expect(bgUnder(t, 'Harness')).not.toBe('#1f6feb');
+    expect(bgUnder(t, 'Harness')).not.toBe('#6ba3b2');
 
     t.app.focus.focus(chipId('harness'));
     await t.settle();
     // A chip has no selection of its own - it is the focused one or it is not
     // there - so the theme states the fill under `focus` and nothing is
     // painted when the keyboard is elsewhere.
-    expect(bgUnder(t, 'Harness')).toBe('#1f6feb');
+    expect(bgUnder(t, 'Harness')).toBe('#6ba3b2');
 
     t.app.focus.focus(chipId('model'));
     await t.settle();
-    expect(bgUnder(t, 'Harness')).not.toBe('#1f6feb');
-    expect(bgUnder(t, 'Model')).toBe('#1f6feb');
+    expect(bgUnder(t, 'Harness')).not.toBe('#6ba3b2');
+    expect(bgUnder(t, 'Model')).toBe('#6ba3b2');
     await t.unmount();
   });
 });

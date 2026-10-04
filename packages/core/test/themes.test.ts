@@ -17,17 +17,29 @@ const CAPS = { colorDepth: 24, unicode: 'full' } as TerminalCapabilities;
 
 describe('the colour written on a filled row', () => {
   it('is derived from the theme when the theme does not state it', () => {
-    const dark = createThemes().resolve('dark', CAPS);
-    expect(dark.colors.onSelected).toBe(dark.colors.inverted);
-    expect(dark.colors.onActive).toBe(dark.colors.text);
+    // `mono` states neither, so both fall back to its own pair.
+    const mono = createThemes().resolve('mono', CAPS);
+    expect(mono.colors.onSelected).toBe(mono.colors.inverted);
+    expect(mono.colors.onActive).toBe(mono.colors.text);
   });
 
-  it('follows the theme that restates one half of the pair', () => {
-    // `paper-dark` restates `inverted` and `text`; both on-tokens move with
-    // them rather than staying with the theme it extends.
-    const paperDark = createThemes().resolve('paper-dark', CAPS);
-    expect(paperDark.colors.onSelected).toBe(paperDark.colors.inverted);
-    expect(paperDark.colors.onActive).toBe(paperDark.colors.text);
+  it('is the theme\'s own where the theme states it', () => {
+    // `dark` draws a selection with no fill, so the colour is the whole of
+    // it: an accent rather than the text it would be written on.
+    const dark = createThemes().resolve('dark', CAPS);
+    expect(dark.colors.selected).toBe('default');
+    expect(dark.colors.onSelected).not.toBe(dark.colors.inverted);
+    expect(dark.colors.onActive).not.toBe(dark.colors.text);
+  });
+
+  it('is restated by a theme that brings back a fill', () => {
+    // `console` extends `dark` but fills its selection, so it states the
+    // colours that read on the fill rather than inheriting `dark`'s.
+    const dark = createThemes().resolve('dark', CAPS);
+    const console_ = createThemes().resolve('console', CAPS);
+    expect(console_.colors.selected).not.toBe('default');
+    expect(console_.colors.onSelected).not.toBe(dark.colors.onSelected);
+    expect(console_.colors.onActive).toBe(console_.colors.text);
   });
 
   it('leaves `paper` a colour of its own for the fill', () => {

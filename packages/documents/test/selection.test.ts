@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CommandContext } from '@textui/core';
-import { CLIPBOARD_PATH } from '@textui/core';
+import { ATTR_INVERSE, CLIPBOARD_PATH } from '@textui/core';
 import { registerBuiltins } from '@textui/widgets';
 import { renderApp } from '@textui/testing';
 import { registerDocuments } from '../src/index.js';
@@ -89,7 +89,7 @@ describe('extending a selection', () => {
     await t.unmount();
   });
 
-  it('draws the selection as a background rather than an inversion', async () => {
+  it('draws the selection in reverse video, over the text\'s own colour', async () => {
     const { t } = await editing('abcdef\n');
     t.pressAll('shift+right', 'shift+right', 'shift+right');
     await settle(t);
@@ -98,7 +98,8 @@ describe('extending a selection', () => {
     const outside = buffer.get(4, 0);
     expect(inside?.char).toBe('a');
     expect(outside?.char).toBe('e');
-    expect(inside?.bg).not.toEqual(outside?.bg);
+    expect((inside?.attrs ?? 0) & ATTR_INVERSE).not.toBe(0);
+    expect((outside?.attrs ?? 0) & ATTR_INVERSE).toBe(0);
     // Still the text's own colour, not a colour picked to be written on.
     expect(inside?.fg).toEqual(outside?.fg);
     await t.unmount();

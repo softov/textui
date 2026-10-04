@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Color, ColorDepth, SemanticRole, ThemeDefinition } from '@textui/core';
-import { BUILTIN_THEMES, downsample, h, packRgb, unpackRgb, useState } from '@textui/core';
+import { ATTR_BOLD, BUILTIN_THEMES, downsample, h, packRgb, unpackRgb, useState } from '@textui/core';
 import { CodeViewer, List, Menu, Table, Tabs, TextArea, Tree } from '@textui/widgets';
 import { renderApp } from '../src/index.js';
 import type { Harness } from '../src/index.js';
@@ -33,7 +33,7 @@ const OVERRIDE: ThemeDefinition = {
   id: 'one-component',
   name: 'One component',
   appearance: 'dark',
-  extends: 'dark',
+  extends: 'console',
   colors: {},
   components: { List: { focus: { bg: MARK, fg: '#ffffff' } } },
 };
@@ -140,14 +140,14 @@ describe('a theme override', () => {
     // The second is the table's, and did not: the table has no keyboard, so it
     // is at `Table.selected`, and `List.focus` says nothing about a table.
     expect(hexOf(bgUnder(t, 'Bravo'))).toBe(MARK);
-    expect(hexOf(bgUnder(t, 'Bravo', 1))).toBe('#264466');
+    expect(hexOf(bgUnder(t, 'Bravo', 1))).toBe('#1e3d47');
 
     await focusRole(t, 'table');
     // Now the table has the keyboard and takes the built-in `Table.focus`,
     // while the list falls back to the built-in `List.selected` rather than
     // holding on to the override it was only ever given for the live state.
-    expect(hexOf(bgUnder(t, 'Bravo'))).toBe('#264466');
-    expect(hexOf(bgUnder(t, 'Bravo', 1))).toBe('#1f6feb');
+    expect(hexOf(bgUnder(t, 'Bravo'))).toBe('#1e3d47');
+    expect(hexOf(bgUnder(t, 'Bravo', 1))).toBe('#6ba3b2');
     await t.unmount();
   });
 
@@ -179,70 +179,75 @@ describe('a theme override', () => {
     const focused = selected.filter((el) => el.rect);
     const fills = focused.map((el) =>
       hexOf((t.app.buffer().get(el.rect?.x ?? 0, el.rect?.y ?? 0)?.bg as { rgb: number[] } | undefined)?.rgb));
-    expect(fills).toEqual([MARK, '#264466']);
+    expect(fills).toEqual([MARK, '#1e3d47']);
     await t.unmount();
   });
 });
 
+/**
+ * `console` is the theme these run under because it fills its selection.
+ * `dark` and `light` draw one with no fill, so the cell under a selected row
+ * says nothing about which name reached it.
+ */
 describe("a name the built-in themes state", () => {
   it('is one the list reaches, in both states', async () => {
-    const focused = await mount(h(List, { items: ROWS, selectedId: 'b', autoFocus: true, focusId: 'list' }), { theme: 'dark' });
-    expect(hexOf(bgUnder(focused, 'Bravo'))).toBe('#1f6feb');
+    const focused = await mount(h(List, { items: ROWS, selectedId: 'b', autoFocus: true, focusId: 'list' }), { theme: 'console' });
+    expect(hexOf(bgUnder(focused, 'Bravo'))).toBe('#6ba3b2');
     await focused.unmount();
 
-    const resting = await mount(h(List, { items: ROWS, selectedId: 'b', focusable: false }), { theme: 'dark' });
-    expect(hexOf(bgUnder(resting, 'Bravo'))).toBe('#264466');
+    const resting = await mount(h(List, { items: ROWS, selectedId: 'b', focusable: false }), { theme: 'console' });
+    expect(hexOf(bgUnder(resting, 'Bravo'))).toBe('#1e3d47');
     await resting.unmount();
   });
 
   it('is one the tree reaches, in both states', async () => {
     const nodes = [{ id: 'a', label: 'Alpha', children: [{ id: 'a1', label: 'Alphette' }] }];
     const focused = await mount(
-      h(Tree, { nodes, selectedId: 'a', expandedIds: ['a'], autoFocus: true, focusId: 'tree' }), { theme: 'dark' });
-    expect(hexOf(bgUnder(focused, 'Alpha'))).toBe('#1f6feb');
+      h(Tree, { nodes, selectedId: 'a', expandedIds: ['a'], autoFocus: true, focusId: 'tree' }), { theme: 'console' });
+    expect(hexOf(bgUnder(focused, 'Alpha'))).toBe('#6ba3b2');
     await focused.unmount();
 
     const resting = await mount(
-      h(Tree, { nodes, selectedId: 'a', expandedIds: ['a'], focusable: false }), { theme: 'dark' });
-    expect(hexOf(bgUnder(resting, 'Alpha'))).toBe('#264466');
+      h(Tree, { nodes, selectedId: 'a', expandedIds: ['a'], focusable: false }), { theme: 'console' });
+    expect(hexOf(bgUnder(resting, 'Alpha'))).toBe('#1e3d47');
     await resting.unmount();
   });
 
   it('is one the table reaches, in both states', async () => {
     const columns = [{ key: 'label', header: 'Name' }];
-    const focused = await mount(h(Table, { columns, rows: ROWS, selectedKey: 'b' }), { theme: 'dark' });
+    const focused = await mount(h(Table, { columns, rows: ROWS, selectedKey: 'b' }), { theme: 'console' });
     await focusRole(focused, 'table');
-    expect(hexOf(bgUnder(focused, 'Bravo'))).toBe('#1f6feb');
+    expect(hexOf(bgUnder(focused, 'Bravo'))).toBe('#6ba3b2');
     await focused.unmount();
 
     const resting = await mount(
-      h(Table, { columns, rows: ROWS, selectedKey: 'b', focusable: false }), { theme: 'dark' });
-    expect(hexOf(bgUnder(resting, 'Bravo'))).toBe('#264466');
+      h(Table, { columns, rows: ROWS, selectedKey: 'b', focusable: false }), { theme: 'console' });
+    expect(hexOf(bgUnder(resting, 'Bravo'))).toBe('#1e3d47');
     await resting.unmount();
   });
 
   it('is one the menu reaches, in both states', async () => {
     const items = [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Bravo' }];
-    const focused = await mount(h(Menu, { items, activeId: 'b', autoFocus: true, focusId: 'menu' }), { theme: 'dark' });
-    expect(hexOf(bgUnder(focused, 'Bravo'))).toBe('#1f6feb');
+    const focused = await mount(h(Menu, { items, activeId: 'b', autoFocus: true, focusId: 'menu' }), { theme: 'console' });
+    expect(hexOf(bgUnder(focused, 'Bravo'))).toBe('#6ba3b2');
     await focused.unmount();
 
-    const resting = await mount(h(Menu, { items, activeId: 'b' }), { theme: 'dark' });
-    expect(hexOf(bgUnder(resting, 'Bravo'))).toBe('#264466');
+    const resting = await mount(h(Menu, { items, activeId: 'b' }), { theme: 'console' });
+    expect(hexOf(bgUnder(resting, 'Bravo'))).toBe('#1e3d47');
     await resting.unmount();
   });
 
   it('is one the code viewer reaches, and its focused fill is one step down from a selection', async () => {
     const source = 'one\ntwo\nthree\nfour';
-    const marked = await mount(h(CodeViewer, { content: source, highlight: [1] }), { theme: 'dark' });
-    expect(hexOf(bgUnder(marked, 'one'))).toBe('#264466');
+    const marked = await mount(h(CodeViewer, { content: source, highlight: [1] }), { theme: 'console' });
+    expect(hexOf(bgUnder(marked, 'one'))).toBe('#1e3d47');
     await marked.unmount();
 
     // The caret line is the selection with the keyboard on it, so it takes
     // the next fill up rather than a colour of its own.
     const onCaret = await mount(
-      h(CodeViewer, { content: source, line: 2, autoFocus: true }), { theme: 'dark' });
-    expect(hexOf(bgUnder(onCaret, 'two'))).toBe('#1f2937');
+      h(CodeViewer, { content: source, line: 2, autoFocus: true }), { theme: 'console' });
+    expect(hexOf(bgUnder(onCaret, 'two'))).toBe('#141a21');
     await onCaret.unmount();
   });
 
@@ -260,7 +265,7 @@ describe("a name the built-in themes state", () => {
             const [text, setText] = useState('hello world');
             return h(TextArea, { value: text, onChange: setText, blink: false, focusId: 'field' });
           }, {})),
-        theme: 'dark',
+        theme: 'console',
       });
       await t.settle();
       // The field's selection is made, not declared, so this is the honest
@@ -276,7 +281,7 @@ describe("a name the built-in themes state", () => {
     };
 
     const focused = await open();
-    expect(hexOf(bgUnder(focused, 'hel'))).toBe('#1f6feb');
+    expect(hexOf(bgUnder(focused, 'hel'))).toBe('#6ba3b2');
     await focused.unmount();
 
     // The same selection with the list holding the keyboard. A selection left
@@ -285,7 +290,7 @@ describe("a name the built-in themes state", () => {
     const resting = await open();
     resting.focus('list');
     await resting.settle();
-    expect(hexOf(bgUnder(resting, 'hel'))).toBe('#264466');
+    expect(hexOf(bgUnder(resting, 'hel'))).toBe('#1e3d47');
     await resting.unmount();
   });
 
@@ -295,13 +300,13 @@ describe("a name the built-in themes state", () => {
     // underline tab has two answers to "which one is open".
     const items = [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Bravo' }];
     const solid = await mount(
-      h(Tabs, { items, activeId: 'b', variant: 'solid', autoFocus: true, focusId: 'tabs' }), { theme: 'dark' });
-    expect(hexOf(bgUnder(solid, 'Bravo'))).toBe('#1f6feb');
+      h(Tabs, { items, activeId: 'b', variant: 'solid', autoFocus: true, focusId: 'tabs' }), { theme: 'console' });
+    expect(hexOf(bgUnder(solid, 'Bravo'))).toBe('#6ba3b2');
     await solid.unmount();
 
     const underline = await mount(
-      h(Tabs, { items, activeId: 'b', variant: 'underline', autoFocus: true, focusId: 'tabs' }), { theme: 'dark' });
-    expect(hexOf(bgUnder(underline, 'Bravo'))).not.toBe('#1f6feb');
+      h(Tabs, { items, activeId: 'b', variant: 'underline', autoFocus: true, focusId: 'tabs' }), { theme: 'console' });
+    expect(hexOf(bgUnder(underline, 'Bravo'))).not.toBe('#6ba3b2');
     await underline.unmount();
   });
 });
@@ -334,7 +339,16 @@ describe('a selection pair', () => {
     return `#${[rr, gg, bb].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
   };
 
-  for (const theme of ['dark', 'light']) {
+  const bold = (t: Harness, text: string): boolean => {
+    const lines = t.lines();
+    for (let y = 0; y < lines.length; y++) {
+      const x = (lines[y] as string).indexOf(text);
+      if (x >= 0) return ((t.app.buffer().get(x, y)?.attrs ?? 0) & ATTR_BOLD) !== 0;
+    }
+    throw new Error(`no "${text}" on screen`);
+  };
+
+  for (const theme of ['dark', 'light', 'console', 'paper-light', 'paper-dark', 'workbench']) {
     for (const colorDepth of [24, 8] as const) {
       it(`tells a live selection from a remembered one in ${theme} at ${colorDepth} colours`, async () => {
         const caps = { colorDepth };
@@ -350,14 +364,14 @@ describe('a selection pair', () => {
         });
         await remembered.settle();
 
-        const liveFill = onScreen(bgUnder(live, 'Bravo'), colorDepth);
-        const rememberedFill = onScreen(bgUnder(remembered, 'Bravo'), colorDepth);
-
-        expect(liveFill, `${theme}: the focused row has no fill at all`).toBeDefined();
+        // A selection is told apart by its fill, or by its weight where the
+        // theme draws it with no fill.
+        const look = (t: Harness): string =>
+          `${String(onScreen(bgUnder(t, 'Bravo'), colorDepth))}${bold(t, 'Bravo') ? ' bold' : ''}`;
         expect(
-          liveFill,
-          `${theme} at ${colorDepth}: the live and remembered selections are both ${String(liveFill)}, so there is nothing to see`,
-        ).not.toBe(rememberedFill);
+          look(live),
+          `${theme} at ${colorDepth}: the live and remembered selections are both ${look(live)}, so there is nothing to see`,
+        ).not.toBe(look(remembered));
 
         for (const [name, harness] of [['live', live], ['remembered', remembered]] as const) {
           expect(

@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import { ATTR_INVERSE } from '@textui/core';
 import { registerBuiltins } from '@textui/widgets';
 import { renderApp } from '@textui/testing';
 import type { Harness } from '@textui/testing';
 import { registerDocuments } from '../src/index.js';
 
 /**
- * The editor's selection takes the fill the theme states for it.
+ * The editor's selection takes the look the theme states for it.
  *
- * `components.Editor.selected` is the one built-in entry that states a
- * background and no foreground, and deliberately so: a selection in a source
- * file has to be a wash *under* the syntax colours, and a foreground here
- * would paint over whatever token the cells hold.
+ * `components.Editor.selected` is the one built-in entry that states no
+ * colour, and deliberately so: it is reverse video, which keeps the syntax
+ * colour of every token it covers and shows whether or not the theme's
+ * `active` is a fill. A colour here would paint over whatever token the cells
+ * hold.
  *
  * Checked here rather than in `packages/testing`, which cannot mount this
  * component. A `components` entry nothing reads is the failure this catches:
@@ -21,12 +23,8 @@ async function settle(t: Harness, n = 3): Promise<void> {
   for (let i = 0; i < n; i++) { await t.settle(); t.flush(); }
 }
 
-const bgAt = (t: Harness, x: number, y = 0): string | undefined => {
-  const cell = t.app.buffer().get(x, y)?.bg;
-  if (!cell || typeof cell !== 'object' || !('rgb' in cell)) return undefined;
-  const { rgb } = cell as { rgb: number[] };
-  return `#${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
-};
+const inverseAt = (t: Harness, x: number, y = 0): boolean =>
+  ((t.app.buffer().get(x, y)?.attrs ?? 0) & ATTR_INVERSE) !== 0;
 
 async function editing(shifted: boolean): Promise<Harness> {
   const t = await renderApp({
@@ -53,21 +51,19 @@ async function editing(shifted: boolean): Promise<Harness> {
 }
 
 describe("a theme's `Editor.selected`", () => {
-  it('is the wash under the selection', async () => {
+  it('is reverse video over the selection', async () => {
     const t = await editing(true);
-    // `dark`'s `active`, which is the dim end of the selection pair - the
-    // same colour an unfocused selection takes, and here deliberately no
-    // foreground, so the syntax colours show through it.
-    expect(bgAt(t, 0)).toBe('#264466');
-    expect(bgAt(t, 2)).toBe('#264466');
-    // Past the end of the selection the editor is back to the canvas.
-    expect(bgAt(t, 4)).not.toBe('#264466');
+    // `dark` has no selection fill, so this is the whole of what shows.
+    expect(inverseAt(t, 0)).toBe(true);
+    expect(inverseAt(t, 2)).toBe(true);
+    // Past the end of the selection the editor is drawn as it was.
+    expect(inverseAt(t, 4)).toBe(false);
     await t.unmount();
   });
 
   it('paints nothing at all when nothing is selected', async () => {
     const t = await editing(false);
-    expect(bgAt(t, 0)).not.toBe('#264466');
+    expect(inverseAt(t, 0)).toBe(false);
     await t.unmount();
   });
 });

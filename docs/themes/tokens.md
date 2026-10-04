@@ -31,7 +31,9 @@ There is one per tone rather than a single `inverted` for all of them, because t
 
 `inverted` still exists and is still used, for the places that invert against the page rather than against a tone.
 
-The two selection backgrounds are a pair of their own: `selected` carries `onSelected` and `active` carries `onActive`. Both are *derived* - `onSelected` from the theme's `inverted` and `onActive` from its `text` - unless the theme states them, so a theme that restates one half of the pair cannot leave the other behind, and a component never has to know which theme it is under. `paper` states `onActive`, because its `text` is the terminal's own and a fill cannot be written on with a colour the user may have set to that fill.
+The two selection backgrounds are a pair of their own: `selected` carries `onSelected` and `active` carries `onActive`. Both are *derived* - `onSelected` from the theme's `inverted` and `onActive` from its `text` - unless the theme states them, so a theme that restates one half of the pair cannot leave the other behind, and a component never has to know which theme it is under.
+
+`dark` and `light` state all four, because they draw a selection with no fill: `selected` and `active` are `default`, and the selection is `onSelected` or `onActive` alone, in bold while the component has the keyboard. `paper` and `paper-dark` do the same. A theme that extends one of them and brings a fill back states its own `onSelected` and `onActive` as well, or it inherits an accent meant for the canvas and writes it on the fill - `console`, `workbench` and `paper-light` do.
 
 ## A token belongs to one channel
 

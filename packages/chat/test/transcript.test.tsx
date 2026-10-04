@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Color } from '@textui/core';
-import { h } from '@textui/core';
+import { ATTR_BOLD, h } from '@textui/core';
 import { renderApp } from '@textui/testing';
 import type { Harness } from '@textui/testing';
 import { ChatTranscript, findBlocks, selectable } from '../src/index.js';
@@ -97,8 +97,8 @@ describe('the transcript', () => {
 /**
  * The cursor is drawn in a gutter every block has, as a heavy bar in the
  * accent colour, so a paragraph of prose or a turn header shows where the
- * cursor is as plainly as a tool row does. Tool rows and thoughts keep their
- * background as well, and turn their text inverted on it.
+ * cursor is as plainly as a tool row does. Tool rows and thoughts are also
+ * drawn as a selection, in whatever the theme states for one.
  */
 describe('the cursor', () => {
   /** A theme colour as the buffer holds it: the built-in themes write hex. */
@@ -107,6 +107,10 @@ describe('the cursor', () => {
     return { rgb: [parseInt(color.slice(1, 3), 16), parseInt(color.slice(3, 5), 16), parseInt(color.slice(5, 7), 16)] };
   };
   const rowOf = (t: Harness, text: string): number => t.lines().findIndex((line) => line.includes(text));
+  /** A cell drawn as a live selection: `onSelected` over `selected`, in bold. */
+  const isSelected = (t: Harness, cell: { fg: Color; bg: Color; attrs: number } | undefined): boolean =>
+    JSON.stringify(cell?.fg) === JSON.stringify(asRgb(t.app.theme.color('onSelected')))
+    && ((cell?.attrs ?? 0) & ATTR_BOLD) !== 0;
 
   it('draws the bar down the gutter of whichever block it is on', async () => {
     for (const [cursor, text] of [[0, 'hello there'], [1, 'claude'], [3, 'here is the answer'], [4, 'Bash'], [5, 'context compacted'], [6, 'the host went away'], [7, 'and then this']] as const) {
@@ -170,38 +174,36 @@ describe('the cursor', () => {
     await t.unmount();
   });
 
-  it("turns a selected tool row's words inverted and keeps its status glyph", async () => {
+  it("draws a selected tool row's words as a selection and keeps its status glyph", async () => {
     const t = await open({ cursor: 4 });
     const y = rowOf(t, 'Bash');
     const name = t.app.buffer().get(t.lines()[y]?.indexOf('Bash') ?? 0, y);
     const glyph = t.app.buffer().get(t.lines()[y]?.indexOf('✓') ?? 0, y);
-    expect(name?.fg).toEqual(asRgb(t.app.theme.color('inverted')));
-    expect(name?.bg).toEqual(asRgb(t.app.theme.color('selected')));
+    expect(isSelected(t, name)).toBe(true);
     expect(glyph?.fg).toEqual(asRgb(t.app.theme.color('success')));
     await t.unmount();
   });
 
-  it("inverts a selected thought's header, and leaves what it opens to alone", async () => {
+  it("draws a selected thought's header as a selection, and leaves what it opens to alone", async () => {
     const t = await open({ cursor: 2, expanded: { r2: true } });
     const cellOf = (text: string) => {
       const y = rowOf(t, text);
       return t.app.buffer().get(t.lines()[y]?.indexOf(text) ?? 0, y);
     };
     const header = cellOf('thought, 3 words');
-    expect(header?.fg).toEqual(asRgb(t.app.theme.color('inverted')));
-    expect(header?.bg).toEqual(asRgb(t.app.theme.color('selected')));
-    // The words themselves keep the canvas: a block opened under the cursor
-    // took the selection's background under colours chosen for the canvas.
-    expect(cellOf('let me think')?.bg).not.toEqual(asRgb(t.app.theme.color('selected')));
+    expect(isSelected(t, header)).toBe(true);
+    // The words themselves are not the selection: a block opened under the
+    // cursor once took the selection's look under colours chosen for the canvas.
+    expect(isSelected(t, cellOf('let me think'))).toBe(false);
     await t.unmount();
   });
 
-  it('paints the selection on a tool call\'s header only, not on its input', async () => {
+  it('draws the selection on a tool call\'s header only, not on its input', async () => {
     const t = await open({ cursor: 4, expanded: { c1: true } });
     const y = rowOf(t, 'Bash');
-    expect(t.app.buffer().get(t.lines()[y]?.indexOf('Bash') ?? 0, y)?.bg).toEqual(asRgb(t.app.theme.color('selected')));
+    expect(isSelected(t, t.app.buffer().get(t.lines()[y]?.indexOf('Bash') ?? 0, y))).toBe(true);
     const below = t.lines().findIndex((line, at) => at > y && line.includes('ls'));
-    expect(t.app.buffer().get(t.lines()[below]?.indexOf('ls') ?? 0, below)?.bg).not.toEqual(asRgb(t.app.theme.color('selected')));
+    expect(isSelected(t, t.app.buffer().get(t.lines()[below]?.indexOf('ls') ?? 0, below))).toBe(false);
     await t.unmount();
   });
 

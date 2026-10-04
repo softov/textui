@@ -107,6 +107,12 @@ So `components.List.selected = { bg, fg }` is the answer, and the component says
 
 **Cost.** Three things. A theme author now has to know which name a component answers to, and a wrong one is a colour that silently does nothing - so each built-in entry is covered by a test that mounts the component and reads the cell, which is the only way a miss shows up before a person notices it. Text inside a selected row had to give up its own `fg`, which is the inheritance rule doing its job but reads as an omission at the call site. And `Tabs` needed the general form, a state qualified by a variant (`Tabs.solid.selected`), because whether a selected tab paints at all is a property of the variant rather than of the state.
 
+## A selection in a list is a colour, not a fill
+
+**Chosen** for `dark`, `light`, `paper` and `paper-dark`: a selected row in a list, tree, table, menu or text field keeps the canvas behind it and is drawn in `onSelected`, bold while the component has the keyboard, and in `onActive` when it does not. A button still inverts; this is about rows. The editor's selection is reverse video, because it has to keep each token's syntax colour and there is no fill to lay it on.
+
+**Cost.** The live and the remembered selection are now the same colour and differ only by weight, which a terminal that draws bold faintly will not show well. And a theme that extends one of these and brings a fill back has to state its own `onSelected` and `onActive`, or it inherits a colour chosen for the canvas and writes it on the fill.
+
 ## A colour is typed by its channel
 
 **Chosen** because `active` was reachable in all three and meant three things. As a background it was the dim end of the selection pair; as a foreground it was the colour written on it; as a border it was neither and read as a mistake. Every one of those was a valid-looking line of code, and none of them said which was which.

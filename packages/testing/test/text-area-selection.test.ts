@@ -43,8 +43,12 @@ describe('TextArea selection', () => {
    * As a string, because a colour is a structure and two cells painted the
    * same colour are not the same object.
    */
-  const bgAt = (t: Awaited<ReturnType<typeof open>>, x: number, y = 0): string =>
-    JSON.stringify(t.app.buffer().get(x, y)?.bg ?? null);
+  /** What a cell looks like: its fill, its colour and its weight. A theme
+   * may draw a selection as any of the three. */
+  const lookAt = (t: Awaited<ReturnType<typeof open>>, x: number, y = 0): string => {
+    const cell = t.app.buffer().get(x, y);
+    return JSON.stringify([cell?.bg ?? null, cell?.fg ?? null, cell?.attrs ?? 0]);
+  };
 
   it('copies what a drag covered', async () => {
     const t = await open('hello world');
@@ -118,13 +122,13 @@ describe('TextArea selection', () => {
     t.drag([6, 0], [11, 0]);
     await t.settle();
 
-    const inside = bgAt(t, 7);
+    const inside = lookAt(t, 7);
     expect(inside).not.toBe('null');
-    expect(bgAt(t, 6)).toBe(inside);
-    expect(bgAt(t, 10)).toBe(inside);
+    expect(lookAt(t, 6)).toBe(inside);
+    expect(lookAt(t, 10)).toBe(inside);
     // The cell before the selection and the empty field beyond it are not it.
-    expect(bgAt(t, 5)).not.toBe(inside);
-    expect(bgAt(t, 12)).not.toBe(inside);
+    expect(lookAt(t, 5)).not.toBe(inside);
+    expect(lookAt(t, 12)).not.toBe(inside);
     await t.unmount();
   });
 
@@ -156,13 +160,13 @@ describe('TextArea selection', () => {
     await t.settle();
     t.pressAll('shift+right', 'shift+right', 'shift+right');
     await t.settle();
-    expect(bgAt(t, 0)).toBe(bgAt(t, 2));
+    expect(lookAt(t, 0)).toBe(lookAt(t, 2));
 
-    const selection = bgAt(t, 0);
+    const selection = lookAt(t, 0);
     t.press('right');
     await t.settle();
-    // Collapsed: the first three cells are back to the field's own background.
-    expect(bgAt(t, 0)).not.toBe(selection);
+    // Collapsed: the first three cells are back to the field's own look.
+    expect(lookAt(t, 0)).not.toBe(selection);
     await t.unmount();
   });
 

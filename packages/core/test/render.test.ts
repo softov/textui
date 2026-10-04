@@ -575,7 +575,7 @@ describe('what colour a border is', () => {
       h(Box, { fg: 'text' }, h(Box, { border: 'single' }, h(Text, { content: 'x' }))),
       { width: 12, height: 3, theme: 'dark' },
     );
-    expect(r.buffer.get(1, 1)?.fg).toEqual({ rgb: [230, 237, 243] });
+    expect(r.buffer.get(1, 1)?.fg).toEqual({ rgb: [243, 230, 241] });
     r.dispose();
   });
 });

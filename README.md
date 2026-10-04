@@ -290,6 +290,14 @@ Then by subsystem:
   <img src="./media/print-theme-mono.svg" alt="TextUI mono theme" />
 </p>
 
+## Built with TextUI
+
+[ahpc](https://github.com/softov/ahpc) is a terminal client for the [Agent Host Protocol](https://microsoft.github.io/agent-host-protocol/): sessions, a chat transcript and a composer, all drawn with TextUI.
+
+<p align="center">
+  <img src="./media/print-ahpc.svg" alt="ahpc showing a session transcript" />
+</p>
+
 ## Developing
 
 Working on TextUI rather than with it — building, testing, the playgrounds, the docs site and how a release is cut — is in [`DEVELOPER.md`](DEVELOPER.md).

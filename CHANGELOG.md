@@ -2,7 +2,7 @@
 
 The packages release as a set under one version.
 
-## Unreleased
+## 0.9.0
 
 ### Added
 
@@ -37,9 +37,6 @@ The packages release as a set under one version.
 - The line under a palette's list no longer keeps the last answer's sentence when
   nothing is selectable, and no longer counts nothing: the count is there when
   there is something to count.
-
-### Fixed
-
 - A marquee counts from its own first frame. The ticker hands it the
   application's frame number, so a marquee whose count started at zero began at
   whatever frame the application happened to be on: opening a menu after a while

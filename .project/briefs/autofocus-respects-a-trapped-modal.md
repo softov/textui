@@ -21,7 +21,7 @@ On 2026-11-03, the commit prompt in ahpc lost its text box to the list behind it
 - `FocusManager.focus` moves the focus to any registered node, and does not check the trap ([`code://packages/core/src/core/focus.ts`](../../packages/core/src/core/focus.ts)).
 - `dispatch` gives a key to no node outside the trap. With the focus outside the trap, the modal's own field gets no key either.
 - `chain` lists the focused node and every scope on the stack, past the trap. The keybindings read it as `activeScopes`, so a binding of the screen behind the modal still runs.
-- In ahpc, the list remounted when a row above it changed, and its `autoFocus` took the focus. ahpc now keeps the list mounted, which hides the case there.
+- In ahpc, the list remounted when a row above it changed. Its `autoFocus` then took the focus. ahpc now keeps the list mounted, which hides the case there.
 
 ## The change
 

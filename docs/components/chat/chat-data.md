@@ -83,7 +83,7 @@ Most of it is what the host said: `id`, `title`, `provider`, `createdAt`, `modif
 
 `ChatCompletion` is one entry of the path menu: what to `insertText`, the `rangeStart` and `rangeEnd` of the fragment it replaces, a `label` and an optional `description`.
 
-`ChatCommand` is one entry of the slash menu: an `id`, a `kind` of `client` or `session`, a `title`, an optional `description` and `from`, and a `hint` saying what goes after the name - `/autocompact <tokens>` says more about a command than a sentence describing it, and the row is the name.
+`ChatCommand` is one entry of the slash menu: an `id`, a `kind` of `client` or `session`, a `title`, an optional `description` and `from`, and a `hint` saying what goes after the name - `/autocompact <tokens>` says more about a command than a sentence describing it, and the row is the name. A `section` names the group the command belongs to, such as `Commands` or `Skills`: the menu lists a section's commands together and names it once, on a heading above its first row.
 
 `ChatSendStatus` is the row under the composer, and says only whether something has gone to the host or has not: a `state` of `sending` or `failed`, and its `text`.
 

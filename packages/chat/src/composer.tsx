@@ -1,9 +1,9 @@
 import type { BoxProps, Rect, RenderOutput } from '@textui/core';
 import { defineComponent, useApp, useEffect, useI18n, useSize, useState, useTheme } from '@textui/core';
-import type { ListItem } from '@textui/widgets';
 import { Column, Divider, List, TextArea } from '@textui/widgets';
 import type { ChatCommand, ChatCompletion } from './types.js';
 import { CommandList } from './command-list.js';
+import type { CommandItem } from './command-list.js';
 import { ComposerBar, composerRows } from './controls.js';
 import type { ComposerOption } from './controls.js';
 import { useReportMeasure } from './measure.js';
@@ -142,13 +142,13 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
 
     // A slash menu is a completion over what is already typed, not a mode.
     const slash = value.startsWith('/') && !value.includes(' ') ? value.slice(1).toLowerCase() : null;
-    const found = slash === null ? [] : commands
+    const found = sections(slash === null ? [] : commands
       .filter((command) => command.id.toLowerCase().includes(slash) || command.title.toLowerCase().includes(slash))
       // What the host contributed first. A person typing a slash into a chat
       // is usually reaching for a skill, and the client's own commands - which
       // are also in the palette, on their own key - would otherwise fill the
       // rows that are visible without scrolling.
-      .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'session' ? -1 : 1));
+      .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'session' ? -1 : 1)));
     const byId = new Map(found.map((command) => [command.id, command]));
     /*
      * One menu, and whichever list is live fills it.
@@ -157,14 +157,17 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
      * slash, and a path menu is a word the caret is in that starts with an
      * at-sign. Two menus would be two boxes above one field.
      */
-    const offered: ListItem[] = found.length > 0
-      ? found.map((command) => ({
+    const offered: CommandItem[] = found.length > 0
+      ? found.map((command, index) => ({
         id: command.id,
         label: `/${command.id}`,
         ...(command.description ? { description: command.description } : {}),
+        // The heading goes on the first row of each section the match left.
+        ...(command.section !== undefined && command.section !== found[index - 1]?.section ? { sectionBefore: command.section } : {}),
         // Where it came from, when something did: two plugins can contribute
-        // a `/review`, and the title alone does not say which this is.
-        meta: command.from ?? command.title,
+        // a `/review`, and the title alone does not say which this is. A title
+        // that is only the name again says nothing the row does not.
+        ...(command.from !== undefined ? { meta: command.from } : command.title !== command.id ? { meta: command.title } : {}),
       }))
       : paths.map((path) => ({
         id: path.insertText,
@@ -360,3 +363,16 @@ export const ChatComposer: (props: ChatComposerProps) => RenderOutput =
       </Column>
     );
   });
+
+/**
+ * The commands with each section's together, the sections in the order they
+ * first appear, and the order inside one kept.
+ *
+ * A heading names a run of rows, so a section split in two would be named
+ * twice. A command with no section is a section of its own, unnamed.
+ */
+function sections(commands: ChatCommand[]): ChatCommand[] {
+  const first = new Map<string | undefined, number>();
+  for (const command of commands) if (!first.has(command.section)) first.set(command.section, first.size);
+  return [...commands].sort((a, b) => (first.get(a.section) ?? 0) - (first.get(b.section) ?? 0));
+}

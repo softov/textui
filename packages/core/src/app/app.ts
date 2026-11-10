@@ -94,6 +94,11 @@ export class App implements TextUIApp {
   private frameScheduled = false;
   private frameTimer: ReturnType<typeof setTimeout> | null = null;
   private running_ = false;
+  /**
+   * While `suspend` has handed the terminal to another program: no frame is
+   * drawn, because it would be written over that program's screen.
+   */
+  private suspended = false;
   /** What `start` acquired, so `suspend` can put the same thing back. */
   private session: TerminalSessionOptions | null = null;
   private disposed = false;
@@ -412,11 +417,13 @@ export class App implements TextUIApp {
    */
   async suspend<T>(run: () => Promise<T>): Promise<T> {
     if (!this.running_ || !this.session) return run();
+    this.suspended = true;
     await this.terminal.release();
     try {
       return await run();
     }
     finally {
+      this.suspended = false;
       await this.terminal.acquire(this.session);
       this.applyCursorShape();
       this.buffer_.invalidate();
@@ -769,7 +776,7 @@ export class App implements TextUIApp {
   }
 
   private renderFrame(): void {
-    if (!this.running_ || this.disposed) return;
+    if (!this.running_ || this.disposed || this.suspended) return;
 
     const size = this.terminal.size();
     if (size.width !== this.buffer_.width || size.height !== this.buffer_.height) {

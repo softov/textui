@@ -34,6 +34,32 @@ export interface CommandItem extends ListItem {
   description?: string;
   /** Where it came from, or its title. Pinned to the right. */
   meta?: string;
+  /**
+   * A heading on the line above this row, naming the section it starts, as
+   * `Menu`'s `sectionBefore` does.
+   *
+   * The heading is a row of the list that cannot be selected, so the keys and
+   * a click step over it. It is as tall as a command row, because the list
+   * windows rows of one height.
+   */
+  sectionBefore?: string;
+}
+
+/** A section's heading, as the list holds it: a row nothing can select. */
+interface HeadingItem extends CommandItem {
+  heading: true;
+}
+
+const isHeading = (item: CommandItem): item is HeadingItem => (item as Partial<HeadingItem>).heading === true;
+
+/** The rows with a heading row before each one that starts a section. */
+function withHeadings(items: CommandItem[]): CommandItem[] {
+  if (!items.some((item) => item.sectionBefore !== undefined)) return items;
+  return items.flatMap((item): CommandItem[] => {
+    if (item.sectionBefore === undefined) return [item];
+    const heading: HeadingItem = { id: `${item.id}\u0000section`, label: item.sectionBefore, disabled: true, heading: true };
+    return [heading, item];
+  });
 }
 
 export interface CommandListProps extends BoxProps {
@@ -116,6 +142,7 @@ export const CommandList = defineComponent<CommandListProps>('CommandList', (pro
    * row's three cells; the source column is measured because it never gives
    * ground.
    */
+  const rows = withHeadings(items);
   const longest = Math.max(0, ...items.map((item) => stringWidth(item.label)));
   const widestMeta = Math.max(0, ...items.map((item) => stringWidth(item.meta ?? '')));
   const room = width - 4 - widestMeta - DESCRIPTION_FLOOR;
@@ -128,7 +155,7 @@ export const CommandList = defineComponent<CommandListProps>('CommandList', (pro
 
   return (
     <List
-      items={items}
+      items={rows}
       selectedId={selectedId}
       focusable={focusable}
       itemHeight={lines}
@@ -137,7 +164,9 @@ export const CommandList = defineComponent<CommandListProps>('CommandList', (pro
       {...(emptyMessage === undefined ? {} : { emptyMessage })}
       {...(onSelect === undefined ? {} : { onSelect: (id: string, item: CommandItem) => onSelect(id, item) })}
       {...(onActivate === undefined ? {} : { onActivate: (id: string, item: CommandItem) => onActivate(id, item) })}
-      renderItem={(item: CommandItem, state: ListItemState): RenderOutput => (
+      renderItem={(item: CommandItem, state: ListItemState): RenderOutput => isHeading(item) ? (
+        <text role="heading" content={item.label} height={lines} bold fg="muted" truncate="end" />
+      ) : (
         <Row gap={1} height={lines}>
           <text
             content={item.label}

@@ -162,6 +162,14 @@ export interface ChatCommand {
   /** Where a session command came from: the plugin or directory. */
   from?: string;
   /**
+   * The group the command belongs to, such as `Commands` or `Skills`.
+   *
+   * The menu lists a section's commands together and names the section once,
+   * on a heading above its first row. A menu where no command names one has
+   * no headings.
+   */
+  section?: string;
+  /**
    * What goes after the name, written the way it would be typed.
    *
    * `/autocompact <tokens>` says more about the command than a sentence

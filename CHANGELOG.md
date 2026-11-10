@@ -2,6 +2,29 @@
 
 The packages release as a set under one version.
 
+## Unreleased
+
+### Added
+
+- `ChatCommand` takes `section`: the group it belongs to, such as `Commands` or
+  `Skills`. The composer's slash menu lists a section's commands together, the
+  sections in the order they first appear, and names each once on a heading
+  above its first row, as `Menu`'s `sectionBefore` does. The heading is a row
+  the keys and a click step over. A menu where no command names a section has
+  no headings. `CommandItem` takes `sectionBefore` for the same heading.
+
+### Changed
+
+- The slash menu's right column shows a command's `from`, or its title when the
+  title is not its name. A title that is the name again is no longer repeated
+  beside it.
+
+### Fixed
+
+- `suspend` draws no frame while the program it runs has the terminal. A store
+  change or an animation meanwhile used to write a frame over an editor's
+  screen; it now shows in the frame drawn once the terminal is back.
+
 ## 0.9.0
 
 ### Added

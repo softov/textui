@@ -74,6 +74,8 @@ export interface TextUIApp extends Disposable {
    * inherits a terminal in the state it expects - no alt screen, no raw mode -
    * and is acquired again afterwards exactly as it was, with the frame
    * repainted whole rather than diffed against what another program left.
+   * No frame is drawn while `run` runs: a change meanwhile shows in the frame
+   * drawn once the terminal is back.
    *
    * `run` rejecting still gives the terminal back.
    */

@@ -417,7 +417,8 @@ describe('the slash menu name column', () => {
 
   it('cuts a name that will not fit, with the theme\'s ellipsis', async () => {
     const long: ChatCommand[] = [
-      { id: 'very-long-command-name-here', kind: 'session', title: 'very-long-command-name-here', description: 'A long description' },
+      // A source as wide as the name, so the column beside it takes the room.
+      { id: 'very-long-command-name-here', kind: 'session', title: 'very-long-command-name-here', description: 'A long description', from: 'very-long-command-name-here' },
     ];
     const t = await slash(60, long);
     const row = t.lines().find((line) => line.includes('very-long-command-name-here')) ?? '';
@@ -443,6 +444,89 @@ describe('the slash menu name column', () => {
     await t.settle();
     // A path is the row, not a table cell: its own name and nothing padded.
     expect(t.lines().some((line) => line.includes('@src/file.ts'))).toBe(true);
+    await t.unmount();
+  });
+});
+
+/**
+ * The slash menu in sections.
+ *
+ * A host whose menu holds two kinds of thing - its commands and the skills a
+ * person wrote - names each once, on a heading above its rows, as `Menu`'s
+ * `sectionBefore` does. The heading is not a row the keys can stop on.
+ */
+
+const SECTIONED: ChatCommand[] = [
+  { id: 'status', kind: 'session', title: 'status', description: 'The session', section: 'Commands' },
+  { id: 'review', kind: 'session', title: 'review', description: 'Review the changes', section: 'Skills' },
+  { id: 'compact', kind: 'session', title: 'compact', description: 'Fold the conversation', section: 'Commands' },
+  { id: 'memory', kind: 'client', title: 'Memory', description: 'What it remembers', section: 'Screen' },
+];
+
+const sectioned = async (value: string, picked: string[] = []): Promise<Harness> => {
+  const t = await renderApp({
+    width: 80,
+    height: 20,
+    theme: 'workbench',
+    root: h(ChatComposer, {
+      value,
+      onChange: () => undefined,
+      onSubmit: () => undefined,
+      commands: SECTIONED,
+      onCommand: (command: ChatCommand) => { picked.push(command.id); },
+      autoFocus: true,
+    }),
+  });
+  await t.settle();
+  await t.settle();
+  return t;
+};
+
+/** The line each string is drawn on. */
+const rowsOf = (t: Harness, needles: string[]): number[] =>
+  needles.map((text) => t.lines().findIndex((line) => line.includes(text)));
+
+describe('the slash menu in sections', () => {
+  it('names each section once, above its commands, the sections in the order they first appear', async () => {
+    const t = await sectioned('/');
+    const [commands, status, compact, skills, review, screen, memory] = rowsOf(t, ['Commands', '/status', '/compact', 'Skills', '/review', 'Screen', '/memory']);
+    expect([status, compact, skills, review, screen, memory]).toEqual([commands! + 1, commands! + 2, commands! + 3, commands! + 4, commands! + 5, commands! + 6]);
+    // Over the labels, not over the cursor's column.
+    expect(t.lines()[commands!]!.indexOf('Commands')).toBe(t.lines()[status!]!.indexOf('/status'));
+    await t.unmount();
+  });
+
+  it('steps over a heading, and enter runs the command it lands on', async () => {
+    const picked: string[] = [];
+    const t = await sectioned('/', picked);
+    await t.press('down');
+    await t.press('down');
+    await t.settle();
+    await t.press('enter');
+    await t.settle();
+    expect(picked).toEqual(['review']);
+    await t.unmount();
+  });
+
+  it('draws no heading for a section the match left empty', async () => {
+    const t = await sectioned('/rev');
+    expect(t.hasText('Skills')).toBe(true);
+    expect(t.hasText('Commands')).toBe(false);
+    expect(t.hasText('Screen')).toBe(false);
+    await t.unmount();
+  });
+
+  it('leaves the right column empty when the title is the name, and shows a title of its own', async () => {
+    const t = await sectioned('/');
+    const status = t.lines().find((line) => line.includes('/status'))!;
+    expect(status.slice(status.indexOf('/status') + '/status'.length)).not.toContain('status');
+    expect(t.lines().find((line) => line.includes('/memory'))).toContain('Memory');
+    await t.unmount();
+  });
+
+  it('draws no heading at all when no command names a section', async () => {
+    const t = await slash(100);
+    expect(t.lines().filter((line) => line.trim() !== '').some((line) => !line.includes('/') && /^[│ ]*[A-Z]/.test(line.trim()))).toBe(false);
     await t.unmount();
   });
 });

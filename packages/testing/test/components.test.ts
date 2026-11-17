@@ -175,6 +175,24 @@ describe('Tree', () => {
     await t.unmount();
   });
 
+  it('opens a row with children on a click, and closes it on a second', async () => {
+    const t = await render({ component: 'Tree', nodes }, { width: 40, height: 10 });
+    const at = t.getAllByRole('treeitem')[0]!.rect!;
+    t.click(at.x + 2, at.y);
+    expect(t.hasText('billing-worker')).toBe(true);
+    t.click(at.x + 2, at.y);
+    expect(t.hasText('billing-worker')).toBe(false);
+    await t.unmount();
+  });
+
+  it('selects a row with no children on a click, and opens nothing', async () => {
+    const t = await render({ component: 'Tree', nodes, expandedIds: ['prod'] }, { width: 40, height: 10 });
+    const at = t.getAllByRole('treeitem').find((item) => item.label === 'api-gateway')!.rect!;
+    t.click(at.x + 4, at.y);
+    expect(t.getAllByRole('treeitem').length).toBe(4);
+    await t.unmount();
+  });
+
   it('walks into the children once expanded', async () => {
     const t = await render({ component: 'Tree', nodes }, { width: 40, height: 10 });
     t.focus(t.getByRole('tree').id);

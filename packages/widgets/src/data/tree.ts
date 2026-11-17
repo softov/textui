@@ -199,9 +199,13 @@ export const Tree = defineComponent<TreeProps>('Tree', (props) => {
         // What the row is filled with is the theme's to say - `Tree.selected`
         // for the current row and `Tree.focused` over it while the tree has
         // the keyboard - as it is for a list, a table and a menu.
+        // A click selects the row, and opens or closes one that has children,
+        // as `enter` does. Selecting alone left a pointer with no way to open
+        // anything, because the twisty is not a target of its own.
         onClick: () => {
           if (selectedId === undefined) setInternalSelected(row.node.id);
           onSelect?.(row.node.id, row.node);
+          if (row.expandable) toggle(row.node.id, !row.expanded);
         },
       },
         h('text', {

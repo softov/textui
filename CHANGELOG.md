@@ -2,6 +2,14 @@
 
 The packages release as a set under one version.
 
+## Unreleased
+
+### Changed
+
+- A click on a `Tree` row that has children opens or closes it, as `enter`
+  does, besides selecting it. A click on a row with no children only selects
+  it, as before.
+
 ## 0.9.1
 
 ### Added

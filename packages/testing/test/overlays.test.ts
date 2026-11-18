@@ -3,6 +3,7 @@ import type { TextUIApp } from '@textui/core';
 import { defineComponent, h, useCommand, useFocus, useFocusScope, useState } from '@textui/core';
 import { prompt } from '@textui/widgets';
 import { render, renderApp } from '../src/index.js';
+import type { Harness } from '../src/index.js';
 import type { ArgChoices } from '@textui/core';
 
 function promptDialog(app: TextUIApp) {
@@ -144,6 +145,30 @@ describe('focus inside a trapped overlay', () => {
     await t.settle();
     expect(t.focused()?.label).toBe('opener');
     await t.unmount();
+  });
+});
+
+describe('a dialog\'s default action', () => {
+  const open = async (actions: { id: string; label: string; default?: boolean }[]): Promise<Harness> => {
+    const t = await renderApp({ width: 60, height: 12 });
+    t.app.layers.open({ id: 'd', layer: 'modal', trapFocus: true, node: { component: 'Dialog', title: 'Stage', width: 50, actions } });
+    await t.settle();
+    return t;
+  };
+
+  it('focuses the action marked default, wherever it sits', async () => {
+    const t = await open([{ id: 'all', label: 'All files' }, { id: 'one', label: 'This file', default: true }, { id: 'no', label: 'Cancel' }]);
+    expect(t.focused()?.label).toBe('This file');
+    await t.unmount();
+  });
+
+  it('focuses the first marked when several are, and the first action when none is', async () => {
+    const several = await open([{ id: 'a', label: 'A' }, { id: 'b', label: 'B', default: true }, { id: 'c', label: 'C', default: true }]);
+    expect(several.focused()?.label).toBe('B');
+    await several.unmount();
+    const none = await open([{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }]);
+    expect(none.focused()?.label).toBe('A');
+    await none.unmount();
   });
 });
 

@@ -4,11 +4,25 @@ The packages release as a set under one version.
 
 ## Unreleased
 
+### Added
+
+- A `Dialog` action takes `default`: the action that has the focus when the
+  dialog opens, wherever it sits in the row. With none marked, the first action
+  has it, as before; with several, the first of them.
+
 ### Changed
 
 - A click on a `Tree` row that has children opens or closes it, as `enter`
   does, besides selecting it. A click on a row with no children only selects
   it, as before.
+- `Tabs` steps past a disabled tab with left and right, to the next one that is
+  not, wrapping as before. A tab beyond a disabled one could be reached by a
+  click only.
+
+### Fixed
+
+- `useForm`'s `submit()` returns at once while a submit is out. A field whose
+  Enter submits could send the form a second time beside the button.
 
 ## 0.9.1
 

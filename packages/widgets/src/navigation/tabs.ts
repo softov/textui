@@ -33,8 +33,13 @@ export const Tabs = defineComponent<TabsProps>('Tabs', (props) => {
     (event) => {
       const step = event.name === 'right' ? 1 : event.name === 'left' ? -1 : 0;
       if (step === 0) return false;
-      const next = items[(index + step + items.length) % items.length];
-      if (next && !next.disabled) onChange?.(next.id);
+      // Past every disabled tab to the next one that is not, wrapping as a
+      // single step does. Stopping at a disabled tab left the ones beyond it
+      // out of the keyboard's reach.
+      for (let moved = 1; moved < items.length; moved++) {
+        const next = items[(index + step * moved + items.length * moved) % items.length];
+        if (next && !next.disabled) { onChange?.(next.id); break; }
+      }
       return true;
     },
     { focusId: focus.id },

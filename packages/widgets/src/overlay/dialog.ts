@@ -4,8 +4,12 @@ import { Button } from '../control/index.js';
 
 export interface DialogProps extends BoxProps {
   title?: string;
-  /** Buttons along the bottom. The first is the default action. */
-  actions?: { id: string; label: string; tone?: SemanticVariant; onPress?(): void }[];
+  /**
+   * Buttons along the bottom. The default action has the focus when the
+   * dialog opens: the one marked `default`, the first of them when several
+   * are, and the first action when none is.
+   */
+  actions?: { id: string; label: string; tone?: SemanticVariant; default?: boolean; onPress?(): void }[];
   onClose?(): void;
   /** Cells wide. The dialog centres itself in whatever is left. */
   width?: number;
@@ -21,6 +25,12 @@ export const Dialog = defineComponent<DialogProps>('Dialog', (props) => {
   // earliest. The flag never fired before, because a scope is empty when it
   // is activated; now that it works, it has to mean what it says.
   useFocusScope({ trap: true, restore: true });
+
+  // Which action is the default is its own choice, apart from where it sits:
+  // a question reads best in one order and is answered most often by a
+  // button that is not first in it.
+  const marked = actions.findIndex((action) => action.default === true);
+  const preferred = marked === -1 ? 0 : marked;
 
   // Only consume escape when there is something to do with it. Consuming it
   // regardless would stop the layer manager dismissing a dialog that was
@@ -57,7 +67,7 @@ export const Dialog = defineComponent<DialogProps>('Dialog', (props) => {
               // the default action solid as well meant two filled buttons the
               // moment focus moved, and no way to tell which one Enter meant.
               variant: 'outline',
-              autoFocus: i === 0,
+              autoFocus: i === preferred,
               onPress: action.onPress,
             })))
       : null,

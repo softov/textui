@@ -1,5 +1,5 @@
 import type { ComponentDefinition } from '@textui/core';
-import { useCallback, useMemo, useState } from '@textui/core';
+import { useCallback, useMemo, useRef, useState } from '@textui/core';
 import { DangerZone } from './danger-zone.js';
 import { Field } from './field.js';
 import { FormActions } from './form-actions.js';
@@ -43,6 +43,14 @@ export function useForm<T extends Record<string, unknown>>(
   );
   const [touched, setTouched] = useState<Partial<Record<keyof T & string, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
+  /**
+   * Whether a submit is out, as a ref rather than as `submitting`.
+   *
+   * State is read as it was at the last render, so a second call in the same
+   * frame - a field's Enter beside the button's - would see `false` and send
+   * the form again. A ref is read as it is now.
+   */
+  const running = useRef(false);
   const [submitted, setSubmitted] = useState(false);
   const [initial] = useState(options.initialValues);
 
@@ -97,6 +105,8 @@ export function useForm<T extends Record<string, unknown>>(
       return Object.keys(found).length === 0;
     },
     async submit() {
+      // One submit at a time: a second while the first is out is dropped.
+      if (running.current) return;
       const found = runValidation(values);
       setErrors(found);
       // Submitting reveals every error, touched or not.
@@ -108,11 +118,13 @@ export function useForm<T extends Record<string, unknown>>(
       );
       if (Object.keys(found).length > 0) return;
 
+      running.current = true;
       setSubmitting(true);
       try {
         await options.onSubmit?.(values);
         setSubmitted(true);
       } finally {
+        running.current = false;
         setSubmitting(false);
       }
     },

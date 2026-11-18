@@ -687,6 +687,69 @@ describe('ScrollView', () => {
  * Borderless controls are one row and looked right, so a form mixing the two
  * had half its labels aligned and half of them a row high.
  */
+describe('Tabs', () => {
+  const Subject = defineComponent<{ items: { id: string; label: string; disabled?: boolean }[]; start: string }>('TabsSubject', (props) => {
+    const [active, setActive] = useState(props.start);
+    return h('box', { direction: 'column' },
+      h('Tabs', { items: props.items, activeId: active, onChange: setActive, autoFocus: true }),
+      h('text', { content: `active=${active}` }));
+  });
+  const items = [
+    { id: 'uncommitted', label: 'Uncommitted' },
+    { id: 'turn', label: 'This Turn', disabled: true },
+    { id: 'branch', label: 'Branch' },
+  ];
+
+  it('steps past a disabled tab with right and left', async () => {
+    const t = await render(h(Subject, { items, start: 'uncommitted' }), { width: 50, height: 3 });
+    t.press('right');
+    await t.settle();
+    expect(t.hasText('active=branch')).toBe(true);
+    t.press('left');
+    await t.settle();
+    expect(t.hasText('active=uncommitted')).toBe(true);
+    await t.unmount();
+  });
+
+  it('stays put when every other tab is disabled', async () => {
+    const lone = [{ id: 'a', label: 'A' }, { id: 'b', label: 'B', disabled: true }];
+    const t = await render(h(Subject, { items: lone, start: 'a' }), { width: 30, height: 3 });
+    t.press('right');
+    await t.settle();
+    expect(t.hasText('active=a')).toBe(true);
+    await t.unmount();
+  });
+});
+
+describe('a form submit', () => {
+  it('sends once while a submit is out, and again once it has ended', async () => {
+    let calls = 0;
+    let finish = (): void => undefined;
+    let api: { submit(): Promise<void> } | undefined;
+    const Subject = defineComponent<Record<string, never>>('SubmitTwice', () => {
+      const form = useForm({
+        initialValues: { name: 'x' },
+        onSubmit: () => { calls += 1; return new Promise<void>((done) => { finish = done; }); },
+      });
+      api = form;
+      return h(Form, { form }, h('text', { content: 'form' }));
+    });
+    const t = await render(h(Subject, {}), { width: 20, height: 3 });
+    const first = api!.submit();
+    const second = api!.submit();
+    await second;
+    expect(calls).toBe(1);
+    finish();
+    await first;
+    await t.settle();
+    const third = api!.submit();
+    expect(calls).toBe(2);
+    finish();
+    await third;
+    await t.unmount();
+  });
+});
+
 describe('Field alignment', () => {
   const Subject = defineComponent<Record<string, never>>('Subject', () => {
     const [value, setValue] = useState('typed');
